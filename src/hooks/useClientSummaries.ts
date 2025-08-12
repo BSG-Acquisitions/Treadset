@@ -99,6 +99,21 @@ export const useClientSummaryAnalytics = (year: number = 2025) => {
       const totalPtes = data.reduce((sum, s) => sum + s.total_ptes, 0);
       const totalTons = data.reduce((sum, s) => sum + s.total_weight_tons, 0);
 
+      console.log('Analytics calculations:', {
+        dataLength: data.length,
+        totalClients,
+        totalPickups,
+        totalRevenue,
+        totalPtes,
+        firstFewClients: Array.from(new Set(data.map(s => s.client_id))).slice(0, 5),
+        sampleRecords: data.slice(0, 3).map(d => ({
+          client_id: d.client_id,
+          month: d.month,
+          revenue: d.total_revenue,
+          pickups: d.total_pickups
+        }))
+      });
+
       // Monthly breakdown
       const monthlyData = Array.from({ length: 12 }, (_, i) => {
         const month = i + 1;
@@ -147,6 +162,8 @@ export const useClientSummaryAnalytics = (year: number = 2025) => {
         monthlyData,
         topClients
       };
-    }
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 10, // 10 minutes  
   });
 };
