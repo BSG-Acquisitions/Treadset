@@ -7,6 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { BarChart3, TrendingUp, Calendar, Users, DollarSign, Recycle, Upload } from 'lucide-react';
 import { useClientSummaries, useClientSummaryAnalytics } from '@/hooks/useClientSummaries';
 import { ClientSummaryImport } from '@/components/csv/ClientSummaryImport';
+import { MonthlyPerformanceTable } from '@/components/analytics/MonthlyPerformanceTable';
 import { useQueryClient } from '@tanstack/react-query';
 
 export function ClientAnalyticsDashboard() {
@@ -202,31 +203,14 @@ export function ClientAnalyticsDashboard() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-brand-primary" />
-                Monthly Performance 2025
+                Monthly Performance Rankings 2025
               </CardTitle>
-              <CardDescription>Revenue and pickup trends throughout the year</CardDescription>
+              <CardDescription>
+                Performance analysis with color-coded gauges showing top performing months
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {analytics.monthlyData.map((month, index) => (
-                  <div key={month.month} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">
-                        {new Date(2025, month.month - 1).toLocaleDateString('en-US', { month: 'long' })}
-                      </span>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span>{month.pickups} pickups</span>
-                        <span>${month.revenue.toLocaleString()}</span>
-                        <span>{month.ptes} PTEs</span>
-                      </div>
-                    </div>
-                    <Progress 
-                      value={(month.revenue / Math.max(...analytics.monthlyData.map(m => m.revenue))) * 100} 
-                      className="h-2" 
-                    />
-                  </div>
-                ))}
-              </div>
+              <MonthlyPerformanceTable monthlyData={analytics.monthlyData} />
             </CardContent>
           </Card>
         </TabsContent>
