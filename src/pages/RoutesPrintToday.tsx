@@ -2,10 +2,11 @@ import { useEffect } from "react";
 import { useAssignments } from "@/hooks/usePickups";
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
+import { formatTime, formatDate } from "@/lib/formatters";
 
 export default function RoutesPrintToday() {
   useEffect(() => {
-    document.title = "Print Today's Routes – BSG";
+    document.title = "Print Today's Routes – BSG Logistics";
   }, []);
 
   const today = new Date().toISOString().split('T')[0];
@@ -35,38 +36,27 @@ export default function RoutesPrintToday() {
     window.print();
   };
 
-  const formatTime = (timeStr: string) => {
-    if (!timeStr) return 'TBD';
-    return new Date(timeStr).toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
-  };
-
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
-
   if (isLoading) {
     return (
-      <div className="p-8">
-        <p>Loading routes...</p>
+      <div className="p-8 text-center">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-muted rounded w-48 mx-auto"></div>
+          <div className="h-4 bg-muted rounded w-32 mx-auto"></div>
+        </div>
+        <p className="mt-4 text-muted-foreground">Loading routes...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white text-black">
-      {/* Print button - hidden in print */}
-      <div className="no-print p-4 bg-gray-100 border-b">
-        <div className="flex justify-between items-center max-w-4xl mx-auto">
-          <h1 className="text-2xl font-bold">Print Today's Routes</h1>
+    <div className="min-h-screen">
+      {/* Screen-only controls */}
+      <div className="print-hidden bg-background border-b border-border p-6">
+        <div className="max-w-4xl mx-auto flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-semibold text-foreground">Print Today's Routes</h1>
+            <p className="text-muted-foreground">{formatDate(today)}</p>
+          </div>
           <Button onClick={handlePrint} className="flex items-center gap-2">
             <Printer className="h-4 w-4" />
             Print Routes
@@ -77,155 +67,167 @@ export default function RoutesPrintToday() {
       {/* Print content */}
       <div className="print-content">
         {Object.keys(vehicleRoutes).length === 0 ? (
-          <div className="p-8 text-center">
-            <p className="text-lg">No routes scheduled for today.</p>
+          <div className="p-12 text-center">
+            <div className="max-w-md mx-auto">
+              <h3 className="text-lg font-semibold text-foreground mb-2">No routes scheduled</h3>
+              <p className="text-muted-foreground">There are no pickup routes scheduled for today.</p>
+            </div>
           </div>
         ) : (
           Object.values(vehicleRoutes).map(({ vehicle, assignments }, index) => (
-            <div key={vehicle?.id || index} className="vehicle-page">
-              {/* Vehicle header */}
-              <div className="mb-6">
-                <div className="text-center mb-4">
-                  <h1 className="text-2xl font-bold">BSG Logistics</h1>
-                  <p className="text-lg">Daily Route Sheet</p>
-                  <p className="text-sm">{formatDate(today)}</p>
+            <div key={vehicle?.id || index} className="print-page-break vehicle-route-page">
+              {/* Page header */}
+              <div className="mb-8">
+                <div className="text-center mb-6">
+                  <div className="flex items-center justify-center gap-3 mb-2">
+                    <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                      <span className="text-primary-foreground font-bold text-sm">B</span>
+                    </div>
+                    <h1 className="text-2xl font-bold">BSG Tire Recycling</h1>
+                  </div>
+                  <p className="text-lg font-semibold text-muted-foreground">Daily Route Sheet</p>
+                  <p className="text-sm text-muted-foreground">{formatDate(today)}</p>
                 </div>
                 
-                <div className="mb-4">
-                  <h2 className="text-xl font-bold">{vehicle?.name || 'Unknown Vehicle'}</h2>
-                  <p className="text-sm">Driver: _____________________ Signature: _____________________</p>
-                  <p className="text-sm">Start Time: _______ End Time: _______ Total Miles: _______</p>
+                <div className="grid grid-cols-2 gap-8 mb-6 p-4 bg-muted/30 rounded-lg">
+                  <div>
+                    <h2 className="text-xl font-bold text-foreground mb-2">
+                      {vehicle?.name || 'Unknown Vehicle'}
+                    </h2>
+                    <p className="text-sm">License: {vehicle?.license_plate || 'N/A'}</p>
+                    <p className="text-sm">Capacity: {vehicle?.capacity || 0} PTE</p>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between border-b border-border pb-1">
+                      <span className="font-medium">Driver:</span>
+                      <span className="border-b border-dotted border-foreground w-32"></span>
+                    </div>
+                    <div className="flex justify-between border-b border-border pb-1">
+                      <span className="font-medium">Start Time:</span>
+                      <span className="border-b border-dotted border-foreground w-20"></span>
+                    </div>
+                    <div className="flex justify-between border-b border-border pb-1">
+                      <span className="font-medium">End Time:</span>
+                      <span className="border-b border-dotted border-foreground w-20"></span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
               {/* Routes table */}
-              <table className="w-full border-collapse border border-black mb-6">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="border border-black p-2 w-12">#</th>
-                    <th className="border border-black p-2 w-20">ETA</th>
-                    <th className="border border-black p-2">Client</th>
-                    <th className="border border-black p-2">Address</th>
-                    <th className="border border-black p-2 w-16">PTE</th>
-                    <th className="border border-black p-2 w-16">OTR</th>
-                    <th className="border border-black p-2 w-20">Tractor</th>
-                    <th className="border border-black p-2 w-24">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {assignments.map((assignment, idx) => (
-                    <tr key={assignment.id}>
-                      <td className="border border-black p-2 text-center font-bold">{idx + 1}</td>
-                      <td className="border border-black p-2 text-center">
-                        {formatTime(assignment.estimated_arrival)}
-                      </td>
-                      <td className="border border-black p-2">
-                        {assignment.pickup?.client?.company_name || 'Unknown Client'}
-                      </td>
-                      <td className="border border-black p-2">
-                        {assignment.pickup?.location?.address || 'Address TBD'}
-                      </td>
-                      <td className="border border-black p-2 text-center">
-                        {assignment.pickup?.pte_count || 0}
-                      </td>
-                      <td className="border border-black p-2 text-center">
-                        {assignment.pickup?.otr_count || 0}
-                      </td>
-                      <td className="border border-black p-2 text-center">
-                        {assignment.pickup?.tractor_count || 0}
-                      </td>
-                      <td className="border border-black p-2 text-center">
-                        ☐ Progress ☐ Complete
-                      </td>
+              <div className="mb-8">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-muted">
+                      <th className="border border-border p-3 text-left font-semibold w-12">#</th>
+                      <th className="border border-border p-3 text-left font-semibold w-20">ETA</th>
+                      <th className="border border-border p-3 text-left font-semibold">Client</th>
+                      <th className="border border-border p-3 text-left font-semibold">Address</th>
+                      <th className="border border-border p-3 text-center font-semibold w-16 numeric">PTE</th>
+                      <th className="border border-border p-3 text-center font-semibold w-16 numeric">OTR</th>
+                      <th className="border border-border p-3 text-center font-semibold w-20 numeric">Tractor</th>
+                      <th className="border border-border p-3 text-center font-semibold w-24">Status</th>
                     </tr>
-                  ))}
-                  {/* Add empty rows for manual entries */}
-                  {[...Array(3)].map((_, idx) => (
-                    <tr key={`empty-${idx}`}>
-                      <td className="border border-black p-2 h-8"></td>
-                      <td className="border border-black p-2"></td>
-                      <td className="border border-black p-2"></td>
-                      <td className="border border-black p-2"></td>
-                      <td className="border border-black p-2"></td>
-                      <td className="border border-black p-2"></td>
-                      <td className="border border-black p-2"></td>
-                      <td className="border border-black p-2"></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {/* Notes section */}
-              <div className="mb-4">
-                <h3 className="font-bold mb-2">Notes & Comments:</h3>
-                <div className="border border-black h-20 p-2"></div>
+                  </thead>
+                  <tbody>
+                    {assignments.map((assignment, idx) => (
+                      <tr key={assignment.id} className="hover:bg-muted/20">
+                        <td className="border border-border p-3 text-center font-semibold">{idx + 1}</td>
+                        <td className="border border-border p-3 text-center tabular-nums">
+                          {formatTime(assignment.estimated_arrival)}
+                        </td>
+                        <td className="border border-border p-3 font-medium">
+                          {assignment.pickup?.client?.company_name || 'Unknown Client'}
+                        </td>
+                        <td className="border border-border p-3 text-sm">
+                          {assignment.pickup?.location?.address || 'Address TBD'}
+                        </td>
+                        <td className="border border-border p-3 text-center numeric">
+                          {assignment.pickup?.pte_count || 0}
+                        </td>
+                        <td className="border border-border p-3 text-center numeric">
+                          {assignment.pickup?.otr_count || 0}
+                        </td>
+                        <td className="border border-border p-3 text-center numeric">
+                          {assignment.pickup?.tractor_count || 0}
+                        </td>
+                        <td className="border border-border p-3 text-center text-xs">
+                          <div className="flex items-center justify-center gap-2">
+                            <label className="flex items-center gap-1">
+                              <input type="checkbox" className="w-3 h-3" />
+                              <span>Progress</span>
+                            </label>
+                            <label className="flex items-center gap-1">
+                              <input type="checkbox" className="w-3 h-3" />
+                              <span>Complete</span>
+                            </label>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {/* Add empty rows for manual entries */}
+                    {[...Array(Math.max(0, 5 - assignments.length))].map((_, idx) => (
+                      <tr key={`empty-${idx}`}>
+                        <td className="border border-border p-3 h-12"></td>
+                        <td className="border border-border p-3"></td>
+                        <td className="border border-border p-3"></td>
+                        <td className="border border-border p-3"></td>
+                        <td className="border border-border p-3"></td>
+                        <td className="border border-border p-3"></td>
+                        <td className="border border-border p-3"></td>
+                        <td className="border border-border p-3"></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
 
-              {/* Summary */}
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              {/* Route summary */}
+              <div className="grid grid-cols-3 gap-6 mb-8 p-4 bg-muted/30 rounded-lg">
                 <div>
-                  <p><strong>Total Stops:</strong> {assignments.length}</p>
-                  <p><strong>Total PTE:</strong> {assignments.reduce((sum, a) => sum + (a.pickup?.pte_count || 0), 0)}</p>
+                  <h4 className="font-semibold mb-2">Route Summary</h4>
+                  <p className="text-sm"><strong>Total Stops:</strong> {assignments.length}</p>
+                  <p className="text-sm"><strong>Total PTE:</strong> {assignments.reduce((sum, a) => sum + (a.pickup?.pte_count || 0), 0)}</p>
                 </div>
                 <div>
-                  <p><strong>Vehicle Capacity:</strong> {vehicle?.capacity || 0} PTE</p>
-                  <p><strong>Remaining Capacity:</strong> {(vehicle?.capacity || 0) - assignments.reduce((sum, a) => sum + (a.pickup?.pte_count || 0), 0)} PTE</p>
+                  <h4 className="font-semibold mb-2">Vehicle Info</h4>
+                  <p className="text-sm"><strong>Capacity:</strong> {vehicle?.capacity || 0} PTE</p>
+                  <p className="text-sm"><strong>Remaining:</strong> {(vehicle?.capacity || 0) - assignments.reduce((sum, a) => sum + (a.pickup?.pte_count || 0), 0)} PTE</p>
+                </div>
+                <div>
+                  <h4 className="font-semibold mb-2">Totals</h4>
+                  <p className="text-sm"><strong>OTR:</strong> {assignments.reduce((sum, a) => sum + (a.pickup?.otr_count || 0), 0)}</p>
+                  <p className="text-sm"><strong>Tractor:</strong> {assignments.reduce((sum, a) => sum + (a.pickup?.tractor_count || 0), 0)}</p>
+                </div>
+              </div>
+
+              {/* Notes section */}
+              <div className="mb-6">
+                <h4 className="font-semibold mb-3">Driver Notes & Comments</h4>
+                <div className="border border-border rounded-lg p-3 min-h-[100px] bg-background">
+                  {/* Empty space for handwritten notes */}
+                </div>
+              </div>
+
+              {/* Signature section */}
+              <div className="flex justify-between items-end pt-6 border-t border-border">
+                <div className="text-center">
+                  <div className="border-b border-dotted border-foreground w-48 mb-2"></div>
+                  <p className="text-sm font-medium">Driver Signature</p>
+                </div>
+                <div className="text-center">
+                  <div className="border-b border-dotted border-foreground w-32 mb-2"></div>
+                  <p className="text-sm font-medium">Date</p>
+                </div>
+                <div className="text-center">
+                  <div className="border-b border-dotted border-foreground w-32 mb-2"></div>
+                  <p className="text-sm font-medium">Total Miles</p>
                 </div>
               </div>
             </div>
           ))
         )}
       </div>
-
-      <style dangerouslySetInnerHTML={{
-        __html: `
-        @media print {
-          .no-print {
-            display: none !important;
-          }
-          
-          .vehicle-page {
-            page-break-after: always;
-            padding: 1rem;
-          }
-          
-          .vehicle-page:last-child {
-            page-break-after: auto;
-          }
-          
-          table {
-            -webkit-print-color-adjust: exact;
-            color-adjust: exact;
-          }
-          
-          body {
-            -webkit-print-color-adjust: exact;
-          }
-        }
-        
-        @media screen {
-          .vehicle-page {
-            max-width: 8.5in;
-            margin: 0 auto;
-            padding: 1rem;
-            border-bottom: 2px dashed #ccc;
-            margin-bottom: 2rem;
-          }
-          
-          .vehicle-page:last-child {
-            border-bottom: none;
-          }
-        }
-        
-        table {
-          font-size: 12px;
-        }
-        
-        th, td {
-          font-size: 11px;
-        }
-        `
-      }} />
     </div>
   );
 }

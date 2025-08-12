@@ -1,28 +1,87 @@
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { ClientCard } from "./ClientCard";
+import { ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 interface RowCarouselProps {
   title: string;
-  items: Array<{ id: string; name: string; capacity: number; lastPickup: string }>;
+  items: Array<{ 
+    id: string; 
+    name: string; 
+    capacity: number; 
+    lastPickup: string;
+    address?: string;
+    type?: 'commercial' | 'residential';
+  }>;
+  viewAllLink?: string;
 }
 
-export function RowCarousel({ title, items }: RowCarouselProps) {
+export function RowCarousel({ title, items, viewAllLink }: RowCarouselProps) {
+  if (items.length === 0) {
+    return (
+      <section className="mb-8 animate-fade-in">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-foreground">{title}</h2>
+        </div>
+        <div className="border-2 border-dashed border-border rounded-lg p-12 text-center">
+          <p className="text-muted-foreground">No items to display</p>
+        </div>
+      </section>
+    );
+  }
+
   return (
-    <section className="mb-8 animate-fade-in">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+    <section className="mb-12 animate-fade-in" role="region" aria-labelledby={`${title.replace(/\s+/g, '-').toLowerCase()}-heading`}>
+      <div className="flex items-center justify-between mb-6">
+        <h2 
+          id={`${title.replace(/\s+/g, '-').toLowerCase()}-heading`}
+          className="text-xl font-semibold text-foreground"
+        >
+          {title}
+        </h2>
+        {viewAllLink && (
+          <Button variant="ghost" size="sm" asChild className="text-muted-foreground hover:text-primary">
+            <Link to={viewAllLink} className="flex items-center gap-1">
+              View all
+              <ChevronRight className="h-4 w-4" />
+            </Link>
+          </Button>
+        )}
       </div>
-      <div className="relative">
-        <Carousel opts={{ align: "start" }}>
-          <CarouselContent>
-            {items.map((c) => (
-              <CarouselItem key={c.id} className="basis-3/4 sm:basis-1/2 md:basis-1/3 lg:basis-1/4 xl:basis-1/5">
-                <ClientCard id={c.id} name={c.name} capacity={c.capacity} lastPickup={c.lastPickup} />
+      
+      <div className="relative -mx-2">
+        <Carousel
+          opts={{ 
+            align: "start",
+            skipSnaps: false,
+            dragFree: true
+          }}
+          className="w-full"
+        >
+          <CarouselContent className="ml-2">
+            {items.map((item) => (
+              <CarouselItem 
+                key={item.id} 
+                className="pl-2 basis-full sm:basis-1/2 lg:basis-1/3 xl:basis-1/4 2xl:basis-1/5"
+              >
+                <div className="h-full">
+                  <ClientCard 
+                    id={item.id} 
+                    name={item.name} 
+                    capacity={item.capacity} 
+                    lastPickup={item.lastPickup}
+                    address={item.address}
+                    type={item.type}
+                  />
+                </div>
               </CarouselItem>
             ))}
           </CarouselContent>
-          <CarouselPrevious />
-          <CarouselNext />
+          
+          {/* Navigation arrows */}
+          <CarouselPrevious className="hidden sm:flex -left-4 shadow-elevation-md hover:shadow-elevation-lg border-border/50" />
+          <CarouselNext className="hidden sm:flex -right-4 shadow-elevation-md hover:shadow-elevation-lg border-border/50" />
         </Carousel>
       </div>
     </section>
