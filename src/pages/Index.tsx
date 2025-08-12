@@ -23,11 +23,12 @@ export default function Index() {
   const { data: clientsData } = useClients();
   const { data: vehicles = [] } = useVehicles();
 
-  const clients = Array.isArray(clientsData) ? clientsData : clientsData?.data || [];
+  // Handle the clients data structure properly
+  const clients = clientsData?.data || [];
   const activeClients = clients.filter(client => client.is_active);
   const totalRevenue = clients.reduce((sum, client) => sum + (client.lifetime_revenue || 0), 0);
-  const assignedPickups = todayPickups.length; // Simplified for now
-  const unassignedPickups = 0;
+  const assignedPickups = todayPickups; // Keep as array for now
+  const unassignedPickups = []; // Keep as array for now
 
   const stats = [
     {
@@ -178,7 +179,7 @@ export default function Index() {
             </CardHeader>
             <CardContent>
               <div className="text-center">
-                <div className="text-2xl font-bold">{assignedPickups}/{vehicles.length * 10}</div>
+                <div className="text-2xl font-bold">{assignedPickups.length}/{vehicles.length * 10}</div>
                 <p className="text-sm text-muted-foreground">Capacity utilization</p>
               </div>
             </CardContent>
