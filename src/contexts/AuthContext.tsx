@@ -80,7 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Current org slug:', orgSlug);
       
       if (DISABLE_AUTH) {
-        // Demo mode - create a mock admin user
+        // Demo mode - create a mock admin user with real organization
         setUser({
           id: 'demo-user',
           email: 'admin@bsg.com',
@@ -88,7 +88,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           lastName: 'Admin',
           roles: ['admin'],
           currentOrganization: {
-            id: 'demo-org',
+            id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
             name: 'BSG Logistics',
             slug: 'bsg'
           }
