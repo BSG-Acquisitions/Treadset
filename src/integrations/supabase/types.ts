@@ -139,6 +139,107 @@ export type Database = {
           },
         ]
       }
+      invoice_items: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          invoice_id: string
+          pickup_id: string
+          quantity: number
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          invoice_id: string
+          pickup_id: string
+          quantity?: number
+          total_price: number
+          unit_price: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          invoice_id?: string
+          pickup_id?: string
+          quantity?: number
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_items_pickup_id_fkey"
+            columns: ["pickup_id"]
+            isOneToOne: false
+            referencedRelation: "pickups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          client_id: string
+          created_at: string
+          due_date: string | null
+          id: string
+          invoice_number: string
+          issued_date: string | null
+          notes: string | null
+          status: string
+          subtotal: number
+          tax_amount: number
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          invoice_number: string
+          issued_date?: string | null
+          notes?: string | null
+          status?: string
+          subtotal?: number
+          tax_amount?: number
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          invoice_number?: string
+          issued_date?: string | null
+          notes?: string | null
+          status?: string
+          subtotal?: number
+          tax_amount?: number
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       locations: {
         Row: {
           access_notes: string | null
@@ -196,9 +297,97 @@ export type Database = {
           },
         ]
       }
+      organization_settings: {
+        Row: {
+          created_at: string
+          default_otr_rate: number | null
+          default_pte_rate: number | null
+          default_tractor_rate: number | null
+          id: string
+          name: string
+          tax_rate: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_otr_rate?: number | null
+          default_pte_rate?: number | null
+          default_tractor_rate?: number | null
+          id?: string
+          name?: string
+          tax_rate?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_otr_rate?: number | null
+          default_pte_rate?: number | null
+          default_tractor_rate?: number | null
+          id?: string
+          name?: string
+          tax_rate?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      payments: {
+        Row: {
+          amount: number
+          client_id: string
+          created_at: string
+          id: string
+          invoice_id: string | null
+          notes: string | null
+          payment_date: string
+          payment_method: string
+          reference_number: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          client_id: string
+          created_at?: string
+          id?: string
+          invoice_id?: string | null
+          notes?: string | null
+          payment_date?: string
+          payment_method?: string
+          reference_number?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          client_id?: string
+          created_at?: string
+          id?: string
+          invoice_id?: string | null
+          notes?: string | null
+          payment_date?: string
+          payment_method?: string
+          reference_number?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pickups: {
         Row: {
           client_id: string
+          computed_revenue: number | null
           created_at: string
           id: string
           location_id: string | null
@@ -206,6 +395,7 @@ export type Database = {
           otr_count: number | null
           pickup_date: string
           preferred_window: string | null
+          pricing_tier_id: string | null
           pte_count: number | null
           status: string | null
           tractor_count: number | null
@@ -213,6 +403,7 @@ export type Database = {
         }
         Insert: {
           client_id: string
+          computed_revenue?: number | null
           created_at?: string
           id?: string
           location_id?: string | null
@@ -220,6 +411,7 @@ export type Database = {
           otr_count?: number | null
           pickup_date: string
           preferred_window?: string | null
+          pricing_tier_id?: string | null
           pte_count?: number | null
           status?: string | null
           tractor_count?: number | null
@@ -227,6 +419,7 @@ export type Database = {
         }
         Update: {
           client_id?: string
+          computed_revenue?: number | null
           created_at?: string
           id?: string
           location_id?: string | null
@@ -234,6 +427,7 @@ export type Database = {
           otr_count?: number | null
           pickup_date?: string
           preferred_window?: string | null
+          pricing_tier_id?: string | null
           pte_count?: number | null
           status?: string | null
           tractor_count?: number | null
@@ -254,6 +448,13 @@ export type Database = {
             referencedRelation: "locations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "pickups_pricing_tier_id_fkey"
+            columns: ["pricing_tier_id"]
+            isOneToOne: false
+            referencedRelation: "pricing_tiers"
+            referencedColumns: ["id"]
+          },
         ]
       }
       pricing_tiers: {
@@ -262,7 +463,10 @@ export type Database = {
           description: string | null
           id: string
           name: string
+          otr_rate: number | null
+          pte_rate: number | null
           rate: number | null
+          tractor_rate: number | null
           updated_at: string
         }
         Insert: {
@@ -270,7 +474,10 @@ export type Database = {
           description?: string | null
           id?: string
           name: string
+          otr_rate?: number | null
+          pte_rate?: number | null
           rate?: number | null
+          tractor_rate?: number | null
           updated_at?: string
         }
         Update: {
@@ -278,7 +485,10 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
+          otr_rate?: number | null
+          pte_rate?: number | null
           rate?: number | null
+          tractor_rate?: number | null
           updated_at?: string
         }
         Relationships: []
@@ -318,7 +528,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      calculate_pickup_revenue: {
+        Args: { pickup_row: Database["public"]["Tables"]["pickups"]["Row"] }
+        Returns: number
+      }
+      generate_invoice_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
     }
     Enums: {
       client_type: "commercial" | "residential" | "industrial"
