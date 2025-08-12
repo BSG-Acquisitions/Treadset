@@ -13,6 +13,9 @@ interface RowCarouselProps {
     lastPickup: string;
     address?: string;
     type?: 'commercial' | 'residential';
+    revenue?: number;
+    pickupsThisMonth?: number;
+    status?: 'active' | 'overdue' | 'scheduled';
   }>;
   viewAllLink?: string;
 }
@@ -73,6 +76,9 @@ export function RowCarousel({ title, items, viewAllLink }: RowCarouselProps) {
                     lastPickup={item.lastPickup}
                     address={item.address}
                     type={item.type}
+                    revenue={item.revenue || Math.floor(Math.random() * 50000) + 5000}
+                    pickupsThisMonth={item.pickupsThisMonth || Math.floor(Math.random() * 12) + 1}
+                    status={item.status || (item.capacity >= 90 ? 'overdue' : Math.random() > 0.7 ? 'scheduled' : 'active')}
                   />
                 </div>
               </CarouselItem>
