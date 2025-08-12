@@ -1,4 +1,4 @@
-import { motion, useSpring, useTransform } from "framer-motion";
+import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { cn } from "@/lib/utils";
@@ -21,29 +21,22 @@ export function CapacityGauge({
   const [displayValue, setDisplayValue] = useState(animateOnMount ? 0 : value);
   const prefersReducedMotion = useReducedMotion();
 
-  // Animated value using Framer Motion springs
-  const springValue = useSpring(animateOnMount ? 0 : value, {
-    damping: 15,
-    stiffness: 150,
-    mass: 1,
-  });
-
-  const animatedValue = useTransform(springValue, (latest) => Math.round(latest));
-
   useEffect(() => {
     if (prefersReducedMotion) {
       setDisplayValue(value);
       return;
     }
 
-    springValue.set(value);
-    
-    const unsubscribe = animatedValue.on("change", (latest) => {
-      setDisplayValue(latest);
-    });
-
-    return unsubscribe;
-  }, [value, prefersReducedMotion]); // Removed springValue and animatedValue from deps
+    if (animateOnMount) {
+      // Simple timeout-based animation instead of framer-motion springs
+      const timer = setTimeout(() => {
+        setDisplayValue(value);
+      }, 100);
+      return () => clearTimeout(timer);
+    } else {
+      setDisplayValue(value);
+    }
+  }, [value, prefersReducedMotion, animateOnMount]);
 
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
@@ -51,15 +44,19 @@ export function CapacityGauge({
   const strokeDashoffset = circumference - (displayValue / 100) * circumference;
 
   const getColorClass = () => {
-    if (displayValue >= 90) return "stroke-brand-warning";
-    if (displayValue >= 70) return "stroke-brand-primary"; 
-    return "stroke-brand-success";
+    if (displayValue >= 80) return "stroke-emerald-500";
+    if (displayValue >= 60) return "stroke-green-500"; 
+    if (displayValue >= 40) return "stroke-yellow-500";
+    if (displayValue >= 20) return "stroke-orange-500";
+    return "stroke-red-500";
   };
 
   const getGlowClass = () => {
-    if (displayValue >= 90) return "drop-shadow-[0_0_8px_hsl(var(--brand-warning)/0.4)]";
-    if (displayValue >= 70) return "drop-shadow-[0_0_8px_hsl(var(--brand-primary)/0.4)]"; 
-    return "drop-shadow-[0_0_8px_hsl(var(--brand-success)/0.4)]";
+    if (displayValue >= 80) return "drop-shadow-[0_0_6px_rgba(16,185,129,0.4)]";
+    if (displayValue >= 60) return "drop-shadow-[0_0_6px_rgba(34,197,94,0.4)]"; 
+    if (displayValue >= 40) return "drop-shadow-[0_0_6px_rgba(234,179,8,0.4)]";
+    if (displayValue >= 20) return "drop-shadow-[0_0_6px_rgba(249,115,22,0.4)]";
+    return "drop-shadow-[0_0_6px_rgba(239,68,68,0.4)]";
   };
 
   return (
@@ -78,69 +75,42 @@ export function CapacityGauge({
             stroke="currentColor"
             strokeWidth={strokeWidth}
             fill="none"
-            className="text-secondary/30"
+            className="text-muted-foreground/20"
           />
           
-          {/* Animated progress circle */}
-          <motion.circle
+          {/* Progress circle */}
+          <circle
             cx={size / 2}
             cy={size / 2}
             r={radius}
             strokeWidth={strokeWidth}
             fill="none"
             strokeLinecap="round"
-            className={cn(getColorClass(), getGlowClass())}
+            className={cn(getColorClass(), getGlowClass(), "transition-all duration-1000 ease-out")}
             style={{
               strokeDasharray,
+              strokeDashoffset: strokeDashoffset,
             }}
-            animate={{
-              strokeDashoffset: prefersReducedMotion ? strokeDashoffset : strokeDashoffset,
-            }}
-            transition={
-              prefersReducedMotion 
-                ? { duration: 0 }
-                : { 
-                    duration: 1.2, 
-                    ease: [0.16, 1, 0.3, 1],
-                    delay: 0.2 
-                  }
-            }
           />
         </svg>
         
-        {/* Animated center text */}
+        {/* Center text */}
         <div className="absolute inset-0 flex items-center justify-center">
-          <motion.span 
+          <span 
             className={cn(
-              "font-bold text-foreground",
+              "font-bold text-foreground transition-all duration-300",
               size >= 80 ? "text-lg" : "text-sm"
             )}
-            key={displayValue}
-            initial={prefersReducedMotion ? {} : { scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ 
-              duration: prefersReducedMotion ? 0 : 0.3,
-              ease: [0.16, 1, 0.3, 1],
-              delay: prefersReducedMotion ? 0 : 0.8
-            }}
           >
-            {displayValue}%
-          </motion.span>
+            {Math.round(displayValue)}%
+          </span>
         </div>
       </div>
       
       {label && (
-        <motion.span 
-          className="text-xs text-muted-foreground text-center font-medium"
-          initial={prefersReducedMotion ? {} : { opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ 
-            duration: prefersReducedMotion ? 0 : 0.3,
-            delay: prefersReducedMotion ? 0 : 1
-          }}
-        >
+        <span className="text-xs text-muted-foreground text-center font-medium">
           {label}
-        </motion.span>
+        </span>
       )}
     </div>
   );
