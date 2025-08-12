@@ -2,14 +2,21 @@ import { useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useClient } from "@/hooks/useClients";
 import { useLocations } from "@/hooks/useLocations";
+import { useInvoices, useCompletedPickups } from "@/hooks/useFinance";
+import { CreateInvoiceDialog } from "@/components/finance/CreateInvoiceDialog";
+import { RecordPaymentDialog } from "@/components/finance/RecordPaymentDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CapacityGauge } from "@/components/CapacityGauge";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { DollarSign, FileText, Calendar, CreditCard, MapPin } from "lucide-react";
 
 export default function ClientDetail() {
   const { id } = useParams();
   const { data: client, isLoading } = useClient(id!);
   const { data: locations = [] } = useLocations(id);
+  const { data: invoices = [] } = useInvoices(id);
+  const { data: completedPickups = [] } = useCompletedPickups(id);
 
   useEffect(() => {
     document.title = client ? `${client.company_name} – Client – BSG` : "Client – BSG";
@@ -47,75 +54,150 @@ export default function ClientDetail() {
       <section className="container grid md:grid-cols-3 gap-4 pb-8">
         <Card>
           <CardHeader>
-            <CardTitle>Revenue</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-primary" />
+              Lifetime Revenue
+            </CardTitle>
           </CardHeader>
-          <CardContent className="flex items-center gap-4">
-            <div>
-              <div className="text-2xl font-semibold text-foreground">${(client.lifetime_revenue || 0).toLocaleString()}</div>
-              <div className="text-sm text-muted-foreground">Lifetime revenue</div>
+          <CardContent>
+            <div className="text-2xl font-semibold text-foreground">${(client.lifetime_revenue || 0).toFixed(2)}</div>
+            <div className="text-sm text-muted-foreground">Total revenue from all pickups</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-destructive" />
+              Open Balance
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-semibold text-destructive">${(client.open_balance || 0).toFixed(2)}</div>
+            <div className="text-sm text-muted-foreground">Outstanding invoices</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-muted-foreground" />
+              Last Pickup
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-semibold text-foreground">
+              {client.last_pickup_at 
+                ? new Date(client.last_pickup_at).toLocaleDateString()
+                : 'Never'
+              }
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Locations</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold text-foreground">{locations.length}</div>
-            <div className="text-sm text-muted-foreground">Active locations</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Balance</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold text-foreground">${(client.open_balance || 0).toLocaleString()}</div>
-            <div className="text-sm text-muted-foreground">Open balance</div>
+            <div className="text-sm text-muted-foreground">Most recent service</div>
           </CardContent>
         </Card>
       </section>
 
       <section className="container grid md:grid-cols-2 gap-6 pb-12">
+        {/* Invoices and Finance */}
         <Card>
-          <CardHeader>
-            <CardTitle>Locations</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Recent Invoices
+            </CardTitle>
+            <div className="flex gap-2">
+              <CreateInvoiceDialog 
+                clientId={client.id}
+                trigger={
+                  <Button size="sm" disabled={completedPickups.length === 0}>
+                    Create Invoice
+                  </Button>
+                }
+              />
+              <RecordPaymentDialog 
+                clientId={client.id}
+                trigger={
+                  <Button size="sm" variant="outline">
+                    Record Payment
+                  </Button>
+                }
+              />
+            </div>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-3">
-              {locations.map((loc) => (
-                <li key={loc.id} className="flex items-center justify-between border-b last:border-b-0 py-3">
-                  <div>
-                    <div className="font-medium text-foreground">{loc.name || 'Unnamed Location'}</div>
-                    <div className="text-sm text-muted-foreground">{loc.address}</div>
-                    {loc.pricing_tier && (
-                      <div className="text-xs text-muted-foreground">Pricing: {loc.pricing_tier.name}</div>
-                    )}
-                  </div>
-                  <div className="text-sm text-right">
-                    <div className={`font-medium ${loc.is_active ? 'text-green-600' : 'text-red-600'}`}>
-                      {loc.is_active ? 'Active' : 'Inactive'}
+            {invoices.length === 0 ? (
+              <p className="text-muted-foreground text-center py-4">
+                No invoices found for this client.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {invoices.slice(0, 5).map((invoice) => (
+                  <div key={invoice.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div>
+                      <p className="font-medium">{invoice.invoice_number}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {invoice.issued_date && new Date(invoice.issued_date).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">${invoice.total_amount.toFixed(2)}</p>
+                      <Badge 
+                        variant={
+                          invoice.status === 'paid' ? 'default' : 
+                          invoice.status === 'partial' ? 'secondary' : 
+                          'outline'
+                        }
+                      >
+                        {invoice.status}
+                      </Badge>
                     </div>
                   </div>
-                </li>
-              ))}
-            </ul>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
+        {/* Locations */}
         <Card>
           <CardHeader>
-            <CardTitle>Client Details</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <MapPin className="h-5 w-5" />
+              Locations ({locations.length})
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-2 text-sm">
-              {client.contact_name && <li><strong>Contact:</strong> {client.contact_name}</li>}
-              {client.email && <li><strong>Email:</strong> {client.email}</li>}
-              {client.phone && <li><strong>Phone:</strong> {client.phone}</li>}
-              {client.type && <li><strong>Type:</strong> {client.type}</li>}
-              {client.sla_weeks && <li><strong>SLA:</strong> {client.sla_weeks} weeks</li>}
-              {client.notes && <li><strong>Notes:</strong> {client.notes}</li>}
-            </ul>
+            {locations.length === 0 ? (
+              <p className="text-muted-foreground text-center py-4">
+                No locations found for this client.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {locations.map((location) => (
+                  <div key={location.id} className="p-3 border rounded-lg">
+                    <div className="space-y-2">
+                      {location.name && (
+                        <p className="font-medium">{location.name}</p>
+                      )}
+                      <p className="text-sm text-muted-foreground">{location.address}</p>
+                      {location.access_notes && (
+                        <p className="text-xs text-muted-foreground italic">
+                          {location.access_notes}
+                        </p>
+                      )}
+                      <div className="flex justify-between items-center">
+                        <Badge variant={location.is_active ? "default" : "secondary"}>
+                          {location.is_active ? "Active" : "Inactive"}
+                        </Badge>
+                        {location.pricing_tier && (
+                          <Badge variant="outline">{location.pricing_tier.name}</Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </section>
