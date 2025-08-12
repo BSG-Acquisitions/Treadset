@@ -1,13 +1,13 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAssignments } from "@/hooks/usePickups";
 import { useUpdateAssignmentStatus } from "@/hooks/useDriverWorkflow";
 import { CompleteAssignmentDialog } from "@/components/driver/CompleteAssignmentDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { CapacityGauge } from "@/components/CapacityGauge";
-import { Truck, MapPin, Clock, Package, Play, CheckCircle } from "lucide-react";
-import { useState } from "react";
+import { Truck, MapPin, Clock, Package, Play, CheckCircle, Calendar } from "lucide-react";
 import { TopNav } from "@/components/TopNav";
 
 export default function RoutesToday() {
@@ -15,8 +15,8 @@ export default function RoutesToday() {
     document.title = "Today's Routes – BSG";
   }, []);
 
-  const today = new Date().toISOString().split('T')[0];
-  const { data: assignments = [], isLoading } = useAssignments(today);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const { data: assignments = [], isLoading } = useAssignments(selectedDate);
   const updateStatus = useUpdateAssignmentStatus();
   
   const [completingAssignment, setCompletingAssignment] = useState<any>(null);
@@ -73,10 +73,24 @@ export default function RoutesToday() {
       <TopNav />
       <main>
         <header className="container py-6">
-          <h1 className="text-2xl font-semibold text-foreground">Today's Routes</h1>
-          <p className="text-sm text-muted-foreground">
-            {Object.keys(vehicleRoutes).length} vehicles with {assignments.length} scheduled pickups
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold text-foreground">Routes</h1>
+              <p className="text-sm text-muted-foreground">
+                {Object.keys(vehicleRoutes).length} vehicles with {assignments.length} scheduled pickups
+              </p>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <Input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="w-auto"
+              />
+            </div>
+          </div>
         </header>
 
       <div className="container pb-12 space-y-6">
