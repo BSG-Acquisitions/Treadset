@@ -78,6 +78,57 @@ export type Database = {
           },
         ]
       }
+      client_pricing_overrides: {
+        Row: {
+          client_id: string
+          created_at: string
+          effective_from: string
+          effective_to: string | null
+          id: string
+          notes: string | null
+          organization_id: string
+          rim: Database["public"]["Enums"]["rim_status"]
+          service_mode: Database["public"]["Enums"]["service_mode"]
+          size_max_inches: number | null
+          size_min_inches: number | null
+          tire_category: Database["public"]["Enums"]["tire_category"]
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          notes?: string | null
+          organization_id: string
+          rim?: Database["public"]["Enums"]["rim_status"]
+          service_mode: Database["public"]["Enums"]["service_mode"]
+          size_max_inches?: number | null
+          size_min_inches?: number | null
+          tire_category: Database["public"]["Enums"]["tire_category"]
+          unit_price: number
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          rim?: Database["public"]["Enums"]["rim_status"]
+          service_mode?: Database["public"]["Enums"]["service_mode"]
+          size_max_inches?: number | null
+          size_min_inches?: number | null
+          tire_category?: Database["public"]["Enums"]["tire_category"]
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       client_summaries: {
         Row: {
           average_pickup_size: number | null
@@ -365,6 +416,57 @@ export type Database = {
           },
         ]
       }
+      location_pricing_overrides: {
+        Row: {
+          created_at: string
+          effective_from: string
+          effective_to: string | null
+          id: string
+          location_id: string
+          notes: string | null
+          organization_id: string
+          rim: Database["public"]["Enums"]["rim_status"]
+          service_mode: Database["public"]["Enums"]["service_mode"]
+          size_max_inches: number | null
+          size_min_inches: number | null
+          tire_category: Database["public"]["Enums"]["tire_category"]
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          location_id: string
+          notes?: string | null
+          organization_id: string
+          rim?: Database["public"]["Enums"]["rim_status"]
+          service_mode: Database["public"]["Enums"]["service_mode"]
+          size_max_inches?: number | null
+          size_min_inches?: number | null
+          tire_category: Database["public"]["Enums"]["tire_category"]
+          unit_price: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          location_id?: string
+          notes?: string | null
+          organization_id?: string
+          rim?: Database["public"]["Enums"]["rim_status"]
+          service_mode?: Database["public"]["Enums"]["service_mode"]
+          size_max_inches?: number | null
+          size_min_inches?: number | null
+          tire_category?: Database["public"]["Enums"]["tire_category"]
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       locations: {
         Row: {
           access_notes: string | null
@@ -605,6 +707,8 @@ export type Database = {
           client_id: string
           computed_revenue: number | null
           created_at: string
+          estimated_revenue: number | null
+          final_revenue: number | null
           id: string
           location_id: string | null
           notes: string | null
@@ -612,16 +716,27 @@ export type Database = {
           otr_count: number | null
           pickup_date: string
           preferred_window: string | null
+          price_version_id: string | null
           pricing_tier_id: string | null
           pte_count: number | null
+          resolved_price_source:
+            | Database["public"]["Enums"]["price_source"]
+            | null
+          rim_surcharge_applied: number | null
           status: string | null
+          surcharges_applied_json: Json | null
           tractor_count: number | null
+          unit_price_otr: number | null
+          unit_price_pte: number | null
+          unit_price_tractor: number | null
           updated_at: string
         }
         Insert: {
           client_id: string
           computed_revenue?: number | null
           created_at?: string
+          estimated_revenue?: number | null
+          final_revenue?: number | null
           id?: string
           location_id?: string | null
           notes?: string | null
@@ -629,16 +744,27 @@ export type Database = {
           otr_count?: number | null
           pickup_date: string
           preferred_window?: string | null
+          price_version_id?: string | null
           pricing_tier_id?: string | null
           pte_count?: number | null
+          resolved_price_source?:
+            | Database["public"]["Enums"]["price_source"]
+            | null
+          rim_surcharge_applied?: number | null
           status?: string | null
+          surcharges_applied_json?: Json | null
           tractor_count?: number | null
+          unit_price_otr?: number | null
+          unit_price_pte?: number | null
+          unit_price_tractor?: number | null
           updated_at?: string
         }
         Update: {
           client_id?: string
           computed_revenue?: number | null
           created_at?: string
+          estimated_revenue?: number | null
+          final_revenue?: number | null
           id?: string
           location_id?: string | null
           notes?: string | null
@@ -646,10 +772,19 @@ export type Database = {
           otr_count?: number | null
           pickup_date?: string
           preferred_window?: string | null
+          price_version_id?: string | null
           pricing_tier_id?: string | null
           pte_count?: number | null
+          resolved_price_source?:
+            | Database["public"]["Enums"]["price_source"]
+            | null
+          rim_surcharge_applied?: number | null
           status?: string | null
+          surcharges_applied_json?: Json | null
           tractor_count?: number | null
+          unit_price_otr?: number | null
+          unit_price_pte?: number | null
+          unit_price_tractor?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -689,6 +824,93 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      price_matrix: {
+        Row: {
+          created_at: string
+          effective_from: string
+          effective_to: string | null
+          id: string
+          needs_confirmation: boolean | null
+          notes: string | null
+          organization_id: string
+          priority: number
+          rim: Database["public"]["Enums"]["rim_status"]
+          service_mode: Database["public"]["Enums"]["service_mode"]
+          size_max_inches: number | null
+          size_min_inches: number | null
+          source: Database["public"]["Enums"]["price_source"]
+          tire_category: Database["public"]["Enums"]["tire_category"]
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          needs_confirmation?: boolean | null
+          notes?: string | null
+          organization_id: string
+          priority?: number
+          rim?: Database["public"]["Enums"]["rim_status"]
+          service_mode: Database["public"]["Enums"]["service_mode"]
+          size_max_inches?: number | null
+          size_min_inches?: number | null
+          source?: Database["public"]["Enums"]["price_source"]
+          tire_category: Database["public"]["Enums"]["tire_category"]
+          unit_price: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          needs_confirmation?: boolean | null
+          notes?: string | null
+          organization_id?: string
+          priority?: number
+          rim?: Database["public"]["Enums"]["rim_status"]
+          service_mode?: Database["public"]["Enums"]["service_mode"]
+          size_max_inches?: number | null
+          size_min_inches?: number | null
+          source?: Database["public"]["Enums"]["price_source"]
+          tire_category?: Database["public"]["Enums"]["tire_category"]
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      price_versions: {
+        Row: {
+          changelog: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          organization_id: string
+          version_tag: string
+        }
+        Insert: {
+          changelog?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          organization_id: string
+          version_tag: string
+        }
+        Update: {
+          changelog?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          organization_id?: string
+          version_tag?: string
+        }
+        Relationships: []
       }
       pricing_tiers: {
         Row: {
@@ -736,6 +958,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      surcharge_rules: {
+        Row: {
+          created_at: string
+          effective_from: string
+          effective_to: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          organization_id: string
+          priority: number
+          type: Database["public"]["Enums"]["surcharge_type"]
+          updated_at: string
+          value: number
+          value_type: Database["public"]["Enums"]["value_type"]
+          when_expr: Json | null
+        }
+        Insert: {
+          created_at?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          organization_id: string
+          priority?: number
+          type: Database["public"]["Enums"]["surcharge_type"]
+          updated_at?: string
+          value: number
+          value_type: Database["public"]["Enums"]["value_type"]
+          when_expr?: Json | null
+        }
+        Update: {
+          created_at?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          organization_id?: string
+          priority?: number
+          type?: Database["public"]["Enums"]["surcharge_type"]
+          updated_at?: string
+          value?: number
+          value_type?: Database["public"]["Enums"]["value_type"]
+          when_expr?: Json | null
+        }
+        Relationships: []
       }
       user_organization_roles: {
         Row: {
@@ -980,6 +1250,22 @@ export type Database = {
     Enums: {
       app_role: "admin" | "ops_manager" | "dispatcher" | "driver" | "sales"
       client_type: "commercial" | "residential" | "industrial"
+      price_source:
+        | "org_default"
+        | "admin_manual"
+        | "smart_suggested"
+        | "client_override"
+        | "location_override"
+      rim_status: "off" | "on" | "any"
+      service_mode: "pickup" | "dropoff"
+      surcharge_type: "rim_on" | "after_hours" | "fuel" | "distance_band"
+      tire_category:
+        | "passenger"
+        | "commercial_17_5_19_5"
+        | "commercial_22_5"
+        | "otr"
+        | "other"
+      value_type: "flat" | "percent"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1109,6 +1395,24 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "ops_manager", "dispatcher", "driver", "sales"],
       client_type: ["commercial", "residential", "industrial"],
+      price_source: [
+        "org_default",
+        "admin_manual",
+        "smart_suggested",
+        "client_override",
+        "location_override",
+      ],
+      rim_status: ["off", "on", "any"],
+      service_mode: ["pickup", "dropoff"],
+      surcharge_type: ["rim_on", "after_hours", "fuel", "distance_band"],
+      tire_category: [
+        "passenger",
+        "commercial_17_5_19_5",
+        "commercial_22_5",
+        "otr",
+        "other",
+      ],
+      value_type: ["flat", "percent"],
     },
   },
 } as const
