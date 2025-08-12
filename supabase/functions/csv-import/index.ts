@@ -62,19 +62,25 @@ Deno.serve(async (req) => {
       }
 
       // Validate and normalize phone format if provided
-      if (row.phone) {
+      if (row.phone && row.phone.trim()) {
+        console.log(`Row ${rowNum} phone before cleaning:`, JSON.stringify(row.phone));
         const cleanPhone = row.phone.replace(/[\s\-\(\)\.]/g, ''); // Remove spaces, dashes, parentheses, dots
+        console.log(`Row ${rowNum} phone after cleaning:`, cleanPhone);
         
-        if (!/^(\+1)?[0-9]{10}$/.test(cleanPhone) && !/^\+[1-9]\d{1,14}$/.test(cleanPhone)) {
-          errors.push({ row: rowNum, field: 'phone', message: 'Phone must be a valid US number (like 5551234567, (555) 123-4567, or +15551234567)' });
+        // Very permissive - just check if it has 10-11 digits
+        const digitCount = cleanPhone.replace(/\D/g, '').length;
+        if (digitCount < 10 || digitCount > 11) {
+          errors.push({ row: rowNum, field: 'phone', message: `Phone has ${digitCount} digits, need 10-11 digits (found: "${row.phone}")` });
         } else {
           // Normalize to E.164 format for US numbers
-          if (/^[0-9]{10}$/.test(cleanPhone)) {
-            row.phone = '+1' + cleanPhone;
-          } else if (/^1[0-9]{10}$/.test(cleanPhone)) {
-            row.phone = '+' + cleanPhone;
+          const digitsOnly = cleanPhone.replace(/\D/g, '');
+          if (digitsOnly.length === 10) {
+            row.phone = '+1' + digitsOnly;
+          } else if (digitsOnly.length === 11 && digitsOnly.startsWith('1')) {
+            row.phone = '+' + digitsOnly;
+          } else {
+            row.phone = '+1' + digitsOnly.slice(-10); // Take last 10 digits
           }
-          // Otherwise keep as-is (already in E.164 format)
         }
       }
 
