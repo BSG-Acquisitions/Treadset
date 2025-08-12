@@ -98,54 +98,68 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('Fetching user data for auth user:', authUser.id);
       
-      // Get user from our custom users table
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select(`
-          id,
-          email,
-          first_name,
-          last_name,
-          phone,
-          user_organization_roles (
-            role,
-            organization:organizations (
-              id,
-              name,
-              slug
+      try {
+        // Get user from our custom users table
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select(`
+            id,
+            email,
+            first_name,
+            last_name,
+            phone,
+            user_organization_roles (
+              role,
+              organization:organizations (
+                id,
+                name,
+                slug
+              )
             )
-          )
-        `)
-        .eq('auth_user_id', authUser.id)
-        .single();
+          `)
+          .eq('auth_user_id', authUser.id)
+          .single();
 
-      console.log('User data query result:', { userData, userError });
+        console.log('User data query result:', { userData, userError });
 
-      if (userError) {
-        console.error('Error loading user data:', userError);
+        if (userError) {
+          console.error('Error loading user data:', userError);
+          setUser(null);
+          return;
+        }
+
+        console.log('Processing user data...');
+
+        // Find current organization
+        const currentOrg = userData.user_organization_roles.find(
+          (uor: any) => uor.organization.slug === orgSlug
+        )?.organization;
+
+        console.log('Current org found:', currentOrg);
+
+        // Get all roles for current organization
+        const roles = userData.user_organization_roles
+          .filter((uor: any) => uor.organization.slug === orgSlug)
+          .map((uor: any) => uor.role);
+
+        console.log('User roles:', roles);
+
+        const finalUser = {
+          id: userData.id,
+          email: userData.email,
+          firstName: userData.first_name,
+          lastName: userData.last_name,
+          phone: userData.phone,
+          roles,
+          currentOrganization: currentOrg
+        };
+
+        console.log('Setting final user:', finalUser);
+        setUser(finalUser);
+      } catch (queryError) {
+        console.error('Caught error during user data query:', queryError);
         setUser(null);
-        return;
       }
-
-      // Find current organization
-      const currentOrg = userData.user_organization_roles.find(
-        (uor: any) => uor.organization.slug === orgSlug
-      )?.organization;
-
-      // Get all roles for current organization
-      const roles = userData.user_organization_roles
-        .filter((uor: any) => uor.organization.slug === orgSlug)
-        .map((uor: any) => uor.role);
-
-      setUser({
-        id: userData.id,
-        email: userData.email,
-        firstName: userData.first_name,
-        lastName: userData.last_name,
-        phone: userData.phone,
-        roles,
-        currentOrganization: currentOrg
-      });
     } catch (error) {
       console.error('Error loading user data:', error);
       setUser(null);
