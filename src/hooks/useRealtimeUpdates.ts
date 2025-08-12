@@ -57,6 +57,24 @@ export function useRealtimeUpdates() {
       )
       .subscribe();
 
+    // Set up real-time subscription for client summaries
+    const summariesChannel = supabase
+      .channel('client-summaries-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'client_summaries'
+        },
+        () => {
+          // Invalidate client summaries queries to trigger refetch
+          queryClient.invalidateQueries({ queryKey: ['client-summaries'] });
+          queryClient.invalidateQueries({ queryKey: ['client-summary-analytics'] });
+        }
+      )
+      .subscribe();
+
     // Set up real-time subscription for assignments
     const assignmentsChannel = supabase
       .channel('assignments-changes')
@@ -80,6 +98,7 @@ export function useRealtimeUpdates() {
       supabase.removeChannel(pickupsChannel);
       supabase.removeChannel(vehiclesChannel);
       supabase.removeChannel(assignmentsChannel);
+      supabase.removeChannel(summariesChannel);
     };
   }, [queryClient]);
 }

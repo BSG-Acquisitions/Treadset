@@ -254,6 +254,25 @@ export default function Index() {
               </CardContent>
             </Card>
           )}
+
+          {hasAnyRole(['admin', 'ops_manager']) && (
+            <Card className="interactive-card border-brand-recycling/20 bg-gradient-to-br from-card to-brand-recycling/5">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5 text-brand-recycling" />
+                  Analytics Dashboard
+                </CardTitle>
+                <CardDescription>
+                  View comprehensive 2025 analytics and trends
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button asChild variant="outline" className="w-full border-brand-recycling/30 text-brand-recycling hover:bg-brand-recycling/10">
+                  <Link to="/analytics">View Analytics</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Today's Activity */}

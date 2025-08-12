@@ -16,6 +16,7 @@ import BookingConfirmation from "./pages/BookingConfirmation";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import Employees from "./pages/Employees";
+import ClientAnalytics from "./pages/ClientAnalytics";
 
 const queryClient = new QueryClient();
 
@@ -66,6 +67,11 @@ const App = () => (
             <Route path="/employees" element={
               <ProtectedRoute roles={['admin']}>
                 <Employees />
+              </ProtectedRoute>
+            } />
+            <Route path="/analytics" element={
+              <ProtectedRoute roles={['admin', 'ops_manager']}>
+                <ClientAnalytics />
               </ProtectedRoute>
             } />
             <Route path="/booking-confirmation" element={
