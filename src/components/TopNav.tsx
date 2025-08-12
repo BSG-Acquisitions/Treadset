@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Bell, Menu, User, Settings, Package, BarChart3, UserCheck, Home, Users, MapPin } from 'lucide-react';
+import { Search, Bell, Menu, User, Settings, Package, BarChart3, UserCheck, Home, Users, MapPin, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -32,6 +32,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
     if (location.pathname === '/book') return 'book';
     if (location.pathname === '/employees') return 'employees';
     if (location.pathname === '/analytics') return 'analytics';
+    if (location.pathname === '/pricing') return 'pricing';
     return 'dashboard';
   };
 
@@ -42,6 +43,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
     { id: 'book', label: 'Book', icon: Package, path: '/book', roles: ['admin', 'ops_manager', 'sales'] as const },
     { id: 'employees', label: 'Employees', icon: UserCheck, path: '/employees', roles: ['admin'] as const },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics', roles: ['admin', 'ops_manager'] as const },
+    { id: 'pricing', label: 'Pricing', icon: DollarSign, path: '/pricing', roles: ['admin', 'ops_manager'] as const },
   ];
 
   return (
