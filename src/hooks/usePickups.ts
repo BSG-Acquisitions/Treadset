@@ -103,12 +103,17 @@ export const useSchedulePickup = () => {
       // Use the best option (first in the sorted list)
       const bestOption = plannerResult.options[0];
 
+      // Get current organization ID
+      const orgSlug = 'bsg'; // For now, default to BSG
+      const { data: orgData } = await supabase.rpc('get_current_user_organization', { org_slug: orgSlug });
+      
       // Create the pickup
       const { data: pickup, error: pickupError } = await supabase
         .from('pickups')
         .insert({
           client_id: data.clientId,
           location_id: data.locationId,
+          organization_id: orgData,
           pickup_date: data.pickupDate,
           pte_count: data.pteCount,
           otr_count: data.otrCount,
@@ -127,6 +132,7 @@ export const useSchedulePickup = () => {
         .insert({
           pickup_id: pickup.id,
           vehicle_id: bestOption.vehicleId,
+          organization_id: orgData,
           scheduled_date: data.pickupDate,
           estimated_arrival: bestOption.eta,
           sequence_order: bestOption.insertionIndex || 0

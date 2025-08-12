@@ -102,11 +102,16 @@ export const useCreateInvoice = () => {
       const taxAmount = subtotal * taxRate;
       const totalAmount = subtotal + taxAmount;
 
+      // Get current organization ID
+      const orgSlug = 'bsg'; // For now, default to BSG
+      const { data: orgData } = await supabase.rpc('get_current_user_organization', { org_slug: orgSlug });
+      
       // Create invoice
       const { data: invoice, error: invoiceError } = await supabase
         .from('invoices')
         .insert({
           client_id: data.clientId,
+          organization_id: orgData,
           invoice_number: invoiceNumber,
           subtotal,
           tax_amount: taxAmount,

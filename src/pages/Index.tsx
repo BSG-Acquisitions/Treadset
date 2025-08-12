@@ -1,91 +1,213 @@
-import { useEffect } from "react";
-import { RowCarousel } from "@/components/RowCarousel";
-import { useClients } from "@/hooks/useClients";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { CalendarDays, Clock, MapPin, Users, TrendingUp, Package } from "lucide-react";
+import { usePickups } from "@/hooks/usePickups";
+import { useClients } from "@/hooks/useClients";
+import { useVehicles } from "@/hooks/useVehicles";
+import { useAuth } from "@/contexts/AuthContext";
+import { UserMenu } from "@/components/auth/UserMenu";
+import { CapacityGauge } from "@/components/CapacityGauge";
+import { RowCarousel } from "@/components/RowCarousel";
+import { format } from "date-fns";
+import { useEffect } from "react";
 
-const Index = () => {
+export default function Index() {
   useEffect(() => {
-    document.title = "Dashboard – BSG Tire Recycling CRM";
+    document.title = "Dashboard – BSG";
   }, []);
 
-  const { data: clientsData, isLoading } = useClients({ 
-    sortBy: 'updated_at', 
-    sortOrder: 'desc',
-    limit: 50 
-  });
+  const { user, hasAnyRole } = useAuth();
+  const { data: todayPickups = [] } = usePickups(format(new Date(), 'yyyy-MM-dd'));
+  const { data: clientsData } = useClients();
+  const { data: vehicles = [] } = useVehicles();
 
-  const clients = clientsData?.data || [];
+  const clients = Array.isArray(clientsData) ? clientsData : clientsData?.data || [];
+  const activeClients = clients.filter(client => client.is_active);
+  const totalRevenue = clients.reduce((sum, client) => sum + (client.lifetime_revenue || 0), 0);
+  const assignedPickups = todayPickups.length; // Simplified for now
+  const unassignedPickups = 0;
 
-  // Calculate dashboard metrics using real data
-  const highValueClients = clients.filter(c => (c.lifetime_revenue || 0) > 5000);
-  const recentPickups = clients
-    .filter(c => c.last_pickup_at && new Date(c.last_pickup_at) >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
-    .sort((a, b) => new Date(b.last_pickup_at || 0).getTime() - new Date(a.last_pickup_at || 0).getTime());
-  const outstandingBalances = clients.filter(c => (c.open_balance || 0) > 0);
-
-  if (isLoading) {
-    return (
-      <main className="min-h-screen bg-background">
-        <header className="container py-6">
-          <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">Loading...</p>
-        </header>
-      </main>
-    );
-  }
+  const stats = [
+    {
+      title: "Today's Pickups",
+      value: todayPickups.length,
+      description: `${assignedPickups.length} assigned, ${unassignedPickups.length} pending`,
+      icon: Package,
+      color: "text-blue-600"
+    },
+    {
+      title: "Active Clients",
+      value: activeClients.length,
+      description: "Currently serviced",
+      icon: Users,
+      color: "text-green-600"
+    },
+    {
+      title: "Fleet Vehicles",
+      value: vehicles.length,
+      description: "Available for routes",
+      icon: MapPin,
+      color: "text-purple-600"
+    },
+    {
+      title: "Total Revenue",
+      value: `$${totalRevenue.toFixed(2)}`,
+      description: "Lifetime client value",
+      icon: TrendingUp,
+      color: "text-orange-600"
+    }
+  ];
 
   return (
     <main className="min-h-screen bg-background">
-      <header className="container py-6 flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">Overview of clients and business metrics.</p>
+      <div className="container py-6 space-y-8">
+        {/* Header with User Menu */}
+        <header className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">
+              Welcome back{user?.firstName ? `, ${user.firstName}` : ''}
+            </h1>
+            <p className="text-muted-foreground">
+              Here's what's happening with your logistics operations today.
+            </p>
+            {user?.currentOrganization && (
+              <p className="text-sm text-muted-foreground mt-1">
+                {user.currentOrganization.name} • Role: {user.roles.join(', ')}
+              </p>
+            )}
+          </div>
+          <UserMenu />
+        </header>
+
+        {/* Statistics Cards */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {stats.map((stat, index) => {
+            const Icon = stat.icon;
+            return (
+              <Card key={index}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    {stat.title}
+                  </CardTitle>
+                  <Icon className={`h-4 w-4 ${stat.color}`} />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stat.value}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {stat.description}
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
-        <Link to="/clients">
-          <Button>View All Clients</Button>
-        </Link>
-      </header>
-      <div className="container pb-12 space-y-6">
-        <RowCarousel 
-          title="All Clients" 
-          items={clients.map(c => ({ 
-            id: c.id, 
-            name: c.company_name, 
-            capacity: Math.round((c.lifetime_revenue || 0) / 1000), // Revenue in thousands
-            lastPickup: c.last_pickup_at || "" 
-          }))} 
-        />
-        <RowCarousel 
-          title="High Value Clients ($5K+)" 
-          items={highValueClients.map(c => ({ 
-            id: c.id, 
-            name: c.company_name, 
-            capacity: Math.round((c.lifetime_revenue || 0) / 1000),
-            lastPickup: c.last_pickup_at || "" 
-          }))} 
-        />
-        <RowCarousel 
-          title="Recent Pickups (Last 7 Days)" 
-          items={recentPickups.map(c => ({ 
-            id: c.id, 
-            name: c.company_name, 
-            capacity: Math.round((c.lifetime_revenue || 0) / 1000),
-            lastPickup: c.last_pickup_at || "" 
-          }))} 
-        />
-        <RowCarousel 
-          title="Outstanding Balances" 
-          items={outstandingBalances.map(c => ({ 
-            id: c.id, 
-            name: c.company_name, 
-            capacity: Math.round(c.open_balance || 0),
-            lastPickup: c.last_pickup_at || "" 
-          }))} 
-        />
+
+        {/* Quick Actions */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {hasAnyRole(['admin', 'ops_manager', 'dispatcher']) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CalendarDays className="h-5 w-5" />
+                  Today's Routes
+                </CardTitle>
+                <CardDescription>
+                  View and manage today's pickup assignments
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button asChild className="w-full">
+                  <Link to="/routes/today">View Routes</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {hasAnyRole(['admin', 'ops_manager', 'sales']) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Client Management
+                </CardTitle>
+                <CardDescription>
+                  Manage clients and their locations
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button asChild variant="outline" className="w-full">
+                  <Link to="/clients">Manage Clients</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {hasAnyRole(['admin', 'ops_manager', 'sales']) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  Quick Booking
+                </CardTitle>
+                <CardDescription>
+                  Schedule a new pickup quickly
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button asChild variant="outline" className="w-full">
+                  <Link to="/book">Book Pickup</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Today's Capacity Overview */}
+        {todayPickups.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Today's Capacity
+              </CardTitle>
+              <CardDescription>
+                Vehicle utilization for today's routes
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center">
+                <div className="text-2xl font-bold">{assignedPickups}/{vehicles.length * 10}</div>
+                <p className="text-sm text-muted-foreground">Capacity utilization</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Recent Activity */}
+        {todayPickups.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Today's Pickups</CardTitle>
+              <CardDescription>
+                Recent pickup activity and status updates
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RowCarousel
+                title="Today's Pickups"
+                items={todayPickups.slice(0, 10).map(pickup => ({
+                  id: pickup.id,
+                  name: pickup.client?.company_name || 'Unknown Client',
+                  capacity: pickup.pte_count || 0,
+                  lastPickup: pickup.pickup_date
+                }))}
+              />
+            </CardContent>
+          </Card>
+        )}
       </div>
     </main>
   );
-};
-
-export default Index;
+}

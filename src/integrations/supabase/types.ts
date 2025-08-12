@@ -20,6 +20,7 @@ export type Database = {
           created_at: string
           estimated_arrival: string | null
           id: string
+          organization_id: string
           pickup_id: string
           scheduled_date: string
           sequence_order: number | null
@@ -32,6 +33,7 @@ export type Database = {
           created_at?: string
           estimated_arrival?: string | null
           id?: string
+          organization_id: string
           pickup_id: string
           scheduled_date: string
           sequence_order?: number | null
@@ -44,6 +46,7 @@ export type Database = {
           created_at?: string
           estimated_arrival?: string | null
           id?: string
+          organization_id?: string
           pickup_id?: string
           scheduled_date?: string
           sequence_order?: number | null
@@ -52,6 +55,13 @@ export type Database = {
           vehicle_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "assignments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "assignments_pickup_id_fkey"
             columns: ["pickup_id"]
@@ -82,6 +92,7 @@ export type Database = {
           lifetime_revenue: number | null
           notes: string | null
           open_balance: number | null
+          organization_id: string
           phone: string | null
           pricing_tier_id: string | null
           sla_weeks: number | null
@@ -102,6 +113,7 @@ export type Database = {
           lifetime_revenue?: number | null
           notes?: string | null
           open_balance?: number | null
+          organization_id: string
           phone?: string | null
           pricing_tier_id?: string | null
           sla_weeks?: number | null
@@ -122,6 +134,7 @@ export type Database = {
           lifetime_revenue?: number | null
           notes?: string | null
           open_balance?: number | null
+          organization_id?: string
           phone?: string | null
           pricing_tier_id?: string | null
           sla_weeks?: number | null
@@ -130,6 +143,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "clients_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "clients_pricing_tier_id_fkey"
             columns: ["pricing_tier_id"]
@@ -196,6 +216,7 @@ export type Database = {
           invoice_number: string
           issued_date: string | null
           notes: string | null
+          organization_id: string
           status: string
           subtotal: number
           tax_amount: number
@@ -210,6 +231,7 @@ export type Database = {
           invoice_number: string
           issued_date?: string | null
           notes?: string | null
+          organization_id: string
           status?: string
           subtotal?: number
           tax_amount?: number
@@ -224,6 +246,7 @@ export type Database = {
           invoice_number?: string
           issued_date?: string | null
           notes?: string | null
+          organization_id?: string
           status?: string
           subtotal?: number
           tax_amount?: number
@@ -236,6 +259,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -251,6 +281,7 @@ export type Database = {
           latitude: number | null
           longitude: number | null
           name: string | null
+          organization_id: string
           pricing_tier_id: string | null
           updated_at: string
         }
@@ -264,6 +295,7 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           name?: string | null
+          organization_id: string
           pricing_tier_id?: string | null
           updated_at?: string
         }
@@ -277,6 +309,7 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           name?: string | null
+          organization_id?: string
           pricing_tier_id?: string | null
           updated_at?: string
         }
@@ -286,6 +319,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "locations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
@@ -330,6 +370,63 @@ export type Database = {
         }
         Relationships: []
       }
+      organizations: {
+        Row: {
+          brand_primary_color: string | null
+          brand_secondary_color: string | null
+          created_at: string
+          default_otr_rate: number | null
+          default_pte_rate: number | null
+          default_tractor_rate: number | null
+          depot_lat: number | null
+          depot_lng: number | null
+          id: string
+          logo_url: string | null
+          name: string
+          service_hours_end: string | null
+          service_hours_start: string | null
+          slug: string
+          tax_rate: number | null
+          updated_at: string
+        }
+        Insert: {
+          brand_primary_color?: string | null
+          brand_secondary_color?: string | null
+          created_at?: string
+          default_otr_rate?: number | null
+          default_pte_rate?: number | null
+          default_tractor_rate?: number | null
+          depot_lat?: number | null
+          depot_lng?: number | null
+          id?: string
+          logo_url?: string | null
+          name: string
+          service_hours_end?: string | null
+          service_hours_start?: string | null
+          slug: string
+          tax_rate?: number | null
+          updated_at?: string
+        }
+        Update: {
+          brand_primary_color?: string | null
+          brand_secondary_color?: string | null
+          created_at?: string
+          default_otr_rate?: number | null
+          default_pte_rate?: number | null
+          default_tractor_rate?: number | null
+          depot_lat?: number | null
+          depot_lng?: number | null
+          id?: string
+          logo_url?: string | null
+          name?: string
+          service_hours_end?: string | null
+          service_hours_start?: string | null
+          slug?: string
+          tax_rate?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       payments: {
         Row: {
           amount: number
@@ -338,6 +435,7 @@ export type Database = {
           id: string
           invoice_id: string | null
           notes: string | null
+          organization_id: string
           payment_date: string
           payment_method: string
           reference_number: string | null
@@ -350,6 +448,7 @@ export type Database = {
           id?: string
           invoice_id?: string | null
           notes?: string | null
+          organization_id: string
           payment_date?: string
           payment_method?: string
           reference_number?: string | null
@@ -362,6 +461,7 @@ export type Database = {
           id?: string
           invoice_id?: string | null
           notes?: string | null
+          organization_id?: string
           payment_date?: string
           payment_method?: string
           reference_number?: string | null
@@ -382,6 +482,13 @@ export type Database = {
             referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "payments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
         ]
       }
       pickups: {
@@ -392,6 +499,7 @@ export type Database = {
           id: string
           location_id: string | null
           notes: string | null
+          organization_id: string
           otr_count: number | null
           pickup_date: string
           preferred_window: string | null
@@ -408,6 +516,7 @@ export type Database = {
           id?: string
           location_id?: string | null
           notes?: string | null
+          organization_id: string
           otr_count?: number | null
           pickup_date: string
           preferred_window?: string | null
@@ -424,6 +533,7 @@ export type Database = {
           id?: string
           location_id?: string | null
           notes?: string | null
+          organization_id?: string
           otr_count?: number | null
           pickup_date?: string
           preferred_window?: string | null
@@ -449,6 +559,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "pickups_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "pickups_pricing_tier_id_fkey"
             columns: ["pricing_tier_id"]
             isOneToOne: false
@@ -463,6 +580,7 @@ export type Database = {
           description: string | null
           id: string
           name: string
+          organization_id: string
           otr_rate: number | null
           pte_rate: number | null
           rate: number | null
@@ -474,6 +592,7 @@ export type Database = {
           description?: string | null
           id?: string
           name: string
+          organization_id: string
           otr_rate?: number | null
           pte_rate?: number | null
           rate?: number | null
@@ -485,10 +604,97 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
+          organization_id?: string
           otr_rate?: number | null
           pte_rate?: number | null
           rate?: number | null
           tractor_rate?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pricing_tiers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_organization_roles: {
+        Row: {
+          created_at: string
+          id: string
+          organization_id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_organization_roles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_organization_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          auth_user_id: string | null
+          created_at: string
+          email: string
+          first_name: string | null
+          id: string
+          is_active: boolean | null
+          last_name: string | null
+          password_hash: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          auth_user_id?: string | null
+          created_at?: string
+          email: string
+          first_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_name?: string | null
+          password_hash?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          auth_user_id?: string | null
+          created_at?: string
+          email?: string
+          first_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_name?: string | null
+          password_hash?: string | null
+          phone?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -501,6 +707,7 @@ export type Database = {
           is_active: boolean | null
           license_plate: string | null
           name: string
+          organization_id: string
           updated_at: string
         }
         Insert: {
@@ -510,6 +717,7 @@ export type Database = {
           is_active?: boolean | null
           license_plate?: string | null
           name: string
+          organization_id: string
           updated_at?: string
         }
         Update: {
@@ -519,9 +727,18 @@ export type Database = {
           is_active?: boolean | null
           license_plate?: string | null
           name?: string
+          organization_id?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "vehicles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -536,8 +753,20 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_current_user_organization: {
+        Args: { org_slug?: string }
+        Returns: string
+      }
+      user_has_role: {
+        Args: {
+          user_role: Database["public"]["Enums"]["app_role"]
+          org_slug?: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
+      app_role: "admin" | "ops_manager" | "dispatcher" | "driver" | "sales"
       client_type: "commercial" | "residential" | "industrial"
     }
     CompositeTypes: {
@@ -666,6 +895,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "ops_manager", "dispatcher", "driver", "sales"],
       client_type: ["commercial", "residential", "industrial"],
     },
   },

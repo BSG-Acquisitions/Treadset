@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useCreatePayment } from "@/hooks/useFinance";
+import { supabase } from "@/integrations/supabase/client";
 import { CreditCard } from "lucide-react";
 
 const createPaymentSchema = z.object({
@@ -54,9 +55,14 @@ export function RecordPaymentDialog({
 
   const handleSubmit = async (data: CreatePaymentData) => {
     try {
+      // Get current organization ID
+      const orgSlug = 'bsg'; // For now, default to BSG
+      const { data: orgData } = await supabase.rpc('get_current_user_organization', { org_slug: orgSlug });
+      
       await createPayment.mutateAsync({
         client_id: data.clientId,
         invoice_id: data.invoiceId || null,
+        organization_id: orgData,
         amount: data.amount,
         payment_method: data.paymentMethod,
         payment_date: data.paymentDate,
