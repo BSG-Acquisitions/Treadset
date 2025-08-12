@@ -72,25 +72,19 @@ export const useClientSummaryAnalytics = (year: number = 2025) => {
   return useQuery({
     queryKey: ['client-summary-analytics', year],
     queryFn: async () => {
+      // Add delay to prevent rate limiting
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const { data, error } = await supabase
         .from('client_summaries')
-        .select(`
-          *,
-          client:client_id(company_name, type)
-        `)
+        .select('client_id, total_pickups, total_revenue, total_ptes, total_weight_tons, month, client:client_id(company_name)')
         .eq('year', year)
-        .eq('organization_id', 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73'); // Add organization filter
+        .eq('organization_id', 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73');
 
       if (error) {
         console.error('Error fetching analytics:', error);
         throw error;
       }
-
-      console.log('Analytics data fetched:', { 
-        recordCount: data?.length, 
-        uniqueClients: new Set(data?.map(s => s.client_id)).size,
-        sampleData: data?.slice(0, 3)
-      });
 
       // Calculate analytics
       const totalClients = new Set(data.map(s => s.client_id)).size;
@@ -163,7 +157,9 @@ export const useClientSummaryAnalytics = (year: number = 2025) => {
         topClients
       };
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    gcTime: 1000 * 60 * 10, // 10 minutes  
+    staleTime: 1000 * 60 * 10, // 10 minutes - longer cache to reduce requests
+    gcTime: 1000 * 60 * 30, // 30 minutes
+    refetchOnWindowFocus: false, // Prevent unnecessary refetches
+    retry: 1, // Reduce retry attempts
   });
 };
