@@ -192,7 +192,7 @@ Deno.serve(async (req) => {
       .from('assignments')
       .select(`
         *,
-        pickup!inner(
+        pickups!inner(
           id,
           pte_count,
           otr_count,
@@ -201,7 +201,7 @@ Deno.serve(async (req) => {
           client:clients(company_name),
           location:locations(name, address, latitude, longitude)
         ),
-        vehicle!inner(id, name, capacity)
+        vehicles!inner(id, name, capacity)
       `)
       .eq('scheduled_date', date);
 
@@ -239,20 +239,20 @@ Deno.serve(async (req) => {
 
     // Process each vehicle's route
     for (const [vId, vehicleAssignments] of Object.entries(vehicleGroups)) {
-      const vehicle = vehicleAssignments[0].vehicle;
+      const vehicle = vehicleAssignments[0].vehicles;
       
       // Convert assignments to stops
       const stops: Stop[] = vehicleAssignments.map(assignment => ({
         id: assignment.id,
         coordinates: {
-          lat: assignment.pickup.location?.latitude || DEPOT.lat,
-          lng: assignment.pickup.location?.longitude || DEPOT.lng,
+          lat: assignment.pickups.location?.latitude || DEPOT.lat,
+          lng: assignment.pickups.location?.longitude || DEPOT.lng,
         },
-        pteCount: assignment.pickup.pte_count || 0,
-        clientName: assignment.pickup.client?.company_name || 'Unknown',
-        address: assignment.pickup.location?.address || 'Address not found',
+        pteCount: assignment.pickups.pte_count || 0,
+        clientName: assignment.pickups.client?.company_name || 'Unknown',
+        address: assignment.pickups.location?.address || 'Address not found',
         serviceTimeMinutes: SERVICE_TIME_PER_STOP,
-        notes: assignment.pickup.notes
+        notes: assignment.pickups.notes
       }));
 
       // Optimize stop order if requested
