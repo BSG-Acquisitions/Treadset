@@ -252,6 +252,7 @@ export default function EnhancedRoutesToday() {
   };
 
   const formatTime = (dateString: string) => {
+    console.log('Formatting time for:', dateString, 'Result:', format(new Date(dateString), 'h:mm a'));
     return format(new Date(dateString), 'h:mm a');
   };
 
