@@ -1,11 +1,13 @@
 import { useEffect } from "react";
 import { useAssignments } from "@/hooks/usePickups";
-import { useCompletePickup } from "@/hooks/useFinance";
+import { useUpdateAssignmentStatus } from "@/hooks/useDriverWorkflow";
+import { CompleteAssignmentDialog } from "@/components/driver/CompleteAssignmentDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CapacityGauge } from "@/components/CapacityGauge";
-import { Truck, MapPin, Clock, Package, CheckCircle } from "lucide-react";
+import { Truck, MapPin, Clock, Package, Play, CheckCircle } from "lucide-react";
+import { useState } from "react";
 
 export default function RoutesToday() {
   useEffect(() => {
@@ -14,7 +16,9 @@ export default function RoutesToday() {
 
   const today = new Date().toISOString().split('T')[0];
   const { data: assignments = [], isLoading } = useAssignments(today);
-  const completePickup = useCompletePickup();
+  const updateStatus = useUpdateAssignmentStatus();
+  
+  const [completingAssignment, setCompletingAssignment] = useState<any>(null);
 
   // Group assignments by vehicle
   const vehicleRoutes = assignments.reduce((acc, assignment) => {
@@ -36,12 +40,19 @@ export default function RoutesToday() {
     );
   });
 
-  const handleCompletePickup = async (pickupId: string) => {
+  const handleStartPickup = async (assignmentId: string) => {
     try {
-      await completePickup.mutateAsync(pickupId);
+      await updateStatus.mutateAsync({
+        assignmentId,
+        status: 'in_progress'
+      });
     } catch (error) {
-      console.error('Error completing pickup:', error);
+      console.error('Error starting pickup:', error);
     }
+  };
+
+  const handleCompletePickup = (assignment: any) => {
+    setCompletingAssignment(assignment);
   };
 
   if (isLoading) {
@@ -108,21 +119,36 @@ export default function RoutesToday() {
                                 {assignment.pickup?.client?.company_name || 'Unknown Client'}
                               </h3>
                               <Badge 
-                                variant={assignment.status === 'completed' ? 'default' : 'secondary'}
+                                variant={assignment.status === 'completed' ? 'default' : 
+                                        assignment.status === 'in_progress' ? 'secondary' : 'outline'}
                               >
                                 {assignment.status || 'assigned'}
                               </Badge>
                             </div>
                             
-                            {assignment.status !== 'completed' && assignment.pickup && (
-                              <Button 
-                                size="sm" 
-                                onClick={() => handleCompletePickup(assignment.pickup.id)}
-                                disabled={completePickup.isPending}
-                              >
-                                <CheckCircle className="h-4 w-4 mr-1" />
-                                Complete
-                              </Button>
+                            {assignment.status !== 'completed' && (
+                              <div className="flex gap-2">
+                                {assignment.status !== 'in_progress' && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => handleStartPickup(assignment.id)}
+                                    disabled={updateStatus.isPending}
+                                  >
+                                    <Play className="h-4 w-4 mr-1" />
+                                    Start
+                                  </Button>
+                                )}
+                                
+                                <Button 
+                                  size="sm" 
+                                  onClick={() => handleCompletePickup(assignment)}
+                                  disabled={updateStatus.isPending}
+                                >
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  Complete
+                                </Button>
+                              </div>
                             )}
                           </div>
                           
@@ -166,6 +192,12 @@ export default function RoutesToday() {
           })
         )}
       </div>
+      
+      <CompleteAssignmentDialog
+        open={!!completingAssignment}
+        onOpenChange={(open) => !open && setCompletingAssignment(null)}
+        assignment={completingAssignment}
+      />
     </main>
   );
 }

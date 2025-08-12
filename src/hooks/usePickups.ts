@@ -55,22 +55,25 @@ export const useAssignments = (date?: string) => {
   return useQuery({
     queryKey: ['assignments', date],
     queryFn: async () => {
-      let query = supabase
-        .from('assignments')
+      let query = supabase.from('assignments')
         .select(`
           *,
-          pickup:pickup_id(*, client:client_id(company_name), location:location_id(name, address, latitude, longitude)),
-          vehicle:vehicle_id(name, capacity)
+          pickup:pickups(*,
+            client:clients(company_name),
+            location:locations(address, name)
+          ),
+          vehicle:vehicles(name, capacity)
         `);
-
+      
       if (date) {
         query = query.eq('scheduled_date', date);
       }
-
-      const { data, error } = await query.order('estimated_arrival');
+      
+      const { data, error } = await query.order('estimated_arrival', { ascending: true });
       if (error) throw error;
       return data || [];
-    }
+    },
+    refetchInterval: 5000, // Refetch every 5 seconds for live updates
   });
 };
 
