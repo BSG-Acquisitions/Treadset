@@ -355,33 +355,51 @@ export default function Index() {
             <CardHeader className="border-b border-border/10">
               <CardTitle className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-brand-recycling" />
-                Weekly Goals
+                Daily PTE Goal
               </CardTitle>
+              <CardDescription>Progress toward 2,600 PTEs daily target</CardDescription>
             </CardHeader>
             <CardContent className="p-6">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Client Collection</span>
-                    <span className="font-medium">{activeClients.length} / {Math.max(activeClients.length + 10, 50)} clients</span>
+              <div className="space-y-6">
+                {/* Main Goal Progress */}
+                <div className="text-center space-y-3">
+                  <div className="flex items-center justify-center">
+                    <CapacityGauge
+                      value={Math.min((totalTiresRecycled / 2600) * 100, 100)}
+                      size={120}
+                      strokeWidth={12}
+                      animateOnMount
+                    />
                   </div>
-                  <div className="w-full bg-secondary rounded-full h-2">
-                    <div 
-                      className="bg-brand-recycling h-2 rounded-full" 
-                      style={{width: `${Math.min((activeClients.length / Math.max(activeClients.length + 10, 50)) * 100, 100)}%`}}
-                    ></div>
+                  <div className="space-y-1">
+                    <div className="text-3xl font-bold text-brand-recycling">
+                      {totalTiresRecycled.toLocaleString()}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      of 2,600 PTEs goal
+                    </div>
+                    <div className="text-lg font-semibold">
+                      {2600 - totalTiresRecycled > 0 ? 
+                        `${(2600 - totalTiresRecycled).toLocaleString()} remaining` : 
+                        '🎯 Goal achieved!'
+                      }
+                    </div>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Revenue Target</span>
-                    <span className="font-medium">${(totalRevenue / 1000).toFixed(0)}K / $85K</span>
+
+                {/* Additional Metrics */}
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/10">
+                  <div className="text-center space-y-1">
+                    <div className="text-2xl font-bold text-brand-primary">
+                      {totalTiresRecycled > 0 ? Math.round(totalTiresRecycled / todayPickups.length) || 0 : 0}
+                    </div>
+                    <div className="text-xs text-muted-foreground">Avg PTEs/Pickup</div>
                   </div>
-                  <div className="w-full bg-secondary rounded-full h-2">
-                    <div 
-                      className="bg-brand-primary h-2 rounded-full" 
-                      style={{width: `${Math.min((totalRevenue / 85000) * 100, 100)}%`}}
-                    ></div>
+                  <div className="text-center space-y-1">
+                    <div className="text-2xl font-bold text-brand-secondary">
+                      {((totalTiresRecycled / 2600) * 100).toFixed(1)}%
+                    </div>
+                    <div className="text-xs text-muted-foreground">Goal Progress</div>
                   </div>
                 </div>
               </div>
