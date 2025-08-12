@@ -25,19 +25,38 @@ interface MonthlyPerformanceTableProps {
 }
 
 export function MonthlyPerformanceTable({ monthlyData }: MonthlyPerformanceTableProps) {
-  // Calculate performance percentiles for color coding
-  const maxRevenue = Math.max(...monthlyData.map(m => m.revenue));
-  const maxPickups = Math.max(...monthlyData.map(m => m.pickups));
-  const avgRevenue = monthlyData.reduce((sum, m) => sum + m.revenue, 0) / monthlyData.length;
+  // Add safety checks for empty or invalid data
+  if (!monthlyData || monthlyData.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        No monthly data available
+      </div>
+    );
+  }
+
+  // Calculate performance percentiles for color coding with safety checks
+  const revenues = monthlyData.map(m => m.revenue || 0);
+  const pickups = monthlyData.map(m => m.pickups || 0);
+  
+  const maxRevenue = Math.max(...revenues);
+  const maxPickups = Math.max(...pickups);
+  const avgRevenue = revenues.reduce((sum, rev) => sum + rev, 0) / revenues.length;
   
   // Sort months by revenue performance for ranking
-  const sortedMonths = [...monthlyData].sort((a, b) => b.revenue - a.revenue);
+  const sortedMonths = [...monthlyData].sort((a, b) => (b.revenue || 0) - (a.revenue || 0));
   
   const getPerformanceScore = (month: MonthlyData) => {
-    // Combine revenue and pickup metrics for overall performance
-    const revenueScore = (month.revenue / maxRevenue) * 0.7;
-    const pickupScore = (month.pickups / maxPickups) * 0.3;
-    return Math.round((revenueScore + pickupScore) * 100);
+    // Add safety checks to prevent NaN
+    const revenue = month.revenue || 0;
+    const pickupCount = month.pickups || 0;
+    
+    if (maxRevenue === 0 && maxPickups === 0) return 0;
+    
+    const revenueScore = maxRevenue > 0 ? (revenue / maxRevenue) * 0.7 : 0;
+    const pickupScore = maxPickups > 0 ? (pickupCount / maxPickups) * 0.3 : 0;
+    
+    const score = Math.round((revenueScore + pickupScore) * 100);
+    return isNaN(score) ? 0 : score;
   };
 
   const getPerformanceColor = (score: number) => {
@@ -131,7 +150,7 @@ export function MonthlyPerformanceTable({ monthlyData }: MonthlyPerformanceTable
                     <TableCell className="text-right">
                       <div className="flex flex-col items-end">
                         <span className={`font-semibold ${isAboveAverage ? 'text-brand-primary' : 'text-muted-foreground'}`}>
-                          ${month.revenue.toLocaleString()}
+                          ${(month.revenue || 0).toLocaleString()}
                         </span>
                         <span className="text-xs text-muted-foreground">
                           {isAboveAverage ? '↗ Above avg' : '↘ Below avg'}
@@ -141,13 +160,13 @@ export function MonthlyPerformanceTable({ monthlyData }: MonthlyPerformanceTable
                     
                     <TableCell className="text-right">
                       <span className="font-medium text-brand-secondary">
-                        {month.pickups}
+                        {month.pickups || 0}
                       </span>
                     </TableCell>
                     
                     <TableCell className="text-right">
                       <span className="font-medium text-brand-recycling">
-                        {month.ptes.toLocaleString()}
+                        {(month.ptes || 0).toLocaleString()}
                       </span>
                     </TableCell>
                   </motion.tr>

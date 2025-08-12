@@ -41,21 +41,24 @@ export function CapacityGauge({
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
   const strokeDasharray = circumference;
-  const strokeDashoffset = circumference - (displayValue / 100) * circumference;
+  
+  // Add safety check to prevent NaN
+  const safeDisplayValue = isNaN(displayValue) ? 0 : Math.max(0, Math.min(100, displayValue));
+  const strokeDashoffset = circumference - (safeDisplayValue / 100) * circumference;
 
   const getColorClass = () => {
-    if (displayValue >= 80) return "stroke-emerald-500";
-    if (displayValue >= 60) return "stroke-green-500"; 
-    if (displayValue >= 40) return "stroke-yellow-500";
-    if (displayValue >= 20) return "stroke-orange-500";
+    if (safeDisplayValue >= 80) return "stroke-emerald-500";
+    if (safeDisplayValue >= 60) return "stroke-green-500"; 
+    if (safeDisplayValue >= 40) return "stroke-yellow-500";
+    if (safeDisplayValue >= 20) return "stroke-orange-500";
     return "stroke-red-500";
   };
 
   const getGlowClass = () => {
-    if (displayValue >= 80) return "drop-shadow-[0_0_6px_rgba(16,185,129,0.4)]";
-    if (displayValue >= 60) return "drop-shadow-[0_0_6px_rgba(34,197,94,0.4)]"; 
-    if (displayValue >= 40) return "drop-shadow-[0_0_6px_rgba(234,179,8,0.4)]";
-    if (displayValue >= 20) return "drop-shadow-[0_0_6px_rgba(249,115,22,0.4)]";
+    if (safeDisplayValue >= 80) return "drop-shadow-[0_0_6px_rgba(16,185,129,0.4)]";
+    if (safeDisplayValue >= 60) return "drop-shadow-[0_0_6px_rgba(34,197,94,0.4)]"; 
+    if (safeDisplayValue >= 40) return "drop-shadow-[0_0_6px_rgba(234,179,8,0.4)]";
+    if (safeDisplayValue >= 20) return "drop-shadow-[0_0_6px_rgba(249,115,22,0.4)]";
     return "drop-shadow-[0_0_6px_rgba(239,68,68,0.4)]";
   };
 
@@ -102,7 +105,7 @@ export function CapacityGauge({
               size >= 80 ? "text-lg" : "text-sm"
             )}
           >
-            {Math.round(displayValue)}%
+            {Math.round(safeDisplayValue)}%
           </span>
         </div>
       </div>
