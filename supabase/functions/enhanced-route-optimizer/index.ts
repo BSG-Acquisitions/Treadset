@@ -171,12 +171,16 @@ function calculateRouteEfficiency(route: OptimizedRoute): number {
 }
 
 Deno.serve(async (req) => {
+  console.log('Enhanced route optimizer function called');
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('Handling CORS preflight request');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    console.log('Creating Supabase client');
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -184,7 +188,10 @@ Deno.serve(async (req) => {
 
     const mapboxToken = Deno.env.get('MAPBOX_ACCESS_TOKEN');
     
-    const { date, vehicleId, optimize = true } = await req.json();
+    const requestBody = await req.json();
+    console.log('Request body received:', requestBody);
+    
+    const { date, vehicleId, optimize = true } = requestBody;
     console.log('Enhanced route optimization request:', { date, vehicleId, optimize });
 
     // Get assignments for the specified date

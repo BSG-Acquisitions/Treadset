@@ -79,7 +79,14 @@ export default function EnhancedRoutesToday() {
   const optimizeRoutes = async () => {
     setIsOptimizing(true);
     try {
-      const { data, error } = await supabase.functions.invoke('enhanced-route-optimizer', {
+      console.log(`Calling enhanced-route-optimizer for date: ${selectedDate}`);
+      
+      // Add timeout to prevent infinite loading
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Request timeout')), 30000)
+      );
+      
+      const optimizePromise = supabase.functions.invoke('enhanced-route-optimizer', {
         body: {
           date: selectedDate,
           vehicleId: selectedVehicle === 'all' ? null : selectedVehicle,
@@ -87,8 +94,12 @@ export default function EnhancedRoutesToday() {
         }
       });
 
+      const result = await Promise.race([optimizePromise, timeoutPromise]) as any;
+      const { data, error } = result;
+
       if (error) throw error;
       
+      console.log('Route optimization response:', data);
       setOptimizedRoutes(data.routes || []);
       toast({
         title: "Routes Optimized",
@@ -98,9 +109,11 @@ export default function EnhancedRoutesToday() {
       console.error('Route optimization error:', error);
       toast({
         title: "Optimization Error", 
-        description: "Failed to optimize routes. Using default order.",
+        description: `Failed to optimize routes: ${error.message}`,
         variant: "destructive"
       });
+      // Set empty routes on error to stop loading state
+      setOptimizedRoutes([]);
     } finally {
       setIsOptimizing(false);
     }
