@@ -268,6 +268,8 @@ Deno.serve(async (req) => {
         const distance = haversineDistance(currentLocation, stop.coordinates);
         const driveTime = calculateDriveTime(distance);
         
+        console.log(`Distance from ${JSON.stringify(currentLocation)} to ${JSON.stringify(stop.coordinates)}: ${distance.toFixed(2)} miles`);
+        
         totalDistance += distance;
         totalTime += driveTime + stop.serviceTimeMinutes;
         currentLocation = stop.coordinates;
@@ -285,7 +287,7 @@ Deno.serve(async (req) => {
       }
       
       // Calculate start and end times for the selected date
-      const routeDate = new Date(date + 'T00:00:00');
+      const routeDate = new Date(date);
       const startTime = new Date(routeDate);
       startTime.setHours(WORK_START_HOUR, WORK_START_MINUTE, 0, 0);
       
