@@ -156,7 +156,8 @@ Deno.serve(async (req) => {
         phone: row.phone?.trim() || null,
         notes: row.notes?.trim() || null,
         tags: tags.length > 0 ? tags : null,
-        pricing_tier_id: pricingTierId
+        pricing_tier_id: pricingTierId,
+        organization_id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73'
       };
 
       processedData.clients.push({ ...clientData, _rowNum: rowNum });
@@ -248,7 +249,8 @@ Deno.serve(async (req) => {
       if (clientId) {
         const locationWithClientId = {
           ...cleanLocationData,
-          client_id: clientId
+          client_id: clientId,
+          organization_id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73'
         };
 
         // Check if location exists for this client
