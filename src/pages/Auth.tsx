@@ -12,6 +12,7 @@ import { Loader2 } from 'lucide-react';
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>('');
+  const [success, setSuccess] = useState<string>('');
   const [activeTab, setActiveTab] = useState('login');
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
@@ -35,6 +36,7 @@ export default function Auth() {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+    setSuccess('');
 
     const { error } = await signIn(email, password);
     
@@ -51,13 +53,14 @@ export default function Auth() {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+    setSuccess('');
 
     const { error } = await signUp(email, password, firstName, lastName);
     
     if (error) {
       setError(error.message || 'An error occurred during sign up');
     } else {
-      setError('');
+      setSuccess('Account created successfully! Please check your email to confirm your account before signing in.');
       setActiveTab('login');
       // Clear form
       setEmail('');
@@ -121,6 +124,12 @@ export default function Auth() {
                       <AlertDescription>{error}</AlertDescription>
                     </Alert>
                   )}
+                  
+                  {success && (
+                    <Alert>
+                      <AlertDescription>{success}</AlertDescription>
+                    </Alert>
+                  )}
 
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -178,6 +187,12 @@ export default function Auth() {
                   {error && (
                     <Alert variant="destructive">
                       <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  {success && (
+                    <Alert>
+                      <AlertDescription>{success}</AlertDescription>
                     </Alert>
                   )}
 
