@@ -45,8 +45,8 @@ interface TruckRoute {
   geometry: any;
 }
 
-// BSG Tire Recycling depot coordinates (Austin, TX)
-const DEPOT: Coordinates = { lat: 30.2672, lng: -97.7431 };
+// BSG Tire Recycling depot coordinates (Detroit, MI)
+const DEPOT: Coordinates = { lat: 42.3314, lng: -83.0458 };
 
 // Company operating hours
 const WORK_START_HOUR = 8; // 8:30 AM
