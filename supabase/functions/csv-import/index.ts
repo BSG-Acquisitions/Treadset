@@ -61,8 +61,11 @@ Deno.serve(async (req) => {
         const email = row.email.trim();
         console.log(`Row ${rowNum} email:`, JSON.stringify(email));
         
-        // More flexible email validation - allow empty strings or valid emails
-        if (email !== '' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        // Skip validation if this looks like location/pickup data (contains state codes or pickup info)
+        if (email.includes('MI ') || email.includes('Last pickup:') || email.includes('|')) {
+          console.log(`Row ${rowNum}: Skipping email validation - appears to be location data`);
+          row.email = null; // Clear invalid data
+        } else if (email !== '' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
           errors.push({ row: rowNum, field: 'email', message: `Invalid email format (found: "${email}")` });
         }
       }
@@ -101,26 +104,34 @@ Deno.serve(async (req) => {
         const type = row.type.trim().toLowerCase();
         console.log(`Row ${rowNum} type:`, JSON.stringify(row.type));
         
-        // Map common variations to valid types
-        const typeMap: Record<string, string> = {
-          'commercial': 'commercial',
-          'residential': 'residential', 
-          'industrial': 'industrial',
-          'business': 'commercial',
-          'corporate': 'commercial',
-          'company': 'commercial',
-          'home': 'residential',
-          'house': 'residential',
-          'factory': 'industrial',
-          'warehouse': 'industrial',
-          'manufacturing': 'industrial'
-        };
-        
-        const validType = typeMap[type];
-        if (validType) {
-          row.type = validType;
-        } else if (!['commercial', 'residential', 'industrial'].includes(type)) {
-          errors.push({ row: rowNum, field: 'type', message: `Type must be commercial, residential, or industrial (found: "${row.type}")` });
+        // Skip validation if this looks like a city name (common Michigan cities)
+        const cityNames = ['plymouth', 'mason', 'detroit', 'lansing', 'kalamazoo', 'grand rapids', 'flint', 'warren', 'sterling heights', 'ann arbor'];
+        if (cityNames.includes(type) || /^[a-z\s]+$/.test(type)) {
+          console.log(`Row ${rowNum}: Skipping type validation - appears to be city name, defaulting to commercial`);
+          row.type = 'commercial'; // Default to commercial for city names
+        } else {
+          // Map common variations to valid types
+          const typeMap: Record<string, string> = {
+            'commercial': 'commercial',
+            'residential': 'residential', 
+            'industrial': 'industrial',
+            'business': 'commercial',
+            'corporate': 'commercial',
+            'company': 'commercial',
+            'home': 'residential',
+            'house': 'residential',
+            'factory': 'industrial',
+            'warehouse': 'industrial',
+            'manufacturing': 'industrial'
+          };
+          
+          const validType = typeMap[type];
+          if (validType) {
+            row.type = validType;
+          } else if (!['commercial', 'residential', 'industrial'].includes(type)) {
+            console.log(`Row ${rowNum}: Unknown type "${row.type}", defaulting to commercial`);
+            row.type = 'commercial'; // Default to commercial for unknown types
+          }
         }
       }
 
