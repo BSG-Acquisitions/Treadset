@@ -5,11 +5,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { DollarSign, Settings, Calculator, AlertTriangle, Users, MapPin } from 'lucide-react';
-
-// Mock organization ID - in real app this would come from context/auth
-const ORGANIZATION_ID = '550e8400-e29b-41d4-a716-446655440000';
+import { useAuth } from '@/contexts/AuthContext';
 
 const PricingAdmin: React.FC = () => {
+  const { user } = useAuth();
+  
+  // Use the real BSG organization ID
+  const organizationId = 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73';
+
   return (
     <div className="container mx-auto py-8 space-y-8">
       {/* Header */}
@@ -86,7 +89,7 @@ const PricingAdmin: React.FC = () => {
         </TabsList>
 
         <TabsContent value="matrix" className="space-y-6">
-          <PricingMatrixTable organizationId={ORGANIZATION_ID} />
+          <PricingMatrixTable organizationId={organizationId} />
         </TabsContent>
 
         <TabsContent value="surcharges" className="space-y-6">
@@ -173,7 +176,7 @@ const PricingAdmin: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="simulator" className="space-y-6">
-          <PricingSimulator organizationId={ORGANIZATION_ID} />
+          <PricingSimulator organizationId={organizationId} />
         </TabsContent>
 
         <TabsContent value="suggestions" className="space-y-6">
