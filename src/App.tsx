@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import ClientDetail from "./pages/ClientDetail";
+import Clients from "./pages/Clients";
 import RoutesToday from "./pages/RoutesToday";
 import RoutesPrintToday from "./pages/RoutesPrintToday";
 import Book from "./pages/Book";
@@ -20,6 +21,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/clients" element={<Clients />} />
           <Route path="/clients/:id" element={<ClientDetail />} />
           <Route path="/routes/today" element={<RoutesToday />} />
           <Route path="/routes/print/today" element={<RoutesPrintToday />} />
