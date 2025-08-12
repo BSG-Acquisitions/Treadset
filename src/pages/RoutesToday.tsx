@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { CapacityGauge } from "@/components/CapacityGauge";
 import { Truck, MapPin, Clock, Package, Play, CheckCircle } from "lucide-react";
 import { useState } from "react";
+import { TopNav } from "@/components/TopNav";
 
 export default function RoutesToday() {
   useEffect(() => {
@@ -57,23 +58,26 @@ export default function RoutesToday() {
 
   if (isLoading) {
     return (
-      <main className="min-h-screen bg-background">
-        <header className="container py-6">
+      <div className="min-h-screen bg-background">
+        <TopNav />
+        <main className="container py-6">
           <h1 className="text-2xl font-semibold text-foreground">Today's Routes</h1>
           <p className="text-sm text-muted-foreground">Loading...</p>
-        </header>
-      </main>
+        </main>
+      </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-background">
-      <header className="container py-6">
-        <h1 className="text-2xl font-semibold text-foreground">Today's Routes</h1>
-        <p className="text-sm text-muted-foreground">
-          {Object.keys(vehicleRoutes).length} vehicles with {assignments.length} scheduled pickups
-        </p>
-      </header>
+    <div className="min-h-screen bg-background">
+      <TopNav />
+      <main>
+        <header className="container py-6">
+          <h1 className="text-2xl font-semibold text-foreground">Today's Routes</h1>
+          <p className="text-sm text-muted-foreground">
+            {Object.keys(vehicleRoutes).length} vehicles with {assignments.length} scheduled pickups
+          </p>
+        </header>
 
       <div className="container pb-12 space-y-6">
         {Object.keys(vehicleRoutes).length === 0 ? (
@@ -193,11 +197,12 @@ export default function RoutesToday() {
         )}
       </div>
       
-      <CompleteAssignmentDialog
-        open={!!completingAssignment}
-        onOpenChange={(open) => !open && setCompletingAssignment(null)}
-        assignment={completingAssignment}
-      />
-    </main>
+        <CompleteAssignmentDialog
+          open={!!completingAssignment}
+          onOpenChange={(open) => !open && setCompletingAssignment(null)}
+          assignment={completingAssignment}
+        />
+      </main>
+    </div>
   );
 }

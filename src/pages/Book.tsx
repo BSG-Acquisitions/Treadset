@@ -13,6 +13,7 @@ import { PlacesAutocomplete } from "@/components/PlacesAutocomplete";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar, MapPin, Phone, Mail, Building } from "lucide-react";
+import { TopNav } from "@/components/TopNav";
 
 const publicBookingSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -101,16 +102,19 @@ export default function Book() {
   };
 
   return (
-    <main className="min-h-screen bg-background">
-      <header className="container py-12 text-center">
-        <h1 className="text-3xl font-bold text-foreground mb-2">Schedule a Tire Pickup</h1>
-        <p className="text-lg text-muted-foreground">
-          Get your tires collected with our optimized route planning
-        </p>
-      </header>
+    <div className="min-h-screen bg-background">
+      <TopNav />
       
-      <div className="container pb-12">
-        <div className="max-w-2xl mx-auto">
+      <main>
+        <header className="container py-12 text-center">
+          <h1 className="text-3xl font-bold text-foreground mb-2">Schedule a Tire Pickup</h1>
+          <p className="text-lg text-muted-foreground">
+            Get your tires collected with our optimized route planning
+          </p>
+        </header>
+        
+        <div className="container pb-12">
+          <div className="max-w-2xl mx-auto">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -355,8 +359,9 @@ export default function Book() {
               </Form>
             </CardContent>
           </Card>
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }

@@ -3,6 +3,7 @@ import { useAssignments } from "@/hooks/usePickups";
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
 import { formatTime, formatDate } from "@/lib/formatters";
+import { TopNav } from "@/components/TopNav";
 
 export default function RoutesPrintToday() {
   useEffect(() => {
@@ -38,18 +39,23 @@ export default function RoutesPrintToday() {
 
   if (isLoading) {
     return (
-      <div className="p-8 text-center">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-muted rounded w-48 mx-auto"></div>
-          <div className="h-4 bg-muted rounded w-32 mx-auto"></div>
+      <div className="min-h-screen bg-background">
+        <TopNav />
+        <div className="p-8 text-center">
+          <div className="animate-pulse space-y-4">
+            <div className="h-8 bg-muted rounded w-48 mx-auto"></div>
+            <div className="h-4 bg-muted rounded w-32 mx-auto"></div>
+          </div>
+          <p className="mt-4 text-muted-foreground">Loading routes...</p>
         </div>
-        <p className="mt-4 text-muted-foreground">Loading routes...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-background">
+      <TopNav />
+      <div className="min-h-screen">
       {/* Screen-only controls */}
       <div className="print-hidden bg-background border-b border-border p-6">
         <div className="max-w-4xl mx-auto flex justify-between items-center">
@@ -227,6 +233,7 @@ export default function RoutesPrintToday() {
             </div>
           ))
         )}
+      </div>
       </div>
     </div>
   );

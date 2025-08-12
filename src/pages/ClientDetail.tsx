@@ -10,6 +10,7 @@ import { CapacityGauge } from "@/components/CapacityGauge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DollarSign, FileText, Calendar, CreditCard, MapPin } from "lucide-react";
+import { TopNav } from "@/components/TopNav";
 
 export default function ClientDetail() {
   const { id } = useParams();
@@ -24,22 +25,30 @@ export default function ClientDetail() {
 
   if (isLoading) {
     return (
-      <main className="container py-10">
-        <p className="text-muted-foreground">Loading...</p>
-      </main>
+      <div className="min-h-screen bg-background">
+        <TopNav />
+        <main className="container py-10">
+          <p className="text-muted-foreground">Loading...</p>
+        </main>
+      </div>
     );
   }
 
   if (!client) {
     return (
-      <main className="container py-10">
-        <p className="text-muted-foreground">Client not found.</p>
-      </main>
+      <div className="min-h-screen bg-background">
+        <TopNav />
+        <main className="container py-10">
+          <p className="text-muted-foreground">Client not found.</p>
+        </main>
+      </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
+      <TopNav />
+      <main>
       <header className="container py-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">{client.company_name}</h1>
@@ -201,6 +210,7 @@ export default function ClientDetail() {
           </CardContent>
         </Card>
       </section>
-    </main>
+      </main>
+    </div>
   );
 }

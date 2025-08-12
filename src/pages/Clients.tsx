@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Upload, Download } from "lucide-react";
+import { TopNav } from "@/components/TopNav";
 
 type Client = {
   id: string;
@@ -141,33 +142,37 @@ export default function Clients() {
   );
 
   return (
-    <main className="min-h-screen bg-background">
-      <header className="container py-6">
-        <h1 className="text-2xl font-semibold text-foreground">Clients</h1>
-        <p className="text-sm text-muted-foreground">
-          Manage your client database and track their business metrics.
-        </p>
-      </header>
+    <div className="min-h-screen bg-background">
+      <TopNav />
+      
+      <main className="container py-6">
+        <header className="mb-6">
+          <h1 className="text-2xl font-semibold text-foreground">Clients</h1>
+          <p className="text-sm text-muted-foreground">
+            Manage your client database and track their business metrics.
+          </p>
+        </header>
 
-      <div className="container pb-12">
-        <DataTable
-          data={clientsData?.data || []}
-          columns={columns}
-          totalCount={clientsData?.totalCount || 0}
-          currentPage={tableState.state.page}
-          pageSize={tableState.state.pageSize}
-          onPageChange={tableState.setPage}
-          onPageSizeChange={tableState.setPageSize}
-          search={tableState.state.search}
-          onSearchChange={tableState.setSearch}
-          sortBy={tableState.state.sortBy}
-          sortOrder={tableState.state.sortOrder}
-          onSortChange={tableState.setSort}
-          loading={isLoading}
-          emptyMessage="No clients found."
-          actions={actions}
-        />
-      </div>
-    </main>
+        <div className="container pb-12">
+          <DataTable
+            data={clientsData?.data || []}
+            columns={columns}
+            totalCount={clientsData?.totalCount || 0}
+            currentPage={tableState.state.page}
+            pageSize={tableState.state.pageSize}
+            onPageChange={tableState.setPage}
+            onPageSizeChange={tableState.setPageSize}
+            search={tableState.state.search}
+            onSearchChange={tableState.setSearch}
+            sortBy={tableState.state.sortBy}
+            sortOrder={tableState.state.sortOrder}
+            onSortChange={tableState.setSort}
+            loading={isLoading}
+            emptyMessage="No clients found."
+            actions={actions}
+          />
+        </div>
+      </main>
+    </div>
   );
 }
