@@ -10,6 +10,7 @@ import Clients from "./pages/Clients";
 import RoutesToday from "./pages/RoutesToday";
 import RoutesPrintToday from "./pages/RoutesPrintToday";
 import Book from "./pages/Book";
+import BookingConfirmation from "./pages/BookingConfirmation";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/routes/today" element={<RoutesToday />} />
           <Route path="/routes/print/today" element={<RoutesPrintToday />} />
           <Route path="/book" element={<Book />} />
+          <Route path="/booking-confirmation" element={<BookingConfirmation />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

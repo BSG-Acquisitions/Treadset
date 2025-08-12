@@ -2,270 +2,360 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useClients } from "@/hooks/useClients";
-import { useLocations } from "@/hooks/useLocations";
-import { useSchedulePickup } from "@/hooks/usePickups";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, Truck } from "lucide-react";
+import { PlacesAutocomplete } from "@/components/PlacesAutocomplete";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { Calendar, MapPin, Phone, Mail, Building } from "lucide-react";
 
-const schedulePickupSchema = z.object({
-  clientId: z.string().min(1, "Client is required"),
-  locationId: z.string().optional(),
-  pickupDate: z.string().min(1, "Pickup date is required"),
+const publicBookingSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Valid email is required"),
+  phone: z.string().optional(),
+  company: z.string().min(1, "Company name is required"),
+  address: z.string().min(1, "Address is required"),
   pteCount: z.number().int().min(0, "PTE count must be 0 or greater"),
   otrCount: z.number().int().min(0, "OTR count must be 0 or greater"),
   tractorCount: z.number().int().min(0, "Tractor count must be 0 or greater"),
+  preferredDate: z.string().min(1, "Preferred date is required"),
   preferredWindow: z.enum(["AM", "PM", "Any"]),
   notes: z.string().optional(),
 });
 
-type SchedulePickupData = z.infer<typeof schedulePickupSchema>;
+type PublicBookingData = z.infer<typeof publicBookingSchema>;
 
 export default function Book() {
   useEffect(() => {
     document.title = "Schedule Pickup – BSG";
   }, []);
 
-  const [selectedClientId, setSelectedClientId] = useState<string>("");
-  const [routeOptions, setRouteOptions] = useState<any[]>([]);
-  const [isScheduling, setIsScheduling] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
-  const { data: clientsData } = useClients({ limit: 100 });
-  const { data: locations = [] } = useLocations(selectedClientId);
-  const schedulePickup = useSchedulePickup();
-
-  const clients = clientsData?.data || [];
-
-  const form = useForm<SchedulePickupData>({
-    resolver: zodResolver(schedulePickupSchema),
+  const form = useForm<PublicBookingData>({
+    resolver: zodResolver(publicBookingSchema),
     defaultValues: {
-      clientId: "",
-      locationId: "",
-      pickupDate: "",
+      name: "",
+      email: "",
+      phone: "",
+      company: "",
+      address: "",
       pteCount: 0,
       otrCount: 0,
       tractorCount: 0,
+      preferredDate: "",
       preferredWindow: "Any",
       notes: "",
     },
   });
 
-  const handleSubmit = async (data: SchedulePickupData) => {
+  const handleSubmit = async (data: PublicBookingData) => {
     try {
-      setIsScheduling(true);
-      const result = await schedulePickup.mutateAsync({
-        clientId: data.clientId,
-        locationId: data.locationId || undefined,
-        pickupDate: data.pickupDate,
-        pteCount: data.pteCount,
-        otrCount: data.otrCount,
-        tractorCount: data.tractorCount,
-        preferredWindow: data.preferredWindow,
-        notes: data.notes,
-      });
+      setIsSubmitting(true);
       
-      setRouteOptions(result.options);
-      form.reset();
-    } catch (error) {
-      console.error('Scheduling error:', error);
-    } finally {
-      setIsScheduling(false);
-    }
-  };
+      // Calculate minimum total count
+      const totalCount = data.pteCount + data.otrCount + data.tractorCount;
+      if (totalCount === 0) {
+        toast({
+          title: "Error",
+          description: "Please specify at least one tire to pick up",
+          variant: "destructive"
+        });
+        return;
+      }
 
-  const handleClientChange = (clientId: string) => {
-    setSelectedClientId(clientId);
-    form.setValue("clientId", clientId);
-    form.setValue("locationId", "");
+      const { data: result, error } = await supabase.functions.invoke('public-booking', {
+        body: data
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (result.success) {
+        // Navigate to confirmation page with data
+        const confirmationParams = new URLSearchParams({
+          data: encodeURIComponent(JSON.stringify(result))
+        });
+        navigate(`/booking-confirmation?${confirmationParams.toString()}`);
+      } else {
+        throw new Error(result.error || 'Booking failed');
+      }
+    } catch (error) {
+      console.error('Booking error:', error);
+      toast({
+        title: "Booking Error",
+        description: error.message || "Failed to schedule pickup. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <main className="min-h-screen bg-background">
-      <header className="container py-6">
-        <h1 className="text-2xl font-semibold text-foreground">Schedule Pickup</h1>
-        <p className="text-sm text-muted-foreground">Schedule a tire pickup with route optimization.</p>
+      <header className="container py-12 text-center">
+        <h1 className="text-3xl font-bold text-foreground mb-2">Schedule a Tire Pickup</h1>
+        <p className="text-lg text-muted-foreground">
+          Get your tires collected with our optimized route planning
+        </p>
       </header>
       
-      <div className="container pb-12 grid lg:grid-cols-2 gap-8">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Pickup Details
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-                <FormField
-                  control={form.control}
-                  name="clientId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Client *</FormLabel>
-                      <Select onValueChange={handleClientChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a client" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {clients.map((client) => (
-                            <SelectItem key={client.id} value={client.id}>
-                              {client.company_name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="pickupDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Pickup Date *</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} min={new Date().toISOString().split('T')[0]} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="grid grid-cols-3 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="pteCount"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>PTE Count</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            min="0"
-                            {...field}
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="otrCount"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>OTR Count</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            min="0"
-                            {...field}
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="tractorCount"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Tractor Count</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            min="0"
-                            {...field}
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="preferredWindow"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Preferred Time Window</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Any">Any Time</SelectItem>
-                          <SelectItem value="AM">Morning (AM)</SelectItem>
-                          <SelectItem value="PM">Afternoon (PM)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <Button type="submit" disabled={isScheduling} className="w-full">
-                  {isScheduling ? "Scheduling..." : "Schedule Pickup"}
-                </Button>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
-
-        {routeOptions.length > 0 && (
+      <div className="container pb-12">
+        <div className="max-w-2xl mx-auto">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Truck className="h-5 w-5" />
-                Available Slots
+                <Calendar className="h-5 w-5" />
+                Pickup Information
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {routeOptions.map((option, index) => (
-                  <div key={`${option.vehicleId}-${index}`} className="p-4 border rounded-lg">
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <h3 className="font-medium">{option.vehicleName}</h3>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Clock className="h-4 w-4" />
-                          {new Date(option.eta).toLocaleString()}
-                        </div>
-                      </div>
-                      <Badge variant={index === 0 ? "default" : "secondary"}>
-                        {index === 0 ? "Selected" : option.windowLabel}
-                      </Badge>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+                  {/* Contact Information */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium flex items-center gap-2">
+                      <Building className="h-5 w-5" />
+                      Contact Details
+                    </h3>
+                    
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Full Name *</FormLabel>
+                            <FormControl>
+                              <Input placeholder="John Doe" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email Address *</FormLabel>
+                            <FormControl>
+                              <Input type="email" placeholder="john@company.com" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </div>
-                    <div className="text-sm text-muted-foreground">
-                      <p>Remaining capacity: {option.remainingCapacity} PTE</p>
-                      <p>Added travel time: {option.addedTravelTimeMinutes} min</p>
+
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="phone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Phone Number</FormLabel>
+                            <FormControl>
+                              <Input type="tel" placeholder="(555) 123-4567" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="company"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Company Name *</FormLabel>
+                            <FormControl>
+                              <Input placeholder="ABC Trucking Co." {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </div>
                   </div>
-                ))}
-              </div>
+
+                  {/* Location Information */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium flex items-center gap-2">
+                      <MapPin className="h-5 w-5" />
+                      Pickup Location
+                    </h3>
+
+                    <FormField
+                      control={form.control}
+                      name="address"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Address *</FormLabel>
+                          <FormControl>
+                            <PlacesAutocomplete
+                              value={field.value}
+                              onChange={field.onChange}
+                              placeholder="Enter pickup address"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* Pickup Details */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Tire Details</h3>
+                    
+                    <div className="grid grid-cols-3 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="pteCount"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>PTE Count</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                min="0"
+                                placeholder="0"
+                                {...field}
+                                onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="otrCount"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>OTR Count</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                min="0"
+                                placeholder="0"
+                                {...field}
+                                onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="tractorCount"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Tractor Count</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                min="0"
+                                placeholder="0"
+                                {...field}
+                                onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Schedule Preferences */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Schedule Preferences</h3>
+                    
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="preferredDate"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Preferred Date *</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="date" 
+                                {...field} 
+                                min={new Date().toISOString().split('T')[0]} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="preferredWindow"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Preferred Time Window</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="Any">Any Time</SelectItem>
+                                <SelectItem value="AM">Morning (AM)</SelectItem>
+                                <SelectItem value="PM">Afternoon (PM)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Additional Notes */}
+                  <FormField
+                    control={form.control}
+                    name="notes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Additional Notes</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Any special instructions or access notes..."
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Button type="submit" disabled={isSubmitting} className="w-full">
+                    {isSubmitting ? "Scheduling Pickup..." : "Schedule Pickup"}
+                  </Button>
+                </form>
+              </Form>
             </CardContent>
           </Card>
-        )}
+        </div>
       </div>
     </main>
   );
