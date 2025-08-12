@@ -14,11 +14,67 @@ export type Database = {
   }
   public: {
     Tables: {
+      assignments: {
+        Row: {
+          actual_arrival: string | null
+          created_at: string
+          estimated_arrival: string | null
+          id: string
+          pickup_id: string
+          scheduled_date: string
+          sequence_order: number | null
+          status: string | null
+          updated_at: string
+          vehicle_id: string
+        }
+        Insert: {
+          actual_arrival?: string | null
+          created_at?: string
+          estimated_arrival?: string | null
+          id?: string
+          pickup_id: string
+          scheduled_date: string
+          sequence_order?: number | null
+          status?: string | null
+          updated_at?: string
+          vehicle_id: string
+        }
+        Update: {
+          actual_arrival?: string | null
+          created_at?: string
+          estimated_arrival?: string | null
+          id?: string
+          pickup_id?: string
+          scheduled_date?: string
+          sequence_order?: number | null
+          status?: string | null
+          updated_at?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignments_pickup_id_fkey"
+            columns: ["pickup_id"]
+            isOneToOne: false
+            referencedRelation: "pickups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignments_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           company_name: string
           contact_name: string | null
           created_at: string
+          depot_lat: number | null
+          depot_lng: number | null
           email: string | null
           id: string
           is_active: boolean | null
@@ -37,6 +93,8 @@ export type Database = {
           company_name: string
           contact_name?: string | null
           created_at?: string
+          depot_lat?: number | null
+          depot_lng?: number | null
           email?: string | null
           id?: string
           is_active?: boolean | null
@@ -55,6 +113,8 @@ export type Database = {
           company_name?: string
           contact_name?: string | null
           created_at?: string
+          depot_lat?: number | null
+          depot_lng?: number | null
           email?: string | null
           id?: string
           is_active?: boolean | null
@@ -132,6 +192,66 @@ export type Database = {
             columns: ["pricing_tier_id"]
             isOneToOne: false
             referencedRelation: "pricing_tiers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pickups: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          location_id: string | null
+          notes: string | null
+          otr_count: number | null
+          pickup_date: string
+          preferred_window: string | null
+          pte_count: number | null
+          status: string | null
+          tractor_count: number | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          location_id?: string | null
+          notes?: string | null
+          otr_count?: number | null
+          pickup_date: string
+          preferred_window?: string | null
+          pte_count?: number | null
+          status?: string | null
+          tractor_count?: number | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          location_id?: string | null
+          notes?: string | null
+          otr_count?: number | null
+          pickup_date?: string
+          preferred_window?: string | null
+          pte_count?: number | null
+          status?: string | null
+          tractor_count?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pickups_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pickups_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
             referencedColumns: ["id"]
           },
         ]
