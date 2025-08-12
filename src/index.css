@@ -102,4 +102,48 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground font-inter;
   }
+
+  /* Ensure proper focus visibility for accessibility */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-ring;
+  }
+
+  /* Remove default focus outline for mouse users */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  /* High contrast mode support */
+  @media (prefers-contrast: high) {
+    :root {
+      --border: 0 0% 20%;
+      --input: 0 0% 20%;
+    }
+
+    .dark {
+      --border: 0 0% 80%;
+      --input: 0 0% 80%;
+    }
+  }
+
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* Tabular numbers for consistent table display */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+  
+  /* Apply tabular numbers to table cells by default */
+  table td:has(> :is([data-numeric], .numeric)) {
+    font-variant-numeric: tabular-nums;
+  }
 }
