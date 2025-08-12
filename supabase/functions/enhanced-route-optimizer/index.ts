@@ -55,7 +55,7 @@ const WORK_END_HOUR = 16; // 4:30 PM
 const WORK_END_MINUTE = 30;
 
 // Driving parameters
-const AVERAGE_SPEED_KMH = 45; // Average speed considering traffic and stops
+const AVERAGE_SPEED_MPH = 28; // Average speed in miles per hour considering traffic and stops
 const SERVICE_TIME_PER_STOP = 15; // Minutes per pickup
 const BREAK_TIME = 30; // 30 minute lunch break
 const SETUP_TIME = 15; // Time to load/prep at depot
@@ -70,7 +70,7 @@ async function getTruckRoute(from: Coordinates, to: Coordinates, mapboxToken: st
     if (data.routes && data.routes.length > 0) {
       const route = data.routes[0];
       return {
-        distance: route.distance / 1000, // Convert to km
+        distance: (route.distance / 1000) * 0.621371, // Convert meters to miles
         duration: route.duration / 60, // Convert to minutes
         geometry: route.geometry
       };
@@ -84,7 +84,7 @@ async function getTruckRoute(from: Coordinates, to: Coordinates, mapboxToken: st
 }
 
 function haversineDistance(point1: Coordinates, point2: Coordinates): number {
-  const R = 6371; // Earth's radius in kilometers
+  const R = 3959; // Earth's radius in miles (changed from 6371 km)
   
   const dLat = toRadians(point2.lat - point1.lat);
   const dLng = toRadians(point2.lng - point1.lng);
@@ -95,7 +95,7 @@ function haversineDistance(point1: Coordinates, point2: Coordinates): number {
   
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   
-  return R * c;
+  return R * c; // Returns distance in miles
 }
 
 function toRadians(degrees: number): number {
@@ -107,7 +107,7 @@ function calculateDriveTime(distance: number): number {
   // - City driving vs highway
   // - Traffic patterns
   // - Truck limitations
-  const baseTime = (distance / AVERAGE_SPEED_KMH) * 60; // Minutes
+  const baseTime = (distance / AVERAGE_SPEED_MPH) * 60; // Minutes (distance is now in miles)
   
   // Add buffer for truck-specific delays
   const truckBuffer = baseTime * 0.15; // 15% buffer for truck routing

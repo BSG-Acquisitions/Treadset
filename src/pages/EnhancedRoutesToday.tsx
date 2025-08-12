@@ -187,7 +187,7 @@ export default function EnhancedRoutesToday() {
         <div class="route-info">
           <div>Start Time: ${format(startTime, 'h:mm a')}</div>
           <div>Estimated End: ${format(endTime, 'h:mm a')}</div>
-          <div>Total Distance: ${route.totalDistance.toFixed(1)} km</div>
+          <div>Total Distance: ${route.totalDistance.toFixed(1)} mi</div>
           <div>Efficiency: ${route.efficiency}%</div>
         </div>
         
@@ -407,7 +407,7 @@ export default function EnhancedRoutesToday() {
                               </span>
                               <span className="flex items-center gap-1">
                                 <Navigation className="h-3 w-3" />
-                                {route.totalDistance.toFixed(1)} km
+                                {route.totalDistance.toFixed(1)} mi
                               </span>
                               <span className="flex items-center gap-1">
                                 <MapPin className="h-3 w-3" />
