@@ -9,6 +9,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { Link, useLocation } from 'react-router-dom';
@@ -92,12 +97,59 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
         {/* Right side - Actions and user menu */}
         <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
           {/* Enhanced notifications */}
-          <Button variant="ghost" size="sm" className="relative hover:bg-brand-primary/10 transition-colors" aria-label="Notifications">
-            <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-brand-tire-black/70" />
-            <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 rounded-full p-0 text-xs bg-brand-accent">
-              3
-            </Badge>
-          </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="sm" className="relative hover:bg-brand-primary/10 transition-colors" aria-label="Notifications">
+                <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-brand-tire-black/70" />
+                <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 rounded-full p-0 text-xs bg-brand-accent">
+                  3
+                </Badge>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-0" align="end">
+              <div className="border-b border-border p-4">
+                <h3 className="font-semibold text-foreground">Notifications</h3>
+                <p className="text-sm text-muted-foreground">You have 3 unread notifications</p>
+              </div>
+              <div className="max-h-64 overflow-y-auto">
+                <div className="p-3 border-b border-border/50 hover:bg-muted/50 cursor-pointer">
+                  <div className="flex items-start gap-3">
+                    <div className="w-2 h-2 bg-brand-accent rounded-full mt-2 flex-shrink-0"></div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">New route assigned</p>
+                      <p className="text-xs text-muted-foreground">Route #1234 has been assigned to driver John</p>
+                      <p className="text-xs text-muted-foreground mt-1">2 minutes ago</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-3 border-b border-border/50 hover:bg-muted/50 cursor-pointer">
+                  <div className="flex items-start gap-3">
+                    <div className="w-2 h-2 bg-brand-accent rounded-full mt-2 flex-shrink-0"></div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Pickup completed</p>
+                      <p className="text-xs text-muted-foreground">Client pickup at 123 Main St completed successfully</p>
+                      <p className="text-xs text-muted-foreground mt-1">15 minutes ago</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-3 hover:bg-muted/50 cursor-pointer">
+                  <div className="flex items-start gap-3">
+                    <div className="w-2 h-2 bg-brand-accent rounded-full mt-2 flex-shrink-0"></div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Payment received</p>
+                      <p className="text-xs text-muted-foreground">Payment of $125.50 received from ABC Corp</p>
+                      <p className="text-xs text-muted-foreground mt-1">1 hour ago</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="border-t border-border p-3">
+                <Button variant="ghost" className="w-full text-sm">
+                  Mark all as read
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
 
           {/* Enhanced quick actions */}
           <Button variant="outline" size="sm" asChild className="border-brand-primary/30 text-brand-primary hover:bg-brand-primary/10 hidden sm:flex">
