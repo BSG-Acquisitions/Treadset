@@ -17,6 +17,7 @@ import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import Employees from "./pages/Employees";
 import ClientAnalytics from "./pages/ClientAnalytics";
+import Settings from "./pages/Settings";
 
 const queryClient = new QueryClient();
 
@@ -72,6 +73,11 @@ const App = () => (
             <Route path="/analytics" element={
               <ProtectedRoute roles={['admin', 'ops_manager']}>
                 <ClientAnalytics />
+              </ProtectedRoute>
+            } />
+            <Route path="/settings" element={
+              <ProtectedRoute>
+                <Settings />
               </ProtectedRoute>
             } />
             <Route path="/booking-confirmation" element={
