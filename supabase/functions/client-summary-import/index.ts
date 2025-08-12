@@ -141,9 +141,49 @@ serve(async (req) => {
         const totalWeightTons = parseFloat(row.total_weight_tons || row.weight_tons || row.tons || '0');
         const totalVolumeYards = parseFloat(row.total_volume_yards || row.volume_yards || row.yards || '0');
 
+        // Calculate revenue if missing (using organization default rates)
+        let computedRevenue = totalRevenue;
+        if (totalRevenue === 0 && totalPtes > 0) {
+          // Get organization default rates
+          const { data: orgSettings } = await supabase
+            .from('organization_settings')
+            .select('default_pte_rate, default_otr_rate, default_tractor_rate')
+            .limit(1);
+          
+          if (orgSettings && orgSettings.length > 0) {
+            const settings = orgSettings[0];
+            computedRevenue = 
+              (totalPtes * (settings.default_pte_rate || 25)) +
+              (totalOtr * (settings.default_otr_rate || 45)) +
+              (totalTractor * (settings.default_tractor_rate || 35));
+            console.log(`Computed revenue for ${clientName}: ${computedRevenue} (${totalPtes} PTEs at $${settings.default_pte_rate || 25})`);
+          }
+        }
+
         // Parse dates
         const firstPickupDate = row.first_pickup_date || row.first_pickup || null;
         const lastPickupDate = row.last_pickup_date || row.last_pickup || null;
+
+        // Check for existing record to detect duplicates
+        const { data: existingRecord } = await supabase
+          .from('client_summaries')
+          .select('total_pickups, total_ptes, total_revenue')
+          .eq('client_id', clientId)
+          .eq('year', year)
+          .eq('month', month || null)
+          .eq('organization_id', orgId)
+          .limit(1);
+
+        // Skip if exact duplicate found
+        if (existingRecord && existingRecord.length > 0) {
+          const existing = existingRecord[0];
+          if (existing.total_pickups === totalPickups && 
+              existing.total_ptes === totalPtes && 
+              Math.abs(existing.total_revenue - computedRevenue) < 0.01) {
+            console.log(`Skipping duplicate record for ${clientName} - ${year}/${month}`);
+            continue;
+          }
+        }
 
         const summaryData = {
           client_id: clientId,
@@ -153,7 +193,7 @@ serve(async (req) => {
           total_ptes: totalPtes,
           total_otr: totalOtr,
           total_tractor: totalTractor,
-          total_revenue: totalRevenue,
+          total_revenue: computedRevenue,
           total_weight_tons: totalWeightTons,
           total_volume_yards: totalVolumeYards,
           first_pickup_date: firstPickupDate,

@@ -58,6 +58,26 @@ Michigan Tire Center,2025,1,3,276,0,0,6900.00,3.10,27.6,2025-01-10,2025-01-25,La
     document.body.removeChild(a);
   };
 
+  const fixMissingRevenue = async () => {
+    try {
+      const response = await supabase.functions.invoke('fix-missing-revenue');
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+      setResult({
+        success: true,
+        message: `Fixed revenue calculation: ${response.data.message}`,
+        processed: response.data.updated
+      });
+    } catch (error) {
+      setResult({
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to fix revenue',
+        errors: [error instanceof Error ? error.message : 'Unknown error']
+      });
+    }
+  };
+
   const handleImport = async () => {
     if (!csvText.trim()) {
       return;
@@ -227,6 +247,25 @@ Michigan Tire Center,2025,1,3,276,0,0,6900.00,3.10,27.6,2025-01-10,2025-01-25,La
             </div>
           </Alert>
         )}
+
+        {/* Fix Missing Revenue Button */}
+        <div className="flex items-center justify-between p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+          <div>
+            <h4 className="font-medium text-amber-800 dark:text-amber-200">Missing Revenue Data?</h4>
+            <p className="text-sm text-amber-700 dark:text-amber-300">
+              Click here to calculate revenue for existing summaries with $0 revenue
+            </p>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={fixMissingRevenue}
+            disabled={importing}
+            className="border-amber-500/50 text-amber-700 hover:bg-amber-100 dark:text-amber-200 dark:hover:bg-amber-900/30"
+          >
+            Fix Revenue
+          </Button>
+        </div>
 
         {/* Import Button */}
         <Button
