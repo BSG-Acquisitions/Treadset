@@ -68,3 +68,6 @@ verify_jwt = false
 
 [functions.csv-export]
 verify_jwt = false
+
+[functions.enhanced-route-optimizer]
+verify_jwt = false
