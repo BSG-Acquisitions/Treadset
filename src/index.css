@@ -8,26 +8,26 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* BSG Tire Recycling Brand Design System */
-    /* Primary brand colors - matching BSG green */
-    --brand-primary: 120 45% 55%;      /* BSG Green #7CB342 */
-    --brand-primary-hover: 118 50% 50%; /* Slightly darker green */
-    --brand-primary-dark: 115 55% 35%;   /* Dark green for depth */
-    --brand-primary-light: 120 45% 75%; /* Light green for accents */
-    --brand-tire-black: 210 11% 15%;    /* Deep tire black */
-    --brand-recycling: 160 65% 45%;     /* Recycling earth green */
-    --brand-secondary: 195 100% 35%;    /* Industrial blue */
-    --brand-accent: 45 95% 55%;         /* Safety orange */
-    --brand-warning: 38 92% 50%;        /* Amber warning */
-    --brand-success: 142 69% 45%;       /* Success green */
+    /* BSG Tire Recycling Brand Design System - Professional Olive Green */
+    /* Primary brand colors - neutral olive green palette */
+    --brand-primary: 85 40% 45%;       /* Olive Green #6B7C3E */
+    --brand-primary-hover: 85 45% 40%; /* Darker olive on hover */
+    --brand-primary-dark: 85 50% 30%;  /* Deep olive for depth */
+    --brand-primary-light: 85 30% 65%; /* Light olive for accents */
+    --brand-tire-black: 210 11% 15%;   /* Deep tire black */
+    --brand-recycling: 95 35% 50%;     /* Earthy recycling green */
+    --brand-secondary: 200 25% 45%;    /* Muted slate blue */
+    --brand-accent: 45 70% 55%;        /* Warm amber accent */
+    --brand-warning: 38 75% 50%;       /* Professional amber warning */
+    --brand-success: 120 40% 45%;      /* Muted success green */
     
-    /* Enhanced industrial palette */
-    --background: 210 20% 98%;         /* Soft industrial gray */
+    /* Enhanced professional palette */
+    --background: 85 15% 97%;          /* Soft olive-tinted background */
     --foreground: 210 11% 15%;         /* Deep tire black for text */
     
     --card: 0 0% 100%;                 /* Clean white cards */
     --card-foreground: 210 11% 15%;
-    --card-hover: 120 20% 98%;         /* Subtle green tint on hover */
+    --card-hover: 85 15% 98%;          /* Subtle olive tint on hover */
     
     --popover: 0 0% 100%;
     --popover-foreground: 210 11% 15%;
@@ -35,21 +35,21 @@ All colors MUST be HSL.
     --primary: var(--brand-primary);
     --primary-foreground: 0 0% 100%;
     
-    --secondary: 210 25% 92%;          /* Industrial gray */
+    --secondary: 85 15% 92%;           /* Olive-tinted gray */
     --secondary-foreground: 210 11% 15%;
     
-    --muted: 210 25% 95%;              /* Light industrial backgrounds */
+    --muted: 85 15% 94%;               /* Light olive backgrounds */
     --muted-foreground: 210 11% 45%;   /* Medium gray text */
     
-    --accent: 210 25% 90%;             /* Subtle accent backgrounds */
+    --accent: 85 15% 90%;              /* Subtle accent backgrounds */
     --accent-foreground: 210 11% 15%;
     
-    --destructive: 0 84% 60%;          /* Safety red */
+    --destructive: 0 65% 55%;          /* Muted safety red */
     --destructive-foreground: 0 0% 100%;
     
-    --border: 210 20% 85%;             /* Defined borders */
-    --input: 210 20% 85%;
-    --ring: var(--brand-primary);      /* Green focus rings */
+    --border: 85 15% 85%;              /* Subtle olive borders */
+    --input: 85 15% 85%;
+    --ring: var(--brand-primary);      /* Olive focus rings */
     
     --radius: 16px;                    /* More rounded industrial design */
     
@@ -130,9 +130,9 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground font-inter antialiased;
     background-image: 
-      radial-gradient(circle at 15% 15%, hsl(var(--brand-primary) / 0.04) 0%, transparent 50%),
+      radial-gradient(circle at 15% 15%, hsl(var(--brand-primary) / 0.03) 0%, transparent 50%),
       radial-gradient(circle at 85% 85%, hsl(var(--brand-tire-black) / 0.02) 0%, transparent 50%),
-      repeating-linear-gradient(45deg, transparent, transparent 100px, hsl(var(--brand-primary) / 0.01) 100px, hsl(var(--brand-primary) / 0.01) 200px);
+      repeating-linear-gradient(45deg, transparent, transparent 120px, hsl(var(--brand-primary) / 0.008) 120px, hsl(var(--brand-primary) / 0.008) 240px);
   }
 
   /* Enhanced focus visibility for accessibility */
