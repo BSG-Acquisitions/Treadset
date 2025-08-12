@@ -78,6 +78,94 @@ export type Database = {
           },
         ]
       }
+      client_summaries: {
+        Row: {
+          average_pickup_size: number | null
+          client_id: string
+          created_at: string
+          first_pickup_date: string | null
+          id: string
+          last_pickup_date: string | null
+          month: number | null
+          notes: string | null
+          organization_id: string
+          pickup_frequency_days: number | null
+          total_otr: number | null
+          total_pickups: number | null
+          total_ptes: number | null
+          total_revenue: number | null
+          total_tractor: number | null
+          total_volume_yards: number | null
+          total_weight_tons: number | null
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          average_pickup_size?: number | null
+          client_id: string
+          created_at?: string
+          first_pickup_date?: string | null
+          id?: string
+          last_pickup_date?: string | null
+          month?: number | null
+          notes?: string | null
+          organization_id: string
+          pickup_frequency_days?: number | null
+          total_otr?: number | null
+          total_pickups?: number | null
+          total_ptes?: number | null
+          total_revenue?: number | null
+          total_tractor?: number | null
+          total_volume_yards?: number | null
+          total_weight_tons?: number | null
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          average_pickup_size?: number | null
+          client_id?: string
+          created_at?: string
+          first_pickup_date?: string | null
+          id?: string
+          last_pickup_date?: string | null
+          month?: number | null
+          notes?: string | null
+          organization_id?: string
+          pickup_frequency_days?: number | null
+          total_otr?: number | null
+          total_pickups?: number | null
+          total_ptes?: number | null
+          total_revenue?: number | null
+          total_tractor?: number | null
+          total_volume_yards?: number | null
+          total_weight_tons?: number | null
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_summaries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_summaries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "pickup_analytics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_summaries_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           company_name: string
@@ -262,6 +350,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "invoices_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "pickup_analytics"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "invoices_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -320,6 +415,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "locations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "pickup_analytics"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "locations_organization_id_fkey"
@@ -476,6 +578,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "payments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "pickup_analytics"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "payments_invoice_id_fkey"
             columns: ["invoice_id"]
             isOneToOne: false
@@ -550,6 +659,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pickups_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "pickup_analytics"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "pickups_location_id_fkey"
@@ -742,7 +858,33 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      pickup_analytics: {
+        Row: {
+          avg_pickup_size: number | null
+          client_id: string | null
+          client_type: Database["public"]["Enums"]["client_type"] | null
+          company_name: string | null
+          first_pickup: string | null
+          last_pickup: string | null
+          month: number | null
+          organization_id: string | null
+          pickup_count: number | null
+          total_otr: number | null
+          total_ptes: number | null
+          total_revenue: number | null
+          total_tractor: number | null
+          year: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clients_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       calculate_pickup_revenue: {
