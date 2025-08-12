@@ -136,8 +136,8 @@ Deno.serve(async (req) => {
       .from('assignments')
       .select(`
         *,
-        pickup!inner(pte_count),
-        vehicle!inner(*)
+        pickups!inner(pte_count),
+        vehicles!inner(*)
       `)
       .eq('scheduled_date', pickupDate);
 
@@ -162,7 +162,7 @@ Deno.serve(async (req) => {
       const vehicleAssignments = assignments?.filter(a => a.vehicle_id === vehicle.id) || [];
       
       // Calculate used capacity
-      const usedCapacity = vehicleAssignments.reduce((sum, a) => sum + (a.pickup?.pte_count || 0), 0);
+      const usedCapacity = vehicleAssignments.reduce((sum, a) => sum + (a.pickups?.pte_count || 0), 0);
       const remainingCapacity = vehicle.capacity - usedCapacity;
       
       if (remainingCapacity < pteCount) {
