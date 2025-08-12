@@ -287,7 +287,7 @@ Deno.serve(async (req) => {
       }
       
       // Calculate start and end times for the selected date
-      const routeDate = new Date(date);
+      const routeDate = new Date(date + 'T00:00:00.000Z');
       const startTime = new Date(routeDate);
       startTime.setHours(WORK_START_HOUR, WORK_START_MINUTE, 0, 0);
       
