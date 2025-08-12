@@ -67,13 +67,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const loadUserData = async (authUser: User | null) => {
+    console.log('loadUserData called with:', authUser?.id);
+    
     if (!authUser && !DISABLE_AUTH) {
+      console.log('No auth user, setting user to null');
       setUser(null);
       return;
     }
 
     try {
       const orgSlug = getCurrentOrgSlug();
+      console.log('Current org slug:', orgSlug);
       
       if (DISABLE_AUTH) {
         // Demo mode - create a mock admin user
@@ -92,6 +96,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
+      console.log('Fetching user data for auth user:', authUser.id);
+      
       // Get user from our custom users table
       const { data: userData, error: userError } = await supabase
         .from('users')
@@ -112,6 +118,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         `)
         .eq('auth_user_id', authUser.id)
         .single();
+
+      console.log('User data query result:', { userData, userError });
 
       if (userError) {
         console.error('Error loading user data:', userError);
