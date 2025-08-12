@@ -309,16 +309,16 @@ Deno.serve(async (req) => {
       // Calculate start and end times for the selected date (Detroit local time)
       // Create date in local timezone - date comes in as YYYY-MM-DD format
       const [year, month, day] = date.split('-').map(Number);
-      const startTime = new Date(year, month - 1, day, WORK_START_HOUR, WORK_START_MINUTE, 0, 0);
       
-      // Convert to Detroit timezone offset (UTC-4 for EDT, UTC-5 for EST)
-      // For simplicity, we'll use UTC-4 (Eastern Daylight Time)
-      const detroitOffset = 4 * 60; // 4 hours in minutes
-      const startTimeUTC = new Date(startTime.getTime() + (detroitOffset * 60 * 1000));
+      // Detroit is UTC-4 (Eastern Daylight Time), so to display 8:30 AM local,
+      // we need to store 12:30 PM UTC (8:30 + 4 = 12:30)
+      const detroitOffset = 4; // 4 hours ahead of Detroit
+      const startTimeUTC = new Date(year, month - 1, day, WORK_START_HOUR + detroitOffset, WORK_START_MINUTE, 0, 0);
       const endTimeUTC = new Date(startTimeUTC.getTime() + totalTime * 60 * 1000);
       
-      console.log(`Route calculation for ${date}: Start time UTC: ${startTimeUTC.toISOString()}, End time UTC: ${endTimeUTC.toISOString()}`);
-      console.log(`Local start time should be: ${WORK_START_HOUR}:${WORK_START_MINUTE.toString().padStart(2, '0')}`);
+      console.log(`Route calculation for ${date}:`);
+      console.log(`Start time UTC: ${startTimeUTC.toISOString()} (should display as ${WORK_START_HOUR}:${WORK_START_MINUTE.toString().padStart(2, '0')} AM Detroit time)`);
+      console.log(`End time UTC: ${endTimeUTC.toISOString()}`);
       
       const endTime = endTimeUTC;
       
