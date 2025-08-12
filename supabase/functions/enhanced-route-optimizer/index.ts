@@ -311,9 +311,16 @@ Deno.serve(async (req) => {
       const [year, month, day] = date.split('-').map(Number);
       const startTime = new Date(year, month - 1, day, WORK_START_HOUR, WORK_START_MINUTE, 0, 0);
       
-      console.log(`Route calculation for ${date}: Start time: ${startTime.toISOString()}, Local: ${startTime.toString()}`);
+      // Convert to Detroit timezone offset (UTC-4 for EDT, UTC-5 for EST)
+      // For simplicity, we'll use UTC-4 (Eastern Daylight Time)
+      const detroitOffset = 4 * 60; // 4 hours in minutes
+      const startTimeUTC = new Date(startTime.getTime() + (detroitOffset * 60 * 1000));
+      const endTimeUTC = new Date(startTimeUTC.getTime() + totalTime * 60 * 1000);
       
-      const endTime = new Date(startTime.getTime() + totalTime * 60 * 1000);
+      console.log(`Route calculation for ${date}: Start time UTC: ${startTimeUTC.toISOString()}, End time UTC: ${endTimeUTC.toISOString()}`);
+      console.log(`Local start time should be: ${WORK_START_HOUR}:${WORK_START_MINUTE.toString().padStart(2, '0')}`);
+      
+      const endTime = endTimeUTC;
       
       // Check if route fits within working hours
       const fitsWorkingHours = validateWorkingHours(totalTime);
@@ -328,7 +335,7 @@ Deno.serve(async (req) => {
         stops: orderedStops,
         totalDistance: Math.round(totalDistance * 100) / 100,
         totalTime,
-        startTime: startTime.toISOString(),
+        startTime: startTimeUTC.toISOString(),
         endTime: endTime.toISOString(),
         efficiency: 0 // Will calculate below
       };
