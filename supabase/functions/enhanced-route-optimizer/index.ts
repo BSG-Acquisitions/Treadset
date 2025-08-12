@@ -299,10 +299,12 @@ Deno.serve(async (req) => {
         totalTime += BREAK_TIME;
       }
       
-      // Calculate start and end times for the selected date
-      const routeDate = new Date(date + 'T00:00:00.000Z');
+      // Calculate start and end times for the selected date (using local time)
+      const routeDate = new Date(date + 'T00:00:00');
       const startTime = new Date(routeDate);
       startTime.setHours(WORK_START_HOUR, WORK_START_MINUTE, 0, 0);
+      
+      console.log(`Route date: ${date}, Start time: ${startTime.toISOString()}, Local time: ${startTime.toString()}`);
       
       const endTime = new Date(startTime.getTime() + totalTime * 60 * 1000);
       
