@@ -12,9 +12,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Users, UserCheck, UserX, Mail, Phone } from 'lucide-react';
+import { Users, UserCheck, UserX, Mail, Phone, Truck, Shield, HeadphonesIcon, DollarSign } from 'lucide-react';
 import { formatDate, formatPhoneNumber } from '@/lib/formatters';
 import { SkeletonTable, EmptyState } from '@/components/ui/loading-states';
+import { BrandHeader } from '@/components/BrandHeader';
+import { StatsCard } from '@/components/enhanced/StatsCard';
 
 const ROLE_LABELS: Record<string, string> = {
   admin: 'Admin',
@@ -32,11 +34,21 @@ const ROLE_COLORS: Record<string, string> = {
   sales: 'default'
 };
 
+const ROLE_ICONS: Record<string, typeof Shield> = {
+  admin: Shield,
+  ops_manager: Users,
+  dispatcher: HeadphonesIcon,
+  driver: Truck,
+  sales: DollarSign
+};
+
 export default function EmployeesPage() {
   const { data: employees = [], isLoading, error } = useEmployees();
 
   const activeEmployees = employees.filter(emp => emp.isActive);
   const inactiveEmployees = employees.filter(emp => !emp.isActive);
+  const adminCount = employees.filter(emp => emp.roles.includes('admin')).length;
+  const driversCount = employees.filter(emp => emp.roles.includes('driver')).length;
 
   if (isLoading) {
     return (
@@ -63,57 +75,70 @@ export default function EmployeesPage() {
   }
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">Employee Management</h1>
-          <p className="text-muted-foreground">Manage your team members and their access permissions</p>
+    <div className="min-h-screen bg-background">
+      {/* Enhanced Header */}
+      <BrandHeader 
+        title="Team Management" 
+        subtitle="Manage your BSG workforce and operations team"
+        className="mb-6"
+      />
+      
+      <div className="space-y-8 p-6 max-w-7xl mx-auto">
+        {/* Action Bar */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-xl font-semibold text-foreground">Employee Directory</h2>
+            <p className="text-muted-foreground">Track team performance and manage access permissions</p>
+          </div>
+          <CreateEmployeeDialog />
         </div>
-        <CreateEmployeeDialog />
-      </div>
 
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{employees.length}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Active Employees</CardTitle>
-            <UserCheck className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">{activeEmployees.length}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Inactive Employees</CardTitle>
-            <UserX className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-muted-foreground">{inactiveEmployees.length}</div>
-          </CardContent>
-        </Card>
-      </div>
+        {/* Enhanced Stats Grid */}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <StatsCard
+            title="Total Team"
+            value={employees.length}
+            icon={<Users className="w-5 h-5" />}
+            variant="primary"
+            change={8.2}
+          />
+          
+          <StatsCard
+            title="Active Members"
+            value={activeEmployees.length}
+            icon={<UserCheck className="w-5 h-5" />}
+            variant="success"
+            change={5.1}
+          />
+          
+          <StatsCard
+            title="Drivers"
+            value={driversCount}
+            icon={<Truck className="w-5 h-5" />}
+            variant="accent"
+            change={12.3}
+          />
+          
+          <StatsCard
+            title="Admins"
+            value={adminCount}
+            icon={<Shield className="w-5 h-5" />}
+            variant="warning"
+            change={-2.1}
+          />
+        </div>
 
-      {/* Employees Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Team Members</CardTitle>
-          <CardDescription>
-            View and manage all employees in your organization
-          </CardDescription>
-        </CardHeader>
+        {/* Enhanced Employees Table */}
+        <Card className="border-border/20 shadow-elevation-lg bg-gradient-to-br from-card to-card-hover">
+          <CardHeader className="border-b border-border/10 bg-gradient-to-r from-card to-secondary/30">
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <Users className="w-5 h-5 text-brand-primary" />
+              Team Directory
+            </CardTitle>
+            <CardDescription>
+              Complete workforce overview with role assignments and contact information
+            </CardDescription>
+          </CardHeader>
         <CardContent>
           {employees.length === 0 ? (
             <EmptyState
@@ -167,16 +192,20 @@ export default function EmployeesPage() {
                     </TableCell>
                     
                     <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {employee.roles.map((role) => (
-                          <Badge
-                            key={role}
-                            variant={ROLE_COLORS[role] as any || 'default'}
-                            className="text-xs"
-                          >
-                            {ROLE_LABELS[role] || role}
-                          </Badge>
-                        ))}
+                      <div className="flex flex-wrap gap-2">
+                        {employee.roles.map((role) => {
+                          const IconComponent = ROLE_ICONS[role];
+                          return (
+                            <Badge
+                              key={role}
+                              variant={ROLE_COLORS[role] as any || 'default'}
+                              className="text-xs flex items-center gap-1"
+                            >
+                              {IconComponent && <IconComponent className="w-3 h-3" />}
+                              {ROLE_LABELS[role] || role}
+                            </Badge>
+                          );
+                        })}
                       </div>
                     </TableCell>
                     
@@ -199,7 +228,8 @@ export default function EmployeesPage() {
             </Table>
           )}
         </CardContent>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 }

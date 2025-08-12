@@ -36,6 +36,8 @@ export default {
 				},
 				brand: {
 					primary: 'hsl(var(--brand-primary))',
+					'tire-black': 'hsl(var(--brand-tire-black))',
+					recycling: 'hsl(var(--brand-recycling))',
 					secondary: 'hsl(var(--brand-secondary))',
 					accent: 'hsl(var(--brand-accent))',
 					warning: 'hsl(var(--brand-warning))',

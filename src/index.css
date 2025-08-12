@@ -8,48 +8,50 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* BSG Brand Design System - Enhanced */
-    /* Core brand colors */
-    --brand-primary: 147 100% 33%;    /* #00A651 BSG Green */
-    --brand-primary-hover: 145 100% 35%; /* #059A4F */
-    --brand-primary-dark: 142 88% 25%;   /* #0B7A41 */
-    --brand-primary-light: 137 65% 75%; /* #9AE6B4 */
-    --brand-secondary: 216 98% 52%;    /* #1E40AF Blue accent */
-    --brand-accent: 270 95% 65%;       /* #8B5CF6 Purple accent */
-    --brand-warning: 43 96% 56%;       /* #F59E0B Amber */
-    --brand-success: 160 84% 39%;      /* #10B981 Emerald */
+    /* BSG Tire Recycling Brand Design System */
+    /* Primary brand colors - matching BSG green */
+    --brand-primary: 120 45% 55%;      /* BSG Green #7CB342 */
+    --brand-primary-hover: 118 50% 50%; /* Slightly darker green */
+    --brand-primary-dark: 115 55% 35%;   /* Dark green for depth */
+    --brand-primary-light: 120 45% 75%; /* Light green for accents */
+    --brand-tire-black: 210 11% 15%;    /* Deep tire black */
+    --brand-recycling: 160 65% 45%;     /* Recycling earth green */
+    --brand-secondary: 195 100% 35%;    /* Industrial blue */
+    --brand-accent: 45 95% 55%;         /* Safety orange */
+    --brand-warning: 38 92% 50%;        /* Amber warning */
+    --brand-success: 142 69% 45%;       /* Success green */
     
-    /* Enhanced palette */
-    --background: 220 14% 96%;         /* Soft warm gray instead of pure white */
-    --foreground: 224 71% 4%;          /* Near black text */
+    /* Enhanced industrial palette */
+    --background: 210 20% 98%;         /* Soft industrial gray */
+    --foreground: 210 11% 15%;         /* Deep tire black for text */
     
-    --card: 0 0% 100%;                 /* White cards with subtle tint */
-    --card-foreground: 224 71% 4%;
-    --card-hover: 220 14% 99%;         /* Subtle hover state */
+    --card: 0 0% 100%;                 /* Clean white cards */
+    --card-foreground: 210 11% 15%;
+    --card-hover: 120 20% 98%;         /* Subtle green tint on hover */
     
     --popover: 0 0% 100%;
-    --popover-foreground: 224 71% 4%;
+    --popover-foreground: 210 11% 15%;
     
     --primary: var(--brand-primary);
     --primary-foreground: 0 0% 100%;
     
-    --secondary: 216 16% 94%;          /* Cool gray backgrounds */
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 210 25% 92%;          /* Industrial gray */
+    --secondary-foreground: 210 11% 15%;
     
-    --muted: 216 16% 94%;              /* Subtle backgrounds */
-    --muted-foreground: 215 16% 47%;   /* Medium gray text */
+    --muted: 210 25% 95%;              /* Light industrial backgrounds */
+    --muted-foreground: 210 11% 45%;   /* Medium gray text */
     
-    --accent: 216 16% 92%;             /* Hover states */
-    --accent-foreground: 222 47% 11%;
+    --accent: 210 25% 90%;             /* Subtle accent backgrounds */
+    --accent-foreground: 210 11% 15%;
     
-    --destructive: 0 84% 60%;          /* Error red */
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;          /* Safety red */
+    --destructive-foreground: 0 0% 100%;
     
-    --border: 220 13% 87%;             /* Subtle borders */
-    --input: 220 13% 87%;
-    --ring: var(--brand-primary);      /* Focus rings in brand color */
+    --border: 210 20% 85%;             /* Defined borders */
+    --input: 210 20% 85%;
+    --ring: var(--brand-primary);      /* Green focus rings */
     
-    --radius: 12px;                    /* More rounded for modern feel */
+    --radius: 16px;                    /* More rounded industrial design */
     
     /* Sidebar colors */
     --sidebar-background: 0 0% 98%;
@@ -128,8 +130,9 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground font-inter antialiased;
     background-image: 
-      radial-gradient(circle at 25% 25%, hsl(var(--brand-primary) / 0.03) 0%, transparent 50%),
-      radial-gradient(circle at 75% 75%, hsl(var(--brand-secondary) / 0.02) 0%, transparent 50%);
+      radial-gradient(circle at 15% 15%, hsl(var(--brand-primary) / 0.04) 0%, transparent 50%),
+      radial-gradient(circle at 85% 85%, hsl(var(--brand-tire-black) / 0.02) 0%, transparent 50%),
+      repeating-linear-gradient(45deg, transparent, transparent 100px, hsl(var(--brand-primary) / 0.01) 100px, hsl(var(--brand-primary) / 0.01) 200px);
   }
 
   /* Enhanced focus visibility for accessibility */
@@ -204,7 +207,7 @@ All colors MUST be HSL.
     @apply tabular-nums;
   }
 
-  /* Enhanced brand gradients */
+  /* BSG Tire Recycling Brand Gradients */
   .brand-gradient {
     background: linear-gradient(135deg, hsl(var(--brand-primary)) 0%, hsl(var(--brand-primary-dark)) 100%);
   }
@@ -213,24 +216,27 @@ All colors MUST be HSL.
     background: linear-gradient(135deg, hsl(var(--brand-primary) / 0.1) 0%, hsl(var(--brand-primary) / 0.05) 100%);
   }
   
-  .gradient-mesh {
+  .tire-pattern {
     background: 
-      radial-gradient(circle at 20% 50%, hsl(var(--brand-primary) / 0.15) 0%, transparent 50%),
-      radial-gradient(circle at 80% 20%, hsl(var(--brand-secondary) / 0.15) 0%, transparent 50%),
-      radial-gradient(circle at 40% 80%, hsl(var(--brand-accent) / 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 30% 40%, hsl(var(--brand-tire-black) / 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 70% 60%, hsl(var(--brand-primary) / 0.1) 0%, transparent 50%),
+      repeating-linear-gradient(45deg, transparent, transparent 35px, hsl(var(--brand-primary) / 0.02) 35px, hsl(var(--brand-primary) / 0.02) 70px);
+  }
+  
+  .recycling-gradient {
+    background: 
+      conic-gradient(from 0deg at 50% 50%, 
+        hsl(var(--brand-primary)) 0deg,
+        hsl(var(--brand-recycling)) 120deg,
+        hsl(var(--brand-primary-dark)) 240deg,
+        hsl(var(--brand-primary)) 360deg);
+  }
+  
+  .industrial-mesh {
+    background: 
+      radial-gradient(circle at 25% 25%, hsl(var(--brand-primary) / 0.15) 0%, transparent 50%),
+      radial-gradient(circle at 75% 75%, hsl(var(--brand-tire-black) / 0.1) 0%, transparent 50%),
       linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--card)) 100%);
-  }
-  
-  .card-gradient {
-    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--card-hover)) 100%);
-  }
-  
-  .status-gradient-success {
-    background: linear-gradient(135deg, hsl(var(--brand-success) / 0.1) 0%, hsl(var(--brand-success) / 0.05) 100%);
-  }
-  
-  .status-gradient-warning {
-    background: linear-gradient(135deg, hsl(var(--brand-warning) / 0.1) 0%, hsl(var(--brand-warning) / 0.05) 100%);
   }
 
   /* Enhanced elevation classes */

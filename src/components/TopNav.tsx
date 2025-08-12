@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Bell, Menu, User, Settings } from 'lucide-react';
+import { Search, Bell, Menu, User, Settings, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -23,7 +23,9 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
   const { user, signOut } = useAuth();
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60 shadow-elevation-md">
+      {/* Brand accent stripe */}
+      <div className="h-1 brand-gradient" />
       <div className="flex h-16 items-center justify-between px-6">
         {/* Left side - Logo and menu */}
         <div className="flex items-center gap-4">
@@ -39,13 +41,20 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
             </Button>
           )}
           
-          <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">B</span>
+          <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-all duration-300 group">
+            {/* Enhanced BSG Logo */}
+            <div className="relative">
+              <div className="w-10 h-10 bg-gradient-to-br from-brand-primary to-brand-primary-dark rounded-xl flex items-center justify-center shadow-elevation-md group-hover:shadow-elevation-lg transition-all duration-300">
+                <RotateCcw className="h-5 w-5 text-white group-hover:rotate-180 transition-transform duration-500" />
+              </div>
+              {/* Subtle glow effect */}
+              <div className="absolute inset-0 bg-brand-primary/20 rounded-xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </div>
             <div className="hidden sm:block">
-              <h1 className="text-lg font-semibold text-foreground">BSG Tire Recycling</h1>
-              <p className="text-xs text-muted-foreground">Logistics Management</p>
+              <h1 className="text-lg font-bold bg-gradient-to-r from-brand-primary to-brand-primary-dark bg-clip-text text-transparent">
+                BSG Tire Recycling
+              </h1>
+              <p className="text-xs text-brand-tire-black/60 font-medium">Industrial Waste Solutions</p>
             </div>
           </Link>
         </div>
@@ -56,29 +65,29 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search clients, routes, or pickups..."
+              placeholder="Search clients, routes, pickups..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-muted/50 border-border/50 focus:bg-background"
+              className="pl-10 bg-secondary/30 border-border/50 focus:bg-card focus:border-brand-primary/30 transition-all duration-300"
             />
           </div>
         </div>
 
         {/* Right side - Actions and user menu */}
         <div className="flex items-center gap-2">
-          {/* Notifications */}
-          <Button variant="ghost" size="sm" className="relative" aria-label="Notifications">
-            <Bell className="h-5 w-5" />
-            <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs">
+          {/* Enhanced notifications */}
+          <Button variant="ghost" size="sm" className="relative hover:bg-brand-primary/10 transition-colors" aria-label="Notifications">
+            <Bell className="h-5 w-5 text-brand-tire-black/70" />
+            <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs bg-brand-accent">
               3
             </Badge>
           </Button>
 
-          {/* Quick actions */}
-          <Button variant="ghost" size="sm" asChild>
+          {/* Enhanced quick actions */}
+          <Button variant="outline" size="sm" asChild className="border-brand-primary/30 text-brand-primary hover:bg-brand-primary/10">
             <Link to="/book">
-              <span className="hidden sm:inline">Quick Book</span>
-              <span className="sm:hidden">Book</span>
+              <span className="hidden sm:inline font-medium">Quick Book</span>
+              <span className="sm:hidden font-medium">Book</span>
             </Link>
           </Button>
 
