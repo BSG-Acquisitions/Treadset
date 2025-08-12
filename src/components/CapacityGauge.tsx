@@ -43,7 +43,7 @@ export function CapacityGauge({
     });
 
     return unsubscribe;
-  }, [value, springValue, animatedValue, prefersReducedMotion]);
+  }, [value, prefersReducedMotion]); // Removed springValue and animatedValue from deps
 
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
