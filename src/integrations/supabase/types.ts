@@ -776,6 +776,57 @@ export type Database = {
           },
         ]
       }
+      user_preferences: {
+        Row: {
+          activity_logging: boolean | null
+          client_alerts: boolean | null
+          compact_layout: boolean | null
+          created_at: string
+          dark_mode: boolean | null
+          email_notifications: boolean | null
+          id: string
+          reduced_motion: boolean | null
+          route_updates: boolean | null
+          session_timeout: boolean | null
+          system_maintenance: boolean | null
+          two_factor_enabled: boolean | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activity_logging?: boolean | null
+          client_alerts?: boolean | null
+          compact_layout?: boolean | null
+          created_at?: string
+          dark_mode?: boolean | null
+          email_notifications?: boolean | null
+          id?: string
+          reduced_motion?: boolean | null
+          route_updates?: boolean | null
+          session_timeout?: boolean | null
+          system_maintenance?: boolean | null
+          two_factor_enabled?: boolean | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activity_logging?: boolean | null
+          client_alerts?: boolean | null
+          compact_layout?: boolean | null
+          created_at?: string
+          dark_mode?: boolean | null
+          email_notifications?: boolean | null
+          id?: string
+          reduced_motion?: boolean | null
+          route_updates?: boolean | null
+          session_timeout?: boolean | null
+          system_maintenance?: boolean | null
+          two_factor_enabled?: boolean | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           auth_user_id: string | null
@@ -898,6 +949,25 @@ export type Database = {
       get_current_user_organization: {
         Args: { org_slug?: string }
         Returns: string
+      }
+      get_or_create_user_preferences: {
+        Args: { target_user_id: string }
+        Returns: {
+          activity_logging: boolean | null
+          client_alerts: boolean | null
+          compact_layout: boolean | null
+          created_at: string
+          dark_mode: boolean | null
+          email_notifications: boolean | null
+          id: string
+          reduced_motion: boolean | null
+          route_updates: boolean | null
+          session_timeout: boolean | null
+          system_maintenance: boolean | null
+          two_factor_enabled: boolean | null
+          updated_at: string
+          user_id: string
+        }
       }
       user_has_role: {
         Args: {

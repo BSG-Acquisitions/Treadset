@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { TopNav } from "@/components/TopNav";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,17 +7,100 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { User, Bell, Shield, Palette, Database, Key } from "lucide-react";
+import { User, Bell, Shield, Palette, Database, Key, Loader2, Save, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { SlideUp } from "@/components/motion/SlideUp";
+import { useUserPreferences, useUpdateUserPreferences, useUpdateUserProfile } from "@/hooks/useUserPreferences";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Settings() {
   const { user } = useAuth();
+  const { toast } = useToast();
+  
+  // Fetch user preferences
+  const { data: preferences, isLoading: preferencesLoading, error: preferencesError } = useUserPreferences();
+  const updatePreferences = useUpdateUserPreferences();
+  const updateProfile = useUpdateUserProfile();
+
+  // Local state for form data
+  const [profileData, setProfileData] = useState({
+    email: user?.email || "",
+    phone: user?.phone || "",
+  });
+
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   useEffect(() => {
     document.title = "Settings – BSG Tire Recycling";
   }, []);
+
+  useEffect(() => {
+    // Update local state when user data changes
+    setProfileData({
+      email: user?.email || "",
+      phone: user?.phone || "",
+    });
+  }, [user]);
+
+  const handlePreferenceChange = async (key: keyof typeof preferences, value: boolean) => {
+    if (!preferences) return;
+    
+    try {
+      await updatePreferences.mutateAsync({ [key]: value });
+    } catch (error) {
+      console.error("Failed to update preference:", error);
+    }
+  };
+
+  const handleProfileSave = async () => {
+    try {
+      await updateProfile.mutateAsync(profileData);
+      setHasUnsavedChanges(false);
+    } catch (error) {
+      console.error("Failed to update profile:", error);
+    }
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    setProfileData(prev => ({ ...prev, [field]: value }));
+    setHasUnsavedChanges(true);
+  };
+
+  if (preferencesLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <TopNav />
+        <main className="container mx-auto px-6 pb-8 pt-8">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="flex flex-col items-center gap-4">
+              <Loader2 className="h-8 w-8 animate-spin text-brand-primary" />
+              <p className="text-muted-foreground">Loading your settings...</p>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (preferencesError) {
+    return (
+      <div className="min-h-screen bg-background">
+        <TopNav />
+        <main className="container mx-auto px-6 pb-8 pt-8">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="flex flex-col items-center gap-4 text-center">
+              <X className="h-8 w-8 text-destructive" />
+              <div>
+                <h3 className="text-lg font-semibold">Failed to load settings</h3>
+                <p className="text-muted-foreground">Please refresh the page to try again.</p>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -87,16 +170,21 @@ export default function Settings() {
                     <Label htmlFor="firstName">First Name</Label>
                     <Input 
                       id="firstName" 
-                      defaultValue={user?.firstName || ""} 
+                      value={user?.firstName || ""} 
                       placeholder="Enter first name"
+                      disabled
+                      className="bg-muted/50"
                     />
+                    <p className="text-xs text-muted-foreground">Contact support to change your name</p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="lastName">Last Name</Label>
                     <Input 
                       id="lastName" 
-                      defaultValue={user?.lastName || ""} 
+                      value={user?.lastName || ""} 
                       placeholder="Enter last name"
+                      disabled
+                      className="bg-muted/50"
                     />
                   </div>
                 </div>
@@ -105,7 +193,8 @@ export default function Settings() {
                   <Input 
                     id="email" 
                     type="email" 
-                    defaultValue={user?.email || ""} 
+                    value={profileData.email} 
+                    onChange={(e) => handleInputChange("email", e.target.value)}
                     placeholder="Enter email address"
                   />
                 </div>
@@ -114,7 +203,8 @@ export default function Settings() {
                   <Input 
                     id="phone" 
                     type="tel" 
-                    defaultValue={user?.phone || ""} 
+                    value={profileData.phone} 
+                    onChange={(e) => handleInputChange("phone", e.target.value)}
                     placeholder="Enter phone number"
                   />
                 </div>
@@ -124,6 +214,35 @@ export default function Settings() {
                     {user?.roles?.join(", ") || "No roles assigned"}
                   </span>
                 </div>
+                
+                {hasUnsavedChanges && (
+                  <div className="flex gap-2 pt-4 border-t">
+                    <Button 
+                      onClick={handleProfileSave} 
+                      disabled={updateProfile.isPending}
+                      size="sm"
+                    >
+                      {updateProfile.isPending ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving...</>
+                      ) : (
+                        <><Save className="h-4 w-4 mr-2" /> Save Changes</>
+                      )}
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => {
+                        setProfileData({
+                          email: user?.email || "",
+                          phone: user?.phone || "",
+                        });
+                        setHasUnsavedChanges(false);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -146,7 +265,11 @@ export default function Settings() {
                       Receive notifications via email
                     </p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch 
+                    checked={preferences?.email_notifications || false}
+                    onCheckedChange={(checked) => handlePreferenceChange("email_notifications", checked)}
+                    disabled={updatePreferences.isPending}
+                  />
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between">
@@ -156,7 +279,11 @@ export default function Settings() {
                       Get notified about route changes and assignments
                     </p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch 
+                    checked={preferences?.route_updates || false}
+                    onCheckedChange={(checked) => handlePreferenceChange("route_updates", checked)}
+                    disabled={updatePreferences.isPending}
+                  />
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between">
@@ -166,7 +293,11 @@ export default function Settings() {
                       Receive alerts about client capacity and pickups
                     </p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch 
+                    checked={preferences?.client_alerts || false}
+                    onCheckedChange={(checked) => handlePreferenceChange("client_alerts", checked)}
+                    disabled={updatePreferences.isPending}
+                  />
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between">
@@ -176,7 +307,11 @@ export default function Settings() {
                       Get notified about scheduled maintenance
                     </p>
                   </div>
-                  <Switch />
+                  <Switch 
+                    checked={preferences?.system_maintenance || false}
+                    onCheckedChange={(checked) => handlePreferenceChange("system_maintenance", checked)}
+                    disabled={updatePreferences.isPending}
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -200,7 +335,11 @@ export default function Settings() {
                       Use dark theme for better visibility in low light
                     </p>
                   </div>
-                  <Switch />
+                  <Switch 
+                    checked={preferences?.dark_mode || false}
+                    onCheckedChange={(checked) => handlePreferenceChange("dark_mode", checked)}
+                    disabled={updatePreferences.isPending}
+                  />
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between">
@@ -210,7 +349,11 @@ export default function Settings() {
                       Minimize animations and transitions
                     </p>
                   </div>
-                  <Switch />
+                  <Switch 
+                    checked={preferences?.reduced_motion || false}
+                    onCheckedChange={(checked) => handlePreferenceChange("reduced_motion", checked)}
+                    disabled={updatePreferences.isPending}
+                  />
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between">
@@ -220,7 +363,11 @@ export default function Settings() {
                       Show more information in less space
                     </p>
                   </div>
-                  <Switch />
+                  <Switch 
+                    checked={preferences?.compact_layout || false}
+                    onCheckedChange={(checked) => handlePreferenceChange("compact_layout", checked)}
+                    disabled={updatePreferences.isPending}
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -244,9 +391,18 @@ export default function Settings() {
                       Add an extra layer of security to your account
                     </p>
                   </div>
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant={preferences?.two_factor_enabled ? "default" : "outline"} 
+                    size="sm"
+                    onClick={() => {
+                      toast({
+                        title: "Feature coming soon",
+                        description: "Two-factor authentication setup will be available in a future update.",
+                      });
+                    }}
+                  >
                     <Key className="h-4 w-4 mr-2" />
-                    Setup
+                    {preferences?.two_factor_enabled ? "Enabled" : "Setup"}
                   </Button>
                 </div>
                 <Separator />
@@ -257,7 +413,11 @@ export default function Settings() {
                       Automatically sign out after period of inactivity
                     </p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch 
+                    checked={preferences?.session_timeout || false}
+                    onCheckedChange={(checked) => handlePreferenceChange("session_timeout", checked)}
+                    disabled={updatePreferences.isPending}
+                  />
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between">
@@ -267,16 +427,39 @@ export default function Settings() {
                       Keep logs of account activity for security
                     </p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch 
+                    checked={preferences?.activity_logging || false}
+                    onCheckedChange={(checked) => handlePreferenceChange("activity_logging", checked)}
+                    disabled={updatePreferences.isPending}
+                  />
                 </div>
               </CardContent>
             </Card>
 
-            {/* Action Buttons */}
-            <div className="flex gap-4 pt-4">
-              <Button>Save Changes</Button>
-              <Button variant="outline">Cancel</Button>
-            </div>
+            {/* Action Buttons - Only show if there are unsaved changes */}
+            {hasUnsavedChanges && (
+              <div className="flex gap-4 pt-4 border-t">
+                <Button onClick={handleProfileSave} disabled={updateProfile.isPending}>
+                  {updateProfile.isPending ? (
+                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving...</>
+                  ) : (
+                    <><Save className="h-4 w-4 mr-2" /> Save Changes</>
+                  )}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setProfileData({
+                      email: user?.email || "",
+                      phone: user?.phone || "",
+                    });
+                    setHasUnsavedChanges(false);
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            )}
           </SlideUp>
         </div>
       </main>
