@@ -68,6 +68,12 @@ export function useUpdateUserPreferences() {
         .single();
 
       if (error) throw error;
+
+      // Apply dark mode immediately
+      if (updates.dark_mode !== undefined) {
+        document.documentElement.classList.toggle("dark", updates.dark_mode);
+      }
+
       return data;
     },
     onSuccess: () => {
