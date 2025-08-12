@@ -78,12 +78,19 @@ export const useClientSummaryAnalytics = (year: number = 2025) => {
           *,
           client:client_id(company_name, type)
         `)
-        .eq('year', year);
+        .eq('year', year)
+        .eq('organization_id', 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73'); // Add organization filter
 
       if (error) {
         console.error('Error fetching analytics:', error);
         throw error;
       }
+
+      console.log('Analytics data fetched:', { 
+        recordCount: data?.length, 
+        uniqueClients: new Set(data?.map(s => s.client_id)).size,
+        sampleData: data?.slice(0, 3)
+      });
 
       // Calculate analytics
       const totalClients = new Set(data.map(s => s.client_id)).size;
