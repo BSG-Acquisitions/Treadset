@@ -19,6 +19,7 @@ import Onboarding from "./pages/Onboarding";
 import Employees from "./pages/Employees";
 import ClientAnalytics from "./pages/ClientAnalytics";
 import Settings from "./pages/Settings";
+import EnhancedRoutesToday from "./pages/EnhancedRoutesToday";
 
 const queryClient = new QueryClient();
 
@@ -53,6 +54,11 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/routes/today" element={
+              <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher', 'driver']}>
+                <EnhancedRoutesToday />
+              </ProtectedRoute>
+            } />
+            <Route path="/routes/legacy" element={
               <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher', 'driver']}>
                 <RoutesToday />
               </ProtectedRoute>
