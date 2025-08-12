@@ -10,12 +10,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePickups, useSchedulePickup } from "@/hooks/usePickups";
 import { useLocations } from "@/hooks/useLocations";
+import { useVehicles } from "@/hooks/useVehicles";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { format, addDays, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval } from "date-fns";
 import { MapPin, Clock, Truck, Fuel, Star, TrendingUp, Calendar as CalendarIcon } from "lucide-react";
 import { motion } from "framer-motion";
 import { BSGLogo } from "@/components/BSGLogo";
+import { VehicleSetup } from "@/components/VehicleSetup";
 
 interface OptimizedSchedulingCalendarProps {
   clientId: string;
@@ -62,6 +64,7 @@ export function OptimizedSchedulingCalendar({
   const { toast } = useToast();
   const { data: pickups = [], isLoading: pickupsLoading } = usePickups();
   const { data: locations = [] } = useLocations(clientId);
+  const { data: vehicles = [] } = useVehicles();
   const schedulePickup = useSchedulePickup();
 
   // Generate optimization suggestions for the next 30 days
@@ -231,6 +234,17 @@ export function OptimizedSchedulingCalendar({
         <div className="flex flex-col items-center gap-4">
           <BSGLogo size="md" animated={true} showText={false} />
           <p className="text-muted-foreground">Loading pickup calendar...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if vehicles exist
+  if (vehicles.length === 0) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="w-full max-w-lg">
+          <VehicleSetup />
         </div>
       </div>
     );

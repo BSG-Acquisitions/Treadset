@@ -74,3 +74,6 @@ verify_jwt = false
 
 [functions.geocode-locations]
 verify_jwt = false
+
+[functions.vehicle-setup]
+verify_jwt = false
