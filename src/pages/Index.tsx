@@ -15,6 +15,9 @@ import { StatsCard } from "@/components/enhanced/StatsCard";
 import { format } from "date-fns";
 import { useEffect } from "react";
 import { useRealtimeUpdates } from "@/hooks/useRealtimeUpdates";
+import { StaggerList } from "@/components/motion/StaggerList";
+import { FadeIn } from "@/components/motion/FadeIn";
+import { SlideUp } from "@/components/motion/SlideUp";
 
 export default function Index() {
   useEffect(() => {
@@ -75,60 +78,71 @@ export default function Index() {
       
       <main className="container mx-auto px-6 pb-8 pt-8">
         {/* Welcome Section */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h2 className="text-2xl font-bold text-foreground">
-              Welcome back, {user?.firstName || 'Operator'}!
-            </h2>
-            <p className="text-muted-foreground mt-1">
-              Today is {format(new Date(), 'EEEE, MMMM do, yyyy')} • Here's your operational overview
-            </p>
+        <FadeIn delay={0.1}>
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-2xl font-bold text-foreground">
+                Welcome back, {user?.firstName || 'Operator'}!
+              </h2>
+              <p className="text-muted-foreground mt-1">
+                Today is {format(new Date(), 'EEEE, MMMM do, yyyy')} • Here's your operational overview
+              </p>
+            </div>
+            <UserMenu />
           </div>
-          <UserMenu />
-        </div>
+        </FadeIn>
 
-        {/* Enhanced Stats Grid - Now with real data */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
-          <StatsCard
-            title="Today's Pickups"
-            value={todayPickups.length}
-            icon={<Package className="w-5 h-5" />}
-            variant="primary"
-            change={todayPickups.length > 0 ? 12.5 : 0}
-            changeLabel="vs yesterday"
-          />
+        {/* Enhanced Stats Grid - Now with staggered animation */}
+        <StaggerList className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8" staggerDelay={0.1}>
+          <SlideUp>
+            <StatsCard
+              title="Today's Pickups"
+              value={todayPickups.length}
+              icon={<Package className="w-5 h-5" />}
+              variant="primary"
+              change={todayPickups.length > 0 ? 12.5 : 0}
+              changeLabel="vs yesterday"
+            />
+          </SlideUp>
           
-          <StatsCard
-            title="Tires Recycled"
-            value={totalTiresRecycled > 0 ? `${totalTiresRecycled} PTEs` : 'No data'}
-            icon={<Recycle className="w-5 h-5" />}
-            variant="success"
-            change={totalTiresRecycled > 0 ? 8.3 : 0}
-            changeLabel="vs last week"
-          />
+          <SlideUp>
+            <StatsCard
+              title="Tires Recycled"
+              value={totalTiresRecycled > 0 ? `${totalTiresRecycled} PTEs` : 'No data'}
+              icon={<Recycle className="w-5 h-5" />}
+              variant="success"
+              change={totalTiresRecycled > 0 ? 8.3 : 0}
+              changeLabel="vs last week"
+            />
+          </SlideUp>
           
-          <StatsCard
-            title="Active Fleet"
-            value={vehicles.filter(v => v.status === 'active').length}
-            icon={<Truck className="w-5 h-5" />}
-            variant="accent"
-            change={vehicles.length > 0 ? -2.1 : 0}
-            changeLabel={`${vehicles.filter(v => v.status !== 'active').length} maintenance`}
-          />
+          <SlideUp>
+            <StatsCard
+              title="Active Fleet"
+              value={vehicles.filter(v => v.status === 'active').length}
+              icon={<Truck className="w-5 h-5" />}
+              variant="accent"
+              change={vehicles.length > 0 ? -2.1 : 0}
+              changeLabel={`${vehicles.filter(v => v.status !== 'active').length} maintenance`}
+            />
+          </SlideUp>
           
-          <StatsCard
-            title="Active Clients"
-            value={activeClients.length}
-            icon={<BarChart3 className="w-5 h-5" />}
-            variant="warning"
-            change={activeClients.length > 0 ? 15.7 : 0}
-            changeLabel="total clients"
-          />
-        </div>
+          <SlideUp>
+            <StatsCard
+              title="Active Clients"
+              value={activeClients.length}
+              icon={<BarChart3 className="w-5 h-5" />}
+              variant="warning"
+              change={activeClients.length > 0 ? 15.7 : 0}
+              changeLabel="total clients"
+            />
+          </SlideUp>
+        </StaggerList>
 
         {/* Performance Metrics */}
-        <div className="grid gap-6 lg:grid-cols-3 mb-8">
-          <Card className="lg:col-span-2 border-border/20 shadow-elevation-lg bg-gradient-to-br from-card to-card-hover">
+        <SlideUp delay={0.3}>
+          <div className="grid gap-6 lg:grid-cols-3 mb-8">
+            <Card className="lg:col-span-2 border-border/20 shadow-elevation-lg bg-gradient-to-br from-card to-card-hover">
             <CardHeader className="border-b border-border/10">
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-brand-primary" />
@@ -188,11 +202,13 @@ export default function Index() {
                 </div>
               </div>
             </CardContent>
-          </Card>
-        </div>
+            </Card>
+          </div>
+        </SlideUp>
 
         {/* Quick Actions */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
+        <SlideUp delay={0.4}>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
           {hasAnyRole(['admin', 'ops_manager', 'dispatcher']) && (
             <Card className="interactive-card border-brand-primary/20 bg-gradient-to-br from-card to-brand-primary/5">
               <CardHeader>
@@ -268,11 +284,13 @@ export default function Index() {
               </CardContent>
             </Card>
           )}
-        </div>
+          </div>
+        </SlideUp>
 
         {/* Today's Activity */}
         {todayPickups.length > 0 && (
-          <Card className="border-border/20 shadow-elevation-lg bg-gradient-to-br from-card to-card-hover mb-8">
+          <SlideUp delay={0.5}>
+            <Card className="border-border/20 shadow-elevation-lg bg-gradient-to-br from-card to-card-hover mb-8">
             <CardHeader className="border-b border-border/10">
               <CardTitle className="flex items-center gap-2">
                 <Clock className="h-5 w-5 text-brand-primary" />
@@ -300,10 +318,12 @@ export default function Index() {
               />
             </CardContent>
           </Card>
+          </SlideUp>
         )}
 
         {/* Fleet Status */}
-        <div className="grid gap-6 lg:grid-cols-2">
+        <SlideUp delay={0.6}>
+          <div className="grid gap-6 lg:grid-cols-2">
           <Card className="border-border/20 shadow-elevation-lg bg-gradient-to-br from-card to-secondary/5">
             <CardHeader className="border-b border-border/10">
               <CardTitle className="flex items-center gap-2">
@@ -368,6 +388,7 @@ export default function Index() {
             </CardContent>
           </Card>
         </div>
+        </SlideUp>
       </main>
     </div>
   );
