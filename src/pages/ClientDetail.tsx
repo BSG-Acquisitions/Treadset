@@ -1,14 +1,16 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useClient } from "@/hooks/useClients";
 import { useLocations } from "@/hooks/useLocations";
 import { useInvoices, useCompletedPickups } from "@/hooks/useFinance";
 import { CreateInvoiceDialog } from "@/components/finance/CreateInvoiceDialog";
 import { RecordPaymentDialog } from "@/components/finance/RecordPaymentDialog";
+import { OptimizedSchedulingCalendar } from "@/components/OptimizedSchedulingCalendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CapacityGauge } from "@/components/CapacityGauge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DollarSign, FileText, Calendar, CreditCard, MapPin } from "lucide-react";
 import { TopNav } from "@/components/TopNav";
 
@@ -18,6 +20,7 @@ export default function ClientDetail() {
   const { data: locations = [] } = useLocations(id);
   const { data: invoices = [] } = useInvoices(id);
   const { data: completedPickups = [] } = useCompletedPickups(id);
+  const [showSchedulingCalendar, setShowSchedulingCalendar] = useState(false);
 
   useEffect(() => {
     document.title = client ? `${client.company_name} – Client – BSG` : "Client – BSG";
@@ -55,7 +58,12 @@ export default function ClientDetail() {
           <p className="text-sm text-muted-foreground">Last pickup {client.last_pickup_at ? new Date(client.last_pickup_at).toLocaleDateString() : 'Never'}</p>
         </div>
         <div className="flex gap-2">
-          <Link to="/book"><Button variant="brand">Schedule Pickup</Button></Link>
+          <Button 
+            variant="brand" 
+            onClick={() => setShowSchedulingCalendar(true)}
+          >
+            Schedule Pickup
+          </Button>
           <Link to="/routes/today"><Button variant="outline">View Today’s Routes</Button></Link>
         </div>
       </header>
@@ -211,6 +219,22 @@ export default function ClientDetail() {
         </Card>
       </section>
       </main>
+
+      {/* Optimized Scheduling Calendar Dialog */}
+      <Dialog open={showSchedulingCalendar} onOpenChange={setShowSchedulingCalendar}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Schedule Optimized Pickup</DialogTitle>
+          </DialogHeader>
+          {client && (
+            <OptimizedSchedulingCalendar
+              clientId={client.id}
+              clientName={client.company_name}
+              onClose={() => setShowSchedulingCalendar(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
