@@ -23,6 +23,12 @@ export function ClientSummaryImport({ onSuccess }: ClientSummaryImportProps) {
     message: string;
     processed?: number;
     errors?: string[];
+    fuzzy_matches?: Array<{
+      row: number;
+      csv_name: string;
+      matched_name: string;
+    }>;
+    skipped_entries?: number;
   } | null>(null);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -178,6 +184,28 @@ Michigan Tire Center,2025,1,3,276,0,0,6900.00,3.10,27.6,2025-01-10,2025-01-25,La
                 {result.processed && (
                   <div className="text-sm mt-1">
                     Successfully processed {result.processed} client summaries
+                    {result.skipped_entries && result.skipped_entries > 0 && (
+                      <span className="text-amber-600 ml-2">
+                        ({result.skipped_entries} entries skipped due to unmatched client names)
+                      </span>
+                    )}
+                  </div>
+                )}
+                {result.fuzzy_matches && result.fuzzy_matches.length > 0 && (
+                  <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800">
+                    <div className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">
+                      Fuzzy Matches Applied ({result.fuzzy_matches.length}):
+                    </div>
+                    {result.fuzzy_matches.slice(0, 3).map((match, index) => (
+                      <div key={index} className="text-sm text-amber-700 dark:text-amber-300">
+                        • Row {match.row}: "{match.csv_name}" → "{match.matched_name}"
+                      </div>
+                    ))}
+                    {result.fuzzy_matches.length > 3 && (
+                      <div className="text-sm text-amber-600 dark:text-amber-400">
+                        ... and {result.fuzzy_matches.length - 3} more fuzzy matches
+                      </div>
+                    )}
                   </div>
                 )}
                 {result.errors && result.errors.length > 0 && (

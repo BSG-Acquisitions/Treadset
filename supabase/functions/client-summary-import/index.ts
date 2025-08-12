@@ -9,6 +9,11 @@ const corsHeaders = {
 interface ProcessedSummaryData {
   client_summaries: any[];
   errors: string[];
+  fuzzy_matches: Array<{
+    row: number;
+    csv_name: string;
+    matched_name: string;
+  }>;
 }
 
 serve(async (req) => {
@@ -41,7 +46,8 @@ serve(async (req) => {
 
     const processedData: ProcessedSummaryData = {
       client_summaries: [],
-      errors: []
+      errors: [],
+      fuzzy_matches: []
     };
 
     // Get organization ID
@@ -72,13 +78,44 @@ serve(async (req) => {
           continue;
         }
 
-        // Find matching client
-        const { data: clients, error: clientError } = await supabase
+        // Find matching client with fuzzy matching
+        let { data: clients, error: clientError } = await supabase
           .from('clients')
-          .select('id')
+          .select('id, company_name')
           .eq('company_name', clientName)
           .eq('organization_id', orgId)
           .limit(1);
+
+        // If exact match fails, try fuzzy matching
+        if (!clients || clients.length === 0) {
+          const { data: allClients, error: allClientsError } = await supabase
+            .from('clients')
+            .select('id, company_name')
+            .eq('organization_id', orgId);
+
+          if (!allClientsError && allClients) {
+            // Try to find partial matches
+            const normalizedClientName = clientName.toLowerCase().trim();
+            const matchedClient = allClients.find(client => {
+              const normalizedDbName = client.company_name.toLowerCase().trim();
+              return normalizedDbName.includes(normalizedClientName) || 
+                     normalizedClientName.includes(normalizedDbName) ||
+                     // Check for common variations
+                     normalizedDbName.replace(/\s+/g, '') === normalizedClientName.replace(/\s+/g, '') ||
+                     normalizedDbName.replace(/[&,.-]/g, '') === normalizedClientName.replace(/[&,.-]/g, '');
+            });
+
+            if (matchedClient) {
+              clients = [matchedClient];
+              console.log(`Fuzzy matched "${clientName}" to "${matchedClient.company_name}"`);
+              processedData.fuzzy_matches.push({
+                row: rowNum,
+                csv_name: clientName,
+                matched_name: matchedClient.company_name
+              });
+            }
+          }
+        }
 
         if (clientError) {
           console.error('Client lookup error:', clientError);
@@ -87,7 +124,7 @@ serve(async (req) => {
         }
 
         if (!clients || clients.length === 0) {
-          processedData.errors.push(`Row ${rowNum}: Client "${clientName}" not found`);
+          processedData.errors.push(`Row ${rowNum}: Client "${clientName}" not found - no exact or partial match`);
           continue;
         }
 
@@ -165,7 +202,9 @@ serve(async (req) => {
         success: true,
         message: `Successfully processed ${processedData.client_summaries.length} client summaries`,
         processed: processedData.client_summaries.length,
-        errors: processedData.errors
+        errors: processedData.errors,
+        fuzzy_matches: processedData.fuzzy_matches,
+        skipped_entries: processedData.errors.filter(e => e.includes('not found')).length
       }),
       { 
         status: 200, 
