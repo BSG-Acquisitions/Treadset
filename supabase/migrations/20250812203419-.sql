@@ -1,0 +1,6 @@
+-- Fix surcharge rules insert without notes column
+INSERT INTO public.surcharge_rules (organization_id, name, type, value_type, value, when_expr) VALUES
+((SELECT id FROM public.organizations WHERE slug = 'bsg'), 'Passenger Rim Surcharge - Pickup', 'rim_on', 'flat', 5.00, '{"and": [{"==": [{"var": "service_mode"}, "pickup"]}, {"==": [{"var": "tire_category"}, "passenger"]}, {"==": [{"var": "rim"}, "on"]}]}'),
+((SELECT id FROM public.organizations WHERE slug = 'bsg'), 'Passenger Rim Surcharge - Drop-off', 'rim_on', 'flat', 4.00, '{"and": [{"==": [{"var": "service_mode"}, "dropoff"]}, {"==": [{"var": "tire_category"}, "passenger"]}, {"==": [{"var": "rim"}, "on"]}]}'),
+((SELECT id FROM public.organizations WHERE slug = 'bsg'), 'Commercial Rim Surcharge - Pickup', 'rim_on', 'flat', 8.00, '{"and": [{"==": [{"var": "service_mode"}, "pickup"]}, {"in": [{"var": "tire_category"}, ["commercial_17_5_19_5", "commercial_22_5", "otr"]]}, {"==": [{"var": "rim"}, "on"]}]}'),
+((SELECT id FROM public.organizations WHERE slug = 'bsg'), 'Commercial Rim Surcharge - Drop-off', 'rim_on', 'flat', 6.00, '{"and": [{"==": [{"var": "service_mode"}, "dropoff"]}, {"in": [{"var": "tire_category"}, ["commercial_17_5_19_5", "commercial_22_5", "otr"]]}, {"==": [{"var": "rim"}, "on"]}]}');
