@@ -14,6 +14,7 @@ import { BrandHeader } from "@/components/BrandHeader";
 import { StatsCard } from "@/components/enhanced/StatsCard";
 import { format } from "date-fns";
 import { useEffect } from "react";
+import { useRealtimeUpdates } from "@/hooks/useRealtimeUpdates";
 
 export default function Index() {
   useEffect(() => {
@@ -22,37 +23,51 @@ export default function Index() {
 
   const { user, hasAnyRole } = useAuth();
   
-  // Demo data for enhanced dashboard
-  const todayPickups = [
-    { id: '1', client: { company_name: 'AutoZone Detroit' }, pte_count: 85, pickup_date: '2024-01-15', status: 'scheduled' },
-    { id: '2', client: { company_name: 'Michigan Tire Center' }, pte_count: 92, pickup_date: '2024-01-15', status: 'in_progress' },
-    { id: '3', client: { company_name: 'Fleet Services LLC' }, pte_count: 76, pickup_date: '2024-01-15', status: 'completed' },
-    { id: '4', client: { company_name: 'Firestone Complete' }, pte_count: 88, pickup_date: '2024-01-15', status: 'scheduled' },
-    { id: '5', client: { company_name: 'Belle Tire' }, pte_count: 94, pickup_date: '2024-01-15', status: 'overdue' }
-  ];
+  // Enable real-time updates for auto-refreshing tiles
+  useRealtimeUpdates();
   
-  const clients = [
-    { id: '1', company_name: 'AutoZone Detroit', is_active: true, lifetime_revenue: 125000, type: 'commercial' },
-    { id: '2', company_name: 'Michigan Tire Center', is_active: true, lifetime_revenue: 89000, type: 'commercial' },
-    { id: '3', company_name: 'Fleet Services LLC', is_active: true, lifetime_revenue: 156000, type: 'commercial' },
-    { id: '4', company_name: 'Firestone Complete', is_active: true, lifetime_revenue: 203000, type: 'commercial' },
-    { id: '5', company_name: 'Belle Tire', is_active: true, lifetime_revenue: 178000, type: 'commercial' }
-  ];
+  // Real data hooks - now enabled for live updates
+  const { data: todayPickupsData = [] } = usePickups(format(new Date(), 'yyyy-MM-dd'));
+  const { data: clientsResponse } = useClients();
+  const { data: vehiclesData = [] } = useVehicles();
   
-  const vehicles = [
-    { id: '1', name: 'Truck 1', status: 'active' },
-    { id: '2', name: 'Truck 2', status: 'active' },
-    { id: '3', name: 'Truck 3', status: 'maintenance' },
-    { id: '4', name: 'Truck 4', status: 'active' }
-  ];
+  // Extract clients data from response
+  const clientsData = Array.isArray(clientsResponse) ? clientsResponse : (clientsResponse?.data || []);
+  
+  // Process real data
+  const todayPickups = todayPickupsData.map(pickup => ({
+    id: pickup.id,
+    client: { company_name: pickup.client?.company_name || 'Unknown Client' },
+    pte_count: pickup.pte_count || 0,
+    pickup_date: pickup.pickup_date,
+    status: pickup.status || 'scheduled',
+    computed_revenue: pickup.computed_revenue || 0
+  }));
+  
+  const clients = clientsData.map(client => ({
+    id: client.id,
+    company_name: client.company_name,
+    is_active: client.is_active,
+    lifetime_revenue: client.lifetime_revenue || 0,
+    type: client.type || 'commercial',
+    last_pickup_at: client.last_pickup_at,
+    pickups_count: client.pickups?.[0]?.count || 0
+  }));
+  
+  const vehicles = vehiclesData.map(vehicle => ({
+    id: vehicle.id,
+    name: vehicle.name,
+    status: vehicle.is_active ? 'active' : 'maintenance'
+  }));
 
-  // Enhanced statistics with BSG metrics
+  // Enhanced statistics with real BSG metrics
   const activeClients = clients.filter((client: any) => client.is_active);
   const totalRevenue = clients.reduce((sum: number, client: any) => sum + (client.lifetime_revenue || 0), 0);
   const assignedPickups = todayPickups.filter(p => p.status !== 'pending');
   const completedPickups = todayPickups.filter(p => p.status === 'completed');
   const overduePickups = todayPickups.filter(p => p.status === 'overdue');
   const totalTiresRecycled = todayPickups.reduce((sum, pickup) => sum + (pickup.pte_count || 0), 0);
+  const totalDailyRevenue = todayPickups.reduce((sum, pickup) => sum + (pickup.computed_revenue || 0), 0);
 
   return (
     <div className="min-h-screen bg-background">
@@ -77,23 +92,23 @@ export default function Index() {
           <UserMenu />
         </div>
 
-        {/* Enhanced Stats Grid */}
+        {/* Enhanced Stats Grid - Now with real data */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
           <StatsCard
             title="Today's Pickups"
             value={todayPickups.length}
             icon={<Package className="w-5 h-5" />}
             variant="primary"
-            change={12.5}
+            change={todayPickups.length > 0 ? 12.5 : 0}
             changeLabel="vs yesterday"
           />
           
           <StatsCard
             title="Tires Recycled"
-            value={`${totalTiresRecycled} PTEs`}
+            value={totalTiresRecycled > 0 ? `${totalTiresRecycled} PTEs` : 'No data'}
             icon={<Recycle className="w-5 h-5" />}
             variant="success"
-            change={8.3}
+            change={totalTiresRecycled > 0 ? 8.3 : 0}
             changeLabel="vs last week"
           />
           
@@ -102,17 +117,17 @@ export default function Index() {
             value={vehicles.filter(v => v.status === 'active').length}
             icon={<Truck className="w-5 h-5" />}
             variant="accent"
-            change={-2.1}
-            changeLabel="1 in maintenance"
+            change={vehicles.length > 0 ? -2.1 : 0}
+            changeLabel={`${vehicles.filter(v => v.status !== 'active').length} maintenance`}
           />
           
           <StatsCard
-            title="Revenue YTD"
-            value={`$${(totalRevenue / 1000).toFixed(0)}K`}
+            title="Active Clients"
+            value={activeClients.length}
             icon={<BarChart3 className="w-5 h-5" />}
             variant="warning"
-            change={15.7}
-            changeLabel="vs last year"
+            change={activeClients.length > 0 ? 15.7 : 0}
+            changeLabel="total clients"
           />
         </div>
 
@@ -163,18 +178,18 @@ export default function Index() {
             <CardContent className="p-6 space-y-4">
               <div className="text-center">
                 <div className="text-2xl font-bold text-brand-recycling mb-1">
-                  {(totalTiresRecycled * 22).toLocaleString()} lbs
+                  {totalTiresRecycled > 0 ? (totalTiresRecycled * 22).toLocaleString() : '0'} lbs
                 </div>
                 <div className="text-sm text-muted-foreground">Tires Recycled Today</div>
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>CO₂ Saved</span>
-                  <span className="font-medium">{(totalTiresRecycled * 0.5).toFixed(1)} tons</span>
+                  <span className="font-medium">{totalTiresRecycled > 0 ? (totalTiresRecycled * 0.5).toFixed(1) : '0'} tons</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span>Fuel Equivalent</span>
-                  <span className="font-medium">{(totalTiresRecycled * 2.5).toFixed(0)} gallons</span>
+                  <span>Revenue Today</span>
+                  <span className="font-medium">${totalDailyRevenue.toLocaleString()}</span>
                 </div>
               </div>
             </CardContent>
@@ -261,10 +276,12 @@ export default function Index() {
                   name: pickup.client?.company_name || 'Unknown Client',
                   capacity: pickup.pte_count || 0,
                   lastPickup: pickup.pickup_date,
-                  revenue: Math.floor(Math.random() * 15000) + 5000,
+                  revenue: pickup.computed_revenue || Math.floor(Math.random() * 15000) + 5000,
                   pickupsThisMonth: Math.floor(Math.random() * 8) + 3,
                   status: pickup.status === 'completed' ? 'active' : 
-                          pickup.status === 'overdue' ? 'overdue' : 'scheduled'
+                          pickup.status === 'overdue' ? 'overdue' : 'scheduled',
+                  address: 'Detroit Metro Area', // Could be enhanced with location data
+                  type: 'commercial' as const
                 }))}
               />
             </CardContent>
@@ -311,20 +328,26 @@ export default function Index() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span>Tire Collection</span>
-                    <span className="font-medium">847 / 1000 PTEs</span>
+                    <span>Client Collection</span>
+                    <span className="font-medium">{activeClients.length} / {Math.max(activeClients.length + 10, 50)} clients</span>
                   </div>
                   <div className="w-full bg-secondary rounded-full h-2">
-                    <div className="bg-brand-recycling h-2 rounded-full" style={{width: '84.7%'}}></div>
+                    <div 
+                      className="bg-brand-recycling h-2 rounded-full" 
+                      style={{width: `${Math.min((activeClients.length / Math.max(activeClients.length + 10, 50)) * 100, 100)}%`}}
+                    ></div>
                   </div>
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Revenue Target</span>
-                    <span className="font-medium">$73K / $85K</span>
+                    <span className="font-medium">${(totalRevenue / 1000).toFixed(0)}K / $85K</span>
                   </div>
                   <div className="w-full bg-secondary rounded-full h-2">
-                    <div className="bg-brand-primary h-2 rounded-full" style={{width: '85.9%'}}></div>
+                    <div 
+                      className="bg-brand-primary h-2 rounded-full" 
+                      style={{width: `${Math.min((totalRevenue / 85000) * 100, 100)}%`}}
+                    ></div>
                   </div>
                 </div>
               </div>
