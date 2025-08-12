@@ -9,7 +9,6 @@ const corsHeaders = {
 interface Vehicle {
   name: string;
   capacity: number;
-  truck_type: string;
   license_plate?: string;
   is_active: boolean;
 }
@@ -30,27 +29,18 @@ Deno.serve(async (req) => {
     console.log('Vehicle setup request:', { action, vehicles });
 
     if (action === 'create_default_fleet') {
-      // Create a default fleet for BSG Tire Recycling
+      // Create BSG fleet with real capacities and multi-trip capability  
       const defaultVehicles: Vehicle[] = [
         {
-          name: "Truck 1 - Brenner Whitt",
-          capacity: 150,
-          truck_type: "standard",
+          name: "Brenner Whitt - Active Truck",
+          capacity: 500, // Correct capacity - can do multiple trips
           license_plate: "BSG-001",
           is_active: true
         },
         {
-          name: "Truck 2 - Drop off",
-          capacity: 200,
-          truck_type: "large",
+          name: "Backup Active Truck",
+          capacity: 350,
           license_plate: "BSG-002", 
-          is_active: true
-        },
-        {
-          name: "Backup Truck",
-          capacity: 120,
-          truck_type: "standard",
-          license_plate: "BSG-003",
           is_active: true
         }
       ];

@@ -77,3 +77,6 @@ verify_jwt = false
 
 [functions.vehicle-setup]
 verify_jwt = false
+
+[functions.multi-trip-optimizer]
+verify_jwt = false

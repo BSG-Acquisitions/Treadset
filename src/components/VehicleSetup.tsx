@@ -31,8 +31,8 @@ export function VehicleSetup() {
       if (error) throw error;
 
       toast({
-        title: "Default Fleet Created",
-        description: "Added 3 vehicles to your fleet (Truck 1, Truck 2, Backup Truck)"
+        title: "BSG Fleet Created",
+        description: "Added Brenner Whitt (500 PTE capacity) and Backup Truck (350 PTE capacity)"
       });
       
       refetch();
@@ -89,10 +89,12 @@ export function VehicleSetup() {
           <div className="text-center text-sm text-muted-foreground">
             This will add:
             <ul className="mt-2 space-y-1">
-              <li>• Truck 1 - Brenner Whitt (150 PTE capacity)</li>
-              <li>• Truck 2 - Drop off (200 PTE capacity)</li>  
-              <li>• Backup Truck (120 PTE capacity)</li>
+              <li>• Brenner Whitt - Active Truck (500 PTE capacity)</li>
+              <li>• Backup Active Truck (350 PTE capacity)</li>  
             </ul>
+            <p className="mt-2 text-xs">
+              Note: Brenner's truck can do multiple trips per day with dump runs at the facility.
+            </p>
           </div>
 
           <div className="relative">
