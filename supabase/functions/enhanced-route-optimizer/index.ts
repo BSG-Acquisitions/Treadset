@@ -284,8 +284,9 @@ Deno.serve(async (req) => {
         totalTime += BREAK_TIME;
       }
       
-      // Calculate start and end times
-      const startTime = new Date();
+      // Calculate start and end times for the selected date
+      const routeDate = new Date(date + 'T00:00:00');
+      const startTime = new Date(routeDate);
       startTime.setHours(WORK_START_HOUR, WORK_START_MINUTE, 0, 0);
       
       const endTime = new Date(startTime.getTime() + totalTime * 60 * 1000);
