@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { ClientAnalyticsDashboard } from "@/components/analytics/ClientAnalyticsDashboard";
+import { TopNav } from "@/components/TopNav";
 
 export default function ClientAnalytics() {
   useEffect(() => {
@@ -8,6 +9,8 @@ export default function ClientAnalytics() {
 
   return (
     <div className="min-h-screen bg-background">
+      <TopNav />
+      
       {/* Header with subtle background */}
       <div className="relative overflow-hidden bg-gradient-to-br from-background to-secondary/20 border-b border-border/20">
         <div className="absolute inset-0 tire-pattern opacity-20" />

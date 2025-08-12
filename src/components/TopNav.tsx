@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Bell, Menu, User, Settings, RotateCcw } from 'lucide-react';
+import { Search, Bell, Menu, User, Settings, RotateCcw, Home, Users, MapPin, Package, BarChart3, UserCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -11,7 +11,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface TopNavProps {
   onMenuToggle?: () => void;
@@ -20,7 +21,27 @@ interface TopNavProps {
 
 export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const { user, signOut } = useAuth();
+  const { user, signOut, hasAnyRole } = useAuth();
+  const location = useLocation();
+
+  const getCurrentTab = () => {
+    if (location.pathname === '/') return 'dashboard';
+    if (location.pathname.startsWith('/clients')) return 'clients';
+    if (location.pathname.startsWith('/routes')) return 'routes';
+    if (location.pathname === '/book') return 'book';
+    if (location.pathname === '/employees') return 'employees';
+    if (location.pathname === '/analytics') return 'analytics';
+    return 'dashboard';
+  };
+
+  const navigationTabs = [
+    { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/', roles: [] as const },
+    { id: 'clients', label: 'Clients', icon: Users, path: '/clients', roles: ['admin', 'ops_manager', 'sales'] as const },
+    { id: 'routes', label: 'Routes', icon: MapPin, path: '/routes/today', roles: ['admin', 'ops_manager', 'dispatcher', 'driver'] as const },
+    { id: 'book', label: 'Book', icon: Package, path: '/book', roles: ['admin', 'ops_manager', 'sales'] as const },
+    { id: 'employees', label: 'Employees', icon: UserCheck, path: '/employees', roles: ['admin'] as const },
+    { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics', roles: ['admin', 'ops_manager'] as const },
+  ];
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60 shadow-elevation-md">
@@ -124,6 +145,34 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+        </div>
+      </div>
+      
+      {/* Navigation Tabs */}
+      <div className="border-t border-border/20 bg-card/50">
+        <div className="px-6">
+          <Tabs value={getCurrentTab()} className="w-full">
+            <TabsList className="grid w-full bg-transparent h-auto p-0" style={{ gridTemplateColumns: `repeat(${navigationTabs.filter(tab => tab.roles.length === 0 || hasAnyRole([...tab.roles])).length}, 1fr)` }}>
+              {navigationTabs
+                .filter(tab => tab.roles.length === 0 || hasAnyRole([...tab.roles]))
+                .map((tab) => {
+                  const Icon = tab.icon;
+                  return (
+                    <TabsTrigger 
+                      key={tab.id} 
+                      value={tab.id} 
+                      asChild
+                      className="data-[state=active]:bg-brand-primary/10 data-[state=active]:text-brand-primary border-b-2 border-transparent data-[state=active]:border-brand-primary rounded-none h-12 px-4"
+                    >
+                      <Link to={tab.path} className="flex items-center gap-2 w-full">
+                        <Icon className="h-4 w-4" />
+                        <span className="hidden sm:inline">{tab.label}</span>
+                      </Link>
+                    </TabsTrigger>
+                  );
+                })}
+            </TabsList>
+          </Tabs>
         </div>
       </div>
     </header>

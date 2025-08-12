@@ -15,7 +15,7 @@ import {
 import { Users, UserCheck, UserX, Mail, Phone, Truck, Shield, HeadphonesIcon, DollarSign } from 'lucide-react';
 import { formatDate, formatPhoneNumber } from '@/lib/formatters';
 import { SkeletonTable, EmptyState } from '@/components/ui/loading-states';
-import { BrandHeader } from '@/components/BrandHeader';
+import { TopNav } from '@/components/TopNav';
 import { StatsCard } from '@/components/enhanced/StatsCard';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -76,14 +76,9 @@ export default function EmployeesPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Enhanced Header */}
-      <BrandHeader 
-        title="Team Management" 
-        subtitle="Manage your BSG workforce and operations team"
-        className="mb-6"
-      />
+      <TopNav />
       
-      <div className="space-y-8 p-6 max-w-7xl mx-auto">
+      <div className="space-y-8 p-6 max-w-7xl mx-auto pt-8">
         {/* Action Bar */}
         <div className="flex justify-between items-center">
           <div>
