@@ -71,3 +71,6 @@ verify_jwt = false
 
 [functions.enhanced-route-optimizer]
 verify_jwt = false
+
+[functions.geocode-locations]
+verify_jwt = false

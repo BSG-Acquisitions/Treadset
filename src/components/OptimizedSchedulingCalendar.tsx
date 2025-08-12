@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { usePickups, useSchedulePickup } from "@/hooks/usePickups";
 import { useLocations } from "@/hooks/useLocations";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { format, addDays, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval } from "date-fns";
 import { MapPin, Clock, Truck, Fuel, Star, TrendingUp, Calendar as CalendarIcon } from "lucide-react";
 import { motion } from "framer-motion";
@@ -161,6 +162,38 @@ export function OptimizedSchedulingCalendar({
     }
 
     try {
+      // First, check if the location has coordinates
+      const selectedLocation = locations.find(loc => loc.id === formData.locationId);
+      
+      if (selectedLocation && (!selectedLocation.latitude || !selectedLocation.longitude)) {
+        toast({
+          title: "Geocoding Location",
+          description: "Setting up location coordinates for route optimization...",
+        });
+
+        // Geocode the location first
+        const { error: geocodeError } = await supabase.functions.invoke('geocode-locations', {
+          body: {
+            locationId: formData.locationId,
+            address: selectedLocation.address
+          }
+        });
+
+        if (geocodeError) {
+          toast({
+            title: "Location Setup Failed",
+            description: "Could not set up location coordinates. Please try again or contact support.",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        toast({
+          title: "Location Ready",
+          description: "Location coordinates updated successfully!",
+        });
+      }
+
       await schedulePickup.mutateAsync({
         clientId,
         locationId: formData.locationId,
