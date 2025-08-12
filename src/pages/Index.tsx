@@ -36,6 +36,7 @@ export default function Index() {
   
   // Extract clients data from response
   const clientsData = Array.isArray(clientsResponse) ? clientsResponse : (clientsResponse?.data || []);
+  const totalActiveClientsCount = Array.isArray(clientsResponse) ? clientsResponse.length : (clientsResponse?.count || 0);
   
   // Process real data
   const todayPickups = todayPickupsData.map(pickup => ({
@@ -64,7 +65,7 @@ export default function Index() {
   }));
 
   // Enhanced statistics with real BSG metrics
-  const activeClients = clients.filter((client: any) => client.is_active);
+  const activeClients = { length: totalActiveClientsCount }; // Use total count instead of filtered array
   const totalRevenue = clients.reduce((sum: number, client: any) => sum + (client.lifetime_revenue || 0), 0);
   const assignedPickups = todayPickups.filter(p => p.status !== 'pending');
   const completedPickups = todayPickups.filter(p => p.status === 'completed');
