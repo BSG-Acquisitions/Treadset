@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
 
     const { csvData, dryRun = true } = await req.json();
     
-    console.log('Processing CSV import:', { rowCount: csvData.length, dryRun });
+    console.log('Processing CSV import request:', { rowCount: csvData.length, dryRun });
 
     const errors: ValidationError[] = [];
     const processedData: { clients: any[], locations: any[] } = { clients: [], locations: [] };
