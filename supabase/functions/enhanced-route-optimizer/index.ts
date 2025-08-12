@@ -242,18 +242,31 @@ Deno.serve(async (req) => {
       const vehicle = vehicleAssignments[0].vehicles;
       
       // Convert assignments to stops
-      const stops: Stop[] = vehicleAssignments.map(assignment => ({
-        id: assignment.id,
-        coordinates: {
-          lat: assignment.pickups.location?.latitude || DEPOT.lat,
-          lng: assignment.pickups.location?.longitude || DEPOT.lng,
-        },
-        pteCount: assignment.pickups.pte_count || 0,
-        clientName: assignment.pickups.client?.company_name || 'Unknown',
-        address: assignment.pickups.location?.address || 'Address not found',
-        serviceTimeMinutes: SERVICE_TIME_PER_STOP,
-        notes: assignment.pickups.notes
-      }));
+      const stops: Stop[] = vehicleAssignments.map(assignment => {
+        const location = assignment.pickups.location;
+        let coordinates = { lat: DEPOT.lat, lng: DEPOT.lng };
+        
+        // Use actual coordinates if available, otherwise fallback to default Royal Oak coordinates
+        if (location?.latitude && location?.longitude) {
+          coordinates = { lat: location.latitude, lng: location.longitude };
+        } else if (location?.address?.includes('Royal Oak')) {
+          // Default Royal Oak coordinates (approximate city center)
+          coordinates = { lat: 42.4897, lng: -83.1467 };
+          console.log(`Using default Royal Oak coordinates for ${assignment.pickups.client?.company_name}`);
+        }
+        
+        console.log(`Location for ${assignment.pickups.client?.company_name}: ${JSON.stringify(coordinates)}`);
+        
+        return {
+          id: assignment.id,
+          coordinates,
+          pteCount: assignment.pickups.pte_count || 0,
+          clientName: assignment.pickups.client?.company_name || 'Unknown',
+          address: assignment.pickups.location?.address || 'Address not found',
+          serviceTimeMinutes: SERVICE_TIME_PER_STOP,
+          notes: assignment.pickups.notes
+        };
+      });
 
       // Optimize stop order if requested
       const orderedStops = optimize ? optimizeRouteOrder(stops, mapboxToken) : stops;
