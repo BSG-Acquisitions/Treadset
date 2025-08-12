@@ -57,8 +57,14 @@ Deno.serve(async (req) => {
       }
 
       // Validate email format if provided
-      if (row.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) {
-        errors.push({ row: rowNum, field: 'email', message: 'Invalid email format' });
+      if (row.email && row.email.trim()) {
+        const email = row.email.trim();
+        console.log(`Row ${rowNum} email:`, JSON.stringify(email));
+        
+        // More flexible email validation - allow empty strings or valid emails
+        if (email !== '' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          errors.push({ row: rowNum, field: 'email', message: `Invalid email format (found: "${email}")` });
+        }
       }
 
       // Validate and normalize phone format if provided
@@ -90,9 +96,32 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Validate type if provided
-      if (row.type && !['commercial', 'residential', 'industrial'].includes(row.type)) {
-        errors.push({ row: rowNum, field: 'type', message: 'Type must be commercial, residential, or industrial' });
+      // Validate type if provided - make it flexible
+      if (row.type && row.type.trim()) {
+        const type = row.type.trim().toLowerCase();
+        console.log(`Row ${rowNum} type:`, JSON.stringify(row.type));
+        
+        // Map common variations to valid types
+        const typeMap: Record<string, string> = {
+          'commercial': 'commercial',
+          'residential': 'residential', 
+          'industrial': 'industrial',
+          'business': 'commercial',
+          'corporate': 'commercial',
+          'company': 'commercial',
+          'home': 'residential',
+          'house': 'residential',
+          'factory': 'industrial',
+          'warehouse': 'industrial',
+          'manufacturing': 'industrial'
+        };
+        
+        const validType = typeMap[type];
+        if (validType) {
+          row.type = validType;
+        } else if (!['commercial', 'residential', 'industrial'].includes(type)) {
+          errors.push({ row: rowNum, field: 'type', message: `Type must be commercial, residential, or industrial (found: "${row.type}")` });
+        }
       }
 
       // Get pricing tier ID if provided
