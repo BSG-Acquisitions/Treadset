@@ -14,7 +14,185 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      clients: {
+        Row: {
+          company_name: string
+          contact_name: string | null
+          created_at: string
+          email: string | null
+          id: string
+          is_active: boolean | null
+          last_pickup_at: string | null
+          lifetime_revenue: number | null
+          notes: string | null
+          open_balance: number | null
+          phone: string | null
+          pricing_tier_id: string | null
+          sla_weeks: number | null
+          tags: string[] | null
+          type: Database["public"]["Enums"]["client_type"] | null
+          updated_at: string
+        }
+        Insert: {
+          company_name: string
+          contact_name?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_pickup_at?: string | null
+          lifetime_revenue?: number | null
+          notes?: string | null
+          open_balance?: number | null
+          phone?: string | null
+          pricing_tier_id?: string | null
+          sla_weeks?: number | null
+          tags?: string[] | null
+          type?: Database["public"]["Enums"]["client_type"] | null
+          updated_at?: string
+        }
+        Update: {
+          company_name?: string
+          contact_name?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_pickup_at?: string | null
+          lifetime_revenue?: number | null
+          notes?: string | null
+          open_balance?: number | null
+          phone?: string | null
+          pricing_tier_id?: string | null
+          sla_weeks?: number | null
+          tags?: string[] | null
+          type?: Database["public"]["Enums"]["client_type"] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clients_pricing_tier_id_fkey"
+            columns: ["pricing_tier_id"]
+            isOneToOne: false
+            referencedRelation: "pricing_tiers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      locations: {
+        Row: {
+          access_notes: string | null
+          address: string
+          client_id: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          latitude: number | null
+          longitude: number | null
+          name: string | null
+          pricing_tier_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_notes?: string | null
+          address: string
+          client_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          name?: string | null
+          pricing_tier_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_notes?: string | null
+          address?: string
+          client_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          name?: string | null
+          pricing_tier_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "locations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "locations_pricing_tier_id_fkey"
+            columns: ["pricing_tier_id"]
+            isOneToOne: false
+            referencedRelation: "pricing_tiers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pricing_tiers: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          rate: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          rate?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          rate?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      vehicles: {
+        Row: {
+          capacity: number | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          license_plate: string | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          capacity?: number | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          license_plate?: string | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          capacity?: number | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          license_plate?: string | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +201,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      client_type: "commercial" | "residential" | "industrial"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +328,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      client_type: ["commercial", "residential", "industrial"],
+    },
   },
 } as const
