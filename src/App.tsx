@@ -15,6 +15,7 @@ import Book from "./pages/Book";
 import BookingConfirmation from "./pages/BookingConfirmation";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
+import Employees from "./pages/Employees";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +61,11 @@ const App = () => (
             <Route path="/book" element={
               <ProtectedRoute roles={['admin', 'ops_manager', 'sales']}>
                 <Book />
+              </ProtectedRoute>
+            } />
+            <Route path="/employees" element={
+              <ProtectedRoute roles={['admin']}>
+                <Employees />
               </ProtectedRoute>
             } />
             <Route path="/booking-confirmation" element={
