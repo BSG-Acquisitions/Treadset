@@ -12,7 +12,7 @@ import { CapacityGauge } from "@/components/CapacityGauge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { DollarSign, FileText, Calendar, CreditCard, MapPin, Plus } from "lucide-react";
+import { DollarSign, FileText, Calendar, CreditCard, MapPin, Plus, CheckCircle2 } from "lucide-react";
 import { TopNav } from "@/components/TopNav";
 
 export default function ClientDetail() {
@@ -64,10 +64,16 @@ export default function ClientDetail() {
             trigger={
               <Button variant="brand">
                 <Plus className="h-4 w-4 mr-2" />
-                Add Pickup
+                Schedule New Pickup
               </Button>
             }
           />
+          <Link to="/routes/today">
+            <Button variant="outline">
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              Complete Pickups
+            </Button>
+          </Link>
           <Button 
             variant="outline" 
             onClick={() => setShowSchedulingCalendar(true)}
