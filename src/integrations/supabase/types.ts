@@ -227,6 +227,8 @@ export type Database = {
           email: string | null
           id: string
           is_active: boolean | null
+          last_manifest_at: string | null
+          last_payment_at: string | null
           last_pickup_at: string | null
           lifetime_revenue: number | null
           notes: string | null
@@ -248,6 +250,8 @@ export type Database = {
           email?: string | null
           id?: string
           is_active?: boolean | null
+          last_manifest_at?: string | null
+          last_payment_at?: string | null
           last_pickup_at?: string | null
           lifetime_revenue?: number | null
           notes?: string | null
@@ -269,6 +273,8 @@ export type Database = {
           email?: string | null
           id?: string
           is_active?: boolean | null
+          last_manifest_at?: string | null
+          last_payment_at?: string | null
           last_pickup_at?: string | null
           lifetime_revenue?: number | null
           notes?: string | null
@@ -541,6 +547,138 @@ export type Database = {
           },
         ]
       }
+      manifests: {
+        Row: {
+          client_id: string
+          commercial_17_5_19_5_off: number | null
+          commercial_17_5_19_5_on: number | null
+          commercial_22_5_off: number | null
+          commercial_22_5_on: number | null
+          created_at: string
+          customer_signature_png_path: string | null
+          driver_id: string | null
+          driver_signature_png_path: string | null
+          id: string
+          location_id: string | null
+          manifest_number: string
+          organization_id: string
+          otr_count: number | null
+          paid_amount: number | null
+          payment_method: string | null
+          payment_status: string | null
+          pdf_bytes_hash: string | null
+          pdf_path: string | null
+          photos: string[] | null
+          pickup_id: string | null
+          pte_off_rim: number | null
+          pte_on_rim: number | null
+          receipt_url: string | null
+          resolved_unit_prices: Json | null
+          sign_ip: unknown | null
+          signed_at: string | null
+          signed_by_email: string | null
+          signed_by_name: string | null
+          signed_by_title: string | null
+          status: string | null
+          stripe_charge_id: string | null
+          stripe_payment_intent_id: string | null
+          subtotal: number | null
+          surcharges: number | null
+          total: number | null
+          tractor_count: number | null
+          updated_at: string
+          vehicle_id: string | null
+          volume_yards: number | null
+          weight_tons: number | null
+        }
+        Insert: {
+          client_id: string
+          commercial_17_5_19_5_off?: number | null
+          commercial_17_5_19_5_on?: number | null
+          commercial_22_5_off?: number | null
+          commercial_22_5_on?: number | null
+          created_at?: string
+          customer_signature_png_path?: string | null
+          driver_id?: string | null
+          driver_signature_png_path?: string | null
+          id?: string
+          location_id?: string | null
+          manifest_number: string
+          organization_id: string
+          otr_count?: number | null
+          paid_amount?: number | null
+          payment_method?: string | null
+          payment_status?: string | null
+          pdf_bytes_hash?: string | null
+          pdf_path?: string | null
+          photos?: string[] | null
+          pickup_id?: string | null
+          pte_off_rim?: number | null
+          pte_on_rim?: number | null
+          receipt_url?: string | null
+          resolved_unit_prices?: Json | null
+          sign_ip?: unknown | null
+          signed_at?: string | null
+          signed_by_email?: string | null
+          signed_by_name?: string | null
+          signed_by_title?: string | null
+          status?: string | null
+          stripe_charge_id?: string | null
+          stripe_payment_intent_id?: string | null
+          subtotal?: number | null
+          surcharges?: number | null
+          total?: number | null
+          tractor_count?: number | null
+          updated_at?: string
+          vehicle_id?: string | null
+          volume_yards?: number | null
+          weight_tons?: number | null
+        }
+        Update: {
+          client_id?: string
+          commercial_17_5_19_5_off?: number | null
+          commercial_17_5_19_5_on?: number | null
+          commercial_22_5_off?: number | null
+          commercial_22_5_on?: number | null
+          created_at?: string
+          customer_signature_png_path?: string | null
+          driver_id?: string | null
+          driver_signature_png_path?: string | null
+          id?: string
+          location_id?: string | null
+          manifest_number?: string
+          organization_id?: string
+          otr_count?: number | null
+          paid_amount?: number | null
+          payment_method?: string | null
+          payment_status?: string | null
+          pdf_bytes_hash?: string | null
+          pdf_path?: string | null
+          photos?: string[] | null
+          pickup_id?: string | null
+          pte_off_rim?: number | null
+          pte_on_rim?: number | null
+          receipt_url?: string | null
+          resolved_unit_prices?: Json | null
+          sign_ip?: unknown | null
+          signed_at?: string | null
+          signed_by_email?: string | null
+          signed_by_name?: string | null
+          signed_by_title?: string | null
+          status?: string | null
+          stripe_charge_id?: string | null
+          stripe_payment_intent_id?: string | null
+          subtotal?: number | null
+          surcharges?: number | null
+          total?: number | null
+          tractor_count?: number | null
+          updated_at?: string
+          vehicle_id?: string | null
+          volume_yards?: number | null
+          weight_tons?: number | null
+        }
+        Relationships: []
+      }
       organization_settings: {
         Row: {
           created_at: string
@@ -711,6 +849,9 @@ export type Database = {
           final_revenue: number | null
           id: string
           location_id: string | null
+          manifest_id: string | null
+          manifest_payment_status: string | null
+          manifest_pdf_path: string | null
           notes: string | null
           organization_id: string
           otr_count: number | null
@@ -739,6 +880,9 @@ export type Database = {
           final_revenue?: number | null
           id?: string
           location_id?: string | null
+          manifest_id?: string | null
+          manifest_payment_status?: string | null
+          manifest_pdf_path?: string | null
           notes?: string | null
           organization_id: string
           otr_count?: number | null
@@ -767,6 +911,9 @@ export type Database = {
           final_revenue?: number | null
           id?: string
           location_id?: string | null
+          manifest_id?: string | null
+          manifest_payment_status?: string | null
+          manifest_pdf_path?: string | null
           notes?: string | null
           organization_id?: string
           otr_count?: number | null
@@ -807,6 +954,13 @@ export type Database = {
             columns: ["location_id"]
             isOneToOne: false
             referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pickups_manifest_id_fkey"
+            columns: ["manifest_id"]
+            isOneToOne: false
+            referencedRelation: "manifests"
             referencedColumns: ["id"]
           },
           {
@@ -1214,6 +1368,10 @@ export type Database = {
       }
       generate_invoice_number: {
         Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_manifest_number: {
+        Args: { org_id: string }
         Returns: string
       }
       get_current_user_organization: {
