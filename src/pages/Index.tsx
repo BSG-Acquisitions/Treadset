@@ -41,7 +41,9 @@ export default function Index() {
   // Process real data
   const todayPickups = todayPickupsData.map(pickup => ({
     id: pickup.id,
+    client_id: pickup.client_id,
     client: { company_name: pickup.client?.company_name || 'Unknown Client' },
+    location: pickup.location,
     pte_count: pickup.pte_count || 0,
     pickup_date: pickup.pickup_date,
     status: pickup.status || 'scheduled',
@@ -305,7 +307,7 @@ export default function Index() {
               <RowCarousel
                 title=""
                 items={todayPickups.map(pickup => ({
-                  id: pickup.id,
+                  id: pickup.client_id,
                   name: pickup.client?.company_name || 'Unknown Client',
                   capacity: pickup.pte_count || 0,
                   lastPickup: pickup.pickup_date,
@@ -313,7 +315,7 @@ export default function Index() {
                   pickupsThisMonth: Math.floor(Math.random() * 8) + 3,
                   status: pickup.status === 'completed' ? 'active' : 
                           pickup.status === 'overdue' ? 'overdue' : 'scheduled',
-                  address: 'Detroit Metro Area', // Could be enhanced with location data
+                  address: pickup.location?.address || 'Detroit Metro Area',
                   type: 'commercial' as const
                 }))}
               />

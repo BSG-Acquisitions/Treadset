@@ -90,7 +90,7 @@ export const useClient = (id: string) => {
           locations(*)
         `)
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       return data;

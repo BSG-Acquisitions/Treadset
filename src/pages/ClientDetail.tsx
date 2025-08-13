@@ -6,12 +6,13 @@ import { useInvoices, useCompletedPickups } from "@/hooks/useFinance";
 import { CreateInvoiceDialog } from "@/components/finance/CreateInvoiceDialog";
 import { RecordPaymentDialog } from "@/components/finance/RecordPaymentDialog";
 import { OptimizedSchedulingCalendar } from "@/components/OptimizedSchedulingCalendar";
+import { SchedulePickupDialog } from "@/components/SchedulePickupDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CapacityGauge } from "@/components/CapacityGauge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { DollarSign, FileText, Calendar, CreditCard, MapPin } from "lucide-react";
+import { DollarSign, FileText, Calendar, CreditCard, MapPin, Plus } from "lucide-react";
 import { TopNav } from "@/components/TopNav";
 
 export default function ClientDetail() {
@@ -58,11 +59,21 @@ export default function ClientDetail() {
           <p className="text-sm text-muted-foreground">Last pickup {client.last_pickup_at ? new Date(client.last_pickup_at).toLocaleDateString() : 'Never'}</p>
         </div>
         <div className="flex gap-2">
+          <SchedulePickupDialog
+            defaultClientId={client.id}
+            trigger={
+              <Button variant="brand">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Pickup
+              </Button>
+            }
+          />
           <Button 
-            variant="brand" 
+            variant="outline" 
             onClick={() => setShowSchedulingCalendar(true)}
           >
-            Schedule Pickup
+            <Calendar className="h-4 w-4 mr-2" />
+            Optimize Routes
           </Button>
           <Link to="/routes/today"><Button variant="outline">View Today’s Routes</Button></Link>
         </div>
