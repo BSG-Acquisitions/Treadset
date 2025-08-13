@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -24,7 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { CheckCircle2, Camera, Upload, Truck } from "lucide-react";
+import { CheckCircle2, Camera, Upload, Truck, DollarSign, Calculator } from "lucide-react";
 
 const driverPickupSchema = z.object({
   // Tire counts
@@ -63,8 +63,22 @@ interface DriverPickupInterfaceProps {
 export function DriverPickupInterface({ pickup, onComplete }: DriverPickupInterfaceProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [photos, setPhotos] = useState<File[]>([]);
+  const [calculatedTotal, setCalculatedTotal] = useState(0);
+  const [orgSettings, setOrgSettings] = useState<any>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  // Load organization pricing settings
+  useEffect(() => {
+    const loadOrgSettings = async () => {
+      const { data } = await supabase
+        .from('organization_settings')
+        .select('default_pte_rate, default_otr_rate, default_tractor_rate')
+        .single();
+      setOrgSettings(data);
+    };
+    loadOrgSettings();
+  }, []);
 
   const form = useForm<DriverPickupFormData>({
     resolver: zodResolver(driverPickupSchema),
@@ -84,6 +98,24 @@ export function DriverPickupInterface({ pickup, onComplete }: DriverPickupInterf
       access_notes: "",
     },
   });
+
+  // Calculate total in real-time
+  const watchedValues = form.watch();
+  useEffect(() => {
+    if (orgSettings) {
+      const pteTotal = (watchedValues.pte_off_rim + watchedValues.pte_on_rim) * orgSettings.default_pte_rate;
+      const commercialTotal = (
+        watchedValues.commercial_17_5_19_5_off + 
+        watchedValues.commercial_17_5_19_5_on + 
+        watchedValues.commercial_22_5_off + 
+        watchedValues.commercial_22_5_on
+      ) * 35; // Commercial rate
+      const otrTotal = watchedValues.otr_count * orgSettings.default_otr_rate;
+      const tractorTotal = watchedValues.tractor_count * orgSettings.default_tractor_rate;
+      
+      setCalculatedTotal(pteTotal + commercialTotal + otrTotal + tractorTotal);
+    }
+  }, [watchedValues, orgSettings]);
 
   const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -115,6 +147,8 @@ export function DriverPickupInterface({ pickup, onComplete }: DriverPickupInterf
           pte_count: totalPte,
           otr_count: data.otr_count,
           tractor_count: data.tractor_count,
+          computed_revenue: calculatedTotal,
+          final_revenue: calculatedTotal,
           notes: allNotes,
           status: 'completed',
           updated_at: new Date().toISOString(),
@@ -159,6 +193,24 @@ export function DriverPickupInterface({ pickup, onComplete }: DriverPickupInterf
             <div className="text-sm text-muted-foreground">{new Date(pickup.pickup_date).toLocaleDateString()}</div>
             <Badge variant="secondary">{pickup.status}</Badge>
           </div>
+
+          {/* Real-time Total Calculation */}
+          <Card className="bg-brand-primary/5 border-brand-primary/20 mb-6">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Calculator className="h-5 w-5 text-brand-primary" />
+                  <span className="font-medium">Amount to Charge Client:</span>
+                </div>
+                <div className="text-2xl font-bold text-brand-primary">
+                  ${calculatedTotal.toFixed(2)}
+                </div>
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">
+                Updates automatically as you enter tire counts
+              </div>
+            </CardContent>
+          </Card>
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
