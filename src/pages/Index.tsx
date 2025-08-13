@@ -309,8 +309,8 @@ export default function Index() {
                   {todayPickups.length} pickups scheduled for today
                 </span>
                 <Link to="/routes/today">
-                  <Button variant="outline" size="sm">
-                    Complete Pickups →
+                  <Button variant="brand" size="sm">
+                    ✅ Complete Pickups
                   </Button>
                 </Link>
               </div>
