@@ -435,7 +435,7 @@ export function DriverPickupInterface({ pickup, onComplete }: DriverPickupInterf
                             ×
                           </Button>
                         </div>
-                      ))
+                      ))}
                     </div>
                   )}
                 </div>
