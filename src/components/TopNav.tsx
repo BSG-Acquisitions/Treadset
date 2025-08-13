@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Bell, Menu, User, Settings, Package, BarChart3, UserCheck, Home, Users, MapPin, DollarSign } from 'lucide-react';
+import { Search, Bell, Menu, User, Settings, Package, BarChart3, UserCheck, Home, Users, MapPin, DollarSign, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -180,6 +180,12 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                 <Link to="/settings" className="flex items-center gap-2">
                   <Settings className="h-4 w-4" />
                   Settings
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/integrations" className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4" />
+                  Integrations
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />

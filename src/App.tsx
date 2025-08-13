@@ -21,6 +21,8 @@ import ClientAnalytics from "./pages/ClientAnalytics";
 import Settings from "./pages/Settings";
 import EnhancedRoutesToday from "./pages/EnhancedRoutesToday";
 import PricingAdmin from "./pages/PricingAdmin";
+import Integrations from "./pages/Integrations";
+import DriverManifests from "./pages/DriverManifests";
 
 const queryClient = new QueryClient();
 
@@ -97,6 +99,16 @@ const App = () => (
             <Route path="/booking-confirmation" element={
               <ProtectedRoute>
                 <BookingConfirmation />
+              </ProtectedRoute>
+            } />
+            <Route path="/integrations" element={
+              <ProtectedRoute roles={['admin']}>
+                <Integrations />
+              </ProtectedRoute>
+            } />
+            <Route path="/driver/manifests" element={
+              <ProtectedRoute roles={['driver', 'admin']}>
+                <DriverManifests />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
