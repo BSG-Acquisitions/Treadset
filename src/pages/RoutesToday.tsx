@@ -11,7 +11,9 @@ import { format } from "date-fns";
 
 export default function RoutesToday() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  console.log('RoutesToday: Fetching pickups for date:', selectedDate);
   const { data: pickups = [], isLoading } = usePickups(selectedDate);
+  console.log('RoutesToday: Received pickups data:', pickups);
 
   useEffect(() => {
     document.title = "Today's Routes – BSG";
