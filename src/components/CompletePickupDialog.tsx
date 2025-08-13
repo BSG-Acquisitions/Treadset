@@ -24,12 +24,36 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Calendar, MapPin, Building } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+import { CheckCircle2, Calendar, MapPin, Building, DollarSign, Weight } from "lucide-react";
 
 const completePickupSchema = z.object({
-  pteCount: z.number().min(0, "PTE count must be 0 or greater"),
-  otrCount: z.number().min(0, "OTR count must be 0 or greater"),
-  tractorCount: z.number().min(0, "Tractor count must be 0 or greater"),
+  // Passenger tire equipment
+  pte_off_rim: z.number().min(0, "PTE off rim count must be 0 or greater"),
+  pte_on_rim: z.number().min(0, "PTE on rim count must be 0 or greater"),
+  
+  // Commercial tires
+  commercial_17_5_19_5_off: z.number().min(0, "Commercial 17.5/19.5 off rim count must be 0 or greater"),
+  commercial_17_5_19_5_on: z.number().min(0, "Commercial 17.5/19.5 on rim count must be 0 or greater"),
+  commercial_22_5_off: z.number().min(0, "Commercial 22.5 off rim count must be 0 or greater"),
+  commercial_22_5_on: z.number().min(0, "Commercial 22.5 on rim count must be 0 or greater"),
+  
+  // Other categories
+  otr_count: z.number().min(0, "OTR count must be 0 or greater"),
+  tractor_count: z.number().min(0, "Tractor count must be 0 or greater"),
+  
+  // Measurements
+  weight_tons: z.number().min(0, "Weight must be 0 or greater").optional(),
+  volume_yards: z.number().min(0, "Volume must be 0 or greater").optional(),
+  
+  // Pricing overrides
+  custom_pricing: z.boolean().optional(),
+  unit_price_pte: z.number().min(0).optional(),
+  unit_price_commercial: z.number().min(0).optional(),
+  unit_price_otr: z.number().min(0).optional(),
+  unit_price_tractor: z.number().min(0).optional(),
+  
   notes: z.string().optional(),
 });
 
@@ -59,22 +83,39 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
   const form = useForm<CompletePickupFormData>({
     resolver: zodResolver(completePickupSchema),
     defaultValues: {
-      pteCount: pickup.pte_count || 0,
-      otrCount: pickup.otr_count || 0,
-      tractorCount: pickup.tractor_count || 0,
+      pte_off_rim: 0,
+      pte_on_rim: 0,
+      commercial_17_5_19_5_off: 0,
+      commercial_17_5_19_5_on: 0,
+      commercial_22_5_off: 0,
+      commercial_22_5_on: 0,
+      otr_count: pickup.otr_count || 0,
+      tractor_count: pickup.tractor_count || 0,
+      weight_tons: 0,
+      volume_yards: 0,
+      custom_pricing: false,
+      unit_price_pte: 25,
+      unit_price_commercial: 35,
+      unit_price_otr: 45,
+      unit_price_tractor: 35,
       notes: pickup.notes || "",
     },
   });
 
+  const customPricing = form.watch("custom_pricing");
+
   const onSubmit = async (data: CompletePickupFormData) => {
     setIsSubmitting(true);
     try {
+      // Calculate total PTE count for compatibility
+      const totalPte = data.pte_off_rim + data.pte_on_rim;
+      
       const { error } = await supabase
         .from('pickups')
         .update({
-          pte_count: data.pteCount,
-          otr_count: data.otrCount,
-          tractor_count: data.tractorCount,
+          pte_count: totalPte,
+          otr_count: data.otr_count,
+          tractor_count: data.tractor_count,
           notes: data.notes,
           status: 'completed',
           updated_at: new Date().toISOString(),
@@ -107,7 +148,7 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
       <DialogTrigger asChild>
         {trigger}
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5 text-brand-success" />
@@ -136,63 +177,42 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* Passenger Tire Equipment */}
             <div className="space-y-4">
-              <h3 className="text-lg font-medium">Actual Tire Counts</h3>
-              <p className="text-sm text-muted-foreground">
-                Enter the actual number of tires collected during this pickup.
-              </p>
-
-              <div className="grid grid-cols-3 gap-4">
+              <h3 className="text-lg font-medium flex items-center gap-2">
+                <span>🚗</span> Passenger Tire Equipment (PTE)
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="pteCount"
+                  name="pte_off_rim"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>PTE Count</FormLabel>
+                      <FormLabel>PTE Off Rim</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
                           min="0"
                           {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                          onChange={(e) => field.onChange(Number(e.target.value) || 0)}
                         />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-
                 <FormField
                   control={form.control}
-                  name="otrCount"
+                  name="pte_on_rim"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>OTR Count</FormLabel>
+                      <FormLabel>PTE On Rim</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
                           min="0"
                           {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="tractorCount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tractor Count</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min="0"
-                          {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                          onChange={(e) => field.onChange(Number(e.target.value) || 0)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -202,15 +222,311 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
               </div>
             </div>
 
+            <Separator />
+
+            {/* Commercial Tires */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium flex items-center gap-2">
+                <span>🚛</span> Commercial Tires
+              </h3>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="commercial_17_5_19_5_off"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>17.5/19.5 Off Rim</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min="0"
+                            {...field}
+                            onChange={(e) => field.onChange(Number(e.target.value) || 0)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="commercial_17_5_19_5_on"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>17.5/19.5 On Rim</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min="0"
+                            {...field}
+                            onChange={(e) => field.onChange(Number(e.target.value) || 0)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="commercial_22_5_off"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>22.5 Off Rim</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min="0"
+                            {...field}
+                            onChange={(e) => field.onChange(Number(e.target.value) || 0)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="commercial_22_5_on"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>22.5 On Rim</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min="0"
+                            {...field}
+                            onChange={(e) => field.onChange(Number(e.target.value) || 0)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Other Tire Types */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium flex items-center gap-2">
+                <span>🏗️</span> Other Tire Types
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="otr_count"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>OTR (Off-the-Road)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          {...field}
+                          onChange={(e) => field.onChange(Number(e.target.value) || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="tractor_count"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tractor Tires</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          {...field}
+                          onChange={(e) => field.onChange(Number(e.target.value) || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Measurements */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium flex items-center gap-2">
+                <Weight className="h-5 w-5" />
+                Measurements
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="weight_tons"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Weight (Tons)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.1"
+                          {...field}
+                          onChange={(e) => field.onChange(Number(e.target.value) || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="volume_yards"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Volume (Cubic Yards)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.1"
+                          {...field}
+                          onChange={(e) => field.onChange(Number(e.target.value) || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Custom Pricing */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" />
+                  Custom Pricing
+                </h3>
+                <FormField
+                  control={form.control}
+                  name="custom_pricing"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center space-x-2">
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormLabel className="text-sm">Override default pricing</FormLabel>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {customPricing && (
+                <div className="grid grid-cols-2 gap-4 p-4 bg-secondary/10 rounded-lg">
+                  <FormField
+                    control={form.control}
+                    name="unit_price_pte"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>PTE Unit Price ($)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            {...field}
+                            onChange={(e) => field.onChange(Number(e.target.value) || 0)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="unit_price_commercial"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Commercial Unit Price ($)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            {...field}
+                            onChange={(e) => field.onChange(Number(e.target.value) || 0)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="unit_price_otr"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>OTR Unit Price ($)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            {...field}
+                            onChange={(e) => field.onChange(Number(e.target.value) || 0)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="unit_price_tractor"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tractor Unit Price ($)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            {...field}
+                            onChange={(e) => field.onChange(Number(e.target.value) || 0)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
+            </div>
+
+            <Separator />
+
+            {/* Notes */}
             <FormField
               control={form.control}
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Notes</FormLabel>
+                  <FormLabel>Notes & Observations</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Add any notes about this pickup (condition, issues, etc.)"
+                      placeholder="Add any notes about this pickup (tire condition, access issues, special circumstances, etc.)"
+                      className="min-h-[100px]"
                       {...field}
                     />
                   </FormControl>
@@ -219,11 +535,11 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
               )}
             />
 
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting} className="bg-brand-success hover:bg-brand-success/90">
                 {isSubmitting ? "Saving..." : "Complete Pickup"}
               </Button>
             </div>

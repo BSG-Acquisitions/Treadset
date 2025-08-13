@@ -23,6 +23,7 @@ import EnhancedRoutesToday from "./pages/EnhancedRoutesToday";
 import PricingAdmin from "./pages/PricingAdmin";
 import Integrations from "./pages/Integrations";
 import DriverManifests from "./pages/DriverManifests";
+import DriverRoutes from "./pages/DriverRoutes";
 
 const queryClient = new QueryClient();
 
@@ -109,6 +110,11 @@ const App = () => (
             <Route path="/driver/manifests" element={
               <ProtectedRoute roles={['driver', 'admin']}>
                 <DriverManifests />
+              </ProtectedRoute>
+            } />
+            <Route path="/routes/driver" element={
+              <ProtectedRoute roles={['driver', 'admin']}>
+                <DriverRoutes />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
