@@ -24,6 +24,8 @@ import PricingAdmin from "./pages/PricingAdmin";
 import Integrations from "./pages/Integrations";
 import DriverManifests from "./pages/DriverManifests";
 import DriverRoutes from "./pages/DriverRoutes";
+import PublicBook from "./pages/PublicBook";
+import PublicBookingConfirmation from "./pages/PublicBookingConfirmation";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +38,11 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
+            {/* Public Routes - No Authentication Required */}
+            <Route path="/public-book" element={<PublicBook />} />
+            <Route path="/public-booking-confirmation" element={<PublicBookingConfirmation />} />
+            
+            {/* Protected Routes */}
             <Route path="/auth" element={<Auth />} />
             <Route path="/onboarding" element={
               <ProtectedRoute roles={['admin']}>
