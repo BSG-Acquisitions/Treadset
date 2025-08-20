@@ -257,7 +257,29 @@ export type Database = {
           updated_at?: string
           workflow_type?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_client_workflows_client"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_client_workflows_client"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "pickup_analytics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "fk_client_workflows_organization"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       clients: {
         Row: {

@@ -79,7 +79,7 @@ export function FollowupWorkflows() {
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
                   <Building className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">{workflow.clients?.company_name}</span>
+                  <span className="font-medium">{workflow.clients?.company_name || 'Unknown Client'}</span>
                   <Badge variant="outline">{workflow.workflow_type}</Badge>
                 </div>
                 
@@ -129,7 +129,7 @@ export function FollowupWorkflows() {
                     
                     <div className="space-y-4">
                       <div>
-                        <p className="font-medium">{selectedWorkflow?.clients?.company_name}</p>
+                        <p className="font-medium">{selectedWorkflow?.clients?.company_name || 'Unknown Client'}</p>
                         <p className="text-sm text-muted-foreground">
                           Due: {selectedWorkflow?.next_contact_date && 
                             new Date(selectedWorkflow.next_contact_date).toLocaleDateString()}
