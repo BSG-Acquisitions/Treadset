@@ -237,6 +237,16 @@ export function CompleteAssignmentDialog({
                 {updateStatus.isPending ? "Completing..." : "Complete Pickup"}
               </Button>
             </div>
+            
+            {/* Auto-actions info */}
+            <div className="text-xs text-muted-foreground bg-secondary/20 p-3 rounded-lg">
+              <p className="font-medium mb-1">📧 Automatic Actions:</p>
+              <ul className="space-y-1">
+                <li>• Manifest email will be sent to client (if available)</li>
+                <li>• Followup workflow will be scheduled (30 days)</li>
+                <li>• Client history will be updated</li>
+              </ul>
+            </div>
           </form>
         </Form>
       </DialogContent>

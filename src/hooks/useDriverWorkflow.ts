@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useSendManifestEmail } from "./useSendManifestEmail";
 
 interface UpdateAssignmentStatusData {
   assignmentId: string;
@@ -20,6 +21,7 @@ interface UpdateAssignmentStatusData {
 export const useUpdateAssignmentStatus = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const sendManifestEmail = useSendManifestEmail();
 
   return useMutation({
     mutationFn: async (data: UpdateAssignmentStatusData) => {
@@ -33,12 +35,18 @@ export const useUpdateAssignmentStatus = () => {
         updates.actual_arrival = new Date().toISOString();
       }
 
-      // Update assignment status
+      // Update assignment status and get pickup details
       const { data: assignment, error: assignmentError } = await supabase
         .from('assignments')
         .update(updates)
         .eq('id', data.assignmentId)
-        .select('pickup_id')
+        .select(`
+          pickup_id,
+          pickups:pickup_id(
+            id, client_id, organization_id, manifest_id,
+            clients:client_id(id, company_name, email, organization_id)
+          )
+        `)
         .single();
 
       if (assignmentError) throw assignmentError;
@@ -64,8 +72,54 @@ export const useUpdateAssignmentStatus = () => {
 
         if (pickupError) throw pickupError;
 
+        // Get pickup and client info for automation
+        const pickup = assignment.pickups;
+        const client = pickup?.clients;
+
+        if (pickup && client) {
+          // Auto-send manifest email if client has email and manifest exists
+          if (client.email && pickup.manifest_id) {
+            try {
+              await sendManifestEmail.mutateAsync({ 
+                manifestId: pickup.manifest_id 
+              });
+              console.log('Manifest email sent automatically');
+            } catch (emailError) {
+              console.error('Failed to send manifest email:', emailError);
+              // Don't fail the entire completion if email fails
+            }
+          }
+
+          // Create or update client workflow for followup
+          try {
+            const followupDate = new Date();
+            followupDate.setDate(followupDate.getDate() + 30); // 30 days from now
+
+            const { error: workflowError } = await supabase
+              .from('client_workflows')
+              .upsert({
+                client_id: client.id,
+                organization_id: client.organization_id,
+                workflow_type: 'followup',
+                status: 'active',
+                next_contact_date: followupDate.toISOString().split('T')[0],
+                last_contact_date: new Date().toISOString().split('T')[0],
+                contact_frequency_days: 30,
+                notes: `Auto-created after pickup completion on ${new Date().toLocaleDateString()}`
+              });
+            
+            if (workflowError) {
+              console.error('Failed to create workflow:', workflowError);
+            } else {
+              console.log('Client workflow updated for followup');
+            }
+          } catch (error) {
+            console.error('Failed to create workflow:', error);
+            // Don't fail the entire completion if workflow creation fails
+          }
+        }
+
         // TODO: Handle photo uploads to storage if needed
-        // TODO: Store manifest URL and notes in completion data table
       }
 
       return assignment;
@@ -75,9 +129,15 @@ export const useUpdateAssignmentStatus = () => {
       queryClient.invalidateQueries({ queryKey: ['pickups'] });
       
       const statusText = variables.status === 'completed' ? 'completed' : 'started';
+      let description = `Pickup ${statusText} successfully`;
+      
+      if (variables.status === 'completed') {
+        description += '. Manifest email sent and followup scheduled automatically.';
+      }
+      
       toast({ 
         title: "Status Updated", 
-        description: `Pickup ${statusText} successfully` 
+        description 
       });
     },
     onError: (error) => {

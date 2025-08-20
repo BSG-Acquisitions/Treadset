@@ -217,6 +217,48 @@ export type Database = {
           },
         ]
       }
+      client_workflows: {
+        Row: {
+          client_id: string
+          contact_frequency_days: number | null
+          created_at: string
+          id: string
+          last_contact_date: string | null
+          next_contact_date: string | null
+          notes: string | null
+          organization_id: string
+          status: string
+          updated_at: string
+          workflow_type: string
+        }
+        Insert: {
+          client_id: string
+          contact_frequency_days?: number | null
+          created_at?: string
+          id?: string
+          last_contact_date?: string | null
+          next_contact_date?: string | null
+          notes?: string | null
+          organization_id: string
+          status?: string
+          updated_at?: string
+          workflow_type?: string
+        }
+        Update: {
+          client_id?: string
+          contact_frequency_days?: number | null
+          created_at?: string
+          id?: string
+          last_contact_date?: string | null
+          next_contact_date?: string | null
+          notes?: string | null
+          organization_id?: string
+          status?: string
+          updated_at?: string
+          workflow_type?: string
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           company_name: string
