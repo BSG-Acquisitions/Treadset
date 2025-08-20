@@ -23,6 +23,8 @@ import EnhancedRoutesToday from "./pages/EnhancedRoutesToday";
 import PricingAdmin from "./pages/PricingAdmin";
 import Integrations from "./pages/Integrations";
 import DriverManifests from "./pages/DriverManifests";
+import DriverManifestCreate from "./pages/DriverManifestCreate";
+import DriverManifestView from "./pages/DriverManifestView";
 import DriverRoutes from "./pages/DriverRoutes";
 import PublicBook from "./pages/PublicBook";
 import PublicBookingConfirmation from "./pages/PublicBookingConfirmation";
@@ -117,6 +119,16 @@ const App = () => (
             <Route path="/driver/manifests" element={
               <ProtectedRoute roles={['driver', 'admin']}>
                 <DriverManifests />
+              </ProtectedRoute>
+            } />
+            <Route path="/driver/manifest/new" element={
+              <ProtectedRoute roles={['driver', 'admin']}>
+                <DriverManifestCreate />
+              </ProtectedRoute>
+            } />
+            <Route path="/driver/manifest/:id" element={
+              <ProtectedRoute roles={['driver', 'admin']}>
+                <DriverManifestView />
               </ProtectedRoute>
             } />
             <Route path="/routes/driver" element={
