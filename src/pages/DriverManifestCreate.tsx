@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { TopNav } from "@/components/TopNav";
-import { ArrowLeft, Save, Building, MapPin, Calendar, Truck } from "lucide-react";
+import { ArrowLeft, Save, Building, MapPin, Calendar, Truck, Upload, FileText } from "lucide-react";
 
 const manifestSchema = z.object({
   // Tire counts
@@ -69,6 +69,8 @@ export default function DriverManifestCreate() {
   const [pickup, setPickup] = useState<PickupData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploadedFilePath, setUploadedFilePath] = useState<string>("");
 
   const pickupId = searchParams.get('pickup');
   const clientId = searchParams.get('client');
@@ -144,9 +146,49 @@ export default function DriverManifestCreate() {
     }
   };
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf') {
+      toast({
+        title: "Invalid file type",
+        description: "Please select a PDF file",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setUploadedFile(file);
+    toast({
+      title: "File selected",
+      description: `${file.name} ready to upload`,
+    });
+  };
+
   const onSubmit = async (data: ManifestFormData) => {
     setSaving(true);
     try {
+      let pdfPath = "";
+      
+      // Upload PDF if file is selected
+      if (uploadedFile) {
+        const fileExt = uploadedFile.name.split('.').pop();
+        const fileName = `manifest-${Date.now()}.${fileExt}`;
+        const filePath = `${new Date().toISOString().split('T')[0]}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('manifests')
+          .upload(filePath, uploadedFile);
+
+        if (uploadError) {
+          throw new Error(`File upload failed: ${uploadError.message}`);
+        }
+
+        pdfPath = filePath;
+        setUploadedFilePath(filePath);
+      }
+
       // Calculate pricing (simplified - in real app, use pricing engine)
       const totalTires = 
         data.pte_on_rim + 
@@ -169,6 +211,7 @@ export default function DriverManifestCreate() {
         pickup_id: pickupId,
         organization_id: '00000000-0000-0000-0000-000000000000', // TODO: Get from context
         manifest_number: manifestNumber,
+        pdf_path: pdfPath,
         
         ...data,
         
@@ -605,6 +648,43 @@ export default function DriverManifestCreate() {
                         </FormItem>
                       )}
                     />
+
+                    {/* PDF Upload */}
+                    <div>
+                      <FormLabel>State-Compliant Manifest Document</FormLabel>
+                      <div className="mt-2">
+                        <input
+                          type="file"
+                          accept=".pdf"
+                          onChange={handleFileUpload}
+                          className="hidden"
+                          id="pdf-upload"
+                        />
+                        <label
+                          htmlFor="pdf-upload"
+                          className="flex items-center justify-center w-full h-32 border-2 border-dashed border-muted-foreground/25 rounded-lg cursor-pointer hover:border-muted-foreground/50 transition-colors"
+                        >
+                          <div className="text-center">
+                            {uploadedFile ? (
+                              <div className="flex items-center gap-2">
+                                <FileText className="h-5 w-5 text-green-600" />
+                                <span className="text-sm font-medium">{uploadedFile.name}</span>
+                              </div>
+                            ) : (
+                              <div>
+                                <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                                <p className="text-sm text-muted-foreground">
+                                  Click to upload PDF document
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Required state-compliant manifest
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </label>
+                      </div>
+                    </div>
 
                     <FormField
                       control={form.control}
