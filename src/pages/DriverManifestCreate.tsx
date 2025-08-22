@@ -15,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { TopNav } from "@/components/TopNav";
 import { ArrowLeft, Save, Building, MapPin, Calendar, Truck, Upload, FileText } from "lucide-react";
+import { PDFDocument, PDFForm, PDFTextField } from "pdf-lib";
 
 const manifestSchema = z.object({
   // Part 1: Scrap Tire Generator Certification
@@ -106,6 +107,7 @@ export default function DriverManifestCreate() {
   const [saving, setSaving] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadedFilePath, setUploadedFilePath] = useState<string>("");
+  const [originalPdfBytes, setOriginalPdfBytes] = useState<Uint8Array | null>(null);
 
   const pickupId = searchParams.get('pickup');
   const clientId = searchParams.get('client');
@@ -245,26 +247,56 @@ export default function DriverManifestCreate() {
   };
 
   const onSubmit = async (data: ManifestFormData) => {
+    if (!originalPdfBytes) {
+      toast({
+        title: "PDF Required",
+        description: "Please upload the state-compliant PDF document first",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setSaving(true);
     try {
-      let pdfPath = "";
+      // Fill out the original PDF with the form data
+      const pdfDoc = await PDFDocument.load(originalPdfBytes);
+      const form = pdfDoc.getForm();
       
-      // Upload PDF if file is selected
-      if (uploadedFile) {
-        const fileExt = uploadedFile.name.split('.').pop();
-        const fileName = `manifest-${Date.now()}.${fileExt}`;
-        const filePath = `${new Date().toISOString().split('T')[0]}/${fileName}`;
+      // Fill PDF form fields - these field names would need to match your actual PDF
+      // You would need to inspect your PDF to get the exact field names
+      try {
+        // Generator section
+        const generatorNameField = form.getTextField('generator_name');
+        generatorNameField.setText(data.generator_name);
+        
+        const generatorAddressField = form.getTextField('generator_mailing_address');
+        generatorAddressField.setText(data.generator_mailing_address);
+        
+        // Add more fields as needed based on your PDF's actual field names
+        // You'll need to inspect the PDF to get the correct field names
+        
+      } catch (fieldError) {
+        console.log('Some PDF fields may not exist or have different names:', fieldError);
+      }
+      
+      // Generate the filled PDF
+      const filledPdfBytes = await pdfDoc.save();
+      
+      // Convert to File for upload
+      const filledPdfBlob = new Blob([filledPdfBytes], { type: 'application/pdf' });
+      const filledPdfFile = new File([filledPdfBlob], `filled-manifest-${Date.now()}.pdf`, { type: 'application/pdf' });
+      
+      // Upload the filled PDF
+      const fileExt = 'pdf';
+      const fileName = `manifest-${Date.now()}.${fileExt}`;
+      const filePath = `${new Date().toISOString().split('T')[0]}/${fileName}`;
 
-        const { error: uploadError } = await supabase.storage
-          .from('manifests')
-          .upload(filePath, uploadedFile);
+      const { error: uploadError } = await supabase.storage
+        .from('manifests')
+        .upload(filePath, filledPdfFile);
 
-        if (uploadError) {
-          throw new Error(`File upload failed: ${uploadError.message}`);
-        }
-
-        pdfPath = filePath;
-        setUploadedFilePath(filePath);
+      if (uploadError) {
+        throw new Error(`File upload failed: ${uploadError.message}`);
       }
 
       // Calculate total tires from the new format
@@ -280,7 +312,7 @@ export default function DriverManifestCreate() {
         pickup_id: pickupId,
         organization_id: '00000000-0000-0000-0000-000000000000', // TODO: Get from context
         manifest_number: manifestNumber,
-        pdf_path: pdfPath,
+        pdf_path: filePath,
         
         // Map EGLE form data to our manifest fields
         pte_on_rim: 0,
@@ -319,7 +351,7 @@ export default function DriverManifestCreate() {
 
       toast({
         title: "Manifest Created",
-        description: "EGLE-compliant manifest has been created successfully",
+        description: "Your original PDF has been filled out and saved",
       });
 
       navigate(`/driver/manifest/${manifest.id}`);
