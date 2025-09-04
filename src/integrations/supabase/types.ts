@@ -1430,6 +1430,10 @@ export type Database = {
         Args: { pickup_row: Database["public"]["Tables"]["pickups"]["Row"] }
         Returns: number
       }
+      create_followup_workflows_for_inactive_clients: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       generate_invoice_number: {
         Args: Record<PropertyKey, never>
         Returns: string

@@ -18,6 +18,7 @@ import { useRealtimeUpdates } from "@/hooks/useRealtimeUpdates";
 import { StaggerList } from "@/components/motion/StaggerList";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { SlideUp } from "@/components/motion/SlideUp";
+import { FollowupWorkflows } from "@/components/workflows/FollowupWorkflows";
 
 export default function Index() {
   useEffect(() => {
@@ -141,6 +142,15 @@ export default function Index() {
             />
           </SlideUp>
         </StaggerList>
+
+        {/* Client Followups - Prominent section for sales team */}
+        {hasAnyRole(['admin', 'ops_manager', 'sales']) && (
+          <SlideUp delay={0.25}>
+            <div className="mb-8">
+              <FollowupWorkflows />
+            </div>
+          </SlideUp>
+        )}
 
         {/* Performance Metrics */}
         <SlideUp delay={0.3}>
