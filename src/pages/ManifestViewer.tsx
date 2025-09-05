@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { FileText, Download, Send, CheckCircle, Loader2, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import StateDocumentPreview from '@/components/StateDocumentPreview';
 
 interface Manifest {
   id: string;
@@ -34,6 +35,8 @@ export const ManifestViewer = () => {
   const [manifests, setManifests] = useState<Manifest[]>([]);
   const [loading, setLoading] = useState(true);
   const [finalizing, setFinalizing] = useState<string | null>(null);
+  const [selectedManifest, setSelectedManifest] = useState<any>(null);
+  const [showDocument, setShowDocument] = useState(false);
 
   useEffect(() => {
     loadManifests();
@@ -43,7 +46,13 @@ export const ManifestViewer = () => {
     try {
       const { data, error } = await supabase
         .from('manifests')
-        .select('*')
+        .select(`
+          *,
+          clients(company_name, email),
+          locations(address, name),
+          users(first_name, last_name),
+          vehicles(name)
+        `)
         .order('created_at', { ascending: false })
         .limit(10);
 
@@ -127,6 +136,47 @@ export const ManifestViewer = () => {
     }
     return <Badge variant="outline">In Progress</Badge>;
   };
+
+  const showStateDocument = (manifest: any) => {
+    const documentData = {
+      manifest_number: manifest.manifest_number,
+      company_name: manifest.clients?.company_name || 'Unknown Company',
+      location_name: manifest.locations?.name || 'Unknown Location',
+      address: manifest.locations?.address || 'Unknown Address',
+      driver_name: manifest.users ? `${manifest.users.first_name} ${manifest.users.last_name}` : 'Unknown Driver',
+      vehicle_name: manifest.vehicles?.name || 'Unknown Vehicle',
+      pte_off_rim: manifest.pte_off_rim,
+      pte_on_rim: manifest.pte_on_rim,
+      commercial_17_5_19_5_off: manifest.commercial_17_5_19_5_off,
+      commercial_17_5_19_5_on: manifest.commercial_17_5_19_5_on,
+      commercial_22_5_off: manifest.commercial_22_5_off,
+      commercial_22_5_on: manifest.commercial_22_5_on,
+      subtotal: manifest.subtotal,
+      surcharges: manifest.surcharges,
+      total: manifest.total,
+      created_at: manifest.created_at,
+      customer_signature_png_path: manifest.customer_signature_png_path,
+      driver_signature_png_path: manifest.driver_signature_png_path,
+    };
+    setSelectedManifest(documentData);
+    setShowDocument(true);
+  };
+
+  if (showDocument && selectedManifest) {
+    return (
+      <div className="container mx-auto p-6 max-w-6xl">
+        <div className="mb-6">
+          <button 
+            onClick={() => setShowDocument(false)}
+            className="text-blue-600 hover:text-blue-800 font-medium"
+          >
+            ← Back to Manifest List
+          </button>
+        </div>
+        <StateDocumentPreview data={selectedManifest} />
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -235,6 +285,15 @@ export const ManifestViewer = () => {
                     </div>
 
                     <div className="space-y-2 pt-3">
+                      <Button 
+                        onClick={() => showStateDocument(manifest)}
+                        variant="outline"
+                        className="w-full"
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        View State Document
+                      </Button>
+                      
                       {manifest.pdf_path ? (
                         <Button 
                           onClick={() => viewPDF(manifest.id)}
