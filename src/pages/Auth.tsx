@@ -44,7 +44,7 @@ export default function Auth() {
       // Add timeout to prevent infinite loading
       const signInPromise = signIn(email, password);
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Sign in timed out')), 15000)
+        setTimeout(() => reject(new Error('Sign in timed out')), 5000)
       );
       
       const result = await Promise.race([signInPromise, timeoutPromise]) as { error?: any };

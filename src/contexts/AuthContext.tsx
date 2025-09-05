@@ -217,12 +217,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('Auth state changed:', event, session?.user?.id);
         if (mounted) {
           setSession(session);
+          // Temporarily skip loadUserData to test basic auth
+          console.log('Auth state change - skipping user data load');
+          /*
           try {
             await loadUserData(session?.user ?? null);
           } catch (error) {
             console.error('Error in auth state change handler:', error);
             setUser(null);
           }
+          */
           // Don't set loading false here - only on initial load
         }
       }
@@ -248,13 +252,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     console.log('Attempting to sign in with Supabase...');
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
     
-    console.log('Sign in result:', { error });
-    return { error };
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      console.log('Supabase auth result:', { data: !!data, error });
+      
+      if (error) {
+        return { error };
+      }
+      
+      // Temporarily skip loadUserData to test basic auth
+      console.log('Auth successful, skipping user data load for now');
+      return {};
+      
+    } catch (authError) {
+      console.error('Auth error caught:', authError);
+      return { error: authError };
+    }
   };
 
   const signUp = async (email: string, password: string, firstName?: string, lastName?: string) => {
