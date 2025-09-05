@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { Link, useLocation } from 'react-router-dom';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { BSGLogo } from '@/components/BSGLogo';
 import { OrganizationSwitcher } from '@/components/auth/OrganizationSwitcher';
 
 interface TopNavProps {
