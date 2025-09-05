@@ -34,25 +34,44 @@ export const ManifestTest = () => {
         status: 'IN_PROGRESS'
       };
 
-      // Generate manifest number first
-      const { data: orgData } = await supabase.rpc('generate_manifest_number', {
-        org_id: testManifestData.organization_id
-      });
+      // Generate a unique manifest number with retry to avoid duplicates
+      let manifest: any = null;
+      let manifestNumber: string = '';
 
-      const manifestNumber = orgData || `${new Date().toISOString().slice(0,10).replace(/-/g, '')}-00001`;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        // Ask DB to generate the next sequential number
+        const { data: num } = await supabase.rpc('generate_manifest_number', {
+          org_id: testManifestData.organization_id
+        });
 
-      // Insert the manifest
-      const { data: manifest, error: manifestError } = await supabase
-        .from('manifests')
-        .insert({
-          ...testManifestData,
-          manifest_number: manifestNumber
-        })
-        .select()
-        .single();
+        // Fallback in the unlikely event RPC fails
+        const fallback = `${new Date().toISOString().slice(0,10).replace(/-/g, '')}-${String(Math.floor(Math.random()*99999)).padStart(5,'0')}`;
+        manifestNumber = (num as string) || fallback;
 
-      if (manifestError) {
-        throw manifestError;
+        const { data, error } = await supabase
+          .from('manifests')
+          .insert({
+            ...testManifestData,
+            manifest_number: manifestNumber
+          })
+          .select()
+          .maybeSingle();
+
+        if (!error && data) {
+          manifest = data;
+          break;
+        }
+
+        // If duplicate key (race), try again
+        if (error && (error as any).code === '23505') {
+          continue;
+        }
+
+        if (error) throw error;
+      }
+
+      if (!manifest) {
+        throw new Error('Could not create a unique manifest number. Please try again.');
       }
 
       // Upload dummy signatures so finalization can succeed
