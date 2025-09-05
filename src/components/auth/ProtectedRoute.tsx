@@ -31,7 +31,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Check if user is authenticated
   if (!user) {
-    return <Navigate to="/auth/sign-in" replace />;
+    return <Navigate to="/auth" replace />;
   }
 
   // Check if user has required roles
