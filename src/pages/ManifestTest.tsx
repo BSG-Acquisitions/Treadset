@@ -31,7 +31,7 @@ export const ManifestTest = () => {
         subtotal: 875.00,
         surcharges: 45.50,
         total: 920.50,
-        status: 'AWAITING_FINALIZATION'
+        status: 'IN_PROGRESS'
       };
 
       // Generate manifest number first
