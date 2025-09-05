@@ -239,16 +239,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    console.log('signIn called with email:', email);
+    
     if (DISABLE_AUTH) {
       // Demo mode - always succeed
       await loadUserData(null);
       return {};
     }
 
+    console.log('Attempting to sign in with Supabase...');
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+    
+    console.log('Sign in result:', { error });
     return { error };
   };
 
