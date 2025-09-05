@@ -78,6 +78,66 @@ export type Database = {
           },
         ]
       }
+      audit_events: {
+        Row: {
+          action: string
+          changed_fields: string[] | null
+          created_at: string
+          id: string
+          ip_address: unknown | null
+          new_data: Json | null
+          old_data: Json | null
+          organization_id: string
+          record_id: string | null
+          table_name: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          changed_fields?: string[] | null
+          created_at?: string
+          id?: string
+          ip_address?: unknown | null
+          new_data?: Json | null
+          old_data?: Json | null
+          organization_id: string
+          record_id?: string | null
+          table_name: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          changed_fields?: string[] | null
+          created_at?: string
+          id?: string
+          ip_address?: unknown | null
+          new_data?: Json | null
+          old_data?: Json | null
+          organization_id?: string
+          record_id?: string | null
+          table_name?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_pricing_overrides: {
         Row: {
           client_id: string
