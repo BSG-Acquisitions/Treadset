@@ -29,7 +29,7 @@ import DriverRoutes from "./pages/DriverRoutes";
 import DriverDashboard from "./pages/DriverDashboard";
 import PublicBook from "./pages/PublicBook";
 import PublicBookingConfirmation from "./pages/PublicBookingConfirmation";
-import ManifestViewer from '@/pages/ManifestViewer';
+import ManifestExample from '@/pages/ManifestExample';
 
 const queryClient = new QueryClient();
 
@@ -47,7 +47,7 @@ const App = () => (
             <Route path="/public-booking-confirmation" element={<PublicBookingConfirmation />} />
           <Route path="/test/manifest" element={
             <div>
-              <ManifestViewer />
+              <ManifestExample />
             </div>
           } />
             
