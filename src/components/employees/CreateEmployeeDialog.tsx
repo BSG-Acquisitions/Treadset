@@ -50,12 +50,21 @@ export function CreateEmployeeDialog({ trigger }: CreateEmployeeDialogProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('Form submitted with data:', formData);
+    
     if (!formData.email || !formData.password || formData.roles.length === 0) {
+      console.log('Form validation failed:', { 
+        email: formData.email, 
+        password: formData.password.length > 0, 
+        roles: formData.roles 
+      });
       return;
     }
 
     try {
+      console.log('Attempting to create employee...');
       await createEmployee.mutateAsync(formData);
+      console.log('Employee created successfully!');
       setOpen(false);
       setFormData({
         email: '',
@@ -66,6 +75,7 @@ export function CreateEmployeeDialog({ trigger }: CreateEmployeeDialogProps) {
         roles: []
       });
     } catch (error) {
+      console.error('Error creating employee:', error);
       // Error is handled by the hook
     }
   };

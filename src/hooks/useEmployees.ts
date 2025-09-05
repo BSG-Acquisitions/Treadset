@@ -88,52 +88,33 @@ export const useCreateEmployee = () => {
         throw new Error('No organization selected');
       }
 
-      // First, create the auth user
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: employeeData.email,
-        password: employeeData.password,
-        email_confirm: true,
-        user_metadata: {
-          first_name: employeeData.firstName,
-          last_name: employeeData.lastName
+      console.log('Calling create-employee function with data:', employeeData);
+
+      // Call the edge function instead of using auth.admin directly
+      const { data, error } = await supabase.functions.invoke('create-employee', {
+        body: {
+          email: employeeData.email,
+          password: employeeData.password,
+          firstName: employeeData.firstName,
+          lastName: employeeData.lastName,
+          phone: employeeData.phone,
+          roles: employeeData.roles,
+          organizationId: user.currentOrganization.id
         }
       });
 
-      if (authError) throw authError;
-
-      if (!authData.user) {
-        throw new Error('Failed to create user');
+      if (error) {
+        console.error('Edge function error:', error);
+        throw error;
       }
 
-      // Create user record in our users table
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .insert({
-          auth_user_id: authData.user.id,
-          email: employeeData.email,
-          first_name: employeeData.firstName,
-          last_name: employeeData.lastName,
-          phone: employeeData.phone
-        })
-        .select()
-        .single();
+      if (data?.error) {
+        console.error('Employee creation error:', data.error);
+        throw new Error(data.error);
+      }
 
-      if (userError) throw userError;
-
-      // Assign roles to the user
-      const roleInserts = employeeData.roles.map(role => ({
-        user_id: userData.id,
-        organization_id: user.currentOrganization.id,
-        role: role as 'admin' | 'ops_manager' | 'dispatcher' | 'driver' | 'sales'
-      }));
-
-      const { error: roleError } = await supabase
-        .from('user_organization_roles')
-        .insert(roleInserts);
-
-      if (roleError) throw roleError;
-
-      return userData;
+      console.log('Employee created successfully:', data);
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
