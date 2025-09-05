@@ -78,19 +78,23 @@ serve(async (req) => {
     const { data: m, error: me } = await anonClient
       .from("manifests")
       .select(
-        `id, manifest_number, organization_id, client_id, pickup_id, driver_id, vehicle_id,
+        `id, manifest_number, organization_id, client_id, pickup_id, driver_id, vehicle_id, location_id,
          pte_off_rim, pte_on_rim, commercial_17_5_19_5_off, commercial_17_5_19_5_on, commercial_22_5_off, commercial_22_5_on,
          subtotal, surcharges, total,
-         customer_signature_png_path, driver_signature_png_path,
-         clients:client_id(email, company_name),
-         organizations:organization_id(slug),
-         locations:location_id(address)`
+         customer_signature_png_path, driver_signature_png_path`
       )
       .eq("id", manifest_id)
       .maybeSingle();
 
     if (me) throw me;
     if (!m) return new Response(JSON.stringify({ ok: false, error: "Manifest not found or not accessible" }), { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } });
+
+    // Fetch related info without relying on FK relationships
+    const [{ data: client }, { data: org }, { data: loc }] = await Promise.all([
+      admin.from("clients").select("email, company_name").eq("id", m.client_id).maybeSingle(),
+      admin.from("organizations").select("slug").eq("id", m.organization_id).maybeSingle(),
+      admin.from("locations").select("address").eq("id", m.location_id).maybeSingle(),
+    ]);
 
     // Load template PDF from Storage: manifests/templates/STATE_Manifest_v1.pdf
     const templatePath = `templates/STATE_Manifest_v1.pdf`;
@@ -124,8 +128,8 @@ serve(async (req) => {
     const fields: Record<string, string | number> = {
       manifestNumber: m.manifest_number,
       date: new Date().toLocaleDateString(),
-      clientName: m.clients?.company_name ?? "",
-      serviceAddress: (m as any).locations?.address ?? "",
+      clientName: client?.company_name ?? "",
+      serviceAddress: loc?.address ?? "",
       cityStateZip,
       driverName: "", // TODO join driver name
       vehicle: "", // TODO join vehicle label
@@ -171,7 +175,7 @@ serve(async (req) => {
     const pdfHash = await sha256Hex(pdfBytes);
 
     // store PDF
-    const orgSlug = (m as any).organizations?.slug ?? "org";
+    const orgSlug = org?.slug ?? "org";
     const now = new Date();
     const yyyy = now.getUTCFullYear();
     const mm = String(now.getUTCMonth() + 1).padStart(2, "0");

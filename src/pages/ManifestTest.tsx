@@ -218,7 +218,7 @@ export const ManifestTest = () => {
                     ✓ PDF Generated
                   </h4>
                   <div className="text-sm space-y-1">
-                    <div><strong>PDF Path:</strong> <code className="text-xs">{testResult.finalizeResult?.pdf_path}</code></div>
+                    <div><strong>PDF Path:</strong> <code className="text-xs">{testResult.finalizeResult?.pdfPath}</code></div>
                     <div><strong>Template Used:</strong> manifests/templates/STATE_Manifest_v1.pdf</div>
                     <div><strong>Fields Populated:</strong> Manifest number, client info, tire counts, totals</div>
                   </div>
@@ -238,7 +238,7 @@ export const ManifestTest = () => {
                 </div>
 
                 {/* Download Link */}
-                {testResult.finalizeResult?.signed_url && (
+                {testResult.finalizeResult?.link && (
                   <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
                     <h4 className="font-medium mb-2 flex items-center gap-2">
                       <Download className="h-4 w-4" />
@@ -250,7 +250,7 @@ export const ManifestTest = () => {
                       className="w-full"
                     >
                       <a 
-                        href={testResult.finalizeResult.signed_url} 
+                        href={testResult.finalizeResult.link} 
                         target="_blank" 
                         rel="noopener noreferrer"
                       >
