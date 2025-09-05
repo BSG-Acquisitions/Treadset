@@ -82,7 +82,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (DISABLE_AUTH) {
         // Demo mode - create a mock admin user with real organization
         setUser({
-          id: 'demo-user',
+          id: '00000000-0000-0000-0000-000000000000', // Valid UUID for demo
           email: 'admin@bsg.com',
           firstName: 'Demo',
           lastName: 'Admin',
