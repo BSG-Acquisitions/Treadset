@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
 import { Camera, CheckCircle, Clock, FileText, PenTool } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface ManifestWizardProps {
   manifestId: string;
@@ -17,6 +19,11 @@ type WizardStep = 'arrive' | 'counts' | 'photos' | 'signatures' | 'review';
 
 export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onComplete }) => {
   const [step, setStep] = useState<WizardStep>('arrive');
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+  const customerSigRef = useRef<SignatureCanvas>(null);
+  const driverSigRef = useRef<SignatureCanvas>(null);
+  
   const [data, setData] = useState({
     arriveTime: '',
     pteOff: 0,
@@ -28,7 +35,9 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
     notes: '',
     photos: [] as File[],
     customerSigned: false,
-    driverSigned: false
+    driverSigned: false,
+    customerSigPath: '',
+    driverSigPath: ''
   });
 
   const steps: Array<{ key: WizardStep; title: string; icon: React.ReactNode }> = [
@@ -49,29 +58,91 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
     }
   };
 
-  const handleFinalize = async () => {
-    const payload = { manifest_id: manifestId };
-    const queueKey = 'manifestFinalizeQueue';
-
-    const execute = async () => {
-      const { supabase } = await import('@/integrations/supabase/client');
-      const { data, error } = await supabase.functions.invoke('manifest-finalize', { body: payload });
-      if (error) throw error;
-      return data;
-    };
+  const saveSignature = async (type: 'customer' | 'driver', sigRef: React.RefObject<SignatureCanvas>) => {
+    if (!sigRef.current || sigRef.current.isEmpty()) {
+      toast({ title: "Error", description: "Please provide a signature", variant: "destructive" });
+      return false;
+    }
 
     try {
+      setLoading(true);
+      const canvas = sigRef.current.getTrimmedCanvas();
+      const blob = await new Promise<Blob>((resolve) => canvas.toBlob(resolve as BlobCallback, 'image/png'));
+      
+      const fileName = `signatures/${manifestId}/${type}.png`;
+      const { error } = await supabase.storage
+        .from('manifests')
+        .upload(fileName, blob, { contentType: 'image/png', upsert: true });
+
+      if (error) throw error;
+
+      if (type === 'customer') {
+        setData(prev => ({ ...prev, customerSigned: true, customerSigPath: fileName }));
+      } else {
+        setData(prev => ({ ...prev, driverSigned: true, driverSigPath: fileName }));
+      }
+
+      return true;
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to save signature", variant: "destructive" });
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFinalize = async () => {
+    if (!data.customerSigned || !data.driverSigned) {
+      toast({ title: "Error", description: "Both signatures are required", variant: "destructive" });
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // Update manifest with collected data
+      const { error: updateError } = await supabase
+        .from('manifests')
+        .update({
+          pte_off_rim: data.pteOff,
+          pte_on_rim: data.pteOn,
+          commercial_17_5_19_5_off: data.c175Off,
+          commercial_17_5_19_5_on: data.c175On,
+          commercial_22_5_off: data.c225Off,
+          commercial_22_5_on: data.c225On,
+          customer_signature_png_path: data.customerSigPath,
+          driver_signature_png_path: data.driverSigPath,
+          status: 'AWAITING_FINALIZATION'
+        })
+        .eq('id', manifestId);
+
+      if (updateError) throw updateError;
+
+      const payload = { manifest_id: manifestId };
+      const queueKey = 'manifestFinalizeQueue';
+
+      const execute = async () => {
+        const { data, error } = await supabase.functions.invoke('manifest-finalize', { body: payload });
+        if (error) throw error;
+        return data;
+      };
+
       if (!navigator.onLine) {
         const queued = JSON.parse(localStorage.getItem(queueKey) || '[]');
         queued.push(payload);
         localStorage.setItem(queueKey, JSON.stringify(queued));
+        toast({ title: "Queued", description: "Manifest will be finalized when online" });
         onComplete();
         return;
       }
+
       await execute();
+      toast({ title: "Success", description: "Manifest finalized and sent to client" });
       onComplete();
-    } catch (error) {
-      console.error('Error finalizing manifest:', error);
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -223,19 +294,29 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
             
             <div className="border-2 border-dashed border-muted-foreground/25 p-4 rounded-lg">
               <SignatureCanvas
+                ref={customerSigRef}
                 canvasProps={{
                   className: 'w-full h-32 border border-border rounded',
                 }}
               />
             </div>
             
-            <Button 
-              onClick={() => setData(prev => ({ ...prev, customerSigned: true }))}
-              disabled={!data.customerSigned}
-              className="w-full"
-            >
-              Customer Signed
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline"
+                onClick={() => customerSigRef.current?.clear()}
+                className="flex-1"
+              >
+                Clear
+              </Button>
+              <Button 
+                onClick={() => saveSignature('customer', customerSigRef)}
+                disabled={loading || data.customerSigned}
+                className="flex-1"
+              >
+                {loading ? 'Saving...' : data.customerSigned ? '✓ Saved' : 'Save Signature'}
+              </Button>
+            </div>
 
             {data.customerSigned && (
               <>
@@ -245,21 +326,32 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
                 
                 <div className="border-2 border-dashed border-muted-foreground/25 p-4 rounded-lg">
                   <SignatureCanvas
+                    ref={driverSigRef}
                     canvasProps={{
                       className: 'w-full h-32 border border-border rounded',
                     }}
                   />
                 </div>
                 
-                <Button 
-                  onClick={() => {
-                    setData(prev => ({ ...prev, driverSigned: true }));
-                    handleNext();
-                  }}
-                  className="w-full"
-                >
-                  Complete Signatures
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline"
+                    onClick={() => driverSigRef.current?.clear()}
+                    className="flex-1"
+                  >
+                    Clear
+                  </Button>
+                  <Button 
+                    onClick={async () => {
+                      const saved = await saveSignature('driver', driverSigRef);
+                      if (saved) handleNext();
+                    }}
+                    disabled={loading || data.driverSigned}
+                    className="flex-1"
+                  >
+                    {loading ? 'Saving...' : data.driverSigned ? '✓ Complete' : 'Save & Continue'}
+                  </Button>
+                </div>
               </>
             )}
           </div>
@@ -294,8 +386,12 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
               Signatures: Customer ✓, Driver ✓
             </div>
             
-            <Button onClick={handleFinalize} className="w-full bg-green-600 hover:bg-green-700">
-              Finalize Manifest
+            <Button 
+              onClick={handleFinalize} 
+              disabled={loading || !data.customerSigned || !data.driverSigned}
+              className="w-full bg-green-600 hover:bg-green-700"
+            >
+              {loading ? 'Finalizing...' : 'Finalize Manifest'}
             </Button>
           </div>
         );
