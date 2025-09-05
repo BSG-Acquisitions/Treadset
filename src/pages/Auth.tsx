@@ -28,12 +28,20 @@ export default function Auth() {
     
     // Redirect if already authenticated
     if (user) {
+      console.log('User detected, redirecting to home:', user);
       navigate('/');
     }
   }, [user, navigate]);
 
+  // Debug form state changes
+  useEffect(() => {
+    console.log('Form state changed:', { email, password: password.length > 0 });
+  }, [email, password]);
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('handleSignIn called with:', { email, password: password.length > 0 });
+    
     setIsLoading(true);
     setError('');
     setSuccess('');
@@ -49,16 +57,17 @@ export default function Auth() {
       
       const result = await Promise.race([signInPromise, timeoutPromise]) as { error?: any };
       
-      console.log('Sign in completed:', { result });
+      console.log('Sign in completed with result:', result);
       
       if (result?.error) {
+        console.log('Sign in error:', result.error);
         setError(result.error.message || 'An error occurred during sign in');
       } else {
         console.log('Sign in successful, navigating to home...');
         navigate('/');
       }
     } catch (error: any) {
-      console.error('Sign in error:', error);
+      console.error('Sign in catch block error:', error);
       setError(error.message || 'Sign in failed');
     } finally {
       console.log('Setting loading to false');
