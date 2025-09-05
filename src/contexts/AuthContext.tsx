@@ -41,7 +41,7 @@ export const useAuth = () => {
   return context;
 };
 
-const DISABLE_AUTH = true; // Set to true to bypass auth for demo
+const DISABLE_AUTH = false; // Set to true to bypass auth for demo
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
