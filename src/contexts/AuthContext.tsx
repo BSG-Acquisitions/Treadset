@@ -100,7 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Add timeout to user data loading
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('User data load timeout')), 3000)
+        setTimeout(() => reject(new Error('User data load timeout')), 10000)
       );
 
       const userDataPromise = supabase
@@ -130,13 +130,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (userError) {
           console.error('Error loading user data:', userError);
-          // For now, create a basic user object so login works
+          // Do not escalate privileges on error; set minimal user context
           setUser({
             id: authUser.id,
             email: authUser.email || '',
             firstName: authUser.user_metadata?.first_name || 'User',
             lastName: authUser.user_metadata?.last_name || '',
-            roles: ['admin'], // Default to admin for now
+            roles: [],
             currentOrganization: {
               id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
               name: 'BSG Logistics',
@@ -164,7 +164,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           firstName: userData.first_name,
           lastName: userData.last_name,
           phone: userData.phone,
-          roles: roles.length > 0 ? roles : ['admin'], // Fallback to admin
+          roles: roles,
           currentOrganization: currentOrg || {
             id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
             name: 'BSG Logistics',
@@ -176,13 +176,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(finalUser);
       } catch (queryError) {
         console.error('Caught error during user data query:', queryError);
-        // Fallback user object
+        // Do not escalate privileges on error; set minimal user context
         setUser({
           id: authUser.id,
           email: authUser.email || '',
           firstName: authUser.user_metadata?.first_name || 'User',
           lastName: authUser.user_metadata?.last_name || '',
-          roles: ['admin'],
+          roles: [],
           currentOrganization: {
             id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
             name: 'BSG Logistics',
@@ -192,14 +192,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (error) {
       console.error('Error loading user data:', error);
-      // Always set a fallback user so login works
+      // Do not escalate privileges on error; set minimal user or null
       if (authUser) {
         setUser({
           id: authUser.id,
           email: authUser.email || '',
           firstName: authUser.user_metadata?.first_name || 'User',
           lastName: authUser.user_metadata?.last_name || '',
-          roles: ['admin'],
+          roles: [],
           currentOrganization: {
             id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
             name: 'BSG Logistics',
