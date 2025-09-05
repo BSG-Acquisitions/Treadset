@@ -54,64 +54,7 @@ serve(async (req) => {
 
     console.log('Authenticated user:', user.id);
 
-    // Check if user has admin role in their organization
-    // First try to find existing user record
-    let { data: userRecord, error: userRecordError } = await supabaseClient
-      .from('users')
-      .select('id')
-      .eq('auth_user_id', user.id)
-      .single();
-
-    // If user record doesn't exist, create it (this handles cases where user was authenticated but doesn't have a user record)
-    if (userRecordError && userRecordError.code === 'PGRST116') {
-      console.log('User record not found, creating it...');
-      const { data: newUserRecord, error: createUserError } = await supabaseAdmin
-        .from('users')
-        .insert({
-          auth_user_id: user.id,
-          email: user.email,
-          first_name: user.user_metadata?.first_name || null,
-          last_name: user.user_metadata?.last_name || null,
-          phone: user.user_metadata?.phone || null
-        })
-        .select()
-        .single();
-
-      if (createUserError) {
-        console.error('Error creating user record:', createUserError);
-        throw new Error('Failed to create user record');
-      }
-
-      userRecord = newUserRecord;
-    } else if (userRecordError) {
-      console.error('Error finding user record:', userRecordError);
-      throw new Error('Database error finding user');
-    }
-
-    console.log('User record found/created:', userRecord.id);
-
-    // Use admin client for role check since RLS is strict now
-    const { data: userRoles, error: roleError } = await supabaseAdmin
-      .from('user_organization_roles')
-      .select('role, organization_id')
-      .eq('user_id', userRecord.id)
-      .eq('role', 'admin');
-
-    console.log('Role query result:', { userRoles, roleError });
-
-    if (roleError) {
-      console.error('Role check database error:', roleError);
-      throw new Error(`Database error checking roles: ${roleError.message}`);
-    }
-
-    if (!userRoles || userRoles.length === 0) {
-      console.error('No admin role found for user:', userRecord.id);
-      throw new Error('Insufficient permissions - admin role required');
-    }
-
-    console.log('Admin role verified for user:', userRecord.id);
-
-    // Parse request body
+    // Parse request body early to know target organization
     let requestBody;
     try {
       requestBody = await req.json();
@@ -136,14 +79,61 @@ serve(async (req) => {
       throw new Error('Missing required fields: email, password, roles, and organizationId are required');
     }
 
-    console.log('Creating employee with data:', {
-      email,
-      firstName,
-      lastName,
-      phone,
-      roles,
-      organizationId
-    });
+    // Resolve current caller's internal user id using admin client (bypasses RLS)
+    let { data: callerUser, error: callerLookupError } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('auth_user_id', user.id)
+      .maybeSingle();
+
+    if (callerLookupError) {
+      console.error('Error looking up current user record:', callerLookupError);
+      throw new Error('Failed to look up current user record');
+    }
+
+    let currentUserId = callerUser?.id as string | undefined;
+
+    if (!currentUserId) {
+      // Ensure a users row exists for the caller; use upsert to avoid duplicates
+      const { data: upserted, error: upsertErr } = await supabaseAdmin
+        .from('users')
+        .upsert({
+          auth_user_id: user.id,
+          email: user.email,
+          first_name: user.user_metadata?.first_name || null,
+          last_name: user.user_metadata?.last_name || null,
+          phone: user.user_metadata?.phone || null
+        }, { onConflict: 'auth_user_id' })
+        .select('id')
+        .single();
+
+      if (upsertErr) {
+        console.error('Error upserting current user record:', upsertErr);
+        throw new Error('Failed to ensure current user record');
+      }
+
+      currentUserId = upserted.id;
+    }
+
+    console.log('Current user internal id:', currentUserId);
+
+    // Verify caller has admin role in the target organization
+    const { data: adminRoleRows, error: adminRoleError } = await supabaseAdmin
+      .from('user_organization_roles')
+      .select('id')
+      .eq('user_id', currentUserId!)
+      .eq('organization_id', organizationId)
+      .eq('role', 'admin');
+
+    if (adminRoleError) {
+      console.error('Role check database error:', adminRoleError);
+      throw new Error(`Database error checking roles: ${adminRoleError.message}`);
+    }
+
+    if (!adminRoleRows || adminRoleRows.length === 0) {
+      console.error('No admin role in target org for user:', currentUserId);
+      throw new Error('Insufficient permissions - admin role required in target organization');
+    }
 
     // Create the auth user using admin client
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
