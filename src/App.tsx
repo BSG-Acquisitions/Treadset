@@ -45,6 +45,7 @@ const App = () => (
             {/* Public Routes - No Authentication Required */}
             <Route path="/public-book" element={<PublicBook />} />
             <Route path="/public-booking-confirmation" element={<PublicBookingConfirmation />} />
+            <Route path="/test/manifest" element={<ManifestTest />} />
             
             {/* Protected Routes */}
             <Route path="/auth" element={<Auth />} />
@@ -142,11 +143,6 @@ const App = () => (
             <Route path="/driver/dashboard" element={
               <ProtectedRoute roles={['driver', 'admin']}>
                 <DriverDashboard />
-              </ProtectedRoute>
-            } />
-            <Route path="/test/manifest" element={
-              <ProtectedRoute>
-                <ManifestTest />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
