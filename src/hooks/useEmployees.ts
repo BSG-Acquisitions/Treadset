@@ -89,6 +89,7 @@ export const useCreateEmployee = () => {
       }
 
       console.log('Calling create-employee function with data:', employeeData);
+      console.log('Organization ID:', user.currentOrganization.id);
 
       // Call the edge function instead of using auth.admin directly
       const { data, error } = await supabase.functions.invoke('create-employee', {
@@ -102,6 +103,8 @@ export const useCreateEmployee = () => {
           organizationId: user.currentOrganization.id
         }
       });
+
+      console.log('Edge function response:', { data, error });
 
       if (error) {
         console.error('Edge function error:', error);

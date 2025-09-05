@@ -12,6 +12,8 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  console.log('Create employee function called');
+
   try {
     // Create admin client with service role key
     const supabaseAdmin = createClient(
@@ -34,11 +36,11 @@ serve(async (req) => {
     // Get the authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error('No authorization header found');
       throw new Error('No authorization header');
     }
 
-    // Set the auth header for the client
-    supabaseClient.rest.headers['Authorization'] = authHeader;
+    console.log('Auth header found, verifying user...');
 
     // Verify the user is authenticated and has admin role
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser(
@@ -46,6 +48,7 @@ serve(async (req) => {
     );
 
     if (userError || !user) {
+      console.error('User verification failed:', userError);
       throw new Error('Unauthorized');
     }
 
@@ -85,6 +88,8 @@ serve(async (req) => {
       throw new Error('Database error finding user');
     }
 
+    console.log('User record found/created:', userRecord.id);
+
     const { data: userRoles, error: roleError } = await supabaseClient
       .from('user_organization_roles')
       .select('role')
@@ -92,11 +97,36 @@ serve(async (req) => {
       .eq('role', 'admin');
 
     if (roleError || !userRoles?.length) {
+      console.error('Role check failed:', roleError, 'Roles found:', userRoles);
       throw new Error('Insufficient permissions - admin role required');
     }
 
+    console.log('Admin role verified');
+
     // Parse request body
-    const { email, password, firstName, lastName, phone, roles, organizationId } = await req.json();
+    let requestBody;
+    try {
+      requestBody = await req.json();
+    } catch (jsonError) {
+      console.error('Failed to parse request body:', jsonError);
+      throw new Error('Invalid JSON in request body');
+    }
+
+    const { email, password, firstName, lastName, phone, roles, organizationId } = requestBody;
+
+    console.log('Creating employee with data:', {
+      email,
+      firstName,
+      lastName,
+      phone,
+      roles,
+      organizationId
+    });
+
+    if (!email || !password || !roles || !organizationId) {
+      console.error('Missing required fields:', { email: !!email, password: !!password, roles: !!roles, organizationId: !!organizationId });
+      throw new Error('Missing required fields: email, password, roles, and organizationId are required');
+    }
 
     console.log('Creating employee with data:', {
       email,
