@@ -1,0 +1,30 @@
+{
+  "//": "PLACEHOLDER COORDS — adjust after calibration. All units in PDF points.",
+  "page": 1,
+  "text": {
+    "manifestNumber": { "x": 460, "y": 730, "fontSize": 10 },
+    "date":           { "x": 460, "y": 712, "fontSize": 10 },
+    "clientName":     { "x": 90,  "y": 695, "fontSize": 10 },
+    "serviceAddress": { "x": 90,  "y": 680, "fontSize": 10 },
+    "cityStateZip":   { "x": 90,  "y": 665, "fontSize": 10 },
+    "driverName":     { "x": 90,  "y": 635, "fontSize": 10 },
+    "vehicle":        { "x": 280, "y": 635, "fontSize": 10 },
+    "pteOff":         { "x": 110, "y": 560, "fontSize": 10 },
+    "pteOn":          { "x": 180, "y": 560, "fontSize": 10 },
+    "c175Off":        { "x": 250, "y": 560, "fontSize": 10 },
+    "c175On":         { "x": 320, "y": 560, "fontSize": 10 },
+    "c225Off":        { "x": 390, "y": 560, "fontSize": 10 },
+    "c225On":         { "x": 460, "y": 560, "fontSize": 10 },
+    "subtotal":       { "x": 460, "y": 200, "fontSize": 10, "align":"right" },
+    "surcharges":     { "x": 460, "y": 184, "fontSize": 10, "align":"right" },
+    "total":          { "x": 460, "y": 168, "fontSize": 12, "align":"right", "bold": true }
+  },
+  "signatures": {
+    "customer": { "x": 110, "y": 120, "w": 200, "h": 42 },
+    "driver":   { "x": 370, "y": 120, "w": 200, "h": 42 }
+  },
+  "images": {
+    "logo": { "x": 40, "y": 745, "w": 90, "h": 28 },
+    "qr":   { "x": 520, "y": 110, "w": 60, "h": 60 }
+  }
+}
