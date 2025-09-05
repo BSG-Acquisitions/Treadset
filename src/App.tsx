@@ -29,6 +29,7 @@ import DriverRoutes from "./pages/DriverRoutes";
 import DriverDashboard from "./pages/DriverDashboard";
 import PublicBook from "./pages/PublicBook";
 import PublicBookingConfirmation from "./pages/PublicBookingConfirmation";
+import ManifestTest from "./pages/ManifestTest";
 
 const queryClient = new QueryClient();
 
@@ -141,6 +142,11 @@ const App = () => (
             <Route path="/driver/dashboard" element={
               <ProtectedRoute roles={['driver', 'admin']}>
                 <DriverDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/test/manifest" element={
+              <ProtectedRoute roles={['admin']}>
+                <ManifestTest />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
