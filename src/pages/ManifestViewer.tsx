@@ -44,20 +44,64 @@ export const ManifestViewer = () => {
 
   const loadManifests = async () => {
     try {
-      const { data, error } = await supabase
+      // First get the manifests
+      const { data: manifestsData, error: manifestsError } = await supabase
         .from('manifests')
-        .select(`
-          *,
-          clients(company_name, email),
-          locations(address, name),
-          users(first_name, last_name),
-          vehicles(name)
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(10);
 
-      if (error) throw error;
-      setManifests(data || []);
+      if (manifestsError) throw manifestsError;
+
+      if (!manifestsData || manifestsData.length === 0) {
+        setManifests([]);
+        return;
+      }
+
+      // Get unique IDs for related data
+      const clientIds = [...new Set(manifestsData.map(m => m.client_id).filter(Boolean))];
+      const locationIds = [...new Set(manifestsData.map(m => m.location_id).filter(Boolean))];
+      const driverIds = [...new Set(manifestsData.map(m => m.driver_id).filter(Boolean))];
+      const vehicleIds = [...new Set(manifestsData.map(m => m.vehicle_id).filter(Boolean))];
+
+      // Fetch related data in parallel
+      const [clientsResult, locationsResult, driversResult, vehiclesResult] = await Promise.all([
+        clientIds.length > 0 ? supabase.from('clients').select('id, company_name, email').in('id', clientIds) : { data: [] },
+        locationIds.length > 0 ? supabase.from('locations').select('id, address, name').in('id', locationIds) : { data: [] },
+        driverIds.length > 0 ? supabase.from('users').select('id, first_name, last_name').in('id', driverIds) : { data: [] },
+        vehicleIds.length > 0 ? supabase.from('vehicles').select('id, name').in('id', vehicleIds) : { data: [] },
+      ]);
+
+      // Create lookup maps
+      const clientsMap = new Map();
+      const locationsMap = new Map();
+      const driversMap = new Map();
+      const vehiclesMap = new Map();
+
+      // Populate maps if data exists
+      if (clientsResult.data) {
+        clientsResult.data.forEach(c => clientsMap.set(c.id, c));
+      }
+      if (locationsResult.data) {
+        locationsResult.data.forEach(l => locationsMap.set(l.id, l));
+      }
+      if (driversResult.data) {
+        driversResult.data.forEach(u => driversMap.set(u.id, u));
+      }
+      if (vehiclesResult.data) {
+        vehiclesResult.data.forEach(v => vehiclesMap.set(v.id, v));
+      }
+
+      // Combine the data
+      const enrichedManifests = manifestsData.map(manifest => ({
+        ...manifest,
+        clients: clientsMap.get(manifest.client_id) || null,
+        locations: locationsMap.get(manifest.location_id) || null,
+        users: driversMap.get(manifest.driver_id) || null,
+        vehicles: vehiclesMap.get(manifest.vehicle_id) || null,
+      }));
+
+      setManifests(enrichedManifests);
     } catch (error) {
       console.error('Error loading manifests:', error);
       toast.error('Failed to load manifests');
