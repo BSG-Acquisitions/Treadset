@@ -172,22 +172,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+    const initializeAuth = async () => {
+      try {
+        // Set up auth state listener
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event, session) => {
+            console.log('Auth state changed:', event, session?.user?.id);
+            setSession(session);
+            try {
+              await loadUserData(session?.user ?? null);
+            } catch (error) {
+              console.error('Error in auth state change handler:', error);
+              setUser(null);
+            } finally {
+              setLoading(false);
+            }
+          }
+        );
+
+        // Check for existing session
+        const { data: { session }, error } = await supabase.auth.getSession();
+        console.log('Initial session check:', session?.user?.id, error);
+        
         setSession(session);
-        await loadUserData(session?.user ?? null);
+        try {
+          await loadUserData(session?.user ?? null);
+        } catch (error) {
+          console.error('Error in initial session load:', error);
+          setUser(null);
+        } finally {
+          setLoading(false);
+        }
+
+        return () => subscription.unsubscribe();
+      } catch (error) {
+        console.error('Error initializing auth:', error);
         setLoading(false);
       }
-    );
+    };
 
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      loadUserData(session?.user ?? null).finally(() => setLoading(false));
-    });
-
-    return () => subscription.unsubscribe();
+    initializeAuth();
   }, []);
 
   const signIn = async (email: string, password: string) => {
