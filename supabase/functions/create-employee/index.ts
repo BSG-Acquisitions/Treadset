@@ -90,18 +90,26 @@ serve(async (req) => {
 
     console.log('User record found/created:', userRecord.id);
 
-    const { data: userRoles, error: roleError } = await supabaseClient
+    // Use admin client for role check since RLS is strict now
+    const { data: userRoles, error: roleError } = await supabaseAdmin
       .from('user_organization_roles')
-      .select('role')
+      .select('role, organization_id')
       .eq('user_id', userRecord.id)
       .eq('role', 'admin');
 
-    if (roleError || !userRoles?.length) {
-      console.error('Role check failed:', roleError, 'Roles found:', userRoles);
+    console.log('Role query result:', { userRoles, roleError });
+
+    if (roleError) {
+      console.error('Role check database error:', roleError);
+      throw new Error(`Database error checking roles: ${roleError.message}`);
+    }
+
+    if (!userRoles || userRoles.length === 0) {
+      console.error('No admin role found for user:', userRecord.id);
       throw new Error('Insufficient permissions - admin role required');
     }
 
-    console.log('Admin role verified');
+    console.log('Admin role verified for user:', userRecord.id);
 
     // Parse request body
     let requestBody;
