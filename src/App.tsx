@@ -145,7 +145,7 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/test/manifest" element={
-              <ProtectedRoute roles={['admin']}>
+              <ProtectedRoute>
                 <ManifestTest />
               </ProtectedRoute>
             } />
