@@ -26,6 +26,7 @@ import DriverManifests from "./pages/DriverManifests";
 import DriverManifestCreate from "./pages/DriverManifestCreate";
 import DriverManifestView from "./pages/DriverManifestView";
 import DriverRoutes from "./pages/DriverRoutes";
+import DriverDashboard from "./pages/DriverDashboard";
 import PublicBook from "./pages/PublicBook";
 import PublicBookingConfirmation from "./pages/PublicBookingConfirmation";
 
@@ -134,6 +135,11 @@ const App = () => (
             <Route path="/routes/driver" element={
               <ProtectedRoute roles={['driver', 'admin']}>
                 <DriverRoutes />
+              </ProtectedRoute>
+            } />
+            <Route path="/driver/dashboard" element={
+              <ProtectedRoute roles={['driver', 'admin']}>
+                <DriverDashboard />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

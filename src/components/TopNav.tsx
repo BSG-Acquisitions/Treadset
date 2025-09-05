@@ -34,6 +34,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
     if (location.pathname === '/') return 'dashboard';
     if (location.pathname.startsWith('/clients')) return 'clients';
     if (location.pathname.startsWith('/routes')) return 'routes';
+    if (location.pathname.startsWith('/driver')) return 'driver';
     if (location.pathname === '/book') return 'book';
     if (location.pathname === '/employees') return 'employees';
     if (location.pathname === '/analytics') return 'analytics';
@@ -45,6 +46,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
     { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/', roles: [] as const },
     { id: 'clients', label: 'Clients', icon: Users, path: '/clients', roles: ['admin', 'ops_manager', 'sales'] as const },
     { id: 'routes', label: 'Routes', icon: MapPin, path: '/routes/today', roles: ['admin', 'ops_manager', 'dispatcher', 'driver'] as const },
+    { id: 'driver', label: 'Driver Hub', icon: UserCheck, path: '/driver/dashboard', roles: ['driver'] as const },
     { id: 'book', label: 'Book', icon: Package, path: '/book', roles: ['admin', 'ops_manager', 'sales'] as const },
     { id: 'employees', label: 'Employees', icon: UserCheck, path: '/employees', roles: ['admin'] as const },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics', roles: ['admin', 'ops_manager'] as const },
