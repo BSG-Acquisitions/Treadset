@@ -37,20 +37,35 @@ export const useActiveFollowups = () => {
     queryKey: ['active-followups'],
     queryFn: async () => {
       const today = new Date().toISOString().split('T')[0];
-      
-      const { data, error } = await supabase
+
+      // 1) Fetch workflows first (without join to avoid missing FK issues)
+      const { data: workflows, error: wfError } = await supabase
         .from('client_workflows')
-        .select(`
-          *,
-          clients(company_name, email)
-        `)
+        .select('*')
         .eq('status', 'active')
         .eq('workflow_type', 'followup')
         .lte('next_contact_date', today)
         .order('next_contact_date', { ascending: true });
-        
-      if (error) throw error;
-      return data || [];
+
+      if (wfError) throw wfError;
+      if (!workflows?.length) return [] as any[];
+
+      // 2) Fetch client details in a separate query and merge
+      const clientIds = Array.from(new Set(workflows.map(w => w.client_id).filter(Boolean)));
+      const { data: clients, error: clientsError } = await supabase
+        .from('clients')
+        .select('id, company_name, email')
+        .in('id', clientIds);
+
+      if (clientsError) throw clientsError;
+
+      const clientMap = new Map(clients?.map(c => [c.id, c]) ?? []);
+      const enriched = workflows.map(w => ({
+        ...w,
+        clients: clientMap.get(w.client_id) || null,
+      }));
+
+      return enriched;
     }
   });
 };
