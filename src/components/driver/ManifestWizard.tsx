@@ -50,22 +50,47 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
   };
 
   const handleFinalize = async () => {
+    const payload = { manifest_id: manifestId };
+    const queueKey = 'manifestFinalizeQueue';
+
+    const execute = async () => {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data, error } = await supabase.functions.invoke('manifest-finalize', { body: payload });
+      if (error) throw error;
+      return data;
+    };
+
     try {
-      const response = await fetch('/api/manifest/finalize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ manifestId })
-      });
-      
-      if (response.ok) {
+      if (!navigator.onLine) {
+        const queued = JSON.parse(localStorage.getItem(queueKey) || '[]');
+        queued.push(payload);
+        localStorage.setItem(queueKey, JSON.stringify(queued));
         onComplete();
-      } else {
-        console.error('Finalization failed');
+        return;
       }
+      await execute();
+      onComplete();
     } catch (error) {
       console.error('Error finalizing manifest:', error);
     }
   };
+
+  React.useEffect(() => {
+    const queueKey = 'manifestFinalizeQueue';
+    const processQueue = async () => {
+      const queued: any[] = JSON.parse(localStorage.getItem(queueKey) || '[]');
+      if (!queued.length) return;
+      const { supabase } = await import('@/integrations/supabase/client');
+      const remain: any[] = [];
+      for (const item of queued) {
+        const { error } = await supabase.functions.invoke('manifest-finalize', { body: item });
+        if (error) remain.push(item);
+      }
+      localStorage.setItem(queueKey, JSON.stringify(remain));
+    };
+    window.addEventListener('online', processQueue);
+    return () => window.removeEventListener('online', processQueue);
+  }, []);
 
   const renderStepContent = () => {
     switch (step) {

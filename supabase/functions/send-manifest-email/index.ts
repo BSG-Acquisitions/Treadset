@@ -22,6 +22,7 @@ type SendManifestEmailRequest = {
   // Provide either manifest_id (to auto-fetch) or explicit pdf_path + to/email
   manifest_id?: string;
   pdf_path?: string; // e.g. manifests/2025-01-01/manifest-123.pdf
+  attach?: boolean; // default true; when false, send link-only
 };
 
 serve(async (req) => {
@@ -68,7 +69,7 @@ serve(async (req) => {
       // Prefer saved pdf_path
       if (manifest.pdf_path) pdfPath = manifest.pdf_path;
 
-      // Simple default HTML if none provided
+      // Simple default HTML if none provided (link-only or attachment)
       if (!body.messageHtml) {
         const company = manifest.clients?.company_name ?? "Customer";
         const number = manifest.manifest_number ?? manifest.id;
@@ -83,7 +84,7 @@ serve(async (req) => {
             <li><strong>Signed At</strong>: ${signed}</li>
             <li><strong>Total</strong>: $${Number(total).toFixed(2)}</li>
           </ul>
-          <p>The PDF is attached to this email.</p>
+          ${body.attach === false ? '<p><strong>Download:</strong> See secure link below.</p>' : '<p>The PDF is attached to this email.</p>'}
         `;
       }
     }
@@ -97,25 +98,43 @@ serve(async (req) => {
       throw new Error("No recipient email found. Provide 'to' or a manifest with client email.");
     }
 
-    // If we have a PDF path, download from Storage and attach
+    // If we have a PDF path
+    let signedUrl: string | undefined
     if (pdfPath) {
-      console.log("Downloading PDF from storage:", pdfPath);
-      const { data: pdfData, error: dlErr } = await supabase.storage
-        .from("manifests")
-        .download(pdfPath);
-
-      if (dlErr) {
-        console.error("Failed to download PDF:", dlErr);
+      if (body.attach === false) {
+        // link-only: create signed URL
+        const { data: signed, error: urlErr } = await supabase.storage
+          .from("manifests")
+          .createSignedUrl(pdfPath, 60 * 60 * 24 * 7);
+        if (urlErr) {
+          console.error("Failed to create signed URL:", urlErr);
+        } else {
+          signedUrl = signed?.signedUrl;
+          // If HTML not provided, append link
+          if (!body.messageHtml) {
+            html += signedUrl ? `<p><a href="${signedUrl}">Download PDF (expires in 7 days)</a></p>` : ''
+          }
+        }
       } else {
-        const buf = new Uint8Array(await pdfData.arrayBuffer());
-        // Attempt to derive filename from path
-        const parts = pdfPath.split("/");
-        const filename = parts[parts.length - 1] || "manifest.pdf";
-        attachment = {
-          filename,
-          content: buf,
-          contentType: "application/pdf",
-        };
+        // default: attach the file
+        console.log("Downloading PDF from storage:", pdfPath);
+        const { data: pdfData, error: dlErr } = await supabase.storage
+          .from("manifests")
+          .download(pdfPath);
+
+        if (dlErr) {
+          console.error("Failed to download PDF:", dlErr);
+        } else {
+          const buf = new Uint8Array(await pdfData.arrayBuffer());
+          // Attempt to derive filename from path
+          const parts = pdfPath.split("/");
+          const filename = parts[parts.length - 1] || "manifest.pdf";
+          attachment = {
+            filename,
+            content: buf,
+            contentType: "application/pdf",
+          };
+        }
       }
     }
 

@@ -679,9 +679,13 @@ export type Database = {
           commercial_22_5_off: number | null
           commercial_22_5_on: number | null
           created_at: string
+          customer_sig_path: string | null
           customer_signature_png_path: string | null
           driver_id: string | null
+          driver_sig_path: string | null
           driver_signature_png_path: string | null
+          emailed_to: string[] | null
+          finalized_by: string | null
           id: string
           location_id: string | null
           manifest_number: string
@@ -722,9 +726,13 @@ export type Database = {
           commercial_22_5_off?: number | null
           commercial_22_5_on?: number | null
           created_at?: string
+          customer_sig_path?: string | null
           customer_signature_png_path?: string | null
           driver_id?: string | null
+          driver_sig_path?: string | null
           driver_signature_png_path?: string | null
+          emailed_to?: string[] | null
+          finalized_by?: string | null
           id?: string
           location_id?: string | null
           manifest_number: string
@@ -765,9 +773,13 @@ export type Database = {
           commercial_22_5_off?: number | null
           commercial_22_5_on?: number | null
           created_at?: string
+          customer_sig_path?: string | null
           customer_signature_png_path?: string | null
           driver_id?: string | null
+          driver_sig_path?: string | null
           driver_signature_png_path?: string | null
+          emailed_to?: string[] | null
+          finalized_by?: string | null
           id?: string
           location_id?: string | null
           manifest_number?: string
@@ -801,7 +813,15 @@ export type Database = {
           volume_yards?: number | null
           weight_tons?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "manifests_finalized_by_fkey"
+            columns: ["finalized_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       organization_settings: {
         Row: {
