@@ -172,46 +172,70 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        // Set up auth state listener
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          async (event, session) => {
-            console.log('Auth state changed:', event, session?.user?.id);
-            setSession(session);
-            try {
-              await loadUserData(session?.user ?? null);
-            } catch (error) {
-              console.error('Error in auth state change handler:', error);
-              setUser(null);
-            } finally {
-              setLoading(false);
-            }
-          }
-        );
+    let mounted = true;
 
-        // Check for existing session
+    // Fallback timeout to clear loading if something goes wrong
+    const loadingTimeout = setTimeout(() => {
+      if (mounted) {
+        console.log('Loading timeout reached, forcing loading to false');
+        setLoading(false);
+      }
+    }, 5000);
+
+    const initAuth = async () => {
+      try {
+        // Check for existing session first
         const { data: { session }, error } = await supabase.auth.getSession();
         console.log('Initial session check:', session?.user?.id, error);
         
-        setSession(session);
-        try {
-          await loadUserData(session?.user ?? null);
-        } catch (error) {
-          console.error('Error in initial session load:', error);
-          setUser(null);
-        } finally {
+        if (mounted) {
+          setSession(session);
+          try {
+            await loadUserData(session?.user ?? null);
+            console.log('loadUserData completed successfully');
+          } catch (error) {
+            console.error('Error in initial session load:', error);
+            setUser(null);
+          }
+          console.log('Setting loading to false');
           setLoading(false);
+          clearTimeout(loadingTimeout);
         }
-
-        return () => subscription.unsubscribe();
       } catch (error) {
-        console.error('Error initializing auth:', error);
-        setLoading(false);
+        console.error('Error getting initial session:', error);
+        if (mounted) {
+          console.log('Setting loading to false due to error');
+          setLoading(false);
+          clearTimeout(loadingTimeout);
+        }
       }
     };
 
-    initializeAuth();
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.id);
+        if (mounted) {
+          setSession(session);
+          try {
+            await loadUserData(session?.user ?? null);
+          } catch (error) {
+            console.error('Error in auth state change handler:', error);
+            setUser(null);
+          }
+          // Don't set loading false here - only on initial load
+        }
+      }
+    );
+
+    // Initialize auth
+    initAuth();
+
+    return () => {
+      mounted = false;
+      clearTimeout(loadingTimeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
