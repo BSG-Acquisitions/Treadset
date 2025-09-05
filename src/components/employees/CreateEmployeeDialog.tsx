@@ -50,12 +50,12 @@ export function CreateEmployeeDialog({ trigger }: CreateEmployeeDialogProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log('Form submitted with data:', formData);
+    console.log('Form submitted with data:', JSON.stringify(formData, null, 2));
     
     if (!formData.email || !formData.password || formData.roles.length === 0) {
       console.log('Form validation failed:', { 
         email: formData.email, 
-        password: formData.password.length > 0, 
+        hasPassword: formData.password.length > 0, 
         roles: formData.roles 
       });
       return;

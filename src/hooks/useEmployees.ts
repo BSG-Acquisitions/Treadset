@@ -88,7 +88,7 @@ export const useCreateEmployee = () => {
         throw new Error('No organization selected');
       }
 
-      console.log('Calling create-employee function with data:', employeeData);
+      console.log('Calling create-employee function with data:', JSON.stringify(employeeData, null, 2));
       console.log('Organization ID:', user.currentOrganization.id);
 
       // Call the edge function instead of using auth.admin directly
