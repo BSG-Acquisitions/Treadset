@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Upload, Download } from "lucide-react";
+import { SchedulePickupDialog } from "@/components/SchedulePickupDialog";
+import { SchedulePickupWithDriver } from "@/components/SchedulePickupWithDriver";
 import { TopNav } from "@/components/TopNav";
 
 type Client = {
@@ -131,6 +133,13 @@ export default function Clients() {
           </Button>
         }
       />
+
+      <SchedulePickupWithDriver>
+        <Button variant="outline">
+          <Plus className="h-4 w-4 mr-2" />
+          Schedule Pickup
+        </Button>
+      </SchedulePickupWithDriver>
 
       <Button asChild>
         <Link to="/book">

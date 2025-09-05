@@ -5,17 +5,16 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useManifests } from '@/hooks/useManifests';
 import { useAssignments } from '@/hooks/usePickups';
+import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { Plus, FileText, Clock, CheckCircle, CreditCard, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function DriverManifests() {
   const [selectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const { user } = useAuth();
   
-  // For now, assume current user is a driver (in real app, get from auth context)
-  const driverId = "current-driver-id"; // This would come from auth context
-  
-  const { data: manifests = [], isLoading: manifestsLoading } = useManifests(undefined, driverId);
+  const { data: manifests = [], isLoading: manifestsLoading } = useManifests(undefined, user?.id);
   const { data: assignments = [], isLoading: assignmentsLoading } = useAssignments(selectedDate);
 
   const todaysManifests = manifests.filter(manifest => 

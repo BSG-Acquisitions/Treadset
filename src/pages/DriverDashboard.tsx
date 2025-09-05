@@ -20,13 +20,13 @@ import {
 } from 'lucide-react';
 import { useManifests } from '@/hooks/useManifests';
 import { usePickups } from '@/hooks/usePickups';
+import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 
 export default function DriverDashboard() {
-  // For now, assume current user is a driver (in real app, get from auth context)
-  const driverId = "current-driver-id";
+  const { user } = useAuth();
   
-  const { data: manifests = [], isLoading: manifestsLoading } = useManifests(undefined, driverId);
+  const { data: manifests = [], isLoading: manifestsLoading } = useManifests(undefined, user?.id);
   const { data: pickups = [], isLoading: pickupsLoading } = usePickups();
 
   // Get today's date for filtering
