@@ -69,13 +69,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loadUserData = async (authUser: User | null) => {
     console.log('loadUserData called with:', authUser?.id);
     
-    if (!authUser && !DISABLE_AUTH) {
-      console.log('No auth user, setting user to null');
-      setUser(null);
-      return;
-    }
-
     try {
+      if (!authUser && !DISABLE_AUTH) {
+        console.log('No auth user, setting user to null');
+        setUser(null);
+        return;
+      }
+
       const orgSlug = getCurrentOrgSlug();
       console.log('Current org slug:', orgSlug);
       
@@ -136,6 +136,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         )?.organization;
 
         console.log('Current org found:', currentOrg);
+        console.log('Looking for org slug:', orgSlug);
+        console.log('Available orgs:', userData.user_organization_roles.map((uor: any) => uor.organization));
 
         // Get all roles for current organization
         const roles = userData.user_organization_roles
@@ -163,6 +165,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Error loading user data:', error);
       setUser(null);
+    } finally {
+      // Always ensure loading is cleared
+      console.log('loadUserData completed, clearing loading state');
     }
   };
 
