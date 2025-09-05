@@ -55,6 +55,45 @@ export const ManifestTest = () => {
         throw manifestError;
       }
 
+      // Upload dummy signatures so finalization can succeed
+      const createSignatureBlob = (label: string) =>
+        new Promise<Blob>((resolve) => {
+          const canvas = document.createElement('canvas');
+          canvas.width = 400; canvas.height = 120;
+          const ctx = canvas.getContext('2d')!;
+          ctx.fillStyle = '#fff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.strokeStyle = '#111';
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(20, 80); ctx.lineTo(380, 40); ctx.stroke();
+          ctx.fillStyle = '#111'; ctx.font = '16px ui-sans-serif, system-ui, -apple-system';
+          ctx.fillText(`${label} Signature`, 20, 24);
+          canvas.toBlob((b) => resolve(b as Blob), 'image/png');
+        });
+
+      const [customerBlob, driverBlob] = await Promise.all([
+        createSignatureBlob('Customer'),
+        createSignatureBlob('Driver')
+      ]);
+
+      const customerPath = `signatures/${manifest.id}/customer.png`;
+      const driverPath = `signatures/${manifest.id}/driver.png`;
+
+      await Promise.all([
+        supabase.storage.from('manifests').upload(customerPath, customerBlob, { contentType: 'image/png', upsert: true }),
+        supabase.storage.from('manifests').upload(driverPath, driverBlob, { contentType: 'image/png', upsert: true }),
+      ]);
+
+      const { error: updateError } = await supabase
+        .from('manifests')
+        .update({
+          customer_signature_png_path: customerPath,
+          driver_signature_png_path: driverPath,
+        })
+        .eq('id', manifest.id);
+
+      if (updateError) throw updateError;
+
       // Now test the manifest finalization
       const { data: finalizeResult, error: finalizeError } = await supabase.functions.invoke('manifest-finalize', {
         body: { manifest_id: manifest.id }
