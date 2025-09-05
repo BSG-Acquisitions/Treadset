@@ -38,15 +38,32 @@ export default function Auth() {
     setError('');
     setSuccess('');
 
-    const { error } = await signIn(email, password);
-    
-    if (error) {
-      setError(error.message || 'An error occurred during sign in');
-    } else {
-      navigate('/');
+    try {
+      console.log('Starting sign in process...');
+      
+      // Add timeout to prevent infinite loading
+      const signInPromise = signIn(email, password);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Sign in timed out')), 15000)
+      );
+      
+      const result = await Promise.race([signInPromise, timeoutPromise]) as { error?: any };
+      
+      console.log('Sign in completed:', { result });
+      
+      if (result?.error) {
+        setError(result.error.message || 'An error occurred during sign in');
+      } else {
+        console.log('Sign in successful, navigating to home...');
+        navigate('/');
+      }
+    } catch (error: any) {
+      console.error('Sign in error:', error);
+      setError(error.message || 'Sign in failed');
+    } finally {
+      console.log('Setting loading to false');
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
