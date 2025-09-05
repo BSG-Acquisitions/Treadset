@@ -217,17 +217,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('Auth state changed:', event, session?.user?.id);
         if (mounted) {
           setSession(session);
-          // Temporarily skip loadUserData to test basic auth
-          console.log('Auth state change - skipping user data load');
-          /*
           try {
+            console.log('Loading user data after auth change...');
             await loadUserData(session?.user ?? null);
+            console.log('User data loaded successfully');
           } catch (error) {
             console.error('Error in auth state change handler:', error);
             setUser(null);
           }
-          */
-          // Don't set loading false here - only on initial load
         }
       }
     );
@@ -265,8 +262,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { error };
       }
       
-      // Temporarily skip loadUserData to test basic auth
-      console.log('Auth successful, skipping user data load for now');
+      // The auth state change handler will call loadUserData
+      console.log('Auth successful, user data will be loaded by state handler');
       return {};
       
     } catch (authError) {

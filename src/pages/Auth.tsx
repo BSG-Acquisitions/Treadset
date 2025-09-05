@@ -35,7 +35,7 @@ export default function Auth() {
 
   // Debug form state changes
   useEffect(() => {
-    console.log('Form state changed:', { email, password: password.length > 0 });
+    console.log('Form state changed:', { email, passwordLength: password.length });
   }, [email, password]);
 
   const handleSignIn = async (e: React.FormEvent) => {
