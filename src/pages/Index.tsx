@@ -327,7 +327,7 @@ export default function Index() {
               <RowCarousel
                 title=""
                 items={todayPickups.map(pickup => ({
-                  id: pickup.client_id,
+                  id: pickup.id, // Use pickup.id instead of client_id for unique keys
                   name: pickup.client?.company_name || 'Unknown Client',
                   capacity: pickup.pte_count || 0,
                   lastPickup: pickup.pickup_date,
