@@ -105,7 +105,7 @@ export function CreateEmployeeDialog({ trigger }: CreateEmployeeDialogProps) {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add New Employee</DialogTitle>
           <DialogDescription>

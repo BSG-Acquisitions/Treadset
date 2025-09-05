@@ -49,15 +49,40 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
+    console.log('Authenticated user:', user.id);
+
     // Check if user has admin role in their organization
-    const { data: userRecord, error: userRecordError } = await supabaseClient
+    // First try to find existing user record
+    let { data: userRecord, error: userRecordError } = await supabaseClient
       .from('users')
       .select('id')
       .eq('auth_user_id', user.id)
       .single();
 
-    if (userRecordError || !userRecord) {
-      throw new Error('User record not found');
+    // If user record doesn't exist, create it (this handles cases where user was authenticated but doesn't have a user record)
+    if (userRecordError && userRecordError.code === 'PGRST116') {
+      console.log('User record not found, creating it...');
+      const { data: newUserRecord, error: createUserError } = await supabaseAdmin
+        .from('users')
+        .insert({
+          auth_user_id: user.id,
+          email: user.email,
+          first_name: user.user_metadata?.first_name || null,
+          last_name: user.user_metadata?.last_name || null,
+          phone: user.user_metadata?.phone || null
+        })
+        .select()
+        .single();
+
+      if (createUserError) {
+        console.error('Error creating user record:', createUserError);
+        throw new Error('Failed to create user record');
+      }
+
+      userRecord = newUserRecord;
+    } else if (userRecordError) {
+      console.error('Error finding user record:', userRecordError);
+      throw new Error('Database error finding user');
     }
 
     const { data: userRoles, error: roleError } = await supabaseClient
