@@ -47,6 +47,7 @@ const App = () => (
             
             {/* Protected Routes */}
             <Route path="/auth" element={<Auth />} />
+            <Route path="/auth/sign-in" element={<Auth />} />
             <Route path="/onboarding" element={
               <ProtectedRoute roles={['admin']}>
                 <Onboarding />
