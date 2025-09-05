@@ -1,5 +1,5 @@
 import React from 'react';
-import StateDocumentPreview from '@/components/StateDocumentPreview';
+import ActualStateDocument from '@/components/ActualStateDocument';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 
@@ -39,14 +39,14 @@ export const ManifestExample = () => {
         </Button>
         
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-2">Example State Document</h1>
+          <h1 className="text-3xl font-bold mb-2">Actual State Document Template</h1>
           <p className="text-lg text-muted-foreground">
-            Real manifest from your database showing the official Michigan state format
+            Real manifest data overlaid on the official Michigan state form exactly as it appears in the PDF
           </p>
         </div>
       </div>
 
-      <StateDocumentPreview data={exampleManifestData} />
+      <ActualStateDocument data={exampleManifestData} />
       
       <div className="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
         <h3 className="text-lg font-semibold text-blue-800 mb-2">✅ This is Real Data</h3>
