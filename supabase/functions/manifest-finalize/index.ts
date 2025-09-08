@@ -15,11 +15,21 @@ interface FinalizeRequest {
   manifest_id: string;
 }
 
+// Types for layout + field mapping
+type FieldMap = Record<string, { source: string; format?: 'int' | 'currency' | 'date' | 'string' }>;
+type TextSpec = { x: number; y: number; fontSize: number; align?: 'left' | 'right' | 'center'; bold?: boolean };
+type Layout = {
+  page: number;
+  text: Record<string, TextSpec>;
+  signatures: Record<'customer' | 'driver', { x: number; y: number; w: number; h: number }>;
+  images?: Record<'logo' | 'qr', { x: number; y: number; w: number; h: number }>;
+};
+
 // Simple hex helper
 async function sha256Hex(bytes: Uint8Array) {
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
   const hashArray = Array.from(new Uint8Array(digest));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 // Field formatters
@@ -61,12 +71,6 @@ const defaultFieldMappings: FieldMap = {
   total: { source: "total", format: "currency" }
 };
 
-// Simple hex helper
-async function sha256Hex(bytes: Uint8Array) {
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  const hashArray = Array.from(new Uint8Array(digest));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
 
 // Default layout coordinates (from manifestLayout.json)
 const defaultLayout: Layout = {

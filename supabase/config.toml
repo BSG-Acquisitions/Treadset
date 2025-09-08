@@ -80,3 +80,9 @@ verify_jwt = false
 
 [functions.multi-trip-optimizer]
 verify_jwt = false
+
+[functions.manifest-finalize]
+verify_jwt = false
+
+[functions.send-manifest-email]
+verify_jwt = false
