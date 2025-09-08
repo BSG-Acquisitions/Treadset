@@ -81,12 +81,12 @@ export function BSGLogo({
 
       {/* Text */}
       {showText && (
-        <div className="hidden sm:block">
-          <h1 className={`font-bold bg-gradient-to-r from-brand-primary to-brand-primary-dark bg-clip-text text-transparent ${textSizeClasses[size]}`}>
+        <div className="hidden sm:block min-w-0 flex-shrink-0">
+          <h1 className={`font-bold bg-gradient-to-r from-brand-primary to-brand-primary-dark bg-clip-text text-transparent ${textSizeClasses[size]} whitespace-nowrap`}>
             BSG Tire Recycling
           </h1>
           {size !== "xs" && size !== "sm" && (
-            <p className={`text-brand-tire-black/60 font-medium ${size === "md" ? "text-xs" : size === "lg" ? "text-sm" : "text-base"}`}>
+            <p className={`text-brand-tire-black/60 font-medium ${size === "md" ? "text-xs" : size === "lg" ? "text-sm" : "text-base"} whitespace-nowrap`}>
               Industrial Waste Solutions
             </p>
           )}

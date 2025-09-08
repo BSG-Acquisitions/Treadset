@@ -66,10 +66,17 @@ export const useUpdateLocation = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Invalidate all location-related queries
       queryClient.invalidateQueries({ queryKey: ['locations'] });
       queryClient.invalidateQueries({ queryKey: ['clients'] });
-      toast({ title: "Success", description: "Location updated successfully" });
+      queryClient.invalidateQueries({ queryKey: ['pickups'] });
+      queryClient.invalidateQueries({ queryKey: ['manifests'] });
+      queryClient.invalidateQueries({ queryKey: ['assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['routes'] });
+      queryClient.invalidateQueries({ queryKey: ['clients-table'] });
+      
+      toast({ title: "Success", description: "Location updated successfully. All related data has been refreshed." });
     },
     onError: (error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });

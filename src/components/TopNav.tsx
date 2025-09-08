@@ -31,6 +31,23 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
   const { user, signOut, hasAnyRole } = useAuth();
   const location = useLocation();
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      // Navigate to clients page with search query
+      const searchParams = new URLSearchParams();
+      searchParams.set('clients', JSON.stringify({
+        page: 1,
+        pageSize: 10,
+        search: searchQuery.trim(),
+        sortBy: 'company_name',
+        sortOrder: 'asc',
+        filters: {}
+      }));
+      window.location.href = `/clients?${searchParams.toString()}`;
+    }
+  };
+
   const getCurrentTab = () => {
     if (location.pathname === '/') return 'dashboard';
     if (location.pathname.startsWith('/clients')) return 'clients';
@@ -73,19 +90,19 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
             </Button>
           )}
           
-          <Link to="/" className="hover:opacity-80 transition-all duration-300 min-w-0">
+          <Link to="/" className="hover:opacity-80 transition-all duration-300 flex-shrink-0">
             <BSGLogo 
               size="sm" 
               animated={true} 
               showText={true}
-              className="min-w-0"
+              className="flex-shrink-0"
             />
           </Link>
         </div>
 
         {/* Center - Search */}
         <div className="flex-1 max-w-md mx-2 sm:mx-6 min-w-0">
-          <div className="relative">
+          <form onSubmit={handleSearch} className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
@@ -93,8 +110,13 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 bg-secondary/30 border-border/50 focus:bg-card focus:border-brand-primary/30 transition-all duration-300 text-sm"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSearch(e);
+                }
+              }}
             />
-          </div>
+          </form>
         </div>
 
         {/* Right side - Actions and user menu */}
@@ -107,7 +129,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
             <PopoverTrigger asChild>
               <Button variant="ghost" size="sm" className="relative hover:bg-brand-primary/10 transition-colors" aria-label="Notifications">
                 <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-brand-tire-black/70" />
-                <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 rounded-full p-0 text-xs bg-brand-accent">
+                <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs bg-brand-accent flex items-center justify-center min-w-[20px]">
                   3
                 </Badge>
               </Button>
