@@ -147,7 +147,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Using embedded configuration');
 
-    // Get the PDF template with fallbacks
+    // Get the PDF template with fallbacks (use blank Letter page if missing)
     let templateData: Blob | null = null;
     let templateError: any = null;
 
@@ -163,15 +163,17 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    if (templateError || !templateData) {
-      console.error('Template fetch error:', templateError);
-      throw new Error('Failed to fetch PDF template');
+    let pdfDoc: PDFDocument;
+    let firstPage: any;
+    if (templateData) {
+      const templateBytes = await templateData.arrayBuffer();
+      pdfDoc = await PDFDocument.load(templateBytes);
+      firstPage = pdfDoc.getPages()[0];
+    } else {
+      console.warn('Template not found, using blank Letter page (612x792)');
+      pdfDoc = await PDFDocument.create();
+      firstPage = pdfDoc.addPage([612, 792]);
     }
-
-    const templateBytes = await templateData.arrayBuffer();
-    const pdfDoc = await PDFDocument.load(templateBytes);
-    const pages = pdfDoc.getPages();
-    const firstPage = pages[0];
     const { width, height } = firstPage.getSize();
     
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
