@@ -86,3 +86,6 @@ verify_jwt = false
 
 [functions.send-manifest-email]
 verify_jwt = false
+
+[functions.diag-storage]
+verify_jwt = false
