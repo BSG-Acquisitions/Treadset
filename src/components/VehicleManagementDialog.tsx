@@ -4,8 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Truck, Edit3, Save, X } from "lucide-react";
-import { useVehicles, useUpdateVehicle } from "@/hooks/useVehicles";
+import { Separator } from "@/components/ui/separator";
+import { Truck, Edit3, Save, X, Plus } from "lucide-react";
+import { useVehicles, useUpdateVehicle, useCreateVehicle } from "@/hooks/useVehicles";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
 interface VehicleManagementDialogProps {
@@ -15,11 +17,19 @@ interface VehicleManagementDialogProps {
 export const VehicleManagementDialog: React.FC<VehicleManagementDialogProps> = ({ trigger }) => {
   const { data: vehicles = [] } = useVehicles();
   const updateVehicle = useUpdateVehicle();
+  const createVehicle = useCreateVehicle();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [editingVehicle, setEditingVehicle] = useState<string | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
   const [editValues, setEditValues] = useState<{ name: string; capacity: number; licensePlate?: string }>({
     name: '',
-    capacity: 0,
+    capacity: 500,
+    licensePlate: ''
+  });
+  const [newVehicle, setNewVehicle] = useState<{ name: string; capacity: number; licensePlate?: string }>({
+    name: '',
+    capacity: 500,
     licensePlate: ''
   });
 
@@ -58,7 +68,49 @@ export const VehicleManagementDialog: React.FC<VehicleManagementDialogProps> = (
 
   const handleCancel = () => {
     setEditingVehicle(null);
-    setEditValues({ name: '', capacity: 0, licensePlate: '' });
+    setEditValues({ name: '', capacity: 500, licensePlate: '' });
+  };
+
+  const handleCreateVehicle = async () => {
+    if (!newVehicle.name.trim()) {
+      toast({
+        title: "Name Required",
+        description: "Please enter a vehicle/company name",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!user?.currentOrganization?.id) {
+      toast({
+        title: "Error",
+        description: "No organization selected",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      await createVehicle.mutateAsync({
+        name: newVehicle.name,
+        capacity: newVehicle.capacity,
+        license_plate: newVehicle.licensePlate || null,
+        organization_id: user.currentOrganization.id,
+        is_active: true
+      });
+      setNewVehicle({ name: '', capacity: 500, licensePlate: '' });
+      setShowAddForm(false);
+      toast({
+        title: "Vehicle Added",
+        description: `Successfully added ${newVehicle.name} to your fleet`,
+      });
+    } catch (error) {
+      toast({
+        title: "Creation Failed",
+        description: "Failed to create new vehicle",
+        variant: "destructive"
+      });
+    }
   };
 
   const defaultTrigger = (
@@ -82,9 +134,84 @@ export const VehicleManagementDialog: React.FC<VehicleManagementDialogProps> = (
         </DialogHeader>
         
         <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Manage your fleet vehicles and subcontractor trucks. Update names, capacity, and license plates as needed.
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Manage your fleet vehicles and subcontractor trucks. Each vehicle can operate separate routes on the same day.
+            </p>
+            <Button 
+              onClick={() => setShowAddForm(!showAddForm)} 
+              variant="outline" 
+              size="sm"
+              disabled={createVehicle.isPending}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Vehicle
+            </Button>
+          </div>
+
+          {/* Add New Vehicle Form */}
+          {showAddForm && (
+            <div className="p-4 border rounded-lg bg-muted/20 border-dashed">
+              <h4 className="font-medium mb-3 flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Add New Vehicle/Subcontractor
+              </h4>
+              <div className="grid grid-cols-3 gap-3 mb-3">
+                <div>
+                  <Label htmlFor="newName" className="text-xs">Vehicle/Company Name</Label>
+                  <Input
+                    id="newName"
+                    value={newVehicle.name}
+                    onChange={(e) => setNewVehicle(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="e.g., ABC Trucking, XYZ Fleet"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="newCapacity" className="text-xs">Capacity (PTE)</Label>
+                  <Input
+                    id="newCapacity"
+                    type="number"
+                    value={newVehicle.capacity}
+                    onChange={(e) => setNewVehicle(prev => ({ ...prev, capacity: parseInt(e.target.value) || 500 }))}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="newLicensePlate" className="text-xs">License Plate (Optional)</Label>
+                  <Input
+                    id="newLicensePlate"
+                    value={newVehicle.licensePlate}
+                    onChange={(e) => setNewVehicle(prev => ({ ...prev, licensePlate: e.target.value }))}
+                    placeholder="ABC-1234"
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  size="sm" 
+                  onClick={handleCreateVehicle}
+                  disabled={createVehicle.isPending}
+                >
+                  {createVehicle.isPending ? "Creating..." : "Create Vehicle"}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => {
+                    setShowAddForm(false);
+                    setNewVehicle({ name: '', capacity: 500, licensePlate: '' });
+                  }}
+                  disabled={createVehicle.isPending}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {showAddForm && <Separator />}
           
           <div className="space-y-3">
             {vehicles.map((vehicle) => (
