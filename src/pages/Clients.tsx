@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useDataTable } from "@/hooks/useDataTable";
 import { useClientsWithTable } from "@/hooks/useClientsWithTable";
@@ -6,13 +6,16 @@ import { usePricingTiers } from "@/hooks/usePricingTiers";
 import { DataTable, Column } from "@/components/DataTable";
 import { CSVImportDialog } from "@/components/csv/CSVImportDialog";
 import { CSVExportDialog } from "@/components/csv/CSVExportDialog";
+import { EditClientDialog } from "@/components/EditClientDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Upload, Download } from "lucide-react";
+import { Plus, Upload, Download, Edit } from "lucide-react";
 import { SchedulePickupDialog } from "@/components/SchedulePickupDialog";
 import { SchedulePickupWithDriver } from "@/components/SchedulePickupWithDriver";
 import { TopNav } from "@/components/TopNav";
+
+import type { Database } from "@/integrations/supabase/types";
 
 type Client = {
   id: string;
@@ -28,7 +31,7 @@ type Client = {
   pricing_tier: { name: string } | null;
   locations: { count: number }[];
   pickups: { count: number }[];
-};
+} & Database["public"]["Tables"]["clients"]["Row"];
 
 export default function Clients() {
   useEffect(() => {
@@ -101,16 +104,31 @@ export default function Clients() {
         </span>
       )
     },
-    {
-      key: 'is_active',
-      title: 'Status',
-      sortable: true,
-      render: (value) => (
-        <Badge variant={value ? 'default' : 'secondary'}>
-          {value ? 'Active' : 'Inactive'}
-        </Badge>
-      )
-    }
+      {
+        key: 'is_active',
+        title: 'Status',
+        sortable: true,
+        render: (value) => (
+          <Badge variant={value ? 'default' : 'secondary'}>
+            {value ? 'Active' : 'Inactive'}
+          </Badge>
+        )
+      },
+      {
+        key: 'actions',
+        title: 'Actions',
+        sortable: false,
+        render: (_, row) => (
+          <EditClientDialog
+            client={row}
+            trigger={
+              <Button variant="ghost" size="sm">
+                <Edit className="h-4 w-4" />
+              </Button>
+            }
+          />
+        )
+      }
   ];
 
   const actions = (
