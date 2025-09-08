@@ -49,3 +49,30 @@ export const useCreateLocation = () => {
     }
   });
 };
+
+export const useUpdateLocation = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: LocationUpdate }) => {
+      const { data, error } = await supabase
+        .from('locations')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['locations'] });
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      toast({ title: "Success", description: "Location updated successfully" });
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+};

@@ -15,7 +15,7 @@ export const useClientsWithTable = ({ tableState }: UseClientsWithTableOptions) 
         .select(`
           *,
           pricing_tier:pricing_tiers(name),
-          locations:locations(count),
+          locations:locations(count, address, access_notes),
           pickups:pickups(count)
         `, { count: 'exact' });
 

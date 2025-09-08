@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { ClientForm } from "@/components/forms/ClientForm";
 import { useUpdateClient } from "@/hooks/useClients";
+import { useLocations, useCreateLocation, useUpdateLocation } from "@/hooks/useLocations";
 import { ClientFormData } from "@/lib/validations";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -24,9 +25,13 @@ interface EditClientDialogProps {
 export function EditClientDialog({ client, trigger }: EditClientDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const updateClient = useUpdateClient();
+  const { data: locations = [] } = useLocations(client.id);
+  const createLocation = useCreateLocation();
+  const updateLocation = useUpdateLocation();
 
-  const handleSubmit = async (data: ClientFormData) => {
+  const handleSubmit = async (data: ClientFormData & { address?: string; access_notes?: string }) => {
     try {
+      // Update client
       await updateClient.mutateAsync({
         id: client.id,
         updates: {
@@ -41,6 +46,32 @@ export function EditClientDialog({ client, trigger }: EditClientDialogProps) {
           pricing_tier_id: data.pricing_tier_id || null,
         }
       });
+
+      // Handle location (address) update or creation
+      if (data.address) {
+        const primaryLocation = locations[0];
+        
+        if (primaryLocation) {
+          // Update existing location
+          await updateLocation.mutateAsync({
+            id: primaryLocation.id,
+            updates: {
+              address: data.address,
+              access_notes: data.access_notes || null,
+            }
+          });
+        } else {
+          // Create new location
+          await createLocation.mutateAsync({
+            client_id: client.id,
+            address: data.address,
+            access_notes: data.access_notes || null,
+            name: data.address, // Use address as name for primary location
+            organization_id: client.organization_id,
+          });
+        }
+      }
+      
       setIsOpen(false);
     } catch (error) {
       console.error('Error updating client:', error);
@@ -63,7 +94,7 @@ export function EditClientDialog({ client, trigger }: EditClientDialogProps) {
           initialData={client}
           onSubmit={handleSubmit}
           onCancel={() => setIsOpen(false)}
-          isLoading={updateClient.isPending}
+          isLoading={updateClient.isPending || createLocation.isPending || updateLocation.isPending}
         />
       </DialogContent>
     </Dialog>

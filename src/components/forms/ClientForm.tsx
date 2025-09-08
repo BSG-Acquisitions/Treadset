@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { usePricingTiers } from "@/hooks/usePricingTiers";
-import { useState } from "react";
+import { useLocations } from "@/hooks/useLocations";
+import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -16,14 +17,27 @@ type Client = Database["public"]["Tables"]["clients"]["Row"];
 
 interface ClientFormProps {
   initialData?: Partial<Client>;
-  onSubmit: (data: ClientFormData) => void;
+  onSubmit: (data: ClientFormData & { address?: string; access_notes?: string }) => void;
   onCancel: () => void;
   isLoading?: boolean;
 }
 
 export function ClientForm({ initialData, onSubmit, onCancel, isLoading }: ClientFormProps) {
   const { data: pricingTiers = [] } = usePricingTiers();
+  const { data: locations = [] } = useLocations(initialData?.id);
   const [tagInput, setTagInput] = useState("");
+  const [address, setAddress] = useState("");
+  const [accessNotes, setAccessNotes] = useState("");
+
+  // Get the primary location (first one) for this client
+  const primaryLocation = locations[0];
+
+  useEffect(() => {
+    if (primaryLocation) {
+      setAddress(primaryLocation.address || "");
+      setAccessNotes(primaryLocation.access_notes || "");
+    }
+  }, [primaryLocation]);
 
   const form = useForm<ClientFormData>({
     resolver: zodResolver(clientSchema),
@@ -54,6 +68,14 @@ export function ClientForm({ initialData, onSubmit, onCancel, isLoading }: Clien
     form.setValue("tags", watchedTags.filter(tag => tag !== tagToRemove));
   };
 
+  const handleFormSubmit = (data: ClientFormData) => {
+    onSubmit({
+      ...data,
+      address,
+      access_notes: accessNotes
+    });
+  };
+
   const handleTagInputKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" || e.key === ",") {
       e.preventDefault();
@@ -63,7 +85,7 @@ export function ClientForm({ initialData, onSubmit, onCancel, isLoading }: Clien
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
         <div className="grid md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
@@ -162,6 +184,27 @@ export function ClientForm({ initialData, onSubmit, onCancel, isLoading }: Clien
               </FormItem>
             )}
           />
+        </div>
+
+        {/* Address Section */}
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="md:col-span-2">
+            <label className="text-sm font-medium">Primary Address</label>
+            <Input
+              placeholder="Enter full address"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+            />
+          </div>
+          
+          <div className="md:col-span-2">
+            <label className="text-sm font-medium">Access Notes</label>
+            <Input
+              placeholder="Gate codes, special instructions, etc."
+              value={accessNotes}
+              onChange={(e) => setAccessNotes(e.target.value)}
+            />
+          </div>
         </div>
 
         <FormField

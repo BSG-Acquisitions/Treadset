@@ -29,7 +29,7 @@ type Client = {
   last_pickup_at: string | null;
   is_active: boolean;
   pricing_tier: { name: string } | null;
-  locations: { count: number }[];
+  locations: { count: number; address?: string; access_notes?: string }[];
   pickups: { count: number }[];
 } & Database["public"]["Tables"]["clients"]["Row"];
 
@@ -83,6 +83,24 @@ export default function Clients() {
           )}
         </div>
       )
+    },
+    {
+      key: 'locations',
+      title: 'Address',
+      sortable: false,
+      render: (value, row) => {
+        const location = row.locations?.[0];
+        return location?.address ? (
+          <div className="text-sm">
+            <div className="font-medium">{location.address}</div>
+            {location.access_notes && (
+              <div className="text-xs text-muted-foreground">{location.access_notes}</div>
+            )}
+          </div>
+        ) : (
+          <span className="text-muted-foreground text-sm">No address</span>
+        );
+      }
     },
     {
       key: 'lifetime_revenue',
