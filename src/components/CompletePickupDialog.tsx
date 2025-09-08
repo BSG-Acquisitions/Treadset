@@ -120,8 +120,7 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
           otr_count: data.otr_count,
           tractor_count: data.tractor_count,
           notes: data.notes,
-          // Don't mark as completed yet - that happens after manifest
-          status: 'pending_manifest',
+          status: 'completed',
           updated_at: new Date().toISOString(),
         })
         .eq('id', pickup.id);
@@ -134,8 +133,8 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
       setShowManifest(true); // Show manifest dialog
 
       toast({
-        title: "Pickup Data Saved",
-        description: "Please complete the manifest to finish the pickup.",
+        title: "Pickup Completed",
+        description: "Now please complete the state manifest.",
       });
 
       queryClient.invalidateQueries({ queryKey: ['pickups'] });
