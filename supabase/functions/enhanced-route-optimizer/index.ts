@@ -206,7 +206,7 @@ Deno.serve(async (req) => {
           tractor_count,
           notes,
           client:clients(company_name),
-          location:locations(name, address, latitude, longitude)
+          location:locations(id, name, address, latitude, longitude)
         ),
         vehicles!inner(id, name, capacity)
       `)
@@ -249,22 +249,34 @@ Deno.serve(async (req) => {
       const vehicle = vehicleAssignments[0].vehicles;
       
       // Convert assignments to stops
-      const stops: Stop[] = vehicleAssignments.map(assignment => {
+      const stops: Stop[] = [];
+      for (const assignment of vehicleAssignments) {
         const location = assignment.pickups.location;
-        let coordinates = { lat: DEPOT.lat, lng: DEPOT.lng };
+        let lat = location?.latitude as number | undefined;
+        let lng = location?.longitude as number | undefined;
         
-        // Use actual coordinates if available, otherwise fallback to default Royal Oak coordinates
-        if (location?.latitude && location?.longitude) {
-          coordinates = { lat: location.latitude, lng: location.longitude };
-        } else if (location?.address?.includes('Royal Oak')) {
-          // Default Royal Oak coordinates (approximate city center)
-          coordinates = { lat: 42.4897, lng: -83.1467 };
-          console.log(`Using default Royal Oak coordinates for ${assignment.pickups.client?.company_name}`);
+        // If missing coordinates, try to geocode now using the helper function
+        if ((!lat || !lng) && location?.id && location?.address) {
+          try {
+            const { data: geoData, error: geoError } = await supabase.functions.invoke('geocode-locations', {
+              body: { locationId: location.id }
+            });
+            if (geoError) console.error('Geocode function error:', geoError);
+            if (geoData?.location) {
+              lat = geoData.location.latitude;
+              lng = geoData.location.longitude;
+            }
+          } catch (e) {
+            console.warn(`Geocode failed for location ${location?.id}:`, e);
+          }
         }
         
-        console.log(`Location for ${assignment.pickups.client?.company_name}: ${JSON.stringify(coordinates)}`);
+        const coordinates = {
+          lat: lat ?? DEPOT.lat,
+          lng: lng ?? DEPOT.lng,
+        };
         
-        return {
+        stops.push({
           id: assignment.id,
           coordinates,
           pteCount: assignment.pickups.pte_count || 0,
@@ -272,8 +284,8 @@ Deno.serve(async (req) => {
           address: assignment.pickups.location?.address || 'Address not found',
           serviceTimeMinutes: SERVICE_TIME_PER_STOP,
           notes: assignment.pickups.notes
-        };
-      });
+        });
+      }
 
       // Optimize stop order if requested
       const orderedStops = optimize ? optimizeRouteOrder(stops, mapboxToken) : stops;

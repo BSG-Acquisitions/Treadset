@@ -257,7 +257,7 @@ Deno.serve(async (req) => {
           tractor_count,
           notes,
           client:clients(company_name),
-          location:locations(name, address, latitude, longitude)
+          location:locations(id, name, address, latitude, longitude)
         ),
         vehicles!inner(id, name, capacity)
       `)
@@ -300,18 +300,40 @@ Deno.serve(async (req) => {
       const vehicle = vehicleAssignments[0].vehicles;
       
       // Convert assignments to stops
-      const stops: Stop[] = vehicleAssignments.map(assignment => ({
-        id: assignment.id,
-        coordinates: {
-          lat: assignment.pickups.location?.latitude || DEPOT.lat,
-          lng: assignment.pickups.location?.longitude || DEPOT.lng,
-        },
-        pteCount: assignment.pickups.pte_count || 0,
-        clientName: assignment.pickups.client?.company_name || 'Unknown',
-        address: assignment.pickups.location?.address || 'Address not found',
-        serviceTimeMinutes: SERVICE_TIME_PER_STOP,
-        notes: assignment.pickups.notes
-      }));
+      const stops: Stop[] = [];
+      for (const assignment of vehicleAssignments) {
+        const loc = assignment.pickups.location;
+        let lat = loc?.latitude as number | undefined;
+        let lng = loc?.longitude as number | undefined;
+
+        if ((!lat || !lng) && loc?.id && loc?.address) {
+          try {
+            const { data: geoData, error: geoError } = await supabase.functions.invoke('geocode-locations', {
+              body: { locationId: loc.id }
+            });
+            if (geoError) console.error('Geocode function error:', geoError);
+            if (geoData?.location) {
+              lat = geoData.location.latitude;
+              lng = geoData.location.longitude;
+            }
+          } catch (e) {
+            console.warn(`Geocode failed for location ${loc?.id}:`, e);
+          }
+        }
+
+        stops.push({
+          id: assignment.id,
+          coordinates: {
+            lat: lat ?? DEPOT.lat,
+            lng: lng ?? DEPOT.lng,
+          },
+          pteCount: assignment.pickups.pte_count || 0,
+          clientName: assignment.pickups.client?.company_name || 'Unknown',
+          address: assignment.pickups.location?.address || 'Address not found',
+          serviceTimeMinutes: SERVICE_TIME_PER_STOP,
+          notes: assignment.pickups.notes
+        });
+      }
 
       // Plan multi-trip route
       const trips = planMultiTripRoute(vehicle, stops);

@@ -109,15 +109,47 @@ Deno.serve(async (req) => {
     if (locationId) {
       const { data: location, error: locationError } = await supabase
         .from('locations')
-        .select('latitude, longitude')
+        .select('id, address, latitude, longitude')
         .eq('id', locationId)
         .single();
       
-      if (locationError || !location.latitude || !location.longitude) {
+      if (locationError) throw locationError;
+
+      let lat = location?.latitude as number | null;
+      let lng = location?.longitude as number | null;
+
+      // If coordinates missing, try to geocode and update
+      if ((!lat || !lng) && location?.id) {
+        try {
+          const { data: geoData, error: geoError } = await supabase.functions.invoke('geocode-locations', {
+            body: { locationId: location.id }
+          });
+          if (geoError) console.error('Geocode function error:', geoError);
+          if (geoData?.location) {
+            lat = geoData.location.latitude;
+            lng = geoData.location.longitude;
+          } else {
+            // Re-fetch to see if updated
+            const { data: loc2 } = await supabase
+              .from('locations')
+              .select('latitude, longitude')
+              .eq('id', location.id)
+              .single();
+            if (loc2) {
+              lat = loc2.latitude as number | null;
+              lng = loc2.longitude as number | null;
+            }
+          }
+        } catch (e) {
+          console.error('Geocoding attempt failed:', e);
+        }
+      }
+
+      if (!lat || !lng) {
         throw new Error('Location coordinates not found');
       }
-      
-      candidateCoordinates = { lat: location.latitude, lng: location.longitude };
+
+      candidateCoordinates = { lat, lng };
     } else {
       // Use Austin default if no specific location
       candidateCoordinates = { lat: 30.2672, lng: -97.7431 };
