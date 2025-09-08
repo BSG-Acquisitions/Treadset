@@ -6,13 +6,23 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useClients } from "@/hooks/useClients";
 import { useVehicles } from "@/hooks/useVehicles";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useSchedulePickupWithDriver } from "@/hooks/useSchedulePickupWithDriver";
-import { Calendar, Plus } from "lucide-react";
+import { Calendar, Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const scheduleSchema = z.object({
   clientId: z.string().min(1, "Client is required"),
@@ -36,7 +46,9 @@ interface SchedulePickupWithDriverProps {
 
 export function SchedulePickupWithDriver({ children, onSuccess }: SchedulePickupWithDriverProps) {
   const [open, setOpen] = useState(false);
-  const { data: clientsData = { data: [], count: 0, totalPages: 0 } } = useClients();
+  const [clientSearch, setClientSearch] = useState("");
+  const [clientComboOpen, setClientComboOpen] = useState(false);
+  const { data: clientsData = { data: [], count: 0, totalPages: 0 } } = useClients({ search: clientSearch, limit: 100 });
   const { data: vehicles = [] } = useVehicles();
   const { data: employees = [] } = useEmployees();
 
@@ -105,22 +117,67 @@ export function SchedulePickupWithDriver({ children, onSuccess }: SchedulePickup
                 control={form.control}
                 name="clientId"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel>Client *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select client" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {clients.map((client) => (
-                          <SelectItem key={client.id} value={client.id}>
-                            {client.company_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Popover open={clientComboOpen} onOpenChange={setClientComboOpen}>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={clientComboOpen}
+                            className={cn(
+                              "w-full justify-between",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value
+                              ? clients.find((client) => client.id === field.value)?.company_name
+                              : "Search and select client..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0" align="start">
+                        <Command>
+                          <CommandInput 
+                            placeholder="Search clients..." 
+                            value={clientSearch}
+                            onValueChange={setClientSearch}
+                          />
+                          <CommandList>
+                            <CommandEmpty>No client found.</CommandEmpty>
+                            <CommandGroup>
+                              {clients.map((client) => (
+                                <CommandItem
+                                  key={client.id}
+                                  value={client.company_name}
+                                  onSelect={() => {
+                                    field.onChange(client.id);
+                                    setClientComboOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      field.value === client.id ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">{client.company_name}</span>
+                                    {client.contact_name && (
+                                      <span className="text-sm text-muted-foreground">
+                                        Contact: {client.contact_name}
+                                      </span>
+                                    )}
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                     <FormMessage />
                   </FormItem>
                 )}
