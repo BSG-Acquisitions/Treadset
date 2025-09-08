@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
-import { useAssignments } from "@/hooks/usePickups";
+import { useAssignments, usePickups } from "@/hooks/usePickups";
 import { useVehicles } from "@/hooks/useVehicles";
 import { supabase } from "@/integrations/supabase/client";
 import { CompleteAssignmentDialog } from "@/components/driver/CompleteAssignmentDialog";
+import { CompletePickupDialog } from "@/components/CompletePickupDialog";
+import { MovePickupDialog } from "@/components/MovePickupDialog";
 import { DriverAssignmentDropdown } from "@/components/DriverAssignmentDropdown";
 import { VehicleManagementDialog } from "@/components/VehicleManagementDialog";
 import { AddressValidationDialog } from "@/components/AddressValidationDialog";
@@ -10,7 +12,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { CapacityGauge } from "@/components/CapacityGauge";
 import { BSGLogo } from "@/components/BSGLogo";
 import { 
@@ -27,11 +31,16 @@ import {
   RefreshCw,
   Navigation,
   Timer,
-  AlertTriangle
+  AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
+  MoreVertical,
+  Move,
+  Building
 } from "lucide-react";
 import { TopNav } from "@/components/TopNav";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { format, addDays, subDays, startOfWeek, addWeeks, subWeeks } from "date-fns";
 import { motion } from "framer-motion";
 
 interface OptimizedStop {
@@ -56,25 +65,40 @@ interface OptimizedRoute {
 }
 
 export default function EnhancedRoutesToday() {
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [currentWeek, setCurrentWeek] = useState(startOfWeek(new Date()));
+  const [activeDay, setActiveDay] = useState(new Date().toISOString().split('T')[0]);
   const [selectedVehicle, setSelectedVehicle] = useState<string>('all');
   const [optimizedRoutes, setOptimizedRoutes] = useState<OptimizedRoute[]>([]);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [completingAssignment, setCompletingAssignment] = useState<any>(null);
   const [showDriverView, setShowDriverView] = useState(false);
+  const [movePickupOpen, setMovePickupOpen] = useState(false);
+  const [selectedPickupToMove, setSelectedPickupToMove] = useState<any>(null);
 
-  const { data: assignments = [], isLoading } = useAssignments(selectedDate);
+  // Get 7 days starting from current week
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeek, i));
+  
+  const { data: assignments = [], isLoading } = useAssignments(activeDay);
+  const { data: pickups = [] } = usePickups(activeDay);
   const { data: vehicles = [] } = useVehicles();
   const { toast } = useToast();
 
   useEffect(() => {
-    document.title = "Enhanced Routes – BSG Tire Recycling";
+    document.title = "Route Planning – BSG Tire Recycling";
   }, []);
+
+  const goToPreviousWeek = () => setCurrentWeek(prev => subWeeks(prev, 1));
+  const goToNextWeek = () => setCurrentWeek(prev => addWeeks(prev, 1));
+  const goToToday = () => {
+    const today = new Date();
+    setCurrentWeek(startOfWeek(today));
+    setActiveDay(today.toISOString().split('T')[0]);
+  };
 
   const optimizeRoutes = useCallback(async () => {
     setIsOptimizing(true);
     try {
-      console.log(`Calling enhanced-route-optimizer for date: ${selectedDate}`);
+      console.log(`Calling enhanced-route-optimizer for date: ${activeDay}`);
       
       // Add timeout to prevent infinite loading
       const timeoutPromise = new Promise((_, reject) =>
@@ -83,7 +107,7 @@ export default function EnhancedRoutesToday() {
       
       const optimizePromise = supabase.functions.invoke('enhanced-route-optimizer', {
         body: {
-          date: selectedDate,
+          date: activeDay,
           vehicleId: selectedVehicle === 'all' ? null : selectedVehicle,
           optimize: true
         }
@@ -112,15 +136,15 @@ export default function EnhancedRoutesToday() {
     } finally {
       setIsOptimizing(false);
     }
-  }, [selectedDate, selectedVehicle, toast]);
+  }, [activeDay, selectedVehicle, toast]);
 
   useEffect(() => {
-    if (assignments.length > 0) {
+    if (assignments.length > 0 && !isOptimizing) {
       optimizeRoutes();
     } else {
       setOptimizedRoutes([]);
     }
-  }, [selectedDate, assignments, optimizeRoutes]);
+  }, [assignments.length, optimizeRoutes]);
 
   const handlePrintRoute = (route: OptimizedRoute) => {
     const printContent = generatePrintableRoute(route);
@@ -197,7 +221,7 @@ export default function EnhancedRoutesToday() {
         <div class="header">
           <h1>BSG Tire Recycling - Route Sheet</h1>
           <h2>${route.vehicleName}</h2>
-          <p>Date: ${format(new Date(selectedDate), 'EEEE, MMMM d, yyyy')}</p>
+          <p>Date: ${format(new Date(activeDay), 'EEEE, MMMM d, yyyy')}</p>
         </div>
         
         <div class="route-info">
@@ -292,80 +316,92 @@ export default function EnhancedRoutesToday() {
         {/* Enhanced Header */}
         <div className="bg-gradient-to-br from-background to-secondary/20 border-b border-border/20">
           <div className="container py-6">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <BSGLogo size="sm" animated={true} showText={false} />
-                <div>
-                  <h1 className="text-2xl font-bold text-foreground">Intelligent Route Management</h1>
-                  <p className="text-muted-foreground">
-                    AI-optimized routes for maximum efficiency and driver convenience
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex flex-col sm:flex-row gap-3">
-                <VehicleManagementDialog 
-                  trigger={
-                    <Button variant="outline" size="sm">
-                      <Truck className="h-4 w-4 mr-2" />
-                      Manage Fleet
-                    </Button>
-                  }
-                />
-                
-                <AddressValidationDialog
-                  trigger={
-                    <Button variant="outline" size="sm">
-                      <MapPin className="h-4 w-4 mr-2" />
-                      Verify Addresses
-                    </Button>
-                  }
-                  addresses={optimizedRoutes.flatMap(route => 
-                    route.stops.map(stop => ({
-                      clientName: stop.clientName,
-                      address: stop.address,
-                      hasCoordinates: stop.coordinates.lat !== 0 && stop.coordinates.lng !== 0,
-                      accessNotes: stop.notes
-                    }))
-                  )}
-                />
-                
-                <Select value={selectedDate} onValueChange={setSelectedDate}>
-                  <SelectTrigger className="w-full sm:w-48">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: 7 }, (_, i) => {
-                      const date = new Date();
-                      date.setDate(date.getDate() + i);
-                      const dateStr = date.toISOString().split('T')[0];
-                      return (
-                        <SelectItem key={dateStr} value={dateStr}>
-                          {format(date, 'EEE, MMM d')}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-                
-                <Button 
-                  onClick={optimizeRoutes} 
-                  disabled={isOptimizing}
-                  className="whitespace-nowrap"
-                >
-                  {isOptimizing ? (
-                    <><RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Optimizing...</>
-                  ) : (
-                    <><Route className="h-4 w-4 mr-2" /> Re-optimize Routes</>
-                  )}
-                </Button>
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <BSGLogo size="sm" animated={true} showText={false} />
+              <div>
+                <h1 className="text-2xl font-bold text-foreground">Route Planning</h1>
+                <p className="text-muted-foreground">
+                  AI-optimized routes across multiple days for maximum efficiency
+                </p>
               </div>
             </div>
+            
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button variant="outline" size="sm" onClick={goToPreviousWeek}>
+                <ChevronLeft className="h-4 w-4 mr-2" />
+                Previous Week
+              </Button>
+              <Button variant="outline" size="sm" onClick={goToToday}>
+                Today
+              </Button>
+              <Button variant="outline" size="sm" onClick={goToNextWeek}>
+                Next Week
+                <ChevronRight className="h-4 w-4 ml-2" />
+              </Button>
+              
+              <VehicleManagementDialog 
+                trigger={
+                  <Button variant="outline" size="sm">
+                    <Truck className="h-4 w-4 mr-2" />
+                    Manage Fleet
+                  </Button>
+                }
+              />
+              
+              <Button 
+                onClick={optimizeRoutes} 
+                disabled={isOptimizing}
+                className="whitespace-nowrap"
+              >
+                {isOptimizing ? (
+                  <><RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Optimizing...</>
+                ) : (
+                  <><Route className="h-4 w-4 mr-2" /> Re-optimize Routes</>
+                )}
+              </Button>
+            </div>
+          </div>
           </div>
         </div>
 
-        {/* Route Statistics */}
         <div className="container py-6">
+          {/* Week Navigation */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">
+                Week of {format(currentWeek, 'MMMM d, yyyy')}
+              </h2>
+              <div className="text-sm text-muted-foreground">
+                Planning across multiple days
+              </div>
+            </div>
+            
+            <Tabs value={activeDay} onValueChange={setActiveDay}>
+              <TabsList className="grid w-full grid-cols-7">
+                {weekDays.map((day) => {
+                  const dateStr = day.toISOString().split('T')[0];
+                  const isToday = dateStr === new Date().toISOString().split('T')[0];
+                  
+                  return (
+                    <TabsTrigger 
+                      key={dateStr} 
+                      value={dateStr}
+                      className="flex flex-col items-center p-3"
+                    >
+                      <div className="text-xs font-medium">
+                        {format(day, 'EEE')}
+                      </div>
+                      <div className={`text-sm ${isToday ? 'font-bold' : ''}`}>
+                        {format(day, 'd')}
+                      </div>
+                    </TabsTrigger>
+                  );
+                })}
+              </TabsList>
+            </Tabs>
+          </div>
+          {/* Route Statistics */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <Card>
               <CardContent className="p-4">
@@ -416,18 +452,101 @@ export default function EnhancedRoutesToday() {
             </Card>
           </div>
 
-          {/* Route Cards */}
-          {optimizedRoutes.length === 0 ? (
+          {/* Pickups and Routes Section */}
+          {pickups.length === 0 && optimizedRoutes.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
                 <Route className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground text-lg">No routes scheduled for {format(new Date(selectedDate), 'EEEE, MMMM d')}</p>
-                <p className="text-sm text-muted-foreground mt-2">Routes will appear here once pickups are scheduled</p>
+                <p className="text-muted-foreground text-lg">No pickups or routes scheduled for {format(new Date(activeDay), 'EEEE, MMMM d')}</p>
+                <p className="text-sm text-muted-foreground mt-2">Pickups and routes will appear here once scheduled</p>
               </CardContent>
             </Card>
           ) : (
             <div className="space-y-6">
-              {optimizedRoutes.map((route, routeIndex) => (
+              {/* Pickups Section */}
+              {pickups.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Package className="h-5 w-5" />
+                      Scheduled Pickups - {format(new Date(activeDay), 'EEEE, MMMM d')}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {pickups.map((pickup) => (
+                        <div
+                          key={pickup.id}
+                          className="flex items-center justify-between p-4 border rounded-lg hover:bg-secondary/10 transition-colors"
+                        >
+                          <div className="flex items-center gap-4">
+                            <Package className="h-5 w-5 text-muted-foreground" />
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <Building className="h-4 w-4 text-muted-foreground" />
+                                <span className="font-medium text-lg">
+                                  {pickup.client?.company_name || 'Unknown Client'}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <MapPin className="h-4 w-4" />
+                                <span>{pickup.location?.name || pickup.location?.address || 'No address'}</span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-4">
+                            <div className="text-right">
+                              <div className="text-sm font-medium mb-1">
+                                PTE {pickup.pte_count} | OTR {pickup.otr_count} | Tractor {pickup.tractor_count}
+                              </div>
+                              <div className="text-xs text-muted-foreground mb-2">
+                                Revenue: ${pickup.computed_revenue?.toFixed(2) || '0.00'}
+                              </div>
+                              <Badge variant="outline">
+                                {pickup.status.replace('_', ' ')}
+                              </Badge>
+                            </div>
+                            
+                            <div className="flex items-center gap-2">
+                              <CompletePickupDialog
+                                pickup={pickup}
+                                trigger={
+                                  <Button size="sm" disabled={pickup.status === 'completed'}>
+                                    {pickup.status === 'completed' ? 'Completed' : 'Complete'}
+                                  </Button>
+                                }
+                              />
+                              
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="outline" size="sm">
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="bg-background border z-50">
+                                  <DropdownMenuItem 
+                                    onClick={() => {
+                                      setSelectedPickupToMove(pickup);
+                                      setMovePickupOpen(true);
+                                    }}
+                                  >
+                                    <Move className="h-4 w-4 mr-2" />
+                                    Move to Different Date
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {/* Optimized Routes Section */}
+              {optimizedRoutes.length > 0 && optimizedRoutes.map((route, routeIndex) => (
                 <motion.div
                   key={route.vehicleId}
                   initial={{ opacity: 0, y: 20 }}
@@ -465,7 +584,7 @@ export default function EnhancedRoutesToday() {
                           <DriverAssignmentDropdown
                             vehicleId={route.vehicleId}
                             vehicleName={route.vehicleName}
-                            routeDate={selectedDate}
+                            routeDate={activeDay}
                             currentDriverId={
                               // Get driver from assignments for this vehicle
                               assignments?.find(a => a.vehicle_id === route.vehicleId)?.assigned_driver?.id
@@ -549,6 +668,15 @@ export default function EnhancedRoutesToday() {
                 </motion.div>
               ))}
             </div>
+          )}
+          
+          {/* Move Pickup Dialog */}
+          {selectedPickupToMove && (
+            <MovePickupDialog
+              open={movePickupOpen}
+              onOpenChange={setMovePickupOpen}
+              pickup={selectedPickupToMove}
+            />
           )}
         </div>
       </main>
