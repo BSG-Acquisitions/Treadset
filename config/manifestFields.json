@@ -1,0 +1,19 @@
+{
+  "//": "Map overlay field IDs → data source columns from manifests view + optional formatters",
+  "manifestNumber": { "source": "manifest_number" },
+  "date":           { "source": "created_at", "format": "date" },
+  "clientName":     { "source": "company_name" },
+  "serviceAddress": { "source": "address" },
+  "cityStateZip":   { "source": "address" },
+  "driverName":     { "source": "driver_name" },
+  "vehicle":        { "source": "vehicle_name" },
+  "pteOff":         { "source": "pte_off_rim", "format": "int" },
+  "pteOn":          { "source": "pte_on_rim", "format": "int" },
+  "c175Off":        { "source": "commercial_17_5_19_5_off", "format": "int" },
+  "c175On":         { "source": "commercial_17_5_19_5_on", "format": "int" },
+  "c225Off":        { "source": "commercial_22_5_off", "format": "int" },
+  "c225On":         { "source": "commercial_22_5_on", "format": "int" },
+  "subtotal":       { "source": "subtotal", "format": "currency" },
+  "surcharges":     { "source": "surcharges", "format": "currency" },
+  "total":          { "source": "total", "format": "currency" }
+}

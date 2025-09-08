@@ -253,3 +253,53 @@ export const useUpdateManifest = () => {
     }
   });
 };
+
+export const useFinalizeManifest = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (manifestId: string) => {
+      const { data, error } = await supabase.functions.invoke('manifest-finalize', {
+        body: { manifest_id: manifestId }
+      });
+
+      if (error) throw error;
+      
+      if (!data.ok) {
+        throw new Error(data.error || 'Failed to finalize manifest');
+      }
+
+      return data;
+    },
+    onSuccess: (data, manifestId) => {
+      queryClient.invalidateQueries({ queryKey: ['manifests'] });
+      queryClient.invalidateQueries({ queryKey: ['manifest', manifestId] });
+      
+      toast({ 
+        title: "Manifest Finalized", 
+        description: `PDF generated successfully. Download link has been emailed.`
+      });
+    },
+    onError: (error: any) => {
+      console.error('Manifest finalization error:', error);
+      
+      let errorMessage = error.message;
+      
+      // Handle specific error cases
+      if (error.message?.includes('Template not found')) {
+        errorMessage = 'PDF template is missing. Please contact support.';
+      } else if (error.message?.includes('Missing required fields')) {
+        errorMessage = 'Some required data is missing from the manifest.';
+      } else if (error.message?.includes('not accessible')) {
+        errorMessage = 'You do not have permission to finalize this manifest.';
+      }
+      
+      toast({ 
+        title: "Finalization Failed", 
+        description: errorMessage, 
+        variant: "destructive" 
+      });
+    }
+  });
+};

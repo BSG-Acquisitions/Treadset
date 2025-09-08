@@ -22,23 +22,69 @@ async function sha256Hex(bytes: Uint8Array) {
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-// Layout fallback used if storage config missing
-const fallbackLayout = {
+// Field formatters
+const formatField = (value: any, format?: string): string => {
+  if (value === null || value === undefined) return "";
+  
+  switch (format) {
+    case "int":
+      return String(Number(value) || 0);
+    case "currency":
+      return new Intl.NumberFormat('en-US', { 
+        style: 'currency', 
+        currency: 'USD' 
+      }).format(Number(value) || 0);
+    case "date":
+      return new Date(value).toLocaleDateString('en-US');
+    default:
+      return String(value);
+  }
+};
+
+// Default field mappings (loaded from config or fallback)
+const defaultFieldMappings: FieldMap = {
+  manifestNumber: { source: "manifest_number" },
+  date: { source: "created_at", format: "date" },
+  clientName: { source: "company_name" },
+  serviceAddress: { source: "address" },
+  cityStateZip: { source: "address" },
+  driverName: { source: "driver_name" },
+  vehicle: { source: "vehicle_name" },
+  pteOff: { source: "pte_off_rim", format: "int" },
+  pteOn: { source: "pte_on_rim", format: "int" },
+  c175Off: { source: "commercial_17_5_19_5_off", format: "int" },
+  c175On: { source: "commercial_17_5_19_5_on", format: "int" },
+  c225Off: { source: "commercial_22_5_off", format: "int" },
+  c225On: { source: "commercial_22_5_on", format: "int" },
+  subtotal: { source: "subtotal", format: "currency" },
+  surcharges: { source: "surcharges", format: "currency" },
+  total: { source: "total", format: "currency" }
+};
+
+// Simple hex helper
+async function sha256Hex(bytes: Uint8Array) {
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  const hashArray = Array.from(new Uint8Array(digest));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// Default layout coordinates (from manifestLayout.json)
+const defaultLayout: Layout = {
   page: 1,
   text: {
-    manifestNumber: { x: 460, y: 730, fontSize: 10 },
-    date: { x: 460, y: 712, fontSize: 10 },
+    manifestNumber: { x: 460, y: 730, fontSize: 10, align: "right" },
+    date: { x: 460, y: 712, fontSize: 10, align: "right" },
     clientName: { x: 90, y: 695, fontSize: 10 },
     serviceAddress: { x: 90, y: 680, fontSize: 10 },
     cityStateZip: { x: 90, y: 665, fontSize: 10 },
     driverName: { x: 90, y: 635, fontSize: 10 },
     vehicle: { x: 280, y: 635, fontSize: 10 },
-    pteOff: { x: 110, y: 560, fontSize: 10 },
-    pteOn: { x: 180, y: 560, fontSize: 10 },
-    c175Off: { x: 250, y: 560, fontSize: 10 },
-    c175On: { x: 320, y: 560, fontSize: 10 },
-    c225Off: { x: 390, y: 560, fontSize: 10 },
-    c225On: { x: 460, y: 560, fontSize: 10 },
+    pteOff: { x: 110, y: 560, fontSize: 10, align: "center" },
+    pteOn: { x: 180, y: 560, fontSize: 10, align: "center" },
+    c175Off: { x: 250, y: 560, fontSize: 10, align: "center" },
+    c175On: { x: 320, y: 560, fontSize: 10, align: "center" },
+    c225Off: { x: 390, y: 560, fontSize: 10, align: "center" },
+    c225On: { x: 460, y: 560, fontSize: 10, align: "center" },
     subtotal: { x: 460, y: 200, fontSize: 10, align: "right" },
     surcharges: { x: 460, y: 184, fontSize: 10, align: "right" },
     total: { x: 460, y: 168, fontSize: 12, align: "right", bold: true },
@@ -51,9 +97,7 @@ const fallbackLayout = {
     logo: { x: 40, y: 745, w: 90, h: 28 },
     qr: { x: 520, y: 110, w: 60, h: 60 },
   },
-} as const;
-
-type Layout = typeof fallbackLayout;
+};
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -78,7 +122,7 @@ serve(async (req) => {
     const { data: m, error: me } = await anonClient
       .from("manifests")
       .select(
-        `id, manifest_number, organization_id, client_id, pickup_id, driver_id, vehicle_id, location_id,
+        `id, manifest_number, organization_id, client_id, pickup_id, driver_id, vehicle_id, location_id, created_at,
          pte_off_rim, pte_on_rim, commercial_17_5_19_5_off, commercial_17_5_19_5_on, commercial_22_5_off, commercial_22_5_on,
          subtotal, surcharges, total,
          customer_signature_png_path, driver_signature_png_path`
@@ -89,11 +133,13 @@ serve(async (req) => {
     if (me) throw me;
     if (!m) return new Response(JSON.stringify({ ok: false, error: "Manifest not found or not accessible" }), { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } });
 
-    // Fetch related info without relying on FK relationships
-    const [{ data: client }, { data: org }, { data: loc }] = await Promise.all([
+    // Fetch related info including driver and vehicle names
+    const [{ data: client }, { data: org }, { data: loc }, { data: driver }, { data: vehicle }] = await Promise.all([
       admin.from("clients").select("email, company_name").eq("id", m.client_id).maybeSingle(),
       admin.from("organizations").select("slug").eq("id", m.organization_id).maybeSingle(),
-      admin.from("locations").select("address").eq("id", m.location_id).maybeSingle(),
+      m.location_id ? admin.from("locations").select("address").eq("id", m.location_id).maybeSingle() : Promise.resolve({ data: null }),
+      m.driver_id ? admin.from("users").select("first_name, last_name").eq("id", m.driver_id).maybeSingle() : Promise.resolve({ data: null }),
+      m.vehicle_id ? admin.from("vehicles").select("name").eq("id", m.vehicle_id).maybeSingle() : Promise.resolve({ data: null }),
     ]);
 
     // Load template PDF from Storage: manifests/templates/STATE_Manifest_v1.pdf
@@ -107,15 +153,27 @@ serve(async (req) => {
     }
     const templateBytes = new Uint8Array(await tmpl.arrayBuffer());
 
-    // Load layout config if present
-    let layout: Layout = fallbackLayout;
-    const { data: layoutFile } = await admin.storage.from("manifests").download("templates/manifestLayout.json");
+    // Load configurations from Storage or use defaults
+    let fieldMappings: FieldMap = defaultFieldMappings;
+    let layout: Layout = defaultLayout;
+
+    // Try to load field mappings config
+    const { data: fieldsFile } = await admin.storage.from("manifests").download("config/manifestFields.json");
+    if (fieldsFile) {
+      try {
+        fieldMappings = JSON.parse(await fieldsFile.text()) as FieldMap;
+      } catch (e) {
+        console.log('Using default field mappings due to parsing error:', e);
+      }
+    }
+
+    // Try to load layout config
+    const { data: layoutFile } = await admin.storage.from("manifests").download("config/manifestLayout.json");
     if (layoutFile) {
       try {
-        const json = JSON.parse(await layoutFile.text()) as Layout;
-        layout = json;
-      } catch (_) {
-        // ignore parse errors and keep fallback
+        layout = JSON.parse(await layoutFile.text()) as Layout;
+      } catch (e) {
+        console.log('Using default layout due to parsing error:', e);
       }
     }
 
@@ -124,50 +182,110 @@ serve(async (req) => {
     const font = await pdf.embedFont(StandardFonts.Helvetica);
     const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
 
-    const cityStateZip = ""; // TODO derive from location if needed
-    const fields: Record<string, string | number> = {
-      manifestNumber: m.manifest_number,
-      date: new Date().toLocaleDateString(),
-      clientName: client?.company_name ?? "",
-      serviceAddress: loc?.address ?? "",
-      cityStateZip,
-      driverName: "", // TODO join driver name
-      vehicle: "", // TODO join vehicle label
-      pteOff: m.pte_off_rim ?? 0,
-      pteOn: m.pte_on_rim ?? 0,
-      c175Off: m.commercial_17_5_19_5_off ?? 0,
-      c175On: m.commercial_17_5_19_5_on ?? 0,
-      c225Off: m.commercial_22_5_off ?? 0,
-      c225On: m.commercial_22_5_on ?? 0,
-      subtotal: m.subtotal ?? 0,
-      surcharges: m.surcharges ?? 0,
-      total: m.total ?? 0,
+    // Build data object for field mapping
+    const dataRow = {
+      manifest_number: m.manifest_number,
+      created_at: m.created_at,
+      company_name: client?.company_name || "",
+      address: loc?.address || "",
+      driver_name: driver ? `${driver.first_name} ${driver.last_name}` : "",
+      vehicle_name: vehicle?.name || "",
+      pte_off_rim: m.pte_off_rim || 0,
+      pte_on_rim: m.pte_on_rim || 0,
+      commercial_17_5_19_5_off: m.commercial_17_5_19_5_off || 0,
+      commercial_17_5_19_5_on: m.commercial_17_5_19_5_on || 0,
+      commercial_22_5_off: m.commercial_22_5_off || 0,
+      commercial_22_5_on: m.commercial_22_5_on || 0,
+      subtotal: m.subtotal || 0,
+      surcharges: m.surcharges || 0,
+      total: m.total || 0,
     };
 
-    for (const [k, v] of Object.entries(layout.text)) {
-      const val = fields[k];
-      if (val === undefined || val === null) continue;
-      const text = String(val);
-      const fnt = (v as any).bold ? bold : font;
-      const size = (v as any).fontSize ?? 10;
-      const width = fnt.widthOfTextAtSize(text, size);
-      const x = (v as any).align === "right" ? (v as any).x - width : (v as any).x;
-      page.drawText(text, { x, y: (v as any).y, size, font: fnt, color: rgb(0, 0, 0) });
+    // Apply field mappings and formatting
+    const fields: Record<string, string> = {};
+    for (const [fieldId, mapping] of Object.entries(fieldMappings)) {
+      const rawValue = (dataRow as any)[mapping.source];
+      fields[fieldId] = formatField(rawValue, mapping.format);
     }
 
-    // signatures
+    // Validate all required fields exist
+    const requiredFields = Object.keys(layout.text);
+    const missingFields = requiredFields.filter(field => 
+      !fields[field] || fields[field].trim() === '' || fields[field] === 'null'
+    );
+
+    if (missingFields.length > 0) {
+      return new Response(JSON.stringify({ 
+        ok: false, 
+        error: 'Missing required fields', 
+        missing: missingFields,
+        available: Object.keys(fields)
+      }), {
+        status: 400,
+        headers: { "Content-Type": "application/json", ...corsHeaders }
+      });
+    }
+
+    // Draw text overlays with proper positioning
+    for (const [fieldId, spec] of Object.entries(layout.text)) {
+      const value = fields[fieldId];
+      if (!value) continue;
+
+      const textFont = spec.bold ? bold : font;
+      const fontSize = spec.fontSize || 10;
+      
+      let x = spec.x;
+      if (spec.align === 'right') {
+        const textWidth = textFont.widthOfTextAtSize(value, fontSize);
+        x = spec.x - textWidth;
+      } else if (spec.align === 'center') {
+        const textWidth = textFont.widthOfTextAtSize(value, fontSize);
+        x = spec.x - textWidth / 2;
+      }
+
+      page.drawText(value, {
+        x,
+        y: spec.y,
+        size: fontSize,
+        font: textFont,
+        color: rgb(0, 0, 0)
+      });
+    }
+
+    // Embed signatures if available
     if (m.customer_signature_png_path) {
-      const { data } = await admin.storage.from("manifests").download(m.customer_signature_png_path);
-      if (data) {
-        const img = await pdf.embedPng(new Uint8Array(await data.arrayBuffer()));
-        const s = (layout.signatures as any).customer; if (s) page.drawImage(img, { x: s.x, y: s.y, width: s.w, height: s.h });
+      try {
+        const { data } = await admin.storage.from("manifests").download(m.customer_signature_png_path);
+        if (data) {
+          const img = await pdf.embedPng(new Uint8Array(await data.arrayBuffer()));
+          const sigSpec = layout.signatures.customer;
+          page.drawImage(img, { 
+            x: sigSpec.x, 
+            y: sigSpec.y, 
+            width: sigSpec.w, 
+            height: sigSpec.h 
+          });
+        }
+      } catch (e) {
+        console.error('Error embedding customer signature:', e);
       }
     }
+    
     if (m.driver_signature_png_path) {
-      const { data } = await admin.storage.from("manifests").download(m.driver_signature_png_path);
-      if (data) {
-        const img = await pdf.embedPng(new Uint8Array(await data.arrayBuffer()));
-        const s = (layout.signatures as any).driver; if (s) page.drawImage(img, { x: s.x, y: s.y, width: s.w, height: s.h });
+      try {
+        const { data } = await admin.storage.from("manifests").download(m.driver_signature_png_path);
+        if (data) {
+          const img = await pdf.embedPng(new Uint8Array(await data.arrayBuffer()));
+          const sigSpec = layout.signatures.driver;
+          page.drawImage(img, { 
+            x: sigSpec.x, 
+            y: sigSpec.y, 
+            width: sigSpec.w, 
+            height: sigSpec.h 
+          });
+        }
+      } catch (e) {
+        console.error('Error embedding driver signature:', e);
       }
     }
 
@@ -198,17 +316,20 @@ serve(async (req) => {
       .createSignedUrl(key, 60 * 60 * 24 * 7);
 
     // Send link-only email via existing helper
-    if ((m.clients as any)?.email) {
-      await admin.functions.invoke("send-manifest-email", {
-        body: {
-          manifest_id,
-          attach: false,
-          subject: `BSG Manifest ${m.manifest_number}`,
-          messageHtml: signed?.signedUrl
-            ? `<p>Your manifest <b>${m.manifest_number}</b> is ready. <a href="${signed.signedUrl}">Download PDF</a> (expires in 7 days)</p>`
-            : undefined,
-        },
-      });
+    if (client?.email && signed?.signedUrl) {
+      try {
+        await admin.functions.invoke("send-manifest-email", {
+          body: {
+            manifest_id,
+            attach: false,
+            subject: `BSG Manifest ${m.manifest_number}`,
+            messageHtml: `<p>Your manifest <b>${m.manifest_number}</b> is ready. <a href="${signed.signedUrl}">Download PDF</a> (expires in 7 days)</p>`,
+          },
+        });
+      } catch (emailError) {
+        console.error('Email send failed:', emailError);
+        // Don't fail the request if email fails
+      }
     }
 
     return new Response(
