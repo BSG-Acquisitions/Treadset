@@ -1,4 +1,5 @@
 import { Recycle, RotateCcw, Zap } from "lucide-react";
+import { BSGLogoActual } from "@/components/BSGLogoActual";
 
 interface BrandHeaderProps {
   title?: string;
@@ -23,18 +24,7 @@ export function BrandHeader({
         <div className="flex items-center gap-6">
           {showLogo && (
             <div className="flex-shrink-0">
-              {/* Circular logo with tire pattern */}
-              <div className="relative w-16 h-16 md:w-20 md:h-20">
-                <div className="absolute inset-0 recycling-gradient rounded-full opacity-20 animate-float" />
-                <div className="relative w-full h-full bg-brand-tire-black rounded-full flex items-center justify-center border-4 border-brand-primary shadow-elevation-lg">
-                  <div className="text-white">
-                    <RotateCcw className="w-6 h-6 md:w-8 md:h-8 animate-pulse-glow" />
-                  </div>
-                </div>
-                {/* Rotating accent rings */}
-                <div className="absolute inset-0 border-2 border-brand-primary/30 rounded-full animate-[spin_20s_linear_infinite]" />
-                <div className="absolute inset-2 border border-brand-recycling/40 rounded-full animate-[spin_15s_linear_infinite_reverse]" />
-              </div>
+              <BSGLogoActual size="lg" className="drop-shadow-lg" />
             </div>
           )}
           

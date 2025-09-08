@@ -18,7 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { Link, useLocation } from 'react-router-dom';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BSGLogo } from '@/components/BSGLogo';
+import { BSGLogoActual } from '@/components/BSGLogoActual';
 import { OrganizationSwitcher } from '@/components/auth/OrganizationSwitcher';
 
 interface TopNavProps {
@@ -91,10 +91,8 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
           )}
           
           <Link to="/" className="hover:opacity-80 transition-all duration-300 flex-shrink-0">
-            <BSGLogo 
+            <BSGLogoActual 
               size="sm" 
-              animated={true} 
-              showText={true}
               className="flex-shrink-0"
             />
           </Link>
