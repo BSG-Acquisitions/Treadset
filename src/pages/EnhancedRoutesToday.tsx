@@ -4,6 +4,7 @@ import { useVehicles } from "@/hooks/useVehicles";
 import { supabase } from "@/integrations/supabase/client";
 import { CompleteAssignmentDialog } from "@/components/driver/CompleteAssignmentDialog";
 import { DriverAssignmentDropdown } from "@/components/DriverAssignmentDropdown";
+import { VehicleManagementDialog } from "@/components/VehicleManagementDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -302,6 +303,15 @@ export default function EnhancedRoutesToday() {
               </div>
               
               <div className="flex flex-col sm:flex-row gap-3">
+                <VehicleManagementDialog 
+                  trigger={
+                    <Button variant="outline" size="sm">
+                      <Truck className="h-4 w-4 mr-2" />
+                      Manage Fleet
+                    </Button>
+                  }
+                />
+                
                 <Select value={selectedDate} onValueChange={setSelectedDate}>
                   <SelectTrigger className="w-full sm:w-48">
                     <SelectValue />

@@ -46,3 +46,28 @@ export const useCreateVehicle = () => {
     }
   });
 };
+
+export const useUpdateVehicle = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ vehicleId, updates }: { vehicleId: string; updates: Partial<Vehicle> }) => {
+      const { data, error } = await supabase
+        .from('vehicles')
+        .update(updates)
+        .eq('id', vehicleId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+};
