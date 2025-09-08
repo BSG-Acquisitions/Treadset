@@ -5,6 +5,7 @@ import { z } from "zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { ManifestDialog } from "./ManifestDialog";
 import {
   Dialog,
   DialogContent,
@@ -77,6 +78,8 @@ interface CompletePickupDialogProps {
 export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogProps) {
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showManifest, setShowManifest] = useState(false);
+  const [completedManifestData, setCompletedManifestData] = useState<any>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -117,22 +120,27 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
           otr_count: data.otr_count,
           tractor_count: data.tractor_count,
           notes: data.notes,
-          status: 'completed',
+          // Don't mark as completed yet - that happens after manifest
+          status: 'pending_manifest',
           updated_at: new Date().toISOString(),
         })
         .eq('id', pickup.id);
 
       if (error) throw error;
 
+      // Store the manifest data and show manifest dialog
+      setCompletedManifestData(data);
+      setOpen(false); // Close pickup dialog
+      setShowManifest(true); // Show manifest dialog
+
       toast({
-        title: "Pickup Completed",
-        description: "Pickup information has been saved successfully.",
+        title: "Pickup Data Saved",
+        description: "Please complete the manifest to finish the pickup.",
       });
 
       queryClient.invalidateQueries({ queryKey: ['pickups'] });
-      setOpen(false);
     } catch (error) {
-      console.error('Failed to complete pickup:', error);
+      console.error('Failed to save pickup data:', error);
       toast({
         title: "Error",
         description: "Failed to save pickup information. Please try again.",
@@ -144,6 +152,7 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger}
@@ -540,12 +549,23 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting} className="bg-brand-success hover:bg-brand-success/90">
-                {isSubmitting ? "Saving..." : "Complete Pickup"}
+                {isSubmitting ? "Saving..." : "Continue to Manifest"}
               </Button>
             </div>
           </form>
         </Form>
       </DialogContent>
     </Dialog>
+    
+    {/* Manifest Dialog */}
+    {showManifest && completedManifestData && (
+      <ManifestDialog
+        open={showManifest}
+        onOpenChange={setShowManifest}
+        pickup={pickup}
+        manifestData={completedManifestData}
+      />
+    )}
+    </>
   );
 }
