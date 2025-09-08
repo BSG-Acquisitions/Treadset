@@ -62,7 +62,13 @@ export const useAssignments = (date?: string) => {
             client:clients(company_name),
             location:locations(address, name)
           ),
-          vehicle:vehicles(name, capacity)
+          vehicle:vehicles(name, capacity),
+          assigned_driver:users!driver_id(
+            id,
+            first_name,
+            last_name,
+            email
+          )
         `);
       
       if (date) {

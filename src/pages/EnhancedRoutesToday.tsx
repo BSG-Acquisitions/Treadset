@@ -3,6 +3,7 @@ import { useAssignments } from "@/hooks/usePickups";
 import { useVehicles } from "@/hooks/useVehicles";
 import { supabase } from "@/integrations/supabase/client";
 import { CompleteAssignmentDialog } from "@/components/driver/CompleteAssignmentDialog";
+import { DriverAssignmentDropdown } from "@/components/DriverAssignmentDropdown";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -431,20 +432,37 @@ export default function EnhancedRoutesToday() {
                           </div>
                         </div>
                         
-                        <div className="flex items-center gap-3">
-                          <Badge className={`${getEfficiencyColor(route.efficiency)} border`}>
-                            <TrendingUp className="h-3 w-3 mr-1" />
-                            {route.efficiency}% efficient
-                          </Badge>
+                        <div className="flex flex-col lg:flex-row items-start lg:items-center gap-3">
+                          {/* Driver Assignment Dropdown */}
+                          <DriverAssignmentDropdown
+                            vehicleId={route.vehicleId}
+                            vehicleName={route.vehicleName}
+                            routeDate={selectedDate}
+                            currentDriverId={
+                              // Get driver from assignments for this vehicle
+                              assignments?.find(a => a.vehicle_id === route.vehicleId)?.assigned_driver?.id
+                            }
+                            onDriverAssigned={(driverId) => {
+                              // Refresh data when driver is assigned
+                              console.log(`Driver ${driverId} assigned to ${route.vehicleName}`);
+                            }}
+                          />
                           
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handlePrintRoute(route)}
-                          >
-                            <Printer className="h-4 w-4 mr-2" />
-                            Print Route
-                          </Button>
+                          <div className="flex items-center gap-3">
+                            <Badge className={`${getEfficiencyColor(route.efficiency)} border`}>
+                              <TrendingUp className="h-3 w-3 mr-1" />
+                              {route.efficiency}% efficient
+                            </Badge>
+                            
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePrintRoute(route)}
+                            >
+                              <Printer className="h-4 w-4 mr-2" />
+                              Print Route
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </CardHeader>

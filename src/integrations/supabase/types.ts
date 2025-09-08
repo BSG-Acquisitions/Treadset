@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           actual_arrival: string | null
           created_at: string
+          driver_id: string | null
           estimated_arrival: string | null
           id: string
           organization_id: string
@@ -31,6 +32,7 @@ export type Database = {
         Insert: {
           actual_arrival?: string | null
           created_at?: string
+          driver_id?: string | null
           estimated_arrival?: string | null
           id?: string
           organization_id: string
@@ -44,6 +46,7 @@ export type Database = {
         Update: {
           actual_arrival?: string | null
           created_at?: string
+          driver_id?: string | null
           estimated_arrival?: string | null
           id?: string
           organization_id?: string
@@ -55,6 +58,13 @@ export type Database = {
           vehicle_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "assignments_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "assignments_organization_id_fkey"
             columns: ["organization_id"]
