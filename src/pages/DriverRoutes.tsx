@@ -1,17 +1,21 @@
 import { useEffect, useState } from "react";
 import { usePickups } from "@/hooks/usePickups";
 import { DriverPickupInterface } from "@/components/driver/DriverPickupInterface";
+import { MovePickupDialog } from "@/components/MovePickupDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { TopNav } from "@/components/TopNav";
-import { Building, MapPin, Calendar, CheckCircle2, Clock, AlertCircle, Package, Truck } from "lucide-react";
+import { Building, MapPin, Calendar, CheckCircle2, Clock, AlertCircle, Package, Truck, MoreVertical, Move } from "lucide-react";
 import { format } from "date-fns";
 
 export default function DriverRoutes() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedPickup, setSelectedPickup] = useState<string | null>(null);
+  const [movePickupOpen, setMovePickupOpen] = useState(false);
+  const [selectedPickupToMove, setSelectedPickupToMove] = useState<any>(null);
   const { data: pickups = [], isLoading } = usePickups(selectedDate);
 
   useEffect(() => {
@@ -172,14 +176,35 @@ export default function DriverRoutes() {
                             </Badge>
                           </div>
                           
-                          <Button 
-                            size="sm" 
-                            disabled={pickup.status === 'completed'}
-                            onClick={() => setSelectedPickup(pickup.id)}
-                            className="bg-brand-primary hover:bg-brand-primary/90"
-                          >
-                            {pickup.status === 'completed' ? '✅ Completed' : '📝 Start Pickup'}
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <Button 
+                              size="sm" 
+                              disabled={pickup.status === 'completed'}
+                              onClick={() => setSelectedPickup(pickup.id)}
+                              className="bg-brand-primary hover:bg-brand-primary/90"
+                            >
+                              {pickup.status === 'completed' ? '✅ Completed' : '📝 Start Pickup'}
+                            </Button>
+                            
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem 
+                                  onClick={() => {
+                                    setSelectedPickupToMove(pickup);
+                                    setMovePickupOpen(true);
+                                  }}
+                                >
+                                  <Move className="h-4 w-4 mr-2" />
+                                  Move to Different Date
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         </div>
                       </div>
                     );
@@ -218,6 +243,14 @@ export default function DriverRoutes() {
               </CardContent>
             </Card>
           </div>
+        )}
+        
+        {selectedPickupToMove && (
+          <MovePickupDialog
+            open={movePickupOpen}
+            onOpenChange={setMovePickupOpen}
+            pickup={selectedPickupToMove}
+          />
         )}
       </main>
     </div>

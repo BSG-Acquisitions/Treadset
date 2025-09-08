@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAssignments } from "@/hooks/usePickups";
 import { useVehicles } from "@/hooks/useVehicles";
 import { supabase } from "@/integrations/supabase/client";
@@ -71,15 +71,7 @@ export default function EnhancedRoutesToday() {
     document.title = "Enhanced Routes – BSG Tire Recycling";
   }, []);
 
-  useEffect(() => {
-    if (assignments.length > 0) {
-      optimizeRoutes();
-    } else {
-      setOptimizedRoutes([]);
-    }
-  }, [selectedDate, assignments]);
-
-  const optimizeRoutes = async () => {
+  const optimizeRoutes = useCallback(async () => {
     setIsOptimizing(true);
     try {
       console.log(`Calling enhanced-route-optimizer for date: ${selectedDate}`);
@@ -120,7 +112,15 @@ export default function EnhancedRoutesToday() {
     } finally {
       setIsOptimizing(false);
     }
-  };
+  }, [selectedDate, selectedVehicle, toast]);
+
+  useEffect(() => {
+    if (assignments.length > 0) {
+      optimizeRoutes();
+    } else {
+      setOptimizedRoutes([]);
+    }
+  }, [selectedDate, assignments, optimizeRoutes]);
 
   const handlePrintRoute = (route: OptimizedRoute) => {
     const printContent = generatePrintableRoute(route);

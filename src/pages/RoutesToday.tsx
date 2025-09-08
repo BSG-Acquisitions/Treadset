@@ -1,16 +1,20 @@
 import { useEffect, useState } from "react";
 import { usePickups } from "@/hooks/usePickups";
 import { CompletePickupDialog } from "@/components/CompletePickupDialog";
+import { MovePickupDialog } from "@/components/MovePickupDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { TopNav } from "@/components/TopNav";
-import { Building, MapPin, Calendar, CheckCircle2, Clock, AlertCircle, Package } from "lucide-react";
+import { Building, MapPin, Calendar, CheckCircle2, Clock, AlertCircle, Package, MoreVertical, Move } from "lucide-react";
 import { format } from "date-fns";
 
 export default function RoutesToday() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [movePickupOpen, setMovePickupOpen] = useState(false);
+  const [selectedPickupToMove, setSelectedPickupToMove] = useState<any>(null);
   console.log('RoutesToday: Fetching pickups for date:', selectedDate);
   const { data: pickups = [], isLoading } = usePickups(selectedDate);
   console.log('RoutesToday: Received pickups data:', pickups);
@@ -138,6 +142,7 @@ export default function RoutesToday() {
                           </Badge>
                         </div>
                         
+                      <div className="flex items-center gap-2">
                         <CompletePickupDialog
                           pickup={pickup}
                           trigger={
@@ -146,6 +151,26 @@ export default function RoutesToday() {
                             </Button>
                           }
                         />
+                        
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem 
+                              onClick={() => {
+                                setSelectedPickupToMove(pickup);
+                                setMovePickupOpen(true);
+                              }}
+                            >
+                              <Move className="h-4 w-4 mr-2" />
+                              Move to Different Date
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                       </div>
                     </div>
                   );
@@ -153,6 +178,14 @@ export default function RoutesToday() {
               </div>
             </CardContent>
           </Card>
+        )}
+        
+        {selectedPickupToMove && (
+          <MovePickupDialog
+            open={movePickupOpen}
+            onOpenChange={setMovePickupOpen}
+            pickup={selectedPickupToMove}
+          />
         )}
       </main>
     </div>
