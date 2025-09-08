@@ -23,23 +23,27 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 }
 
 function ThemeSync({ children }: { children: React.ReactNode }) {
-  const { data: preferences } = useUserPreferences();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (mounted && preferences) {
-      const theme = preferences.dark_mode ? "dark" : "light";
-      document.documentElement.classList.toggle("dark", preferences.dark_mode);
-    }
-  }, [preferences?.dark_mode, mounted]);
-
   if (!mounted) {
     return <>{children}</>;
   }
+
+  return <ThemeSyncMounted>{children}</ThemeSyncMounted>;
+}
+
+function ThemeSyncMounted({ children }: { children: React.ReactNode }) {
+  const { data: preferences } = useUserPreferences();
+
+  useEffect(() => {
+    if (preferences) {
+      document.documentElement.classList.toggle("dark", preferences.dark_mode);
+    }
+  }, [preferences?.dark_mode]);
 
   return <>{children}</>;
 }
