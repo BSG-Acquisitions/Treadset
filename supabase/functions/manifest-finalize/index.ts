@@ -146,8 +146,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Get the PDF template from the correct location
     const { data: templateData, error: templateError } = await supabase.storage
-      .from('templates')
-      .download('STATE_Manifest_v1.pdf');
+      .from('manifests')
+      .download('Templates /STATE_Manifest_v1.pdf');
 
     if (templateError || !templateData) {
       console.error('Template fetch error:', templateError);
