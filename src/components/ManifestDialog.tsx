@@ -141,9 +141,31 @@ export function ManifestDialog({ open, onOpenChange, pickup, manifestData }: Man
     }
   };
 
-  const downloadManifest = () => {
+  const downloadManifest = async () => {
     if (generatedPdfUrl) {
-      window.open(generatedPdfUrl, '_blank');
+      try {
+        // Fetch the PDF as a blob
+        const response = await fetch(generatedPdfUrl);
+        const blob = await response.blob();
+        
+        // Create a temporary URL for the blob
+        const url = window.URL.createObjectURL(blob);
+        
+        // Create a temporary anchor element and trigger download
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `manifest-${pickup.id}-${new Date().toISOString().split('T')[0]}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        
+        // Cleanup
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error('Error downloading PDF:', error);
+        // Fallback to opening in new tab
+        window.open(generatedPdfUrl, '_blank');
+      }
     }
   };
 
