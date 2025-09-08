@@ -29,7 +29,7 @@ type Client = {
   last_pickup_at: string | null;
   is_active: boolean;
   pricing_tier: { name: string } | null;
-  locations: { count: number; address?: string; access_notes?: string }[];
+  locations: { id?: string; address?: string; access_notes?: string }[];
   pickups: { count: number }[];
 } & Database["public"]["Tables"]["clients"]["Row"];
 
