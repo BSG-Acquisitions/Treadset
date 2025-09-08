@@ -2,29 +2,42 @@
   "//": "CALIBRATED COORDS — adjust after print testing. All units in PDF points.",
   "page": 1,
   "text": {
-    "manifestNumber": { "x": 460, "y": 730, "fontSize": 10, "align": "right" },
-    "date":           { "x": 460, "y": 712, "fontSize": 10, "align": "right" },
-    "clientName":     { "x": 90,  "y": 695, "fontSize": 10 },
-    "serviceAddress": { "x": 90,  "y": 680, "fontSize": 10 },
-    "cityStateZip":   { "x": 90,  "y": 665, "fontSize": 10 },
-    "driverName":     { "x": 90,  "y": 635, "fontSize": 10 },
-    "vehicle":        { "x": 280, "y": 635, "fontSize": 10 },
-    "pteOff":         { "x": 110, "y": 560, "fontSize": 10, "align": "center" },
-    "pteOn":          { "x": 180, "y": 560, "fontSize": 10, "align": "center" },
-    "c175Off":        { "x": 250, "y": 560, "fontSize": 10, "align": "center" },
-    "c175On":         { "x": 320, "y": 560, "fontSize": 10, "align": "center" },
-    "c225Off":        { "x": 390, "y": 560, "fontSize": 10, "align": "center" },
-    "c225On":         { "x": 460, "y": 560, "fontSize": 10, "align": "center" },
-    "subtotal":       { "x": 460, "y": 200, "fontSize": 10, "align": "right" },
-    "surcharges":     { "x": 460, "y": 184, "fontSize": 10, "align": "right" },
-    "total":          { "x": 460, "y": 168, "fontSize": 12, "align": "right", "bold": true }
+    "// Part 1 - Scrap Tire Generator Certification (Upper Section)": "",
+    "generatorName": { "x": 150, "y": 720, "fontSize": 10 },
+    "generatorAddress": { "x": 150, "y": 705, "fontSize": 10 },
+    "passengerTires": { "x": 200, "y": 680, "fontSize": 10, "align": "center" },
+    "truckTires": { "x": 200, "y": 665, "fontSize": 10, "align": "center" },
+    "oversizedTires": { "x": 200, "y": 650, "fontSize": 10, "align": "center" },
+    "pteCount": { "x": 200, "y": 635, "fontSize": 10, "align": "center" },
+    "grossWeight": { "x": 200, "y": 620, "fontSize": 10, "align": "center" },
+    "tareWeight": { "x": 200, "y": 605, "fontSize": 10, "align": "center" },
+    "netWeight": { "x": 200, "y": 590, "fontSize": 10, "align": "center" },
+    "generatorSignature": { "x": 450, "y": 575, "fontSize": 9 },
+    "generatorDate": { "x": 450, "y": 560, "fontSize": 9 },
+    
+    "// Part 2 - Scrap Tire Hauler (Middle Section)": "",
+    "haulerName": { "x": 150, "y": 520, "fontSize": 10 },
+    "haulerAddress": { "x": 150, "y": 505, "fontSize": 10 },
+    "haulerLicense": { "x": 150, "y": 490, "fontSize": 10 },
+    "vehicleInfo": { "x": 150, "y": 475, "fontSize": 10 },
+    "driverName": { "x": 150, "y": 460, "fontSize": 10 },
+    "haulerSignature": { "x": 450, "y": 445, "fontSize": 9 },
+    "haulerDate": { "x": 450, "y": 430, "fontSize": 9 },
+    
+    "// Part 3 - Scrap Tire Processor (Lower Section)": "",
+    "processorName": { "x": 150, "y": 380, "fontSize": 10 },
+    "processorAddress": { "x": 150, "y": 365, "fontSize": 10 },
+    "processorLicense": { "x": 150, "y": 350, "fontSize": 10 },
+    "processingMethod": { "x": 150, "y": 335, "fontSize": 10 },
+    "processorSignature": { "x": 450, "y": 320, "fontSize": 9 },
+    "processorDate": { "x": 450, "y": 305, "fontSize": 9 }
   },
   "signatures": {
-    "customer": { "x": 110, "y": 120, "w": 200, "h": 42 },
-    "driver":   { "x": 370, "y": 120, "w": 200, "h": 42 }
+    "generatorSig": { "x": 400, "y": 575, "w": 150, "h": 25 },
+    "haulerSig": { "x": 400, "y": 445, "w": 150, "h": 25 },
+    "processorSig": { "x": 400, "y": 320, "w": 150, "h": 25 }
   },
   "images": {
-    "logo": { "x": 40, "y": 745, "w": 90, "h": 28 },
-    "qr":   { "x": 520, "y": 110, "w": 60, "h": 60 }
+    "logo": { "x": 40, "y": 745, "w": 90, "h": 28 }
   }
 }
