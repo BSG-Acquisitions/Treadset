@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CompleteAssignmentDialog } from "@/components/driver/CompleteAssignmentDialog";
 import { DriverAssignmentDropdown } from "@/components/DriverAssignmentDropdown";
 import { VehicleManagementDialog } from "@/components/VehicleManagementDialog";
+import { AddressValidationDialog } from "@/components/AddressValidationDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -213,8 +214,8 @@ export default function EnhancedRoutesToday() {
             <div style="display: flex; align-items: flex-start;">
               <span class="stop-number">${index + 1}</span>
               <div style="flex: 1;">
-                <div class="client-name">${stop.clientName}</div>
-                <div class="address">${stop.address}</div>
+                                <div class="client-name">${stop.clientName}</div>
+                                <div class="address"><strong>📍 ${stop.address}</strong></div>
                 <div class="details">
                   <strong>PTE Count:</strong> ${stop.pteCount} | 
                   <strong>Service Time:</strong> ${stop.serviceTimeMinutes} min
@@ -310,6 +311,23 @@ export default function EnhancedRoutesToday() {
                       Manage Fleet
                     </Button>
                   }
+                />
+                
+                <AddressValidationDialog
+                  trigger={
+                    <Button variant="outline" size="sm">
+                      <MapPin className="h-4 w-4 mr-2" />
+                      Verify Addresses
+                    </Button>
+                  }
+                  addresses={optimizedRoutes.flatMap(route => 
+                    route.stops.map(stop => ({
+                      clientName: stop.clientName,
+                      address: stop.address,
+                      hasCoordinates: stop.coordinates.lat !== 0 && stop.coordinates.lng !== 0,
+                      accessNotes: stop.notes
+                    }))
+                  )}
                 />
                 
                 <Select value={selectedDate} onValueChange={setSelectedDate}>
@@ -491,9 +509,9 @@ export default function EnhancedRoutesToday() {
                                   <h4 className="font-semibold text-foreground truncate">
                                     {stop.clientName}
                                   </h4>
-                                  <p className="text-sm text-muted-foreground truncate">
-                                    {stop.address}
-                                  </p>
+                                   <p className="text-sm font-medium text-foreground">
+                                     📍 {stop.address}
+                                   </p>
                                   <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                                     <span className="flex items-center gap-1">
                                       <Package className="h-3 w-3" />

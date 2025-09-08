@@ -146,7 +146,12 @@ export default function RoutesPrintToday() {
                           {assignment.pickup?.client?.company_name || 'Unknown Client'}
                         </td>
                         <td className="border border-border p-3 text-sm">
-                          {assignment.pickup?.location?.address || 'Address TBD'}
+                          <div className="font-medium">{assignment.pickup?.location?.address || 'Address TBD'}</div>
+                          {assignment.pickup?.location?.access_notes && (
+                            <div className="text-xs text-muted-foreground mt-1">
+                              Access: {assignment.pickup?.location?.access_notes}
+                            </div>
+                          )}
                         </td>
                         <td className="border border-border p-3 text-center numeric">
                           {assignment.pickup?.pte_count || 0}
