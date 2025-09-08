@@ -4,7 +4,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 import { ManifestDialog } from "./ManifestDialog";
 import {
   Dialog,
@@ -81,7 +80,6 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
   const [showManifest, setShowManifest] = useState(false);
   const [completedManifestData, setCompletedManifestData] = useState<any>(null);
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   const form = useForm<CompletePickupFormData>({
     resolver: zodResolver(completePickupSchema),
@@ -132,19 +130,9 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
       setOpen(false); // Close pickup dialog
       setShowManifest(true); // Show manifest dialog
 
-      toast({
-        title: "Pickup Completed",
-        description: "Now please complete the state manifest.",
-      });
-
       queryClient.invalidateQueries({ queryKey: ['pickups'] });
     } catch (error) {
       console.error('Failed to save pickup data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save pickup information. Please try again.",
-        variant: "destructive",
-      });
     } finally {
       setIsSubmitting(false);
     }
