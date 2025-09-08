@@ -227,6 +227,28 @@ export function ManifestDialog({ open, onOpenChange, pickup, manifestData }: Man
     }
   };
 
+  const generateCalibration = async () => {
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('manifest-finalize', {
+        body: {
+          pickup_id: pickup.id,
+          manifest_data: {
+            ...manifestData
+          },
+          calibrate: true,
+        }
+      });
+      if (error) throw error;
+      setGeneratedPdfUrl(data.pdf_url);
+      setCurrentStep(3);
+    } catch (error) {
+      console.error('Error generating calibration PDF:', error);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const downloadManifest = async () => {
     if (generatedPdfUrl) {
       try {

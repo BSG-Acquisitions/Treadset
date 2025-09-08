@@ -9,6 +9,7 @@ const corsHeaders = {
 
 interface ManifestRequest {
   pickup_id: string;
+  calibrate?: boolean;
   manifest_data: {
     // Part 1 - Generator fields
     generator_name: string;
@@ -138,16 +139,28 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
-    const { pickup_id, manifest_data }: ManifestRequest = await req.json();
+    const { pickup_id, manifest_data, calibrate }: ManifestRequest = await req.json();
     console.log('Processing manifest for pickup:', pickup_id);
-    console.log('Manifest data received:', JSON.stringify(manifest_data, null, 2));
+    console.log('Calibrate mode:', Boolean(calibrate));
+    console.log('Manifest data received:', JSON.stringify(manifest_data || {}, null, 2));
 
     console.log('Using embedded configuration');
 
-    // Get the PDF template from the correct location
-    const { data: templateData, error: templateError } = await supabase.storage
-      .from('manifests')
-      .download('Templates /STATE_Manifest_v1.pdf');
+    // Get the PDF template with fallbacks
+    let templateData: Blob | null = null;
+    let templateError: any = null;
+
+    const primary = await supabase.storage.from('templates').download('STATE_Manifest_v1.pdf');
+    if (!primary.error && primary.data) {
+      templateData = primary.data as Blob;
+    } else {
+      templateError = primary.error;
+      const fallback = await supabase.storage.from('manifests').download('templates/STATE_Manifest_v1.pdf');
+      if (!fallback.error && fallback.data) {
+        templateData = fallback.data as Blob;
+        templateError = null;
+      }
+    }
 
     if (templateError || !templateData) {
       console.error('Template fetch error:', templateError);
@@ -163,56 +176,70 @@ const handler = async (req: Request): Promise<Response> => {
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-    // Process text overlays based on configuration
-    for (const [fieldId, fieldConfig] of Object.entries(MANIFEST_FIELDS)) {
-      if (typeof fieldConfig !== 'object' || !fieldConfig.source) continue;
-      
-      const layoutConfig = MANIFEST_LAYOUT.text[fieldId];
-      if (!layoutConfig) continue;
-
-      const rawValue = manifest_data[fieldConfig.source as keyof typeof manifest_data];
-      const formattedValue = formatValue(rawValue, fieldConfig.format);
-      
-      if (formattedValue) {
-        const fontSize = layoutConfig.fontSize || 10;
-        const useFont = layoutConfig.bold ? boldFont : font;
-        
-        firstPage.drawText(formattedValue, {
-          x: layoutConfig.x,
-          y: layoutConfig.y,
-          size: fontSize,
-          font: useFont,
-          color: rgb(0, 0, 0),
-        });
-        
-        console.log(`Added text "${formattedValue}" at (${layoutConfig.x}, ${layoutConfig.y})`);
+    // Process overlays (calibration or actual data)
+    if (calibrate) {
+      // Draw light grid every 50pt
+      for (let x = 0; x <= width; x += 50) {
+        firstPage.drawRectangle({ x, y: 0, width: 0.5, height, color: rgb(0.85, 0.85, 0.85) });
       }
-    }
-
-    // Add signatures
-    const signatures = [
-      { data: manifest_data.generator_signature, config: MANIFEST_LAYOUT.signatures.generatorSig },
-      { data: manifest_data.hauler_signature, config: MANIFEST_LAYOUT.signatures.haulerSig },
-      { data: manifest_data.processor_signature, config: MANIFEST_LAYOUT.signatures.processorSig }
-    ];
-
-    for (const sig of signatures) {
-      if (sig.data && sig.config) {
-        try {
-          const sigBytes = Uint8Array.from(atob(sig.data.split(',')[1]), c => c.charCodeAt(0));
-          const sigImage = await pdfDoc.embedPng(sigBytes);
-          const sigDims = sigImage.scale(0.5);
-          
-          firstPage.drawImage(sigImage, {
-            x: sig.config.x,
-            y: sig.config.y,
-            width: Math.min(sigDims.width, sig.config.w),
-            height: Math.min(sigDims.height, sig.config.h),
+      for (let y = 0; y <= height; y += 50) {
+        firstPage.drawRectangle({ x: 0, y, width, height: 0.5, color: rgb(0.85, 0.85, 0.85) });
+      }
+      // Crosshairs and labels for text fields
+      for (const [fieldId, layoutConfig] of Object.entries(MANIFEST_LAYOUT.text)) {
+        const x = (layoutConfig as any).x;
+        const y = (layoutConfig as any).y;
+        firstPage.drawRectangle({ x: x - 6, y: y - 0.5, width: 12, height: 1, color: rgb(1, 0, 0) });
+        firstPage.drawRectangle({ x: x - 0.5, y: y - 6, width: 1, height: 12, color: rgb(1, 0, 0) });
+        firstPage.drawText(String(fieldId), { x: x + 8, y: y + 8, size: 8, font, color: rgb(1, 0, 0) });
+      }
+      // Boxes for signature fields
+      for (const [sigId, box] of Object.entries(MANIFEST_LAYOUT.signatures)) {
+        const b = box as any;
+        firstPage.drawRectangle({ x: b.x, y: b.y, width: b.w, height: b.h, borderColor: rgb(0, 0, 1), borderWidth: 1, color: rgb(0,0,0,0) as any });
+        firstPage.drawText(String(sigId), { x: b.x + 4, y: b.y + b.h + 4, size: 8, font, color: rgb(0, 0, 1) });
+      }
+    } else {
+      // Text overlays based on configuration
+      for (const [fieldId, fieldConfig] of Object.entries(MANIFEST_FIELDS)) {
+        if (typeof fieldConfig !== 'object' || !fieldConfig.source) continue;
+        const layoutConfig = MANIFEST_LAYOUT.text[fieldId];
+        if (!layoutConfig) continue;
+        const rawValue = manifest_data[fieldConfig.source as keyof typeof manifest_data];
+        const formattedValue = formatValue(rawValue, fieldConfig.format);
+        if (formattedValue) {
+          const fontSize = layoutConfig.fontSize || 10;
+          const useFont = layoutConfig.bold ? boldFont : font;
+          firstPage.drawText(formattedValue, {
+            x: layoutConfig.x,
+            y: layoutConfig.y,
+            size: fontSize,
+            font: useFont,
+            color: rgb(0, 0, 0),
           });
-          
-          console.log(`Added signature at (${sig.config.x}, ${sig.config.y})`);
-        } catch (sigError) {
-          console.error('Signature embedding error:', sigError);
+        }
+      }
+      // Add signatures
+      const signatures = [
+        { data: manifest_data.generator_signature, config: MANIFEST_LAYOUT.signatures.generatorSig },
+        { data: manifest_data.hauler_signature, config: MANIFEST_LAYOUT.signatures.haulerSig },
+        { data: manifest_data.processor_signature, config: MANIFEST_LAYOUT.signatures.processorSig }
+      ];
+      for (const sig of signatures) {
+        if (sig.data && sig.config) {
+          try {
+            const sigBytes = Uint8Array.from(atob(sig.data.split(',')[1]), c => c.charCodeAt(0));
+            const sigImage = await pdfDoc.embedPng(sigBytes);
+            const sigDims = sigImage.scale(0.5);
+            firstPage.drawImage(sigImage, {
+              x: sig.config.x,
+              y: sig.config.y,
+              width: Math.min(sigDims.width, sig.config.w),
+              height: Math.min(sigDims.height, sig.config.h),
+            });
+          } catch (sigError) {
+            console.error('Signature embedding error:', sigError);
+          }
         }
       }
     }
