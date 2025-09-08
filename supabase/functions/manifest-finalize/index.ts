@@ -53,63 +53,64 @@ interface ManifestRequest {
 
 // Configuration embedded directly (since edge functions can't read project files)
 const MANIFEST_FIELDS = {
-  "generatorName": { "source": "generator_name" },
-  "generatorAddress": { "source": "generator_address" },
-  "passengerTires": { "source": "passenger_count", "format": "int" },
-  "truckTires": { "source": "truck_count", "format": "int" },
-  "oversizedTires": { "source": "oversized_count", "format": "int" },
-  "pteCount": { "source": "pte_count", "format": "int" },
-  "grossWeight": { "source": "gross_weight" },
-  "tareWeight": { "source": "tare_weight" },
-  "netWeight": { "source": "net_weight" },
-  "generatorSignature": { "source": "generator_signature_name" },
-  "generatorDate": { "source": "generator_date", "format": "date" },
-  "haulerName": { "source": "hauler_name" },
-  "haulerAddress": { "source": "hauler_address" },
-  "haulerLicense": { "source": "hauler_license" },
-  "vehicleInfo": { "source": "vehicle_info" },
-  "driverName": { "source": "driver_name" },
-  "haulerSignature": { "source": "driver_signature_name" },
-  "haulerDate": { "source": "hauler_date", "format": "date" },
-  "processorName": { "source": "processor_name" },
-  "processorAddress": { "source": "processor_address" },
-  "processorLicense": { "source": "processor_license" },
-  "processingMethod": { "source": "processing_method" },
-  "processorSignature": { "source": "processor_signature_name" },
-  "processorDate": { "source": "processor_date", "format": "date" }
+  "gen_name": { "source": "generator_name" },
+  "gen_mail_addr": { "source": "generator_address" },
+  "gen_phone": { "source": "generator_phone" },
+  "gen_print_name": { "source": "generator_signature_name" },
+  "gen_date": { "source": "generator_date", "format": "date" },
+  "haul_reg": { "source": "hauler_license" },
+  "haul_phone": { "source": "hauler_phone" },
+  "haul_print_name": { "source": "driver_signature_name" },
+  "haul_date": { "source": "hauler_date", "format": "date" },
+  "recv_name": { "source": "processor_name" },
+  "recv_addr": { "source": "processor_address" },
+  "recv_phone": { "source": "processor_phone" },
+  "recv_print_name": { "source": "processor_signature_name" },
+  "recv_date": { "source": "processor_date", "format": "date" },
+  "gross_weight": { "source": "gross_weight" },
+  "tare_weight": { "source": "tare_weight" },
+  "net_weight": { "source": "net_weight" },
+  "total_pte": { "source": "pte_count", "format": "int" },
+  "vehicleTrailer": { "source": "vehicle_info" }
 };
 
 const MANIFEST_LAYOUT = {
   "text": {
-    "generatorName": { "x": 150, "y": 720, "fontSize": 10 },
-    "generatorAddress": { "x": 150, "y": 705, "fontSize": 10 },
-    "passengerTires": { "x": 200, "y": 680, "fontSize": 10, "align": "center" },
-    "truckTires": { "x": 200, "y": 665, "fontSize": 10, "align": "center" },
-    "oversizedTires": { "x": 200, "y": 650, "fontSize": 10, "align": "center" },
-    "pteCount": { "x": 200, "y": 635, "fontSize": 10, "align": "center" },
-    "grossWeight": { "x": 200, "y": 620, "fontSize": 10, "align": "center" },
-    "tareWeight": { "x": 200, "y": 605, "fontSize": 10, "align": "center" },
-    "netWeight": { "x": 200, "y": 590, "fontSize": 10, "align": "center" },
-    "generatorSignature": { "x": 450, "y": 575, "fontSize": 9 },
-    "generatorDate": { "x": 450, "y": 560, "fontSize": 9 },
-    "haulerName": { "x": 150, "y": 520, "fontSize": 10 },
-    "haulerAddress": { "x": 150, "y": 505, "fontSize": 10 },
-    "haulerLicense": { "x": 150, "y": 490, "fontSize": 10 },
-    "vehicleInfo": { "x": 150, "y": 475, "fontSize": 10 },
-    "driverName": { "x": 150, "y": 460, "fontSize": 10 },
-    "haulerSignature": { "x": 450, "y": 445, "fontSize": 9 },
-    "haulerDate": { "x": 450, "y": 430, "fontSize": 9 },
-    "processorName": { "x": 150, "y": 380, "fontSize": 10 },
-    "processorAddress": { "x": 150, "y": 365, "fontSize": 10 },
-    "processorLicense": { "x": 150, "y": 350, "fontSize": 10 },
-    "processingMethod": { "x": 150, "y": 335, "fontSize": 10 },
-    "processorSignature": { "x": 450, "y": 320, "fontSize": 9 },
-    "processorDate": { "x": 450, "y": 305, "fontSize": 9 }
+    "gen_name": { "x": 90, "y": 692, "fontSize": 10 },
+    "gen_mail_addr": { "x": 90, "y": 677, "fontSize": 10 },
+    "gen_mail_city": { "x": 90, "y": 662, "fontSize": 10 },
+    "gen_mail_state": { "x": 280, "y": 662, "fontSize": 10 },
+    "gen_mail_zip": { "x": 340, "y": 662, "fontSize": 10 },
+    "gen_phys_addr": { "x": 90, "y": 632, "fontSize": 10 },
+    "gen_phys_city": { "x": 90, "y": 617, "fontSize": 10 },
+    "gen_phys_state": { "x": 280, "y": 617, "fontSize": 10 },
+    "gen_phys_zip": { "x": 340, "y": 617, "fontSize": 10 },
+    "gen_phone": { "x": 90, "y": 587, "fontSize": 10 },
+    "gen_print_name": { "x": 320, "y": 572, "fontSize": 10 },
+    "gen_date": { "x": 480, "y": 572, "fontSize": 10 },
+    "haul_reg": { "x": 160, "y": 520, "fontSize": 10 },
+    "haul_other_id": { "x": 420, "y": 520, "fontSize": 10 },
+    "haul_phone": { "x": 160, "y": 475, "fontSize": 10 },
+    "haul_print_name": { "x": 320, "y": 460, "fontSize": 10 },
+    "haul_date": { "x": 480, "y": 460, "fontSize": 10 },
+    "recv_name": { "x": 160, "y": 408, "fontSize": 10 },
+    "recv_addr": { "x": 160, "y": 393, "fontSize": 10 },
+    "recv_city": { "x": 160, "y": 378, "fontSize": 10 },
+    "recv_state": { "x": 320, "y": 378, "fontSize": 10 },
+    "recv_zip": { "x": 380, "y": 378, "fontSize": 10 },
+    "recv_phone": { "x": 160, "y": 363, "fontSize": 10 },
+    "recv_print_name": { "x": 320, "y": 318, "fontSize": 10 },
+    "recv_date": { "x": 480, "y": 318, "fontSize": 10 },
+    "gross_weight": { "x": 160, "y": 288, "fontSize": 10 },
+    "tare_weight": { "x": 320, "y": 288, "fontSize": 10 },
+    "net_weight": { "x": 480, "y": 288, "fontSize": 10 },
+    "total_pte": { "x": 480, "y": 273, "fontSize": 10 },
+    "vehicleTrailer": { "x": 90, "y": 742, "fontSize": 10 }
   },
   "signatures": {
-    "generatorSig": { "x": 400, "y": 575, "w": 150, "h": 25 },
-    "haulerSig": { "x": 400, "y": 445, "w": 150, "h": 25 },
-    "processorSig": { "x": 400, "y": 320, "w": 150, "h": 25 }
+    "generatorSig": { "x": 90, "y": 568, "w": 210, "h": 38 },
+    "haulerSig": { "x": 90, "y": 456, "w": 210, "h": 38 },
+    "receiverSig": { "x": 90, "y": 314, "w": 210, "h": 38 }
   }
 };
 
@@ -223,7 +224,7 @@ const handler = async (req: Request): Promise<Response> => {
       const signatures = [
         { data: manifest_data.generator_signature, config: MANIFEST_LAYOUT.signatures.generatorSig },
         { data: manifest_data.hauler_signature, config: MANIFEST_LAYOUT.signatures.haulerSig },
-        { data: manifest_data.processor_signature, config: MANIFEST_LAYOUT.signatures.processorSig }
+        { data: manifest_data.processor_signature, config: MANIFEST_LAYOUT.signatures.receiverSig }
       ];
       for (const sig of signatures) {
         if (sig.data && sig.config) {
