@@ -281,7 +281,7 @@ Deno.serve(async (req) => {
           coordinates,
           pteCount: assignment.pickups.pte_count || 0,
           clientName: assignment.pickups.client?.company_name || 'Unknown',
-          address: assignment.pickups.location?.address || 'Address not found',
+          address: assignment.pickups.location?.name || assignment.pickups.location?.address || 'Address not found',
           serviceTimeMinutes: SERVICE_TIME_PER_STOP,
           notes: assignment.pickups.notes
         });

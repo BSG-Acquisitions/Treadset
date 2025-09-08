@@ -115,7 +115,7 @@ export default function RoutesToday() {
                           </div>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <MapPin className="h-4 w-4" />
-                            <span>{pickup.location?.address || pickup.location?.name || 'No address'}</span>
+                            <span>{pickup.location?.name || pickup.location?.address || 'No address'}</span>
                           </div>
                           {pickup.notes && (
                             <p className="text-sm text-muted-foreground italic">
