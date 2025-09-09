@@ -143,25 +143,65 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
-    const { pickup_id, manifest_data, calibrate }: ManifestRequest = await req.json();
+    const { pickup_id, manifest_data, calibrate, template_bucket, template_path }: ManifestRequest = await req.json();
     console.log('Processing manifest for pickup:', pickup_id);
     console.log('Calibrate mode:', Boolean(calibrate));
     console.log('Manifest data received:', JSON.stringify(manifest_data || {}, null, 2));
 
-    console.log('Using fixed template: manifests/templates/STATE_Manifest_v1.pdf');
+    console.log('Using embedded configuration');
 
-    // Always use the fixed template path in manifests bucket
+    // Get the PDF template with fallbacks (use blank Letter page if missing)
     let templateData: Blob | null = null;
-    const fixedBucket = 'manifests';
-    const fixedPath = 'templates/STATE_Manifest_v1.pdf';
+    let templateError: any = null;
+    let resolvedBucket = template_bucket || 'manifests';
+    let resolvedPath: string | null = template_path || null;
 
-    const fixed = await supabase.storage.from(fixedBucket).download(fixedPath);
-    if (!fixed.error && fixed.data) {
-      console.log(`Template loaded from ${fixedBucket}/${fixedPath}`);
-      templateData = fixed.data as Blob;
-    } else {
-      console.error(`Required template missing at ${fixedBucket}/${fixedPath}`, fixed.error);
-      throw new Error('Template PDF not found at manifests/templates/STATE_Manifest_v1.pdf');
+    // 1) Try explicit path if provided
+    if (resolvedPath) {
+      const resp = await supabase.storage.from(resolvedBucket).download(resolvedPath);
+      if (!resp.error && resp.data) {
+        console.log(`Template loaded from ${resolvedBucket}/${resolvedPath}`);
+        templateData = resp.data as Blob;
+      } else {
+        console.warn(`Explicit template not found: ${resolvedBucket}/${resolvedPath}`, resp.error);
+        templateError = resp.error;
+      }
+    }
+
+    // 2) Auto-discover first PDF under manifests/templates/
+    if (!templateData) {
+      const list = await supabase.storage.from('manifests').list('templates', { limit: 100, sortBy: { column: 'name', order: 'asc' } });
+      if (!list.error && list.data && list.data.length) {
+        const firstPdf = list.data.find((f: any) => f.name?.toLowerCase().endsWith('.pdf'));
+        if (firstPdf) {
+          resolvedBucket = 'manifests';
+          resolvedPath = `templates/${firstPdf.name}`;
+          const dl = await supabase.storage.from(resolvedBucket).download(resolvedPath);
+          if (!dl.error && dl.data) {
+            console.log(`Template autodiscovered at ${resolvedBucket}/${resolvedPath}`);
+            templateData = dl.data as Blob;
+            templateError = null;
+          }
+        }
+      }
+    }
+
+    // 3) Try templates bucket root as fallback
+    if (!templateData) {
+      const list = await supabase.storage.from('templates').list('', { limit: 100, sortBy: { column: 'name', order: 'asc' } });
+      if (!list.error && list.data && list.data.length) {
+        const firstPdf = list.data.find((f: any) => f.name?.toLowerCase().endsWith('.pdf'));
+        if (firstPdf) {
+          resolvedBucket = 'templates';
+          resolvedPath = `${firstPdf.name}`;
+          const dl = await supabase.storage.from(resolvedBucket).download(resolvedPath);
+          if (!dl.error && dl.data) {
+            console.log(`Template autodiscovered at ${resolvedBucket}/${resolvedPath}`);
+            templateData = dl.data as Blob;
+            templateError = null;
+          }
+        }
+      }
     }
 
     // 4) Backwards-compat explicit defaults
@@ -183,12 +223,15 @@ const handler = async (req: Request): Promise<Response> => {
 
     let pdfDoc: PDFDocument;
     let firstPage: any;
-    if (!templateData) {
-      throw new Error('Template PDF not loaded');
+    if (templateData) {
+      const templateBytes = await templateData.arrayBuffer();
+      pdfDoc = await PDFDocument.load(templateBytes);
+      firstPage = pdfDoc.getPages()[0];
+    } else {
+      console.warn('Template not found, using blank Letter page (612x792)');
+      pdfDoc = await PDFDocument.create();
+      firstPage = pdfDoc.addPage([612, 792]);
     }
-    const templateBytes = await templateData.arrayBuffer();
-    pdfDoc = await PDFDocument.load(templateBytes);
-    firstPage = pdfDoc.getPages()[0];
     const { width, height } = firstPage.getSize();
     
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
