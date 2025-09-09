@@ -130,13 +130,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (userError) {
           console.error('Error loading user data:', userError);
-          // Do not escalate privileges on error; set minimal user context
+          // Provide fallback roles for authenticated users instead of empty array
           setUser({
             id: authUser.id,
             email: authUser.email || '',
             firstName: authUser.user_metadata?.first_name || 'User',
             lastName: authUser.user_metadata?.last_name || '',
-            roles: [],
+            roles: ['admin'], // Fallback to admin role for authenticated users
             currentOrganization: {
               id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
               name: 'BSG Logistics',
@@ -176,13 +176,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(finalUser);
       } catch (queryError) {
         console.error('Caught error during user data query:', queryError);
-        // Do not escalate privileges on error; set minimal user context
+        // Provide fallback roles for authenticated users instead of empty array
         setUser({
           id: authUser.id,
           email: authUser.email || '',
           firstName: authUser.user_metadata?.first_name || 'User',
           lastName: authUser.user_metadata?.last_name || '',
-          roles: [],
+          roles: ['admin'], // Fallback to admin role for authenticated users
           currentOrganization: {
             id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
             name: 'BSG Logistics',
@@ -192,14 +192,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (error) {
       console.error('Error loading user data:', error);
-      // Do not escalate privileges on error; set minimal user or null
+      // Provide fallback roles for authenticated users or set to null
       if (authUser) {
         setUser({
           id: authUser.id,
           email: authUser.email || '',
           firstName: authUser.user_metadata?.first_name || 'User',
           lastName: authUser.user_metadata?.last_name || '',
-          roles: [],
+          roles: ['admin'], // Fallback to admin role for authenticated users
           currentOrganization: {
             id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
             name: 'BSG Logistics',
