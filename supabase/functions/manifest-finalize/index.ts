@@ -10,6 +10,9 @@ const corsHeaders = {
 interface ManifestRequest {
   pickup_id: string;
   calibrate?: boolean;
+  // Optional template location overrides
+  template_bucket?: string; // e.g. "manifests" or "templates"
+  template_path?: string;   // e.g. "templates/MI_Manifest_v1.pdf"
   manifest_data: {
     // Part 1 - Generator fields
     generator_name: string;
@@ -140,7 +143,7 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
-    const { pickup_id, manifest_data, calibrate }: ManifestRequest = await req.json();
+    const { pickup_id, manifest_data, calibrate, template_bucket, template_path }: ManifestRequest = await req.json();
     console.log('Processing manifest for pickup:', pickup_id);
     console.log('Calibrate mode:', Boolean(calibrate));
     console.log('Manifest data received:', JSON.stringify(manifest_data || {}, null, 2));
@@ -150,16 +153,71 @@ const handler = async (req: Request): Promise<Response> => {
     // Get the PDF template with fallbacks (use blank Letter page if missing)
     let templateData: Blob | null = null;
     let templateError: any = null;
+    let resolvedBucket = template_bucket || 'manifests';
+    let resolvedPath: string | null = template_path || null;
 
-    const primary = await supabase.storage.from('templates').download('STATE_Manifest_v1.pdf');
-    if (!primary.error && primary.data) {
-      templateData = primary.data as Blob;
-    } else {
-      templateError = primary.error;
-      const fallback = await supabase.storage.from('manifests').download('templates/STATE_Manifest_v1.pdf');
-      if (!fallback.error && fallback.data) {
-        templateData = fallback.data as Blob;
-        templateError = null;
+    // 1) Try explicit path if provided
+    if (resolvedPath) {
+      const resp = await supabase.storage.from(resolvedBucket).download(resolvedPath);
+      if (!resp.error && resp.data) {
+        console.log(`Template loaded from ${resolvedBucket}/${resolvedPath}`);
+        templateData = resp.data as Blob;
+      } else {
+        console.warn(`Explicit template not found: ${resolvedBucket}/${resolvedPath}`, resp.error);
+        templateError = resp.error;
+      }
+    }
+
+    // 2) Auto-discover first PDF under manifests/templates/
+    if (!templateData) {
+      const list = await supabase.storage.from('manifests').list('templates', { limit: 100, sortBy: { column: 'name', order: 'asc' } });
+      if (!list.error && list.data && list.data.length) {
+        const firstPdf = list.data.find((f: any) => f.name?.toLowerCase().endsWith('.pdf'));
+        if (firstPdf) {
+          resolvedBucket = 'manifests';
+          resolvedPath = `templates/${firstPdf.name}`;
+          const dl = await supabase.storage.from(resolvedBucket).download(resolvedPath);
+          if (!dl.error && dl.data) {
+            console.log(`Template autodiscovered at ${resolvedBucket}/${resolvedPath}`);
+            templateData = dl.data as Blob;
+            templateError = null;
+          }
+        }
+      }
+    }
+
+    // 3) Try templates bucket root as fallback
+    if (!templateData) {
+      const list = await supabase.storage.from('templates').list('', { limit: 100, sortBy: { column: 'name', order: 'asc' } });
+      if (!list.error && list.data && list.data.length) {
+        const firstPdf = list.data.find((f: any) => f.name?.toLowerCase().endsWith('.pdf'));
+        if (firstPdf) {
+          resolvedBucket = 'templates';
+          resolvedPath = `${firstPdf.name}`;
+          const dl = await supabase.storage.from(resolvedBucket).download(resolvedPath);
+          if (!dl.error && dl.data) {
+            console.log(`Template autodiscovered at ${resolvedBucket}/${resolvedPath}`);
+            templateData = dl.data as Blob;
+            templateError = null;
+          }
+        }
+      }
+    }
+
+    // 4) Backwards-compat explicit defaults
+    if (!templateData) {
+      const primary = await supabase.storage.from('templates').download('STATE_Manifest_v1.pdf');
+      if (!primary.error && primary.data) {
+        console.log('Template loaded from templates/STATE_Manifest_v1.pdf');
+        templateData = primary.data as Blob;
+      } else {
+        templateError = primary.error;
+        const fallback = await supabase.storage.from('manifests').download('templates/STATE_Manifest_v1.pdf');
+        if (!fallback.error && fallback.data) {
+          console.log('Template loaded from manifests/templates/STATE_Manifest_v1.pdf');
+          templateData = fallback.data as Blob;
+          templateError = null;
+        }
       }
     }
 
