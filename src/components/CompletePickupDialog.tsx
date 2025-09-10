@@ -163,26 +163,75 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
     }
   }, [open, pickup]);
 
-  // Mock fetch functions - replace with actual database calls
+  // Fetch functions for real database data
   const fetchGenerators = async (search: string): Promise<Generator[]> => {
-    return [
-      { id: '1', generator_name: 'Generator A', generator_city: 'Austin', generator_state: 'TX' },
-      { id: '2', generator_name: 'Generator B', generator_city: 'Houston', generator_state: 'TX' },
-    ].filter(g => g.generator_name.toLowerCase().includes(search.toLowerCase()));
+    const { data, error } = await supabase
+      .from('generators' as any)
+      .select('*')
+      .ilike('generator_name', `%${search}%`)
+      .eq('is_active', true)
+      .limit(10);
+    
+    if (error) {
+      console.error('Error fetching generators:', error);
+      return [];
+    }
+    
+    return (data || []).map((item: any) => ({
+      id: item.id,
+      generator_name: item.generator_name,
+      generator_mailing_address: item.generator_mailing_address,
+      generator_city: item.generator_city,
+      generator_state: item.generator_state,
+      generator_zip: item.generator_zip
+    }));
   };
 
   const fetchHaulers = async (search: string): Promise<Hauler[]> => {
-    return [
-      { id: '1', hauler_name: 'Hauler A', hauler_city: 'Austin', hauler_state: 'TX', hauler_mi_reg: 'MI123' },
-      { id: '2', hauler_name: 'Hauler B', hauler_city: 'Dallas', hauler_state: 'TX', hauler_mi_reg: 'MI456' },
-    ].filter(h => h.hauler_name.toLowerCase().includes(search.toLowerCase()));
+    const { data, error } = await supabase
+      .from('haulers' as any)
+      .select('*')
+      .ilike('hauler_name', `%${search}%`)
+      .eq('is_active', true)
+      .limit(10);
+    
+    if (error) {
+      console.error('Error fetching haulers:', error);
+      return [];
+    }
+    
+    return (data || []).map((item: any) => ({
+      id: item.id,
+      hauler_name: item.hauler_name,
+      hauler_mailing_address: item.hauler_mailing_address,
+      hauler_city: item.hauler_city,
+      hauler_state: item.hauler_state,
+      hauler_zip: item.hauler_zip,
+      hauler_mi_reg: item.hauler_mi_reg
+    }));
   };
 
   const fetchReceivers = async (search: string): Promise<Receiver[]> => {
-    return [
-      { id: '1', receiver_name: 'Receiver A', receiver_city: 'Austin', receiver_state: 'TX' },
-      { id: '2', receiver_name: 'Receiver B', receiver_city: 'San Antonio', receiver_state: 'TX' },
-    ].filter(r => r.receiver_name.toLowerCase().includes(search.toLowerCase()));
+    const { data, error } = await supabase
+      .from('receivers' as any)
+      .select('*')
+      .ilike('receiver_name', `%${search}%`)
+      .eq('is_active', true)
+      .limit(10);
+    
+    if (error) {
+      console.error('Error fetching receivers:', error);
+      return [];
+    }
+    
+    return (data || []).map((item: any) => ({
+      id: item.id,
+      receiver_name: item.receiver_name,
+      receiver_mailing_address: item.receiver_mailing_address,
+      receiver_city: item.receiver_city,
+      receiver_state: item.receiver_state,
+      receiver_zip: item.receiver_zip
+    }));
   };
 
   const form = useForm<CompletePickupFormData>({
