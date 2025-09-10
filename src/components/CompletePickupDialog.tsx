@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { SearchableDropdown } from "./SearchableDropdown";
 import { useToast } from "@/hooks/use-toast";
+import { useSendManifestEmail } from "@/hooks/useSendManifestEmail";
 import {
   Dialog,
   DialogContent,
@@ -112,8 +113,16 @@ type CompletePickupFormData = z.infer<typeof completePickupSchema>;
 interface CompletePickupDialogProps {
   pickup: {
     id: string;
-    client?: { company_name: string };
-    location?: { name?: string; address: string };
+    client?: { 
+      company_name: string;
+      contact_name?: string;
+      email?: string;
+      phone?: string;
+    };
+    location?: { 
+      name?: string; 
+      address: string; 
+    };
     pickup_date: string;
     pte_count: number;
     otr_count: number;
@@ -130,6 +139,7 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
   const [selectedGenerator, setSelectedGenerator] = useState<Generator | null>(null);
   const [selectedHauler, setSelectedHauler] = useState<Hauler | null>(null);
   const [selectedReceiver, setSelectedReceiver] = useState<Receiver | null>(null);
+  const [generatedPdf, setGeneratedPdf] = useState<{ pdfUrl: string; pdfPath: string } | null>(null);
   
   const generatorSigRef = useRef<SignaturePad>(null);
   const haulerSigRef = useRef<SignaturePad>(null);
@@ -137,6 +147,21 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
   
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const sendManifestEmail = useSendManifestEmail();
+
+  // Auto-populate generator with client data when dialog opens
+  useEffect(() => {
+    if (open && pickup.client) {
+      setSelectedGenerator({
+        id: 'client-' + pickup.id,
+        generator_name: pickup.client.company_name,
+        generator_mailing_address: pickup.location?.address,
+        generator_city: '', // These would need to be parsed from address or fetched from client data
+        generator_state: '',
+        generator_zip: ''
+      });
+    }
+  }, [open, pickup]);
 
   // Mock fetch functions - replace with actual database calls
   const fetchGenerators = async (search: string): Promise<Generator[]> => {
@@ -278,9 +303,15 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
 
       if (pdfError) throw pdfError;
 
+      // Store the PDF result for download/email options
+      setGeneratedPdf({
+        pdfUrl: pdfResult.pdfUrl,
+        pdfPath: pdfResult.pdfPath
+      });
+
       toast({
         title: "Success!",
-        description: "Manifest PDF generated successfully.",
+        description: "Manifest PDF generated successfully. You can now download or email it.",
       });
 
       return pdfResult;
@@ -328,12 +359,12 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
       // Generate manifest PDF
       await generatePDF(data);
 
-      setOpen(false);
+      // Don't close dialog immediately - let user download/email first
       queryClient.invalidateQueries({ queryKey: ['pickups'] });
       
       toast({
         title: "Pickup Completed",
-        description: "Pickup completed and manifest generated successfully!",
+        description: "Pickup completed and manifest generated successfully! Use the buttons below to download or email.",
       });
     } catch (error) {
       console.error('Failed to save pickup data:', error);
@@ -1047,12 +1078,68 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
               />
             </div>
 
+            {/* PDF Actions - Show after successful generation */}
+            {generatedPdf && (
+              <div className="bg-brand-success/10 border border-brand-success/20 rounded-lg p-4 space-y-4">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-brand-success" />
+                  <h3 className="font-semibold text-brand-success">Manifest Generated Successfully!</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Your manifest has been generated. You can now download it or email it to the client.
+                </p>
+                <div className="flex gap-2 flex-wrap">
+                  <Button
+                    type="button"
+                    onClick={() => window.open(generatedPdf.pdfUrl, '_blank')}
+                    className="bg-primary hover:bg-primary/90"
+                  >
+                    Download PDF
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      if (pickup.client?.email) {
+                        sendManifestEmail.mutate({
+                          to: pickup.client.email,
+                          pdfPath: generatedPdf.pdfPath,
+                          subject: `Tire Pickup Manifest - ${pickup.client.company_name}`,
+                          messageHtml: `<p>Dear ${pickup.client.company_name},</p><p>Please find attached your tire pickup manifest for the service completed on ${new Date(pickup.pickup_date).toLocaleDateString()}.</p><p>Thank you for your business!</p>`
+                        });
+                      } else {
+                        toast({
+                          title: "No Email Available",
+                          description: "Client email not found. Please download and send manually.",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                    disabled={sendManifestEmail.isPending}
+                  >
+                    {sendManifestEmail.isPending ? "Sending..." : "Email to Client"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setOpen(false)}
+                  >
+                    Close
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting} className="bg-brand-success hover:bg-brand-success/90">
-                {isSubmitting ? "Saving..." : "Continue to Manifest"}
+              <Button 
+                type="submit" 
+                disabled={isSubmitting || generatedPdf !== null} 
+                className="bg-brand-success hover:bg-brand-success/90"
+              >
+                {isSubmitting ? "Saving..." : generatedPdf ? "Manifest Generated" : "Complete Pickup & Generate Manifest"}
               </Button>
             </div>
           </form>
