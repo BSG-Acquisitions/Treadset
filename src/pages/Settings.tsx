@@ -13,6 +13,7 @@ import { FadeIn } from "@/components/motion/FadeIn";
 import { SlideUp } from "@/components/motion/SlideUp";
 import { useUserPreferences, useUpdateUserPreferences, useUpdateUserProfile } from "@/hooks/useUserPreferences";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Settings() {
   const { user } = useAuth();
@@ -29,11 +30,13 @@ export default function Settings() {
     phone: user?.phone || "",
   });
 
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+const [uploadingTemplate, setUploadingTemplate] = useState(false);
+const [templatePath, setTemplatePath] = useState<string | null>(null);
 
-  useEffect(() => {
-    document.title = "Settings – BSG Tire Recycling";
-  }, []);
+useEffect(() => {
+  document.title = "Settings – BSG Tire Recycling";
+}, []);
 
   useEffect(() => {
     // Update local state when user data changes
@@ -67,7 +70,35 @@ export default function Settings() {
     setHasUnsavedChanges(true);
   };
 
-  if (preferencesLoading) {
+const handleTemplateUpload = async (e: any) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  try {
+    setUploadingTemplate(true);
+    const path = 'templates/STATE_Manifest_v1.pdf';
+    const { error } = await supabase.storage
+      .from('manifests')
+      .upload(path, file, { upsert: true, contentType: 'application/pdf' });
+    if (error) throw error;
+    setTemplatePath(`manifests/${path}`);
+    toast({
+      title: 'Template updated',
+      description: 'Uploaded to manifests/templates/STATE_Manifest_v1.pdf. Overlay will use it automatically.',
+    });
+  } catch (err: any) {
+    console.error('Template upload failed:', err);
+    toast({
+      title: 'Upload failed',
+      description: err?.message || 'Could not upload template. Please try again.',
+      variant: 'destructive',
+    });
+  } finally {
+    setUploadingTemplate(false);
+    e.target.value = '';
+  }
+};
+
+if (preferencesLoading) {
     return (
       <div className="min-h-screen bg-background">
         <TopNav />
