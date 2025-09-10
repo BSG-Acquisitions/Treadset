@@ -438,6 +438,96 @@ export type Database = {
           },
         ]
       }
+      generators: {
+        Row: {
+          created_at: string | null
+          generator_city: string | null
+          generator_city_2: string | null
+          generator_county: string | null
+          generator_mailing_address: string | null
+          generator_name: string
+          generator_phone: string | null
+          generator_physical_address: string | null
+          generator_state: string | null
+          generator_state_2: string | null
+          generator_zip: string | null
+          generator_zip_2: string | null
+          id: string
+          is_active: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          generator_city?: string | null
+          generator_city_2?: string | null
+          generator_county?: string | null
+          generator_mailing_address?: string | null
+          generator_name: string
+          generator_phone?: string | null
+          generator_physical_address?: string | null
+          generator_state?: string | null
+          generator_state_2?: string | null
+          generator_zip?: string | null
+          generator_zip_2?: string | null
+          id?: string
+          is_active?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          generator_city?: string | null
+          generator_city_2?: string | null
+          generator_county?: string | null
+          generator_mailing_address?: string | null
+          generator_name?: string
+          generator_phone?: string | null
+          generator_physical_address?: string | null
+          generator_state?: string | null
+          generator_state_2?: string | null
+          generator_zip?: string | null
+          generator_zip_2?: string | null
+          id?: string
+          is_active?: boolean | null
+        }
+        Relationships: []
+      }
+      haulers: {
+        Row: {
+          created_at: string | null
+          hauler_city: string | null
+          hauler_mailing_address: string | null
+          hauler_mi_reg: string | null
+          hauler_name: string
+          hauler_phone: string | null
+          hauler_state: string | null
+          hauler_zip: string | null
+          id: string
+          is_active: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          hauler_city?: string | null
+          hauler_mailing_address?: string | null
+          hauler_mi_reg?: string | null
+          hauler_name: string
+          hauler_phone?: string | null
+          hauler_state?: string | null
+          hauler_zip?: string | null
+          id?: string
+          is_active?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          hauler_city?: string | null
+          hauler_mailing_address?: string | null
+          hauler_mi_reg?: string | null
+          hauler_name?: string
+          hauler_phone?: string | null
+          hauler_state?: string | null
+          hauler_zip?: string | null
+          id?: string
+          is_active?: boolean | null
+        }
+        Relationships: []
+      }
       invoice_items: {
         Row: {
           created_at: string
@@ -994,6 +1084,71 @@ export type Database = {
           },
         ]
       }
+      pdf_calibrations: {
+        Row: {
+          created_at: string | null
+          field_name: string
+          font_size: number | null
+          id: string
+          page: number
+          template_name: string
+          version: string
+          x: number
+          y: number
+        }
+        Insert: {
+          created_at?: string | null
+          field_name: string
+          font_size?: number | null
+          id?: string
+          page?: number
+          template_name: string
+          version?: string
+          x: number
+          y: number
+        }
+        Update: {
+          created_at?: string | null
+          field_name?: string
+          font_size?: number | null
+          id?: string
+          page?: number
+          template_name?: string
+          version?: string
+          x?: number
+          y?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdf_calibrations_template_name_fkey"
+            columns: ["template_name"]
+            isOneToOne: false
+            referencedRelation: "pdf_templates"
+            referencedColumns: ["template_name"]
+          },
+        ]
+      }
+      pdf_templates: {
+        Row: {
+          created_at: string | null
+          storage_bucket: string
+          storage_path: string
+          template_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          storage_bucket: string
+          storage_path: string
+          template_name: string
+        }
+        Update: {
+          created_at?: string | null
+          storage_bucket?: string
+          storage_path?: string
+          template_name?: string
+        }
+        Relationships: []
+      }
       pickups: {
         Row: {
           client_id: string
@@ -1267,6 +1422,151 @@ export type Database = {
           },
         ]
       }
+      receivers: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          receiver_city: string | null
+          receiver_mailing_address: string | null
+          receiver_name: string
+          receiver_phone: string | null
+          receiver_state: string | null
+          receiver_zip: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          receiver_city?: string | null
+          receiver_mailing_address?: string | null
+          receiver_name: string
+          receiver_phone?: string | null
+          receiver_state?: string | null
+          receiver_zip?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          receiver_city?: string | null
+          receiver_mailing_address?: string | null
+          receiver_name?: string
+          receiver_phone?: string | null
+          receiver_state?: string | null
+          receiver_zip?: string | null
+        }
+        Relationships: []
+      }
+      stops: {
+        Row: {
+          created_at: string | null
+          generator_date: string | null
+          generator_id: string | null
+          generator_print_name: string | null
+          generator_signature: string | null
+          gross_weight: number | null
+          hauler_id: string | null
+          hauler_print_name: string | null
+          hauler_signature: string | null
+          id: string
+          manifest_number: string | null
+          net_weight: number | null
+          output_pdf_path: string | null
+          receiver_date: string | null
+          receiver_id: string | null
+          receiver_print_name: string | null
+          receiver_signature: string | null
+          tare_weight: number | null
+          tire_counts: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          generator_date?: string | null
+          generator_id?: string | null
+          generator_print_name?: string | null
+          generator_signature?: string | null
+          gross_weight?: number | null
+          hauler_id?: string | null
+          hauler_print_name?: string | null
+          hauler_signature?: string | null
+          id?: string
+          manifest_number?: string | null
+          net_weight?: number | null
+          output_pdf_path?: string | null
+          receiver_date?: string | null
+          receiver_id?: string | null
+          receiver_print_name?: string | null
+          receiver_signature?: string | null
+          tare_weight?: number | null
+          tire_counts?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          generator_date?: string | null
+          generator_id?: string | null
+          generator_print_name?: string | null
+          generator_signature?: string | null
+          gross_weight?: number | null
+          hauler_id?: string | null
+          hauler_print_name?: string | null
+          hauler_signature?: string | null
+          id?: string
+          manifest_number?: string | null
+          net_weight?: number | null
+          output_pdf_path?: string | null
+          receiver_date?: string | null
+          receiver_id?: string | null
+          receiver_print_name?: string | null
+          receiver_signature?: string | null
+          tare_weight?: number | null
+          tire_counts?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stops_generator_id_fkey"
+            columns: ["generator_id"]
+            isOneToOne: false
+            referencedRelation: "generator_overlay_view"
+            referencedColumns: ["generator_id"]
+          },
+          {
+            foreignKeyName: "stops_generator_id_fkey"
+            columns: ["generator_id"]
+            isOneToOne: false
+            referencedRelation: "generators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stops_hauler_id_fkey"
+            columns: ["hauler_id"]
+            isOneToOne: false
+            referencedRelation: "hauler_overlay_view"
+            referencedColumns: ["hauler_id"]
+          },
+          {
+            foreignKeyName: "stops_hauler_id_fkey"
+            columns: ["hauler_id"]
+            isOneToOne: false
+            referencedRelation: "haulers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stops_receiver_id_fkey"
+            columns: ["receiver_id"]
+            isOneToOne: false
+            referencedRelation: "receiver_overlay_view"
+            referencedColumns: ["receiver_id"]
+          },
+          {
+            foreignKeyName: "stops_receiver_id_fkey"
+            columns: ["receiver_id"]
+            isOneToOne: false
+            referencedRelation: "receivers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       surcharge_rules: {
         Row: {
           created_at: string
@@ -1487,6 +1787,84 @@ export type Database = {
       }
     }
     Views: {
+      generator_overlay_view: {
+        Row: {
+          generator_city: string | null
+          generator_city_2: string | null
+          generator_county: string | null
+          generator_id: string | null
+          generator_mailing_address: string | null
+          generator_name: string | null
+          generator_phone: string | null
+          generator_physical_address: string | null
+          generator_state: string | null
+          generator_state_2: string | null
+          generator_zip: string | null
+          generator_zip_2: string | null
+        }
+        Insert: {
+          generator_city?: string | null
+          generator_city_2?: string | null
+          generator_county?: string | null
+          generator_id?: string | null
+          generator_mailing_address?: string | null
+          generator_name?: string | null
+          generator_phone?: string | null
+          generator_physical_address?: string | null
+          generator_state?: string | null
+          generator_state_2?: string | null
+          generator_zip?: string | null
+          generator_zip_2?: string | null
+        }
+        Update: {
+          generator_city?: string | null
+          generator_city_2?: string | null
+          generator_county?: string | null
+          generator_id?: string | null
+          generator_mailing_address?: string | null
+          generator_name?: string | null
+          generator_phone?: string | null
+          generator_physical_address?: string | null
+          generator_state?: string | null
+          generator_state_2?: string | null
+          generator_zip?: string | null
+          generator_zip_2?: string | null
+        }
+        Relationships: []
+      }
+      hauler_overlay_view: {
+        Row: {
+          hauler_city: string | null
+          hauler_id: string | null
+          hauler_mailing_address: string | null
+          hauler_mi_reg: string | null
+          hauler_name: string | null
+          hauler_phone: string | null
+          hauler_state: string | null
+          hauler_zip: string | null
+        }
+        Insert: {
+          hauler_city?: string | null
+          hauler_id?: string | null
+          hauler_mailing_address?: string | null
+          hauler_mi_reg?: string | null
+          hauler_name?: string | null
+          hauler_phone?: string | null
+          hauler_state?: string | null
+          hauler_zip?: string | null
+        }
+        Update: {
+          hauler_city?: string | null
+          hauler_id?: string | null
+          hauler_mailing_address?: string | null
+          hauler_mi_reg?: string | null
+          hauler_name?: string | null
+          hauler_phone?: string | null
+          hauler_state?: string | null
+          hauler_zip?: string | null
+        }
+        Relationships: []
+      }
       pickup_analytics: {
         Row: {
           avg_pickup_size: number | null
@@ -1513,6 +1891,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      receiver_overlay_view: {
+        Row: {
+          receiver_city: string | null
+          receiver_id: string | null
+          receiver_mailing_address: string | null
+          receiver_name: string | null
+          receiver_phone: string | null
+          receiver_state: string | null
+          receiver_zip: string | null
+        }
+        Insert: {
+          receiver_city?: string | null
+          receiver_id?: string | null
+          receiver_mailing_address?: string | null
+          receiver_name?: string | null
+          receiver_phone?: string | null
+          receiver_state?: string | null
+          receiver_zip?: string | null
+        }
+        Update: {
+          receiver_city?: string | null
+          receiver_id?: string | null
+          receiver_mailing_address?: string | null
+          receiver_name?: string | null
+          receiver_phone?: string | null
+          receiver_state?: string | null
+          receiver_zip?: string | null
+        }
+        Relationships: []
       }
     }
     Functions: {
