@@ -380,6 +380,17 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
       if (!selectedReceiver) missingFields.push("Receiver");
       
       if (missingFields.length > 0) {
+        alert(`Please select the following before completing pickup: ${missingFields.join(", ")}`);
+        return;
+      }
+
+      // Also check form validation errors
+      const formErrors = form.formState.errors;
+      if (Object.keys(formErrors).length > 0) {
+        const errorMessages = Object.entries(formErrors).map(([field, error]) => 
+          `${field}: ${error.message}`
+        ).join('\n');
+        alert(`Please fix these errors:\n${errorMessages}`);
         return;
       }
 
@@ -407,7 +418,7 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
       queryClient.invalidateQueries({ queryKey: ['pickups'] });
       
     } catch (error) {
-      // Error handling removed since toasts are disabled
+      alert(`Error completing pickup: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
