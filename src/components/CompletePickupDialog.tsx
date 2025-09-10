@@ -1201,7 +1201,7 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                 onClick={(e) => {
                   console.log('Button clicked!', e);
                   console.log('Form valid:', form.formState.isValid);
-                  console.log('Form errors:', form.formState.errors);
+                  console.log('Form errors:', JSON.stringify(form.formState.errors, null, 2));
                 }}
               >
                 {isSubmitting ? "Saving..." : generatedPdf ? "Manifest Generated" : "Complete Pickup & Generate Manifest"}
