@@ -380,11 +380,17 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
     setIsSubmitting(true);
     try {
       // Validate required fields
-      if (!selectedGenerator || !selectedHauler || !selectedReceiver) {
+      const missingFields = [];
+      if (!selectedGenerator) missingFields.push("Generator");
+      if (!selectedHauler) missingFields.push("Hauler");
+      if (!selectedReceiver) missingFields.push("Receiver");
+      
+      if (missingFields.length > 0) {
         console.log('Missing selections:', {selectedGenerator, selectedHauler, selectedReceiver});
+        console.log('Missing fields:', missingFields);
         toast({
           title: "Missing Information", 
-          description: "Please select a generator, hauler, and receiver.",
+          description: `Please select: ${missingFields.join(", ")}`,
           variant: "destructive",
         });
         return;
