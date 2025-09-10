@@ -376,17 +376,21 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
   };
 
   const onSubmit = async (data: CompletePickupFormData) => {
+    console.log('Form submitted with data:', data);
     setIsSubmitting(true);
     try {
       // Validate required fields
       if (!selectedGenerator || !selectedHauler || !selectedReceiver) {
+        console.log('Missing selections:', {selectedGenerator, selectedHauler, selectedReceiver});
         toast({
-          title: "Missing Information",
+          title: "Missing Information", 
           description: "Please select a generator, hauler, and receiver.",
           variant: "destructive",
         });
         return;
       }
+
+      console.log('All validations passed, proceeding with pickup completion...');
 
       // Calculate total PTE count for compatibility
       const totalPte = data.pte_off_rim + data.pte_on_rim;
@@ -456,16 +460,16 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            
-            {/* Manifest Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Manifest Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+            <div className="space-y-6">
+              {/* Manifest Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Manifest Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
@@ -1194,9 +1198,15 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                 type="submit" 
                 disabled={isSubmitting || generatedPdf !== null} 
                 className="bg-brand-success hover:bg-brand-success/90"
+                onClick={(e) => {
+                  console.log('Button clicked!', e);
+                  console.log('Form valid:', form.formState.isValid);
+                  console.log('Form errors:', form.formState.errors);
+                }}
               >
                 {isSubmitting ? "Saving..." : generatedPdf ? "Manifest Generated" : "Complete Pickup & Generate Manifest"}
               </Button>
+            </div>
             </div>
           </form>
         </Form>
