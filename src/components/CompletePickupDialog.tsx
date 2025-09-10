@@ -293,20 +293,10 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
 
   const generatePDF = async (data: CompletePickupFormData) => {
     try {
-      console.log('=== Starting PDF Generation ===');
-      console.log('Form data:', data);
-      console.log('Selected entities:', { selectedGenerator, selectedHauler, selectedReceiver });
-      
       // Get signatures as base64 strings
       const generatorSig = generatorSigRef.current?.toDataURL();
       const haulerSig = haulerSigRef.current?.toDataURL();
       const receiverSig = receiverSigRef.current?.toDataURL();
-
-      console.log('Signatures obtained:', {
-        generator: !!generatorSig,
-        hauler: !!haulerSig, 
-        receiver: !!receiverSig
-      });
 
       // Prepare overlay data in the format expected by the edge function
       const overlayData = {
@@ -351,10 +341,7 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
         manifest_number: data.manifest_number,
       };
 
-      console.log('Overlay data prepared:', overlayData);
-
       // Generate PDF with correct payload structure
-      console.log('Calling generate-manifest-pdf edge function...');
       const { data: pdfResult, error: pdfError } = await supabase.functions.invoke('generate-manifest-pdf', {
         body: {
           template_name: 'STATE_Manifest_v1.pdf',
@@ -363,15 +350,11 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
         }
       });
 
-      console.log('PDF function response:', { data: pdfResult, error: pdfError });
-
       if (pdfError) {
-        console.error('PDF Error details:', pdfError);
         throw pdfError;
       }
 
       if (!pdfResult || !pdfResult.success) {
-        console.error('PDF generation failed:', pdfResult);
         throw new Error(pdfResult?.error || 'Unknown PDF generation error');
       }
 
@@ -381,30 +364,13 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
         pdfPath: pdfResult.file_path
       });
 
-      console.log('PDF generated successfully:', {
-        url: pdfResult.pdf_url,
-        path: pdfResult.file_path
-      });
-
-      toast({
-        title: "Success!",
-        description: "Manifest PDF generated successfully. You can now download or email it.",
-      });
-
       return pdfResult;
     } catch (error) {
-      console.error('PDF generation failed:', error);
-      toast({
-        title: "Error",
-        description: `Failed to generate PDF: ${error.message || 'Unknown error'}`,
-        variant: "destructive",
-      });
       throw error;
     }
   };
 
   const onSubmit = async (data: CompletePickupFormData) => {
-    console.log('Form submitted with data:', data);
     setIsSubmitting(true);
     try {
       // Validate required fields
@@ -414,17 +380,8 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
       if (!selectedReceiver) missingFields.push("Receiver");
       
       if (missingFields.length > 0) {
-        console.log('Missing selections:', {selectedGenerator, selectedHauler, selectedReceiver});
-        console.log('Missing fields:', missingFields);
-        toast({
-          title: "Missing Information", 
-          description: `Please select: ${missingFields.join(", ")}`,
-          variant: "destructive",
-        });
         return;
       }
-
-      console.log('All validations passed, proceeding with pickup completion...');
 
       // Calculate total PTE count for compatibility
       const totalPte = data.pte_off_rim + data.pte_on_rim;
@@ -449,12 +406,8 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
       // Don't close dialog immediately - let user download/email first
       queryClient.invalidateQueries({ queryKey: ['pickups'] });
       
-      toast({
-        title: "Pickup Completed",
-        description: "Pickup completed and manifest generated successfully! Use the buttons below to download or email.",
-      });
     } catch (error) {
-      console.error('Failed to save pickup data:', error);
+      // Error handling removed since toasts are disabled
     } finally {
       setIsSubmitting(false);
     }
@@ -1178,13 +1131,39 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                 <div className="flex gap-2 flex-wrap">
                   <Button
                     type="button"
-                    onClick={() => {
-                      const link = document.createElement('a');
-                      link.href = generatedPdf.pdfUrl;
-                      link.download = `manifest-${pickup.client?.company_name || 'pickup'}-${new Date().toISOString().split('T')[0]}.pdf`;
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
+                    onClick={async () => {
+                      try {
+                        console.log('Downloading PDF from path:', generatedPdf.pdfPath);
+                        
+                        // Use Supabase storage download instead of public URL
+                        const { data, error } = await supabase.storage
+                          .from('manifests')
+                          .download(generatedPdf.pdfPath);
+                        
+                        if (error) {
+                          console.error('Storage download error:', error);
+                          throw error;
+                        }
+                        
+                        console.log('PDF downloaded successfully, creating blob URL');
+                        
+                        // Create blob URL and trigger download
+                        const url = URL.createObjectURL(data);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = `manifest-${pickup.client?.company_name || 'pickup'}-${new Date().toISOString().split('T')[0]}.pdf`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+                        
+                        console.log('PDF download triggered successfully');
+                      } catch (error) {
+                        console.error('PDF download failed:', error);
+                        // Fallback: try opening the public URL
+                        console.log('Falling back to public URL:', generatedPdf.pdfUrl);
+                        window.open(generatedPdf.pdfUrl, '_blank');
+                      }
                     }}
                     className="bg-primary hover:bg-primary/90"
                   >
