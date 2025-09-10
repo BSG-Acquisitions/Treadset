@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAssignments, usePickups } from "@/hooks/usePickups";
 import { useVehicles } from "@/hooks/useVehicles";
 import { supabase } from "@/integrations/supabase/client";
@@ -74,6 +74,7 @@ export default function EnhancedRoutesToday() {
   const [showDriverView, setShowDriverView] = useState(false);
   const [movePickupOpen, setMovePickupOpen] = useState(false);
   const [selectedPickupToMove, setSelectedPickupToMove] = useState<any>(null);
+  const lastOptimizeRef = useRef<number>(0);
 
   // Get 7 days starting from current week
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeek, i));
@@ -96,6 +97,12 @@ export default function EnhancedRoutesToday() {
   };
 
   const optimizeRoutes = useCallback(async () => {
+    const now = Date.now();
+    // Throttle calls to avoid 429s: max once every 12s
+    if (now - lastOptimizeRef.current < 12000 || isOptimizing) {
+      return;
+    }
+    lastOptimizeRef.current = now;
     setIsOptimizing(true);
     try {
       console.log(`Calling enhanced-route-optimizer for date: ${activeDay}`);
