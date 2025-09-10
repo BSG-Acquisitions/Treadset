@@ -1091,7 +1091,14 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                 <div className="flex gap-2 flex-wrap">
                   <Button
                     type="button"
-                    onClick={() => window.open(generatedPdf.pdfUrl, '_blank')}
+                    onClick={() => {
+                      const link = document.createElement('a');
+                      link.href = generatedPdf.pdfUrl;
+                      link.download = `manifest-${pickup.client?.company_name || 'pickup'}-${new Date().toISOString().split('T')[0]}.pdf`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}
                     className="bg-primary hover:bg-primary/90"
                   >
                     Download PDF
