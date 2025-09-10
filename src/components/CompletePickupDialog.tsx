@@ -292,56 +292,80 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
   }, [selectedReceiver, form]);
 
   const generatePDF = async (data: CompletePickupFormData) => {
+    console.log('=== GENERATING PDF ===');
     try {
       // Get signatures as base64 strings
       const generatorSig = generatorSigRef.current?.toDataURL();
       const haulerSig = haulerSigRef.current?.toDataURL();
       const receiverSig = receiverSigRef.current?.toDataURL();
 
+      console.log('Signatures captured:', {
+        generator: generatorSig ? 'present' : 'missing',
+        hauler: haulerSig ? 'present' : 'missing', 
+        receiver: receiverSig ? 'present' : 'missing'
+      });
+
       // Prepare overlay data in the format expected by the edge function
       const overlayData = {
         // Generator data (these field names should match calibration field_name)
-        generator_name: selectedGenerator?.generator_name,
-        generator_mailing_address: selectedGenerator?.generator_mailing_address,
-        generator_city: selectedGenerator?.generator_city,
-        generator_state: selectedGenerator?.generator_state,
-        generator_zip: selectedGenerator?.generator_zip,
-        generator_print_name: data.generator_print_name,
-        generator_date: data.generator_date,
-        generator_signature: generatorSig,
+        generator_name: selectedGenerator?.generator_name || '',
+        generator_mailing_address: selectedGenerator?.generator_mailing_address || '',
+        generator_city: selectedGenerator?.generator_city || '',
+        generator_state: selectedGenerator?.generator_state || '',
+        generator_zip: selectedGenerator?.generator_zip || '',
+        generator_phone: pickup.client?.phone || '',
+        generator_physical_address: selectedGenerator?.generator_mailing_address || '',
+        generator_county: '',
+        generator_city_2: selectedGenerator?.generator_city || '',
+        generator_state_2: selectedGenerator?.generator_state || '',
+        generator_zip_2: selectedGenerator?.generator_zip || '',
+        generator_print_name: data.generator_print_name || '',
+        generator_date: data.generator_date || '',
+        generator_signature: generatorSig || '',
         
         // Hauler data
-        hauler_name: selectedHauler?.hauler_name,
-        hauler_mailing_address: selectedHauler?.hauler_mailing_address,
-        hauler_city: selectedHauler?.hauler_city,
-        hauler_state: selectedHauler?.hauler_state,
-        hauler_zip: selectedHauler?.hauler_zip,
-        hauler_mi_reg: selectedHauler?.hauler_mi_reg,
-        hauler_print_name: data.hauler_print_name,
-        hauler_signature: haulerSig,
+        hauler_name: selectedHauler?.hauler_name || '',
+        hauler_mailing_address: selectedHauler?.hauler_mailing_address || '',
+        hauler_city: selectedHauler?.hauler_city || '',
+        hauler_state: selectedHauler?.hauler_state || '',
+        hauler_zip: selectedHauler?.hauler_zip || '',
+        hauler_phone: pickup.client?.phone || '',
+        hauler_mi_reg: selectedHauler?.hauler_mi_reg || '',
+        hauler_print_name: data.hauler_print_name || '',
+        hauler_signature: haulerSig || '',
         
         // Receiver data
-        receiver_name: selectedReceiver?.receiver_name,
-        receiver_mailing_address: selectedReceiver?.receiver_mailing_address,
-        receiver_city: selectedReceiver?.receiver_city,
-        receiver_state: selectedReceiver?.receiver_state,
-        receiver_zip: selectedReceiver?.receiver_zip,
-        receiver_print_name: data.receiver_print_name,
-        receiver_date: data.receiver_date,
-        receiver_signature: receiverSig,
+        receiver_name: selectedReceiver?.receiver_name || '',
+        receiver_mailing_address: selectedReceiver?.receiver_mailing_address || '',
+        receiver_city: selectedReceiver?.receiver_city || '',
+        receiver_state: selectedReceiver?.receiver_state || '',
+        receiver_zip: selectedReceiver?.receiver_zip || '',
+        receiver_phone: pickup.client?.phone || '',
+        receiver_print_name: data.receiver_print_name || '',
+        receiver_date: data.receiver_date || '',
+        receiver_signature: receiverSig || '',
         
         // Counts and weights
-        count_passenger_car: data.pte_off_rim + data.pte_on_rim,
-        count_truck: data.commercial_17_5_19_5_off + data.commercial_17_5_19_5_on + data.commercial_22_5_off + data.commercial_22_5_on,
-        count_oversized: data.otr_count,
-        count_pte: data.tractor_count,
-        gross_weight: data.gross_weight,
-        tare_weight: data.tare_weight,
-        net_weight: netWeight,
-        manifest_number: data.manifest_number,
+        count_passenger_car: (data.pte_off_rim + data.pte_on_rim) || 0,
+        count_truck: (data.commercial_17_5_19_5_off + data.commercial_17_5_19_5_on + data.commercial_22_5_off + data.commercial_22_5_on) || 0,
+        count_oversized: data.otr_count || 0,
+        count_pte: data.tractor_count || 0,
+        gross_weight: data.gross_weight || 0,
+        tare_weight: data.tare_weight || 0,
+        net_weight: netWeight || 0,
+        manifest_number: data.manifest_number || '',
       };
 
+      console.log('Overlay data prepared:', Object.keys(overlayData));
+      console.log('Sample overlay data:', {
+        generator_name: overlayData.generator_name,
+        hauler_name: overlayData.hauler_name,
+        receiver_name: overlayData.receiver_name,
+        manifest_number: overlayData.manifest_number
+      });
+
       // Generate PDF with correct payload structure
+      console.log('Calling generate-manifest-pdf function...');
       const { data: pdfResult, error: pdfError } = await supabase.functions.invoke('generate-manifest-pdf', {
         body: {
           template_name: 'STATE_Manifest_v1.pdf',
@@ -350,13 +374,19 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
         }
       });
 
+      console.log('PDF function response:', { pdfResult, pdfError });
+
       if (pdfError) {
+        console.error('PDF Error:', pdfError);
         throw pdfError;
       }
 
       if (!pdfResult || !pdfResult.success) {
+        console.error('PDF Generation failed:', pdfResult);
         throw new Error(pdfResult?.error || 'Unknown PDF generation error');
       }
+
+      console.log('PDF Generated successfully:', pdfResult);
 
       // Store the PDF result for download/email options
       setGeneratedPdf({
@@ -364,6 +394,7 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
         pdfPath: pdfResult.file_path
       });
 
+      alert(`PDF Generated Successfully! URL: ${pdfResult.pdf_url}`);
       return pdfResult;
     } catch (error) {
       throw error;
@@ -371,6 +402,12 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
   };
 
   const onSubmit = async (data: CompletePickupFormData) => {
+    console.log('=== SUBMIT STARTED ===');
+    console.log('Form data:', data);
+    console.log('Selected Generator:', selectedGenerator);
+    console.log('Selected Hauler:', selectedHauler);
+    console.log('Selected Receiver:', selectedReceiver);
+    
     setIsSubmitting(true);
     try {
       // Validate required fields
@@ -379,13 +416,25 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
       if (!selectedHauler) missingFields.push("Hauler");
       if (!selectedReceiver) missingFields.push("Receiver");
       
+      // Check for signatures
+      const generatorSig = generatorSigRef.current?.isEmpty();
+      const haulerSig = haulerSigRef.current?.isEmpty();
+      const receiverSig = receiverSigRef.current?.isEmpty();
+      
+      if (generatorSig !== false) missingFields.push("Generator Signature");
+      if (haulerSig !== false) missingFields.push("Hauler Signature"); 
+      if (receiverSig !== false) missingFields.push("Receiver Signature");
+      
+      console.log('Missing fields check:', missingFields);
+      
       if (missingFields.length > 0) {
-        alert(`Please select the following before completing pickup: ${missingFields.join(", ")}`);
+        alert(`Please provide the following before completing pickup: ${missingFields.join(", ")}`);
         return;
       }
 
       // Also check form validation errors
       const formErrors = form.formState.errors;
+      console.log('Form errors:', formErrors);
       if (Object.keys(formErrors).length > 0) {
         const errorMessages = Object.entries(formErrors).map(([field, error]) => 
           `${field}: ${error.message}`
