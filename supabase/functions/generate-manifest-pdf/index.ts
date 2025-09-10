@@ -12,6 +12,10 @@ interface OverlayRequest {
   version: string;
   overlay_data: Record<string, any>;
   stop_id?: string;
+  coordinate_mode?: 'top-left' | 'bottom-left';
+  source_width?: number;
+  source_height?: number;
+  draw_guides?: boolean;
 }
 
 interface Calibration {
@@ -32,7 +36,8 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
-    const { template_name, version, overlay_data, stop_id }: OverlayRequest = await req.json();
+    const reqJson = await req.json() as any;
+    const { template_name, version, overlay_data, stop_id, coordinate_mode, source_width, source_height, draw_guides }: OverlayRequest = reqJson;
     
     console.log('Processing PDF overlay for template:', template_name, 'version:', version);
     console.log('Overlay data keys:', Object.keys(overlay_data));
@@ -90,6 +95,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Found ${calibrations.length} calibrations`);
 
+    // Infer source coordinate space from calibrations (max x/y) if not provided
+    const globalMaxX = Math.max(...calibrations.map(c => Number(c.x)));
+    const globalMaxY = Math.max(...calibrations.map(c => Number(c.y)));
+    console.log('Calibration bounds', { globalMaxX, globalMaxY });
+
     // 3) Validation - check for missing fields
     const calKeys = new Set(calibrations.map(c => c.field_name));
     const dataKeys = new Set(Object.keys(overlay_data));
@@ -143,6 +153,18 @@ const handler = async (req: Request): Promise<Response> => {
       const page = pages[pageIndex];
       const fontSize = cal.font_size || 10;
 
+      // Page dimensions and coordinate transformation
+      const pageWidth = page.getWidth();
+      const pageHeight = page.getHeight();
+      const srcW = (typeof source_width === 'number' && source_width > 0) ? source_width : globalMaxX;
+      const srcH = (typeof source_height === 'number' && source_height > 0) ? source_height : globalMaxY;
+      const mode = coordinate_mode || ((globalMaxX > pageWidth * 1.2 || globalMaxY > pageHeight * 1.2) ? 'top-left' : 'bottom-left');
+      const scaleX = srcW ? pageWidth / srcW : 1;
+      const scaleY = srcH ? pageHeight / srcH : 1;
+      const drawX = Number(cal.x) * scaleX;
+      const yRaw = Number(cal.y) * scaleY;
+      const drawY = mode === 'top-left' ? (pageHeight - yRaw) : yRaw;
+
       // Check if value is an image path or data URL
       if (typeof value === 'string' && (value.startsWith('signatures/') || value.startsWith('data:image/'))) {
         try {
@@ -175,8 +197,8 @@ const handler = async (req: Request): Promise<Response> => {
           const imageDims = image.scale(imageScale);
           
           page.drawImage(image, {
-            x: cal.x,
-            y: cal.y,
+            x: drawX,
+            y: drawY,
             width: Math.min(imageDims.width, 200), // Max width 200pt
             height: Math.min(imageDims.height, 100), // Max height 100pt
           });
@@ -184,8 +206,8 @@ const handler = async (req: Request): Promise<Response> => {
           console.error(`Error embedding image for ${cal.field_name}:`, imageError);
           // Fall back to drawing the text value
           page.drawText(String(value), {
-            x: cal.x,
-            y: cal.y,
+            x: drawX,
+            y: drawY,
             size: fontSize,
             font: font,
             color: rgb(0, 0, 0),
@@ -194,8 +216,8 @@ const handler = async (req: Request): Promise<Response> => {
       } else {
         // Draw text
         page.drawText(String(value), {
-          x: cal.x,
-          y: cal.y,
+          x: drawX,
+          y: drawY,
           size: fontSize,
           font: font,
           color: rgb(0, 0, 0),
