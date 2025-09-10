@@ -308,7 +308,7 @@ export default function StartStop() {
               <CardTitle className="text-lg">Generator</CardTitle>
             </CardHeader>
             <CardContent>
-              <SearchableDropdown<Generator>
+              <SearchableDropdown
                 placeholder="Search generators..."
                 searchFunction={fetchGenerators}
                 onSelect={setSelectedGenerator}
@@ -337,7 +337,7 @@ export default function StartStop() {
               <CardTitle className="text-lg">Hauler</CardTitle>
             </CardHeader>
             <CardContent>
-              <SearchableDropdown<Hauler>
+              <SearchableDropdown
                 placeholder="Search haulers..."
                 searchFunction={fetchHaulers}
                 onSelect={setSelectedHauler}
@@ -366,7 +366,7 @@ export default function StartStop() {
               <CardTitle className="text-lg">Receiver</CardTitle>
             </CardHeader>
             <CardContent>
-              <SearchableDropdown<Receiver>
+              <SearchableDropdown
                 placeholder="Search receivers..."
                 searchFunction={fetchReceivers}
                 onSelect={setSelectedReceiver}

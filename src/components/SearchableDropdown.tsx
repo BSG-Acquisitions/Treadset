@@ -5,25 +5,25 @@ import { Button } from "@/components/ui/button";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface SearchableDropdownProps<T> {
+interface SearchableDropdownProps {
   placeholder: string;
-  searchFunction: (search: string) => Promise<T[]>;
-  onSelect: (item: T | null) => void;
-  displayField: keyof T;
+  searchFunction: (search: string) => Promise<any[]>;
+  onSelect: (item: any | null) => void;
+  displayField: string;
   className?: string;
-  selected?: T | null;
+  selected?: any | null;
 }
 
-export function SearchableDropdown<T extends Record<string, any>>({
+export function SearchableDropdown({
   placeholder,
   searchFunction,
   onSelect,
   displayField,
   className,
   selected
-}: SearchableDropdownProps<T>) {
+}: SearchableDropdownProps) {
   const [open, setOpen] = useState(false);
-  const [items, setItems] = useState<T[]>([]);
+  const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
 
