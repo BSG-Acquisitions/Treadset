@@ -16,6 +16,10 @@ interface OverlayRequest {
   source_width?: number;
   source_height?: number;
   draw_guides?: boolean;
+  offset_x?: number;
+  offset_y?: number;
+  scale_x?: number;
+  scale_y?: number;
 }
 
 interface Calibration {
@@ -37,7 +41,7 @@ const handler = async (req: Request): Promise<Response> => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
     const reqJson = await req.json() as any;
-    const { template_name, version, overlay_data, stop_id, coordinate_mode, source_width, source_height, draw_guides }: OverlayRequest = reqJson;
+    const { template_name, version, overlay_data, stop_id, coordinate_mode, source_width, source_height, draw_guides, offset_x, offset_y, scale_x, scale_y }: OverlayRequest = reqJson;
     
     console.log('Processing PDF overlay for template:', template_name, 'version:', version);
     console.log('Overlay data keys:', Object.keys(overlay_data));
@@ -159,11 +163,35 @@ const handler = async (req: Request): Promise<Response> => {
       const srcW = (typeof source_width === 'number' && source_width > 0) ? source_width : globalMaxX;
       const srcH = (typeof source_height === 'number' && source_height > 0) ? source_height : globalMaxY;
       const mode = coordinate_mode || ((globalMaxX > pageWidth * 1.2 || globalMaxY > pageHeight * 1.2) ? 'top-left' : 'bottom-left');
-      const scaleX = srcW ? pageWidth / srcW : 1;
-      const scaleY = srcH ? pageHeight / srcH : 1;
-      const drawX = Number(cal.x) * scaleX;
+      let scaleX = srcW ? pageWidth / srcW : 1;
+      let scaleY = srcH ? pageHeight / srcH : 1;
+      if (typeof scale_x === 'number' && scale_x > 0) scaleX *= scale_x;
+      if (typeof scale_y === 'number' && scale_y > 0) scaleY *= scale_y;
+      const drawXBase = Number(cal.x) * scaleX;
       const yRaw = Number(cal.y) * scaleY;
-      const drawY = mode === 'top-left' ? (pageHeight - yRaw) : yRaw;
+      const drawYBase = mode === 'top-left' ? (pageHeight - yRaw) : yRaw;
+      const finalX = drawXBase + (offset_x || 0);
+      const finalY = drawYBase + (offset_y || 0);
+
+      // Optional visual guides for calibration
+      if (draw_guides) {
+        page.drawRectangle({
+          x: finalX - 1,
+          y: finalY - 1,
+          width: 2,
+          height: 2,
+          color: rgb(1, 0, 0),
+          borderColor: rgb(1, 0, 0),
+          borderWidth: 0,
+        });
+        page.drawText(cal.field_name, {
+          x: finalX + 3,
+          y: finalY + 3,
+          size: 6,
+          font: font,
+          color: rgb(1, 0, 0),
+        });
+      }
 
       // Check if value is an image path or data URL
       if (typeof value === 'string' && (value.startsWith('signatures/') || value.startsWith('data:image/'))) {
@@ -197,8 +225,8 @@ const handler = async (req: Request): Promise<Response> => {
           const imageDims = image.scale(imageScale);
           
           page.drawImage(image, {
-            x: drawX,
-            y: drawY,
+            x: finalX,
+            y: finalY,
             width: Math.min(imageDims.width, 200), // Max width 200pt
             height: Math.min(imageDims.height, 100), // Max height 100pt
           });
@@ -206,8 +234,8 @@ const handler = async (req: Request): Promise<Response> => {
           console.error(`Error embedding image for ${cal.field_name}:`, imageError);
           // Fall back to drawing the text value
           page.drawText(String(value), {
-            x: drawX,
-            y: drawY,
+            x: finalX,
+            y: finalY,
             size: fontSize,
             font: font,
             color: rgb(0, 0, 0),
