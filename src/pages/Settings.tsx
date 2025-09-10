@@ -467,7 +467,33 @@ if (preferencesLoading) {
               </CardContent>
             </Card>
 
+            {/* State Manifest Template */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Database className="h-5 w-5" />
+                  State Manifest Template
+                </CardTitle>
+                <CardDescription>
+                  Upload the official state PDF template used for overlay.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="manifestTemplate">Upload PDF Template</Label>
+                  <Input id="manifestTemplate" type="file" accept="application/pdf" onChange={handleTemplateUpload} disabled={uploadingTemplate} />
+                  <p className="text-xs text-muted-foreground">
+                    Expected path: manifests/templates/STATE_Manifest_v1.pdf
+                  </p>
+                  {templatePath && (
+                    <p className="text-xs text-brand-primary">Uploaded: {templatePath}</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Action Buttons - Only show if there are unsaved changes */}
+
             {hasUnsavedChanges && (
               <div className="flex gap-4 pt-4 border-t">
                 <Button onClick={handleProfileSave} disabled={updateProfile.isPending}>
