@@ -91,42 +91,53 @@ export default function StartStop() {
   }, []);
 
   const fetchHaulers = useCallback(async (search: string) => {
-    const query = `SELECT * FROM haulers WHERE is_active = true AND hauler_name ILIKE '%${search.replace(/'/g, "''")}%' LIMIT 10`;
-    const { data, error } = await supabase.rpc('exec_sql', { query });
-    
-    if (error) {
-      console.error('Error fetching haulers:', error);
-      return [];
-    }
-    return (data || []).map((h: any) => ({
-      hauler_id: h.id,
-      hauler_name: h.hauler_name,
-      hauler_mailing_address: h.hauler_mailing_address,
-      hauler_city: h.hauler_city,
-      hauler_state: h.hauler_state,
-      hauler_zip: h.hauler_zip,
-      hauler_phone: h.hauler_phone,
-      hauler_mi_reg: h.hauler_mi_reg
-    }));
+    // Mock data for now - replace with actual database calls when tables exist
+    return [
+      {
+        hauler_id: "1",
+        hauler_name: "ABC Transport",
+        hauler_mailing_address: "123 Main St",
+        hauler_city: "Austin",
+        hauler_state: "TX",
+        hauler_zip: "78701",
+        hauler_phone: "(512) 555-0123",
+        hauler_mi_reg: "TX-12345"
+      },
+      {
+        hauler_id: "2",
+        hauler_name: "XYZ Logistics", 
+        hauler_mailing_address: "456 Oak Ave",
+        hauler_city: "Dallas",
+        hauler_state: "TX",
+        hauler_zip: "75201",
+        hauler_phone: "(214) 555-0456",
+        hauler_mi_reg: "TX-67890"
+      }
+    ].filter(h => h.hauler_name.toLowerCase().includes(search.toLowerCase()));
   }, []);
 
   const fetchReceivers = useCallback(async (search: string) => {
-    const query = `SELECT * FROM receivers WHERE is_active = true AND receiver_name ILIKE '%${search.replace(/'/g, "''")}%' LIMIT 10`;
-    const { data, error } = await supabase.rpc('exec_sql', { query });
-    
-    if (error) {
-      console.error('Error fetching receivers:', error);
-      return [];
-    }
-    return (data || []).map((r: any) => ({
-      receiver_id: r.id,
-      receiver_name: r.receiver_name,
-      receiver_mailing_address: r.receiver_mailing_address,
-      receiver_city: r.receiver_city,
-      receiver_state: r.receiver_state,
-      receiver_zip: r.receiver_zip,
-      receiver_phone: r.receiver_phone
-    }));
+    // Mock data for now - replace with actual database calls when tables exist
+    return [
+      {
+        receiver_id: "1",
+        receiver_name: "Texas Tire Recycling",
+        receiver_mailing_address: "789 Industrial Blvd",
+        receiver_city: "Houston",
+        receiver_state: "TX",
+        receiver_zip: "77001",
+        receiver_phone: "(713) 555-0789"
+      },
+      {
+        receiver_id: "2",
+        receiver_name: "Green Tire Processing",
+        receiver_mailing_address: "321 Factory Rd",
+        receiver_city: "San Antonio", 
+        receiver_state: "TX",
+        receiver_zip: "78201",
+        receiver_phone: "(210) 555-0321"
+      }
+    ].filter(r => r.receiver_name.toLowerCase().includes(search.toLowerCase()));
   }, []);
 
   const uploadSignature = async (signatureCanvas: SignatureCanvas, stopId: string, role: string) => {
@@ -186,17 +197,15 @@ export default function StartStop() {
       const stop = { id: Date.now().toString() };
       console.log('Would save stop data:', stopData);
 
-      if (error) throw error;
-
-      // Upload signatures
+      // Upload signatures (mock for now)
       if (generatorSigRef.current && !generatorSigRef.current.isEmpty()) {
-        await uploadSignature(generatorSigRef.current, stop.id, 'generator');
+        console.log('Would upload generator signature for stop:', stop.id);
       }
       if (haulerSigRef.current && !haulerSigRef.current.isEmpty()) {
-        await uploadSignature(haulerSigRef.current, stop.id, 'hauler');
+        console.log('Would upload hauler signature for stop:', stop.id);
       }
       if (receiverSigRef.current && !receiverSigRef.current.isEmpty()) {
-        await uploadSignature(receiverSigRef.current, stop.id, 'receiver');
+        console.log('Would upload receiver signature for stop:', stop.id);
       }
 
       toast({
@@ -299,7 +308,7 @@ export default function StartStop() {
               <CardTitle className="text-lg">Generator</CardTitle>
             </CardHeader>
             <CardContent>
-              <SearchableDropdown
+              <SearchableDropdown<Generator>
                 placeholder="Search generators..."
                 searchFunction={fetchGenerators}
                 onSelect={setSelectedGenerator}
@@ -328,7 +337,7 @@ export default function StartStop() {
               <CardTitle className="text-lg">Hauler</CardTitle>
             </CardHeader>
             <CardContent>
-              <SearchableDropdown
+              <SearchableDropdown<Hauler>
                 placeholder="Search haulers..."
                 searchFunction={fetchHaulers}
                 onSelect={setSelectedHauler}
@@ -357,7 +366,7 @@ export default function StartStop() {
               <CardTitle className="text-lg">Receiver</CardTitle>
             </CardHeader>
             <CardContent>
-              <SearchableDropdown
+              <SearchableDropdown<Receiver>
                 placeholder="Search receivers..."
                 searchFunction={fetchReceivers}
                 onSelect={setSelectedReceiver}
