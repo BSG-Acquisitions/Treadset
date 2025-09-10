@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { User, Bell, Shield, Palette, Database, Key, Loader2, Save, X } from "lucide-react";
+import { User, Bell, Shield, Palette, Database, Key, Loader2, Save, X, FileText } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { SlideUp } from "@/components/motion/SlideUp";
@@ -33,6 +33,7 @@ export default function Settings() {
 const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 const [uploadingTemplate, setUploadingTemplate] = useState(false);
 const [templatePath, setTemplatePath] = useState<string | null>(null);
+const [generatingCalibration, setGeneratingCalibration] = useState(false);
 
 useEffect(() => {
   document.title = "Settings – BSG Tire Recycling";
@@ -95,6 +96,39 @@ const handleTemplateUpload = async (e: any) => {
   } finally {
     setUploadingTemplate(false);
     e.target.value = '';
+  }
+};
+
+const handleGenerateCalibration = async () => {
+  try {
+    setGeneratingCalibration(true);
+    const { data, error } = await supabase.functions.invoke('manifest-finalize', {
+      body: {
+        pickup_id: 'calibration',
+        calibrate: true,
+        manifest_data: {}
+      }
+    });
+    
+    if (error) throw error;
+    
+    if (data?.pdfUrl) {
+      // Open the calibration PDF in a new tab
+      window.open(data.pdfUrl, '_blank');
+      toast({
+        title: 'Calibration PDF generated',
+        description: 'Print at 100% scale (no "Fit to page") and measure coordinates.',
+      });
+    }
+  } catch (err: any) {
+    console.error('Calibration generation failed:', err);
+    toast({
+      title: 'Calibration failed',
+      description: err?.message || 'Could not generate calibration PDF.',
+      variant: 'destructive',
+    });
+  } finally {
+    setGeneratingCalibration(false);
   }
 };
 
@@ -488,6 +522,29 @@ if (preferencesLoading) {
                   {templatePath && (
                     <p className="text-xs text-brand-primary">Uploaded: {templatePath}</p>
                   )}
+                </div>
+                
+                <div className="pt-4 border-t">
+                  <Button
+                    onClick={handleGenerateCalibration}
+                    disabled={generatingCalibration}
+                    className="w-full"
+                  >
+                    {generatingCalibration ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Generating Calibration PDF...
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="mr-2 h-4 w-4" />
+                        Generate Calibration PDF
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Creates a PDF with grid lines to help you measure coordinates for text and signature placement.
+                  </p>
                 </div>
               </CardContent>
             </Card>
