@@ -621,6 +621,7 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                     searchFunction={fetchGenerators}
                     onSelect={setSelectedGenerator}
                     displayField="generator_name"
+                    selected={selectedGenerator}
                     className="w-full"
                   />
                   {selectedGenerator && (
@@ -661,6 +662,7 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                     searchFunction={fetchHaulers}
                     onSelect={setSelectedHauler}
                     displayField="hauler_name"
+                    selected={selectedHauler}
                     className="w-full"
                   />
                   {selectedHauler && (
@@ -704,6 +706,7 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                     searchFunction={fetchReceivers}
                     onSelect={setSelectedReceiver}
                     displayField="receiver_name"
+                    selected={selectedReceiver}
                     className="w-full"
                   />
                   {selectedReceiver && (
