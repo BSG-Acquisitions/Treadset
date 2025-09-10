@@ -224,30 +224,55 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
       const haulerSig = haulerSigRef.current?.toDataURL();
       const receiverSig = receiverSigRef.current?.toDataURL();
 
-      // Generate PDF directly via edge function
+      // Prepare overlay data in the format expected by the edge function
+      const overlayData = {
+        // Generator data (these field names should match calibration field_name)
+        generator_name: selectedGenerator?.generator_name,
+        generator_mailing_address: selectedGenerator?.generator_mailing_address,
+        generator_city: selectedGenerator?.generator_city,
+        generator_state: selectedGenerator?.generator_state,
+        generator_zip: selectedGenerator?.generator_zip,
+        generator_print_name: data.generator_print_name,
+        generator_date: data.generator_date,
+        generator_signature: generatorSig,
+        
+        // Hauler data
+        hauler_name: selectedHauler?.hauler_name,
+        hauler_mailing_address: selectedHauler?.hauler_mailing_address,
+        hauler_city: selectedHauler?.hauler_city,
+        hauler_state: selectedHauler?.hauler_state,
+        hauler_zip: selectedHauler?.hauler_zip,
+        hauler_mi_reg: selectedHauler?.hauler_mi_reg,
+        hauler_print_name: data.hauler_print_name,
+        hauler_signature: haulerSig,
+        
+        // Receiver data
+        receiver_name: selectedReceiver?.receiver_name,
+        receiver_mailing_address: selectedReceiver?.receiver_mailing_address,
+        receiver_city: selectedReceiver?.receiver_city,
+        receiver_state: selectedReceiver?.receiver_state,
+        receiver_zip: selectedReceiver?.receiver_zip,
+        receiver_print_name: data.receiver_print_name,
+        receiver_date: data.receiver_date,
+        receiver_signature: receiverSig,
+        
+        // Counts and weights
+        count_passenger_car: data.pte_off_rim + data.pte_on_rim,
+        count_truck: data.commercial_17_5_19_5_off + data.commercial_17_5_19_5_on + data.commercial_22_5_off + data.commercial_22_5_on,
+        count_oversized: data.otr_count,
+        count_pte: data.tractor_count,
+        gross_weight: data.gross_weight,
+        tare_weight: data.tare_weight,
+        net_weight: netWeight,
+        manifest_number: data.manifest_number,
+      };
+
+      // Generate PDF with correct payload structure
       const { data: pdfResult, error: pdfError } = await supabase.functions.invoke('generate-manifest-pdf', {
-        body: { 
-          generator_id: data.generator_id,
-          hauler_id: data.hauler_id,
-          receiver_id: data.receiver_id,
-          tire_counts: {
-            count_passenger_car: data.pte_off_rim + data.pte_on_rim,
-            count_truck: data.commercial_17_5_19_5_off + data.commercial_17_5_19_5_on + data.commercial_22_5_off + data.commercial_22_5_on,
-            count_oversized: data.otr_count,
-            count_pte: data.tractor_count,
-          },
-          gross_weight: data.gross_weight,
-          tare_weight: data.tare_weight,
-          net_weight: netWeight,
-          generator_date: data.generator_date,
-          receiver_date: data.receiver_date,
-          manifest_number: data.manifest_number,
-          generator_print_name: data.generator_print_name,
-          hauler_print_name: data.hauler_print_name,
-          receiver_print_name: data.receiver_print_name,
-          generator_signature: generatorSig,
-          hauler_signature: haulerSig,
-          receiver_signature: receiverSig,
+        body: {
+          template_name: 'STATE_Manifest_v1.pdf',
+          version: 'v1',
+          overlay_data: overlayData
         }
       });
 
