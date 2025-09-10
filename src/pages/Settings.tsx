@@ -34,6 +34,7 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 const [uploadingTemplate, setUploadingTemplate] = useState(false);
 const [templatePath, setTemplatePath] = useState<string | null>(null);
 const [generatingCalibration, setGeneratingCalibration] = useState(false);
+const [generatingTestOverlay, setGeneratingTestOverlay] = useState(false);
 
 useEffect(() => {
   document.title = "Settings – BSG Tire Recycling";
@@ -112,9 +113,9 @@ const handleGenerateCalibration = async () => {
     
     if (error) throw error;
     
-    if (data?.pdfUrl) {
+    if (data?.pdf_url) {
       // Open the calibration PDF in a new tab
-      window.open(data.pdfUrl, '_blank');
+      window.open(data.pdf_url, '_blank');
       toast({
         title: 'Calibration PDF generated',
         description: 'Print at 100% scale (no "Fit to page") and measure coordinates.',
@@ -129,6 +130,29 @@ const handleGenerateCalibration = async () => {
     });
   } finally {
     setGeneratingCalibration(false);
+  }
+};
+
+const handleGenerateTestOverlay = async () => {
+  try {
+    setGeneratingTestOverlay(true);
+    const { data, error } = await supabase.functions.invoke('manifest-finalize', {
+      body: {
+        pickup_id: `overlay-test-${Date.now()}`,
+        calibrate: false,
+        manifest_data: { generator_name: 'TEST CLIENT' }
+      }
+    });
+    if (error) throw error;
+    if (data?.pdf_url) {
+      window.open(data.pdf_url, '_blank');
+      toast({ title: 'Test PDF generated', description: 'Check generator name placement at x45,y227.' });
+    }
+  } catch (err: any) {
+    console.error('Test overlay failed:', err);
+    toast({ title: 'Test overlay failed', description: err?.message || 'Could not generate test PDF.', variant: 'destructive' });
+  } finally {
+    setGeneratingTestOverlay(false);
   }
 };
 
@@ -544,6 +568,28 @@ if (preferencesLoading) {
                   </Button>
                   <p className="text-xs text-muted-foreground mt-2">
                     Creates a PDF with grid lines to help you measure coordinates for text and signature placement.
+                  </p>
+                </div>
+                <div className="pt-4">
+                  <Button
+                    onClick={handleGenerateTestOverlay}
+                    disabled={generatingTestOverlay}
+                    className="w-full"
+                  >
+                    {generatingTestOverlay ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Generating Test Overlay...
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="mr-2 h-4 w-4" />
+                        Generate Test Overlay (Generator Name)
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Overlays the generator/client name using current coordinates to verify placement.
                   </p>
                 </div>
               </CardContent>

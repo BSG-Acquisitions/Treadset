@@ -79,7 +79,7 @@ const MANIFEST_FIELDS = {
 
 const MANIFEST_LAYOUT = {
   "text": {
-    "gen_name": { "x": 90, "y": 692, "fontSize": 10 },
+    "gen_name": { "x": 45, "y": 227, "fontSize": 10 },
     "gen_mail_addr": { "x": 90, "y": 677, "fontSize": 10 },
     "gen_mail_city": { "x": 90, "y": 662, "fontSize": 10 },
     "gen_mail_state": { "x": 280, "y": 662, "fontSize": 10 },
