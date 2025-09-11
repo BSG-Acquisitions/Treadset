@@ -143,7 +143,37 @@ const handler = async (req: Request): Promise<Response> => {
     const pages = pdfDoc.getPages();
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-    // 6) Apply overlays
+    // Helper function to get field type and apply appropriate nudges
+    const getFieldTypeAndNudge = (fieldName: string) => {
+      if (fieldName.includes('signature')) {
+        return { type: 'signature', nudgeX: 0, nudgeY: 10, align: 'center' };
+      }
+      if (fieldName.includes('date')) {
+        return { type: 'date', nudgeX: 0, nudgeY: 5, align: 'center' };
+      }
+      if (fieldName.includes('count_') || fieldName.includes('_weight')) {
+        return { type: 'number', nudgeX: 0, nudgeY: -6, align: 'left' };
+      }
+      // Generator, hauler, receiver text fields
+      return { type: 'text', nudgeX: 0, nudgeY: 5, align: 'left' };
+    };
+
+    // Helper function to calculate optimal font size
+    const calculateFontSize = (text: string, maxWidth: number, baseFontSize: number = 10) => {
+      if (!text || maxWidth <= 0) return baseFontSize;
+      
+      // Simple approximation - each character is roughly 0.6 * fontSize wide for Helvetica
+      const estimatedWidth = text.length * (baseFontSize * 0.6);
+      
+      if (estimatedWidth > maxWidth) {
+        const newFontSize = Math.max(6, (maxWidth / (text.length * 0.6))); // Minimum 6pt
+        return Math.min(newFontSize, baseFontSize); // Don't exceed base font size
+      }
+      
+      return baseFontSize;
+    };
+
+    // 6) Apply overlays with smart positioning
     for (const cal of calibrations) {
       const value = overlay_data[cal.field_name];
       if (value == null || value === undefined) continue;
@@ -155,7 +185,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       const page = pages[pageIndex];
-      const fontSize = cal.font_size || 10;
+      const fieldConfig = getFieldTypeAndNudge(cal.field_name);
 
       // Page dimensions and coordinate transformation
       const pageWidth = page.getWidth();
@@ -167,33 +197,55 @@ const handler = async (req: Request): Promise<Response> => {
       let scaleY = srcH ? pageHeight / srcH : 1;
       if (typeof scale_x === 'number' && scale_x > 0) scaleX *= scale_x;
       if (typeof scale_y === 'number' && scale_y > 0) scaleY *= scale_y;
+      
+      // Base position from calibration
       const drawXBase = Number(cal.x) * scaleX;
       const yRaw = Number(cal.y) * scaleY;
       const drawYBase = mode === 'top-left' ? (pageHeight - yRaw) : yRaw;
-      const finalX = drawXBase + (offset_x || 0);
-      const finalY = drawYBase + (offset_y || 0);
+      
+      // Apply field-specific nudges and global offsets
+      let finalX = drawXBase + fieldConfig.nudgeX + (offset_x || 0);
+      let finalY = drawYBase + fieldConfig.nudgeY + (offset_y || 0);
+
+      // Calculate optimal font size with auto-shrinking
+      const baseFontSize = cal.font_size || 10;
+      let fontSize = baseFontSize;
+      
+      // Estimate available width based on field type
+      let maxWidth = 0;
+      if (fieldConfig.type === 'text') {
+        maxWidth = 200; // Approximate width for text fields
+      } else if (fieldConfig.type === 'number') {
+        maxWidth = 80; // Smaller width for number fields
+      } else if (fieldConfig.type === 'date') {
+        maxWidth = 100; // Medium width for dates
+      }
+      
+      if (typeof value === 'string' && value.length > 0) {
+        fontSize = calculateFontSize(value, maxWidth, baseFontSize);
+      }
 
       // Optional visual guides for calibration
       if (draw_guides) {
-        page.drawRectangle({
-          x: finalX - 1,
-          y: finalY - 1,
-          width: 2,
-          height: 2,
+        page.drawCircle({
+          x: finalX,
+          y: finalY,
+          size: 3,
           color: rgb(1, 0, 0),
-          borderColor: rgb(1, 0, 0),
-          borderWidth: 0,
+          opacity: 0.7,
         });
-        page.drawText(cal.field_name, {
-          x: finalX + 3,
-          y: finalY + 3,
+        
+        // Draw field type indicator
+        page.drawText(`${fieldConfig.type.substring(0, 1).toUpperCase()}-${cal.field_name}`, {
+          x: finalX + 5,
+          y: finalY + 5,
           size: 6,
           font: font,
-          color: rgb(1, 0, 0),
+          color: rgb(0, 0, 1),
         });
       }
 
-      // Check if value is an image path or data URL
+      // Check if value is an image path or data URL (signatures)
       if (typeof value === 'string' && (value.startsWith('signatures/') || value.startsWith('data:image/'))) {
         try {
           let imageBytes: ArrayBuffer;
@@ -221,20 +273,34 @@ const handler = async (req: Request): Promise<Response> => {
           }
 
           const image = await pdfDoc.embedPng(imageBytes);
-          const imageScale = 0.5; // Adjust as needed
+          const imageScale = 0.3; // Smaller signature images
           const imageDims = image.scale(imageScale);
           
+          // Center signatures horizontally if specified
+          let imageX = finalX;
+          if (fieldConfig.align === 'center') {
+            imageX = finalX - (imageDims.width / 2);
+          }
+          
           page.drawImage(image, {
-            x: finalX,
-            y: finalY,
-            width: Math.min(imageDims.width, 200), // Max width 200pt
-            height: Math.min(imageDims.height, 100), // Max height 100pt
+            x: imageX,
+            y: finalY - imageDims.height,
+            width: imageDims.width,
+            height: imageDims.height,
           });
         } catch (imageError) {
           console.error(`Error embedding image for ${cal.field_name}:`, imageError);
           // Fall back to drawing the text value
-          page.drawText(String(value), {
-            x: finalX,
+          const textValue = String(value);
+          let textX = finalX;
+          
+          if (fieldConfig.align === 'center') {
+            const estimatedTextWidth = textValue.length * (fontSize * 0.6);
+            textX = finalX - (estimatedTextWidth / 2);
+          }
+          
+          page.drawText(textValue, {
+            x: textX,
             y: finalY,
             size: fontSize,
             font: font,
@@ -242,9 +308,18 @@ const handler = async (req: Request): Promise<Response> => {
           });
         }
       } else {
-        // Draw text
-        page.drawText(String(value), {
-          x: finalX,
+        // Draw text with alignment
+        const textValue = String(value);
+        let textX = finalX;
+        
+        if (fieldConfig.align === 'center') {
+          // Calculate text width for centering
+          const estimatedTextWidth = textValue.length * (fontSize * 0.6);
+          textX = finalX - (estimatedTextWidth / 2);
+        }
+        
+        page.drawText(textValue, {
+          x: textX,
           y: finalY,
           size: fontSize,
           font: font,
