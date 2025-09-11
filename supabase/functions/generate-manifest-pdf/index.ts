@@ -244,8 +244,8 @@ const handler = async (req: Request): Promise<Response> => {
       } else {
         // Draw text
         page.drawText(String(value), {
-          x: drawX,
-          y: drawY,
+          x: finalX,
+          y: finalY,
           size: fontSize,
           font: font,
           color: rgb(0, 0, 0),
