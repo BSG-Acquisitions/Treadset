@@ -146,16 +146,16 @@ const handler = async (req: Request): Promise<Response> => {
     // Helper function to get field type and apply appropriate nudges
     const getFieldTypeAndNudge = (fieldName: string) => {
       if (fieldName.includes('signature')) {
-        return { type: 'signature', nudgeX: 0, nudgeY: 10, align: 'center' };
+        return { type: 'signature', align: 'center', width: 150 };
       }
       if (fieldName.includes('date')) {
-        return { type: 'date', nudgeX: 0, nudgeY: 5, align: 'center' };
+        return { type: 'date', align: 'center' };
       }
       if (fieldName.includes('count_') || fieldName.includes('_weight')) {
-        return { type: 'number', nudgeX: 0, nudgeY: -6, align: 'left' };
+        return { type: 'number', align: 'left' };
       }
       // Generator, hauler, receiver text fields
-      return { type: 'text', nudgeX: 0, nudgeY: 5, align: 'left' };
+      return { type: 'text', align: 'left' };
     };
 
     // Helper function to calculate optimal font size
@@ -173,7 +173,7 @@ const handler = async (req: Request): Promise<Response> => {
       return baseFontSize;
     };
 
-    // 6) Apply overlays with smart positioning
+    // 6) Apply overlays with precise positioning
     for (const cal of calibrations) {
       const value = overlay_data[cal.field_name];
       if (value == null || value === undefined) continue;
@@ -187,43 +187,10 @@ const handler = async (req: Request): Promise<Response> => {
       const page = pages[pageIndex];
       const fieldConfig = getFieldTypeAndNudge(cal.field_name);
 
-      // Page dimensions and coordinate transformation
-      const pageWidth = page.getWidth();
-      const pageHeight = page.getHeight();
-      const srcW = (typeof source_width === 'number' && source_width > 0) ? source_width : globalMaxX;
-      const srcH = (typeof source_height === 'number' && source_height > 0) ? source_height : globalMaxY;
-      const mode = coordinate_mode || ((globalMaxX > pageWidth * 1.2 || globalMaxY > pageHeight * 1.2) ? 'top-left' : 'bottom-left');
-      let scaleX = srcW ? pageWidth / srcW : 1;
-      let scaleY = srcH ? pageHeight / srcH : 1;
-      if (typeof scale_x === 'number' && scale_x > 0) scaleX *= scale_x;
-      if (typeof scale_y === 'number' && scale_y > 0) scaleY *= scale_y;
-      
-      // Base position from calibration
-      const drawXBase = Number(cal.x) * scaleX;
-      const yRaw = Number(cal.y) * scaleY;
-      const drawYBase = mode === 'top-left' ? (pageHeight - yRaw) : yRaw;
-      
-      // Apply field-specific nudges and global offsets
-      let finalX = drawXBase + fieldConfig.nudgeX + (offset_x || 0);
-      let finalY = drawYBase + fieldConfig.nudgeY + (offset_y || 0);
-
-      // Calculate optimal font size with auto-shrinking
-      const baseFontSize = cal.font_size || 10;
-      let fontSize = baseFontSize;
-      
-      // Estimate available width based on field type
-      let maxWidth = 0;
-      if (fieldConfig.type === 'text') {
-        maxWidth = 200; // Approximate width for text fields
-      } else if (fieldConfig.type === 'number') {
-        maxWidth = 80; // Smaller width for number fields
-      } else if (fieldConfig.type === 'date') {
-        maxWidth = 100; // Medium width for dates
-      }
-      
-      if (typeof value === 'string' && value.length > 0) {
-        fontSize = calculateFontSize(value, maxWidth, baseFontSize);
-      }
+      // Use exact coordinates from calibration
+      const finalX = Number(cal.x) + (offset_x || 0);
+      const finalY = Number(cal.y) + (offset_y || 0);
+      const fontSize = cal.font_size || 10;
 
       // Optional visual guides for calibration
       if (draw_guides) {
@@ -273,12 +240,12 @@ const handler = async (req: Request): Promise<Response> => {
           }
 
           const image = await pdfDoc.embedPng(imageBytes);
-          const imageScale = 0.3; // Smaller signature images
+          const imageScale = 0.3;
           const imageDims = image.scale(imageScale);
           
-          // Center signatures horizontally if specified
+          // Center signatures at the given coordinates
           let imageX = finalX;
-          if (fieldConfig.align === 'center') {
+          if (fieldConfig.type === 'signature') {
             imageX = finalX - (imageDims.width / 2);
           }
           
