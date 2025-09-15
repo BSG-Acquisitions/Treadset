@@ -28,10 +28,19 @@ export function useDataTable({
   // Initialize state from URL params
   const getInitialState = useCallback((): TableState => {
     const urlState = searchParams.get(urlStateKey);
+    let initialState: TableState = {
+      page: 1,
+      pageSize: defaultPageSize,
+      search: '',
+      sortBy: defaultSortBy,
+      sortOrder: defaultSortOrder,
+      filters: {}
+    };
+
     if (urlState) {
       try {
         const parsed = JSON.parse(decodeURIComponent(urlState));
-        return {
+        initialState = {
           page: parsed.page || 1,
           pageSize: parsed.pageSize || defaultPageSize,
           search: parsed.search || '',
@@ -44,14 +53,13 @@ export function useDataTable({
       }
     }
     
-    return {
-      page: 1,
-      pageSize: defaultPageSize,
-      search: '',
-      sortBy: defaultSortBy,
-      sortOrder: defaultSortOrder,
-      filters: {}
-    };
+    // Also check for simple search parameter
+    const simpleSearch = searchParams.get('search');
+    if (simpleSearch) {
+      initialState.search = simpleSearch;
+    }
+    
+    return initialState;
   }, [searchParams, urlStateKey, defaultPageSize, defaultSortBy, defaultSortOrder]);
 
   const [state, setState] = useState<TableState>(getInitialState);

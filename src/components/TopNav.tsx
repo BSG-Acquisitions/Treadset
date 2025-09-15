@@ -38,16 +38,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
     e.preventDefault();
     if (searchQuery.trim()) {
       // Navigate to clients page with search query
-      const searchParams = new URLSearchParams();
-      searchParams.set('clients', JSON.stringify({
-        page: 1,
-        pageSize: 10,
-        search: searchQuery.trim(),
-        sortBy: 'company_name',
-        sortOrder: 'asc',
-        filters: {}
-      }));
-      window.location.href = `/clients?${searchParams.toString()}`;
+      window.location.href = `/clients?search=${encodeURIComponent(searchQuery.trim())}`;
     }
   };
 
