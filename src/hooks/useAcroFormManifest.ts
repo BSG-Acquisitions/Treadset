@@ -35,6 +35,7 @@ export const useGenerateAcroFormManifest = () => {
         title: "Manifest Generated", 
         description: `AcroForm manifest PDF created successfully with ${data.fieldsProcessed} fields filled.` 
       });
+      return data; // Return data so it can be used by the caller
     },
     onError: (err: any) => {
       toast({

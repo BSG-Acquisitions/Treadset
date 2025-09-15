@@ -2,12 +2,20 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AcroFormManifestEditor } from '@/components/manifest/AcroFormManifestEditor';
 import { BusinessDataEditor } from '@/components/manifest/BusinessDataEditor';
 import { useGenerateAcroFormManifest, convertToAcroFormFields } from '@/hooks/useAcroFormManifest';
+import { useSendManifestEmail } from '@/hooks/useSendManifestEmail';
 import { AcroFormManifestData, ManifestBusinessData } from '@/types/acroform-manifest';
+import { uploadAcroFormTemplate } from '@/utils/uploadTemplate';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AcroFormDemo() {
+  const { toast } = useToast();
+  const [generatedPdfUrl, setGeneratedPdfUrl] = useState<string | null>(null);
+  const [generatedPdfPath, setGeneratedPdfPath] = useState<string | null>(null);
+  const [isUploadingTemplate, setIsUploadingTemplate] = useState(false);
   const [stateData, setStateData] = useState<Partial<AcroFormManifestData>>({
     manifest_number: 'M-2024-001',
     vehicle_trailer: 'T-123',
@@ -36,15 +44,66 @@ export default function AcroFormDemo() {
   });
 
   const generateManifest = useGenerateAcroFormManifest();
+  const sendEmail = useSendManifestEmail();
+
+  const handleUploadTemplate = async () => {
+    setIsUploadingTemplate(true);
+    try {
+      await uploadAcroFormTemplate();
+      toast({
+        title: "Template Uploaded",
+        description: "AcroForm template uploaded to storage successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Upload Failed",
+        description: error.message || "Failed to upload template.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingTemplate(false);
+    }
+  };
 
   const handleGenerate = async () => {
     const acroFormFields = convertToAcroFormFields(stateData);
     
-    await generateManifest.mutateAsync({
-      templatePath: 'Michigan_Manifest_AcroForm.pdf',
-      manifestData: acroFormFields,
-      outputPath: `manifests/demo-${Date.now()}.pdf`
-    });
+    try {
+      const result = await generateManifest.mutateAsync({
+        templatePath: 'Michigan_Manifest_AcroForm.pdf',
+        manifestData: acroFormFields,
+        outputPath: `manifests/demo-${Date.now()}.pdf`
+      });
+      
+      setGeneratedPdfUrl(result.pdfUrl);
+      setGeneratedPdfPath(result.pdfPath);
+    } catch (error) {
+      console.error('Generation failed:', error);
+    }
+  };
+
+  const handleDownload = () => {
+    if (generatedPdfUrl) {
+      const link = document.createElement('a');
+      link.href = generatedPdfUrl;
+      link.download = 'manifest.pdf';
+      link.click();
+    }
+  };
+
+  const handleEmail = async () => {
+    if (!generatedPdfPath) return;
+    
+    try {
+      await sendEmail.mutateAsync({
+        to: ['test@example.com'], // Replace with actual email
+        subject: 'Manifest PDF',
+        messageHtml: '<p>Please find the attached manifest PDF.</p>',
+        pdfPath: generatedPdfPath,
+      });
+    } catch (error) {
+      console.error('Email failed:', error);
+    }
   };
 
   return (
@@ -79,9 +138,30 @@ export default function AcroFormDemo() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Generate AcroForm Manifest</CardTitle>
+          <CardTitle>Template Setup</CardTitle>
         </CardHeader>
         <CardContent>
+          <Alert className="mb-4">
+            <AlertDescription>
+              First, upload the AcroForm template to Supabase storage before generating manifests.
+            </AlertDescription>
+          </Alert>
+          <Button 
+            onClick={handleUploadTemplate}
+            disabled={isUploadingTemplate}
+            variant="outline"
+            className="w-full mb-4"
+          >
+            {isUploadingTemplate ? 'Uploading Template...' : 'Upload AcroForm Template'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Generate AcroForm Manifest</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
           <Button 
             onClick={handleGenerate}
             disabled={generateManifest.isPending}
@@ -89,6 +169,26 @@ export default function AcroFormDemo() {
           >
             {generateManifest.isPending ? 'Generating...' : 'Generate PDF Manifest'}
           </Button>
+          
+          {generatedPdfUrl && (
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleDownload}
+                variant="outline"
+                className="flex-1"
+              >
+                Download PDF
+              </Button>
+              <Button 
+                onClick={handleEmail}
+                disabled={sendEmail.isPending}
+                variant="outline"
+                className="flex-1"
+              >
+                {sendEmail.isPending ? 'Sending...' : 'Email PDF'}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
