@@ -1,12 +1,23 @@
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle, 
+  AlertDialogTrigger 
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Truck, Edit3, Save, X, Plus } from "lucide-react";
-import { useVehicles, useUpdateVehicle, useCreateVehicle } from "@/hooks/useVehicles";
+import { Truck, Edit3, Save, X, Plus, Trash2 } from "lucide-react";
+import { useVehicles, useUpdateVehicle, useCreateVehicle, useDeleteVehicle } from "@/hooks/useVehicles";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
@@ -18,6 +29,7 @@ export const VehicleManagementDialog: React.FC<VehicleManagementDialogProps> = (
   const { data: vehicles = [] } = useVehicles();
   const updateVehicle = useUpdateVehicle();
   const createVehicle = useCreateVehicle();
+  const deleteVehicle = useDeleteVehicle();
   const { user } = useAuth();
   const { toast } = useToast();
   const [editingVehicle, setEditingVehicle] = useState<string | null>(null);
@@ -285,13 +297,44 @@ export const VehicleManagementDialog: React.FC<VehicleManagementDialogProps> = (
                       </Button>
                     </>
                   ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEdit(vehicle)}
-                    >
-                      <Edit3 className="h-4 w-4" />
-                    </Button>
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(vehicle)}
+                      >
+                        <Edit3 className="h-4 w-4" />
+                      </Button>
+                      
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="bg-card border z-50">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Vehicle</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete "{vehicle.name}"? This will remove it from your fleet but preserve historical assignment data.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteVehicle.mutate(vehicle.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Delete Vehicle
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </>
                   )}
                 </div>
               </div>

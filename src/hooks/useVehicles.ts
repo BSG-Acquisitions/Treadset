@@ -71,3 +71,33 @@ export const useUpdateVehicle = () => {
     }
   });
 };
+
+export const useDeleteVehicle = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (vehicleId: string) => {
+      // Soft delete by setting is_active to false
+      const { data, error } = await supabase
+        .from('vehicles')
+        .update({ is_active: false })
+        .eq('id', vehicleId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      toast({ 
+        title: "Vehicle Deleted", 
+        description: `${data.name} has been removed from your fleet` 
+      });
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+};
