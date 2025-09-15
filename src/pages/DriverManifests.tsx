@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { Plus, FileText, Clock, CheckCircle, CreditCard, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { ManifestPDFControls } from '@/components/ManifestPDFControls';
 
 export default function DriverManifests() {
   const [selectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -197,6 +198,19 @@ export default function DriverManifests() {
                         <span className="text-sm text-muted-foreground">
                           {manifest.location?.address}
                         </span>
+                        
+                        {/* Show PDF controls when manifest is completed */}
+                        {manifest.status === 'COMPLETED' && (manifest.pdf_path || manifest.acroform_pdf_path) && (
+                          <div className="mt-2 max-w-md">
+                            <ManifestPDFControls
+                              manifestId={manifest.id}
+                              pdfPath={manifest.pdf_path}
+                              acroformPdfPath={manifest.acroform_pdf_path}
+                              clientEmails={[]}
+                              className="text-xs"
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
                     

@@ -31,6 +31,7 @@ import PublicBook from "./pages/PublicBook";
 import PublicBookingConfirmation from "./pages/PublicBookingConfirmation";
 import ManifestExample from '@/pages/ManifestExample';
 import AcroFormDemo from '@/pages/AcroFormDemo';
+import ManifestViewer from './pages/ManifestViewer';
 
 const queryClient = new QueryClient();
 
@@ -142,7 +143,7 @@ const App = () => (
             } />
             <Route path="/driver/manifest/:id" element={
               <ProtectedRoute roles={['driver', 'admin']}>
-                <DriverManifestView />
+                <ManifestViewer />
               </ProtectedRoute>
             } />
             <Route path="/routes/driver" element={

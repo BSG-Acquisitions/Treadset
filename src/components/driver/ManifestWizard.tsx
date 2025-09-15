@@ -9,6 +9,7 @@ import { Camera, CheckCircle, Clock, FileText, PenTool } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useManifestIntegration } from '@/hooks/useManifestIntegration';
 
 interface ManifestWizardProps {
   manifestId: string;
@@ -21,6 +22,7 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
   const [step, setStep] = useState<WizardStep>('arrive');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const manifestIntegration = useManifestIntegration();
   const customerSigRef = useRef<SignatureCanvas>(null);
   const driverSigRef = useRef<SignatureCanvas>(null);
   
@@ -122,9 +124,9 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
       const queueKey = 'manifestFinalizeQueue';
 
       const execute = async () => {
-        const { data, error } = await supabase.functions.invoke('manifest-finalize', { body: payload });
-        if (error) throw error;
-        return data;
+        // Use the new integration hook that generates both PDFs
+        const result = await manifestIntegration.mutateAsync({ manifestId });
+        return result;
       };
 
       if (!navigator.onLine) {
@@ -388,10 +390,10 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
             
             <Button 
               onClick={handleFinalize} 
-              disabled={loading || !data.customerSigned || !data.driverSigned}
+              disabled={loading || manifestIntegration.isPending || !data.customerSigned || !data.driverSigned}
               className="w-full bg-green-600 hover:bg-green-700"
             >
-              {loading ? 'Finalizing...' : 'Finalize Manifest'}
+              {(loading || manifestIntegration.isPending) ? 'Generating PDFs...' : 'Finalize Manifest'}
             </Button>
           </div>
         );

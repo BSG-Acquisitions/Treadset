@@ -773,6 +773,7 @@ export type Database = {
       }
       manifests: {
         Row: {
+          acroform_pdf_path: string | null
           client_id: string
           commercial_17_5_19_5_off: number | null
           commercial_17_5_19_5_on: number | null
@@ -820,6 +821,7 @@ export type Database = {
           weight_tons: number | null
         }
         Insert: {
+          acroform_pdf_path?: string | null
           client_id: string
           commercial_17_5_19_5_off?: number | null
           commercial_17_5_19_5_on?: number | null
@@ -867,6 +869,7 @@ export type Database = {
           weight_tons?: number | null
         }
         Update: {
+          acroform_pdf_path?: string | null
           client_id?: string
           commercial_17_5_19_5_off?: number | null
           commercial_17_5_19_5_on?: number | null

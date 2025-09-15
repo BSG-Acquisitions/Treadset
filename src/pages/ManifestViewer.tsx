@@ -1,384 +1,270 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { TopNav } from '@/components/TopNav';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Download, Send, CheckCircle, Loader2, ExternalLink } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import StateDocumentPreview from '@/components/StateDocumentPreview';
+import { Button } from '@/components/ui/button';
+import { useManifests } from '@/hooks/useManifests';
+import { ManifestPDFControls } from '@/components/ManifestPDFControls';
+import { format } from 'date-fns';
+import { ArrowLeft, FileText, User, MapPin, Package, Clock, CreditCard, CheckCircle } from 'lucide-react';
 
-interface Manifest {
-  id: string;
-  manifest_number: string;
-  status: string;
-  client_id: string;
-  driver_id: string;
-  vehicle_id: string;
-  location_id: string;
-  pte_off_rim: number;
-  pte_on_rim: number;
-  commercial_17_5_19_5_off: number;
-  commercial_17_5_19_5_on: number;
-  commercial_22_5_off: number;
-  commercial_22_5_on: number;
-  subtotal: number;
-  surcharges: number;
-  total: number;
-  customer_signature_png_path?: string;
-  driver_signature_png_path?: string;
-  pdf_path?: string;
-  signed_at?: string;
-  created_at: string;
-}
+export default function ManifestViewer() {
+  const { id } = useParams<{ id: string }>();
+  const { data: manifests = [], isLoading } = useManifests();
+  
+  const manifest = manifests.find(m => m.id === id);
 
-export const ManifestViewer = () => {
-  const [manifests, setManifests] = useState<Manifest[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [finalizing, setFinalizing] = useState<string | null>(null);
-  const [selectedManifest, setSelectedManifest] = useState<any>(null);
-  const [showDocument, setShowDocument] = useState(false);
-
-  useEffect(() => {
-    loadManifests();
-  }, []);
-
-  const loadManifests = async () => {
-    try {
-      // First get the manifests
-      const { data: manifestsData, error: manifestsError } = await supabase
-        .from('manifests')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (manifestsError) throw manifestsError;
-
-      if (!manifestsData || manifestsData.length === 0) {
-        setManifests([]);
-        return;
-      }
-
-      // Get unique IDs for related data
-      const clientIds = [...new Set(manifestsData.map(m => m.client_id).filter(Boolean))];
-      const locationIds = [...new Set(manifestsData.map(m => m.location_id).filter(Boolean))];
-      const driverIds = [...new Set(manifestsData.map(m => m.driver_id).filter(Boolean))];
-      const vehicleIds = [...new Set(manifestsData.map(m => m.vehicle_id).filter(Boolean))];
-
-      // Fetch related data in parallel
-      const [clientsResult, locationsResult, driversResult, vehiclesResult] = await Promise.all([
-        clientIds.length > 0 ? supabase.from('clients').select('id, company_name, email').in('id', clientIds) : { data: [] },
-        locationIds.length > 0 ? supabase.from('locations').select('id, address, name').in('id', locationIds) : { data: [] },
-        driverIds.length > 0 ? supabase.from('users').select('id, first_name, last_name').in('id', driverIds) : { data: [] },
-        vehicleIds.length > 0 ? supabase.from('vehicles').select('id, name').in('id', vehicleIds) : { data: [] },
-      ]);
-
-      // Create lookup maps
-      const clientsMap = new Map();
-      const locationsMap = new Map();
-      const driversMap = new Map();
-      const vehiclesMap = new Map();
-
-      // Populate maps if data exists
-      if (clientsResult.data) {
-        clientsResult.data.forEach(c => clientsMap.set(c.id, c));
-      }
-      if (locationsResult.data) {
-        locationsResult.data.forEach(l => locationsMap.set(l.id, l));
-      }
-      if (driversResult.data) {
-        driversResult.data.forEach(u => driversMap.set(u.id, u));
-      }
-      if (vehiclesResult.data) {
-        vehiclesResult.data.forEach(v => vehiclesMap.set(v.id, v));
-      }
-
-      // Combine the data
-      const enrichedManifests = manifestsData.map(manifest => ({
-        ...manifest,
-        clients: clientsMap.get(manifest.client_id) || null,
-        locations: locationsMap.get(manifest.location_id) || null,
-        users: driversMap.get(manifest.driver_id) || null,
-        vehicles: vehiclesMap.get(manifest.vehicle_id) || null,
-      }));
-
-      setManifests(enrichedManifests);
-    } catch (error) {
-      console.error('Error loading manifests:', error);
-      toast.error('Failed to load manifests');
-    } finally {
-      setLoading(false);
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'DRAFT':
+      case 'IN_PROGRESS':
+        return <Clock className="h-4 w-4 text-amber-500" />;
+      case 'AWAITING_SIGNATURE':
+        return <FileText className="h-4 w-4 text-blue-500" />;
+      case 'AWAITING_PAYMENT':
+        return <CreditCard className="h-4 w-4 text-purple-500" />;
+      case 'COMPLETED':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      default:
+        return <Clock className="h-4 w-4 text-gray-500" />;
     }
   };
 
-  const finalizeManifest = async (manifestId: string) => {
-    setFinalizing(manifestId);
-    try {
-      const { data, error } = await supabase.functions.invoke('manifest-finalize', {
-        body: { manifest_id: manifestId }
-      });
-
-      if (error) throw error;
-
-      toast.success('Manifest finalized successfully!');
-      
-      // Reload manifests to show updated data
-      await loadManifests();
-      
-      // Show the PDF if available
-      if (data?.pdf_signed_url) {
-        window.open(data.pdf_signed_url, '_blank');
-      }
-    } catch (error) {
-      console.error('Error finalizing manifest:', error);
-      toast.error('Failed to finalize manifest');
-    } finally {
-      setFinalizing(null);
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'DRAFT':
+      case 'IN_PROGRESS':
+        return 'bg-amber-100 text-amber-800 border-amber-200';
+      case 'AWAITING_SIGNATURE':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'AWAITING_PAYMENT':
+        return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'COMPLETED':
+        return 'bg-green-100 text-green-800 border-green-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
-  const viewPDF = async (manifestId: string) => {
-    try {
-      const manifest = manifests.find(m => m.id === manifestId);
-      if (!manifest?.pdf_path) {
-        toast.error('PDF not yet generated');
-        return;
-      }
-
-      // Get signed URL for the PDF
-      const { data, error } = await supabase.storage
-        .from('manifests')
-        .createSignedUrl(manifest.pdf_path, 3600); // 1 hour expiry
-
-      if (error) throw error;
-      
-      if (data?.signedUrl) {
-        window.open(data.signedUrl, '_blank');
-      }
-    } catch (error) {
-      console.error('Error viewing PDF:', error);
-      toast.error('Failed to view PDF');
-    }
-  };
-
-  const getTotalTires = (manifest: Manifest) => {
+  if (isLoading) {
     return (
-      manifest.pte_off_rim +
-      manifest.pte_on_rim +
-      manifest.commercial_17_5_19_5_off +
-      manifest.commercial_17_5_19_5_on +
-      manifest.commercial_22_5_off +
-      manifest.commercial_22_5_on
-    );
-  };
-
-  const getStatusBadge = (manifest: Manifest) => {
-    if (manifest.pdf_path && manifest.signed_at) {
-      return <Badge variant="default" className="bg-green-100 text-green-800">✓ Completed</Badge>;
-    }
-    if (manifest.customer_signature_png_path && manifest.driver_signature_png_path) {
-      return <Badge variant="secondary" className="bg-blue-100 text-blue-800">Ready to Finalize</Badge>;
-    }
-    return <Badge variant="outline">In Progress</Badge>;
-  };
-
-  const showStateDocument = (manifest: any) => {
-    const documentData = {
-      manifest_number: manifest.manifest_number,
-      company_name: manifest.clients?.company_name || 'Unknown Company',
-      location_name: manifest.locations?.name || 'Unknown Location',
-      address: manifest.locations?.address || 'Unknown Address',
-      driver_name: manifest.users ? `${manifest.users.first_name} ${manifest.users.last_name}` : 'Unknown Driver',
-      vehicle_name: manifest.vehicles?.name || 'Unknown Vehicle',
-      pte_off_rim: manifest.pte_off_rim,
-      pte_on_rim: manifest.pte_on_rim,
-      commercial_17_5_19_5_off: manifest.commercial_17_5_19_5_off,
-      commercial_17_5_19_5_on: manifest.commercial_17_5_19_5_on,
-      commercial_22_5_off: manifest.commercial_22_5_off,
-      commercial_22_5_on: manifest.commercial_22_5_on,
-      subtotal: manifest.subtotal,
-      surcharges: manifest.surcharges,
-      total: manifest.total,
-      created_at: manifest.created_at,
-      customer_signature_png_path: manifest.customer_signature_png_path,
-      driver_signature_png_path: manifest.driver_signature_png_path,
-    };
-    setSelectedManifest(documentData);
-    setShowDocument(true);
-  };
-
-  if (showDocument && selectedManifest) {
-    return (
-      <div className="container mx-auto p-6 max-w-6xl">
-        <div className="mb-6">
-          <button 
-            onClick={() => setShowDocument(false)}
-            className="text-blue-600 hover:text-blue-800 font-medium"
-          >
-            ← Back to Manifest List
-          </button>
+      <div className="min-h-screen bg-background">
+        <TopNav />
+        <div className="container mx-auto p-6">
+          <div className="text-center py-8">Loading manifest...</div>
         </div>
-        <StateDocumentPreview data={selectedManifest} />
       </div>
     );
   }
 
-  if (loading) {
+  if (!manifest) {
     return (
-      <div className="container mx-auto p-6 max-w-6xl">
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin" />
-          <span className="ml-2">Loading manifests...</span>
+      <div className="min-h-screen bg-background">
+        <TopNav />
+        <div className="container mx-auto p-6">
+          <Card>
+            <CardContent className="text-center py-8">
+              <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+              <h2 className="text-xl font-semibold mb-2">Manifest not found</h2>
+              <p className="text-muted-foreground mb-4">
+                The manifest you're looking for doesn't exist or you don't have access to it.
+              </p>
+              <Button asChild variant="outline">
+                <Link to="/driver/manifests">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Manifests
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-6xl">
-      <div className="text-center space-y-4 mb-8">
-        <h1 className="text-4xl font-bold">Live Manifest System</h1>
-        <p className="text-xl text-muted-foreground">
-          Real tire recycling manifests with signatures and state-compliant PDFs
-        </p>
-      </div>
+    <div className="min-h-screen bg-background">
+      <TopNav />
+      
+      <div className="container mx-auto p-6 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button asChild variant="outline" size="sm">
+              <Link to="/driver/manifests">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Link>
+            </Button>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold">{manifest.manifest_number}</h1>
+                <Badge className={getStatusColor(manifest.status)}>
+                  {getStatusIcon(manifest.status)}
+                  <span className="ml-1">{manifest.status.replace('_', ' ')}</span>
+                </Badge>
+              </div>
+              <p className="text-muted-foreground">
+                Created {format(new Date(manifest.created_at), 'PPP p')}
+              </p>
+            </div>
+          </div>
+        </div>
 
-      {manifests.length === 0 ? (
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Client & Location Info */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Client Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <div className="font-medium">{manifest.client?.company_name}</div>
+              </div>
+              
+              {manifest.location && (
+                <div className="border-t pt-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <MapPin className="h-4 w-4" />
+                    <span className="font-medium">Pickup Location</span>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {manifest.location.name && <div>{manifest.location.name}</div>}
+                    {manifest.location.address && <div>{manifest.location.address}</div>}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Tire Counts */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Tire Counts
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <div className="font-medium">PTE Off Rim</div>
+                  <div className="text-2xl font-bold text-blue-600">{manifest.pte_off_rim}</div>
+                </div>
+                <div>
+                  <div className="font-medium">PTE On Rim</div>
+                  <div className="text-2xl font-bold text-blue-600">{manifest.pte_on_rim}</div>
+                </div>
+                <div>
+                  <div className="font-medium">17.5-19.5 Off</div>
+                  <div className="text-2xl font-bold text-green-600">{manifest.commercial_17_5_19_5_off}</div>
+                </div>
+                <div>
+                  <div className="font-medium">17.5-19.5 On</div>
+                  <div className="text-2xl font-bold text-green-600">{manifest.commercial_17_5_19_5_on}</div>
+                </div>
+                <div>
+                  <div className="font-medium">22.5 Off</div>
+                  <div className="text-2xl font-bold text-purple-600">{manifest.commercial_22_5_off}</div>
+                </div>
+                <div>
+                  <div className="font-medium">22.5 On</div>
+                  <div className="text-2xl font-bold text-purple-600">{manifest.commercial_22_5_on}</div>
+                </div>
+                <div>
+                  <div className="font-medium">OTR Count</div>
+                  <div className="text-2xl font-bold text-orange-600">{manifest.otr_count}</div>
+                </div>
+                <div>
+                  <div className="font-medium">Tractor Count</div>
+                  <div className="text-2xl font-bold text-red-600">{manifest.tractor_count}</div>
+                </div>
+              </div>
+              
+              <div className="mt-4 pt-4 border-t">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Total Amount:</span>
+                  <span className="text-2xl font-bold">${manifest.total?.toFixed(2) || '0.00'}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm text-muted-foreground">
+                  <span>Payment Status:</span>
+                  <span className={manifest.payment_status === 'SUCCEEDED' ? 'text-green-600' : ''}>
+                    {manifest.payment_status === 'SUCCEEDED' ? 'Paid' : manifest.payment_status}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* PDF Downloads */}
         <Card>
-          <CardContent className="py-12 text-center">
-            <FileText className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2">No Manifests Found</h3>
-            <p className="text-muted-foreground">Create a manifest from the driver interface to see it here.</p>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Manifest PDFs
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ManifestPDFControls
+              manifestId={manifest.id}
+              pdfPath={manifest.pdf_path}
+              acroformPdfPath={manifest.acroform_pdf_path}
+              clientEmails={[]}
+            />
           </CardContent>
         </Card>
-      ) : (
-        <div className="space-y-6">
-          {manifests.map((manifest) => (
-            <Card key={manifest.id} className="border-2">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
-                    Manifest #{manifest.manifest_number}
-                  </CardTitle>
-                  {getStatusBadge(manifest)}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* Manifest Details */}
-                  <div className="space-y-3">
-                    <h4 className="font-semibold">Manifest Details</h4>
-                    <div className="space-y-2 text-sm">
-                      <div><strong>Total Tires:</strong> {getTotalTires(manifest)}</div>
-                      <div><strong>PTE Off Rim:</strong> {manifest.pte_off_rim}</div>
-                      <div><strong>PTE On Rim:</strong> {manifest.pte_on_rim}</div>
-                      <div><strong>17.5-19.5 Off:</strong> {manifest.commercial_17_5_19_5_off}</div>
-                      <div><strong>17.5-19.5 On:</strong> {manifest.commercial_17_5_19_5_on}</div>
-                      <div><strong>22.5 Off:</strong> {manifest.commercial_22_5_off}</div>
-                      <div><strong>22.5 On:</strong> {manifest.commercial_22_5_on}</div>
+
+        {/* Signatures */}
+        {(manifest.customer_signature_png_path || manifest.driver_signature_png_path) && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Signatures</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-2">
+                {manifest.customer_signature_png_path && (
+                  <div>
+                    <div className="font-medium mb-2">Customer Signature</div>
+                    <div className="border rounded-lg p-4 bg-gray-50">
+                      <img 
+                        src={`https://wvjehbozyxhmgdljwsiz.supabase.co/storage/v1/object/public/manifests/${manifest.customer_signature_png_path}`}
+                        alt="Customer signature"
+                        className="max-w-full h-auto"
+                      />
+                    </div>
+                    {manifest.signed_by_name && (
+                      <div className="text-sm text-muted-foreground mt-2">
+                        Signed by: {manifest.signed_by_name}
+                        {manifest.signed_at && (
+                          <span> on {format(new Date(manifest.signed_at), 'PPP p')}</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {manifest.driver_signature_png_path && (
+                  <div>
+                    <div className="font-medium mb-2">Driver Signature</div>
+                    <div className="border rounded-lg p-4 bg-gray-50">
+                      <img 
+                        src={`https://wvjehbozyxhmgdljwsiz.supabase.co/storage/v1/object/public/manifests/${manifest.driver_signature_png_path}`}
+                        alt="Driver signature"
+                        className="max-w-full h-auto"
+                      />
                     </div>
                   </div>
-
-                  {/* Financial Details */}
-                  <div className="space-y-3">
-                    <h4 className="font-semibold">Financial Summary</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span>Subtotal:</span>
-                        <span>${manifest.subtotal.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Surcharges:</span>
-                        <span>${manifest.surcharges.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between font-bold text-lg border-t pt-2">
-                        <span>Total:</span>
-                        <span>${manifest.total.toFixed(2)}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Status & Actions */}
-                  <div className="space-y-3">
-                    <h4 className="font-semibold">Status & Actions</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center gap-2">
-                        {manifest.customer_signature_png_path ? (
-                          <CheckCircle className="h-4 w-4 text-green-600" />
-                        ) : (
-                          <div className="h-4 w-4 rounded-full border-2" />
-                        )}
-                        <span>Customer Signature</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {manifest.driver_signature_png_path ? (
-                          <CheckCircle className="h-4 w-4 text-green-600" />
-                        ) : (
-                          <div className="h-4 w-4 rounded-full border-2" />
-                        )}
-                        <span>Driver Signature</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {manifest.pdf_path ? (
-                          <CheckCircle className="h-4 w-4 text-green-600" />
-                        ) : (
-                          <div className="h-4 w-4 rounded-full border-2" />
-                        )}
-                        <span>PDF Generated</span>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2 pt-3">
-                      <Button 
-                        onClick={() => showStateDocument(manifest)}
-                        variant="outline"
-                        className="w-full"
-                      >
-                        <FileText className="h-4 w-4 mr-2" />
-                        View State Document
-                      </Button>
-                      
-                      {manifest.pdf_path ? (
-                        <Button 
-                          onClick={() => viewPDF(manifest.id)}
-                          className="w-full"
-                        >
-                          <ExternalLink className="h-4 w-4 mr-2" />
-                          View Signed PDF
-                        </Button>
-                      ) : manifest.customer_signature_png_path && manifest.driver_signature_png_path ? (
-                        <Button 
-                          onClick={() => finalizeManifest(manifest.id)}
-                          disabled={finalizing === manifest.id}
-                          className="w-full"
-                        >
-                          {finalizing === manifest.id ? (
-                            <>
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              Generating PDF...
-                            </>
-                          ) : (
-                            <>
-                              <FileText className="h-4 w-4 mr-2" />
-                              Generate State PDF
-                            </>
-                          )}
-                        </Button>
-                      ) : (
-                        <Button disabled className="w-full">
-                          Waiting for Signatures
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
-};
-
-export default ManifestViewer;
+}
