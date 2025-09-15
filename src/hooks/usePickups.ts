@@ -171,3 +171,45 @@ export const useSchedulePickup = () => {
     }
   });
 };
+
+export const useDeletePickup = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (pickupId: string) => {
+      // First, delete any related assignments
+      const { error: assignmentError } = await supabase
+        .from('assignments')
+        .delete()
+        .eq('pickup_id', pickupId);
+
+      if (assignmentError) throw assignmentError;
+
+      // Then delete the pickup
+      const { error: pickupError } = await supabase
+        .from('pickups')
+        .delete()
+        .eq('id', pickupId);
+
+      if (pickupError) throw pickupError;
+
+      return pickupId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pickups'] });
+      queryClient.invalidateQueries({ queryKey: ['assignments'] });
+      toast({
+        title: "Success",
+        description: "Pickup deleted successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+};

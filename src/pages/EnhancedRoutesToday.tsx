@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useAssignments, usePickups } from "@/hooks/usePickups";
+import { useAssignments, usePickups, useDeletePickup } from "@/hooks/usePickups";
 import { useVehicles } from "@/hooks/useVehicles";
 import { supabase } from "@/integrations/supabase/client";
 import { CompleteAssignmentDialog } from "@/components/driver/CompleteAssignmentDialog";
@@ -37,9 +37,21 @@ import {
   ChevronRight,
   MoreVertical,
   Move,
-  Building
+  Building,
+  Trash2
 } from "lucide-react";
 import { TopNav } from "@/components/TopNav";
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle, 
+  AlertDialogTrigger 
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { format, addDays, subDays, startOfWeek, addWeeks, subWeeks } from "date-fns";
 import { motion } from "framer-motion";
@@ -84,6 +96,7 @@ export default function EnhancedRoutesToday() {
   const { data: pickups = [] } = usePickups(activeDay);
   const { data: vehicles = [] } = useVehicles();
   const { toast } = useToast();
+  const deletePickup = useDeletePickup();
 
   useEffect(() => {
     document.title = "Route Planning – BSG Tire Recycling";
@@ -550,6 +563,38 @@ export default function EnhancedRoutesToday() {
                                     <Move className="h-4 w-4 mr-2" />
                                     Move to Different Date
                                   </DropdownMenuItem>
+                                  
+                                  {pickup.status === 'scheduled' && (
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <DropdownMenuItem 
+                                          onSelect={(e) => e.preventDefault()}
+                                          className="text-destructive focus:text-destructive"
+                                        >
+                                          <Trash2 className="h-4 w-4 mr-2" />
+                                          Delete Pickup
+                                        </DropdownMenuItem>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent className="bg-card border z-50">
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Delete Pickup</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            Are you sure you want to delete this pickup for {pickup.client?.company_name}? 
+                                            This action cannot be undone and will remove it from the schedule.
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <AlertDialogAction
+                                            onClick={() => deletePickup.mutate(pickup.id)}
+                                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                          >
+                                            Delete Pickup
+                                          </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  )}
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </div>
