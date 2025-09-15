@@ -309,7 +309,11 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
         });
 
       if (error) throw error;
-      return data.path;
+      // Be resilient to different return shapes (path, fullPath, Key)
+      const rawPath = (data as any)?.path || (data as any)?.fullPath || (data as any)?.Key || '';
+      const normalized = String(rawPath).replace(/^manifests\//, '').replace(/^\/+/, '');
+      if (!normalized) throw new Error(`Upload returned empty path for ${type} signature`);
+      return normalized;
     } catch (error) {
       console.error(`Error saving ${type} signature:`, error);
       return null;
