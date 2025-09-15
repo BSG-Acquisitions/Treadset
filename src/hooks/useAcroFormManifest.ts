@@ -77,7 +77,11 @@ export const convertToAcroFormFields = (data: Partial<AcroFormManifestData>): Re
   if (data.generator_volume_weight) fields['Passenger tire equivalents'] = data.generator_volume_weight;
   if (data.generator_date_processed) fields['Generator_Date'] = data.generator_date_processed;
   if (data.generator_print_name) fields['Generator_Print_Name'] = data.generator_print_name;
-  if (data.generator_date) fields['Generator_Date'] = data.generator_date;
+  if (data.generator_date) {
+    fields['Generator_Date'] = data.generator_time 
+      ? `${data.generator_date} ${data.generator_time}` 
+      : data.generator_date;
+  }
 
   // Part 2: Hauler fields  
   if (data.hauler_mi_reg) fields['MI_SCRAP_TIR _HAULER_REG_#'] = data.hauler_mi_reg;
@@ -89,7 +93,11 @@ export const convertToAcroFormFields = (data: Partial<AcroFormManifestData>): Re
   if (data.hauler_zip) fields['Hauler_Zip'] = data.hauler_zip;
   if (data.hauler_phone) fields['Hauler_Phone'] = data.hauler_phone;
   if (data.hauler_print_name) fields['Hauler_Print_Name'] = data.hauler_print_name;
-  if (data.hauler_date) fields['Hauler_Date'] = data.hauler_date;
+  if (data.hauler_date) {
+    fields['Hauler_Date'] = data.hauler_time 
+      ? `${data.hauler_date} ${data.hauler_time}` 
+      : data.hauler_date;
+  }
   if (data.hauler_gross_weight) fields['Gross'] = data.hauler_gross_weight;
   if (data.hauler_tare_weight) fields['Tare'] = data.hauler_tare_weight;
   if (data.hauler_net_weight) fields['Net_Weight'] = data.hauler_net_weight;
@@ -104,7 +112,11 @@ export const convertToAcroFormFields = (data: Partial<AcroFormManifestData>): Re
   if (data.receiver_zip) fields['Receiver_Zip'] = data.receiver_zip;
   if (data.receiver_phone) fields['Reciever_Phone'] = data.receiver_phone; // Note: PDF has typo "Reciever"
   if (data.receiver_print_name) fields['Processor_Print_Name'] = data.receiver_print_name;
-  if (data.receiver_date) fields['Processor_Date'] = data.receiver_date;
+  if (data.receiver_date) {
+    fields['Processor_Date'] = data.receiver_time 
+      ? `${data.receiver_date} ${data.receiver_time}` 
+      : data.receiver_date;
+  }
   if (data.receiver_gross_weight) fields['Gross'] = data.receiver_gross_weight;
   if (data.receiver_total_pte) fields['Passenger tire equivalents'] = data.receiver_total_pte;
   if (data.receiver_tare_weight) fields['Tare'] = data.receiver_tare_weight;
