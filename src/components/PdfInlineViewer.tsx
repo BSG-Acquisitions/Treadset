@@ -26,10 +26,10 @@ export const PdfInlineViewer: React.FC<PdfInlineViewerProps> = ({ filePath, clas
         if (!resp.ok) throw new Error('Failed to fetch PDF');
         const arrayBuffer = await resp.arrayBuffer();
 
-        // Lazy-import pdfjs and configure worker
+        // Lazy-import pdfjs and configure worker path compatible with Vite
         const { GlobalWorkerOptions, getDocument } = await import('pdfjs-dist');
-        // @ts-ignore - vite resolves asset URL
-        const workerSrc = (await import('pdfjs-dist/build/pdf.worker.min.js?url')).default as string;
+        // @ts-ignore - vite resolves asset URL at build time
+        const workerSrc = (await import('pdfjs-dist/build/pdf.worker.mjs?url')).default as string;
         GlobalWorkerOptions.workerSrc = workerSrc;
 
         const loadingTask = getDocument({ data: arrayBuffer });
