@@ -78,7 +78,7 @@ export default function EmployeesPage() {
     <div className="min-h-screen bg-background">
       <TopNav />
       
-      <div className="space-y-8 p-6 max-w-7xl mx-auto pt-8">
+      <div className="space-y-8 p-4 sm:p-6 max-w-7xl mx-auto pt-8 overflow-hidden">
         {/* Action Bar */}
         <div className="flex justify-between items-center">
           <div>
@@ -134,95 +134,99 @@ export default function EmployeesPage() {
               Complete workforce overview with role assignments and contact information
             </CardDescription>
           </CardHeader>
-        <CardContent>
-          {employees.length === 0 ? (
-            <EmptyState
-              title="No employees found"
-              description="Add your first team member to get started with employee management."
-              action={<CreateEmployeeDialog trigger={
-                <Button>Add First Employee</Button>
-              } />}
-              icon={<Users className="h-12 w-12 text-muted-foreground" />}
-            />
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Employee</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Roles</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Joined</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {employees.map((employee) => (
-                  <TableRow key={employee.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">
-                          {employee.firstName || employee.lastName 
-                            ? `${employee.firstName || ''} ${employee.lastName || ''}`.trim()
-                            : 'No name set'
-                          }
-                        </div>
-                        <div className="text-sm text-muted-foreground">{employee.email}</div>
-                      </div>
-                    </TableCell>
-                    
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1 text-sm">
-                          <Mail className="h-3 w-3" />
-                          <span>{employee.email}</span>
-                        </div>
-                        {employee.phone && (
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <Phone className="h-3 w-3" />
-                            <span>{formatPhoneNumber(employee.phone)}</span>
+          <CardContent className="p-0">
+            {employees.length === 0 ? (
+              <div className="p-6">
+                <EmptyState
+                  title="No employees found"
+                  description="Add your first team member to get started with employee management."
+                  action={<CreateEmployeeDialog trigger={
+                    <Button>Add First Employee</Button>
+                  } />}
+                  icon={<Users className="h-12 w-12 text-muted-foreground" />}
+                />
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-[200px]">Employee</TableHead>
+                      <TableHead className="min-w-[180px]">Contact</TableHead>
+                      <TableHead className="min-w-[150px]">Roles</TableHead>
+                      <TableHead className="min-w-[100px]">Status</TableHead>
+                      <TableHead className="min-w-[120px]">Joined</TableHead>
+                      <TableHead className="text-right min-w-[100px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {employees.map((employee) => (
+                      <TableRow key={employee.id}>
+                        <TableCell className="min-w-[200px]">
+                          <div>
+                            <div className="font-medium">
+                              {employee.firstName || employee.lastName 
+                                ? `${employee.firstName || ''} ${employee.lastName || ''}`.trim()
+                                : 'No name set'
+                              }
+                            </div>
+                            <div className="text-sm text-muted-foreground truncate max-w-[180px]">{employee.email}</div>
                           </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    
-                    <TableCell>
-                      <div className="flex flex-wrap gap-2">
-                        {employee.roles.map((role) => {
-                          const IconComponent = ROLE_ICONS[role];
-                          return (
-                            <Badge
-                              key={role}
-                              variant={ROLE_COLORS[role] as any || 'default'}
-                              className="text-xs flex items-center gap-1"
-                            >
-                              {IconComponent && <IconComponent className="w-3 h-3" />}
-                              {ROLE_LABELS[role] || role}
-                            </Badge>
-                          );
-                        })}
-                      </div>
-                    </TableCell>
-                    
-                    <TableCell>
-                      <Badge variant={employee.isActive ? 'default' : 'secondary'}>
-                        {employee.isActive ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </TableCell>
-                    
-                    <TableCell className="text-sm text-muted-foreground">
-                      {formatDate(employee.createdAt)}
-                    </TableCell>
-                    
-                    <TableCell className="text-right">
-                      <EditEmployeeDialog employee={employee} />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
+                        </TableCell>
+                        
+                        <TableCell className="min-w-[180px]">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1 text-sm">
+                              <Mail className="h-3 w-3 flex-shrink-0" />
+                              <span className="truncate">{employee.email}</span>
+                            </div>
+                            {employee.phone && (
+                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                <Phone className="h-3 w-3 flex-shrink-0" />
+                                <span>{formatPhoneNumber(employee.phone)}</span>
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        
+                        <TableCell className="min-w-[150px]">
+                          <div className="flex flex-wrap gap-1">
+                            {employee.roles.map((role) => {
+                              const IconComponent = ROLE_ICONS[role];
+                              return (
+                                <Badge
+                                  key={role}
+                                  variant={ROLE_COLORS[role] as any || 'default'}
+                                  className="text-xs flex items-center gap-1 whitespace-nowrap"
+                                >
+                                  {IconComponent && <IconComponent className="w-3 h-3" />}
+                                  {ROLE_LABELS[role] || role}
+                                </Badge>
+                              );
+                            })}
+                          </div>
+                        </TableCell>
+                        
+                        <TableCell className="min-w-[100px]">
+                          <Badge variant={employee.isActive ? 'default' : 'secondary'} className="whitespace-nowrap">
+                            {employee.isActive ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </TableCell>
+                        
+                        <TableCell className="text-sm text-muted-foreground min-w-[120px]">
+                          <span className="whitespace-nowrap">{formatDate(employee.createdAt)}</span>
+                        </TableCell>
+                        
+                        <TableCell className="text-right min-w-[100px]">
+                          <EditEmployeeDialog employee={employee} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
         </Card>
       </div>
     </div>
