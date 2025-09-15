@@ -26,39 +26,26 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
 
   const handleDownload = async (path: string, filename: string) => {
     if (!path) return;
-    
     try {
-      // Generate signed URL for download
       const { supabase } = await import('@/integrations/supabase/client');
-      const { data, error } = await supabase.storage
-        .from('manifests')
-        .createSignedUrl(path, 3600); // 1 hour expiry
+      // Use public URL (bucket is public) and fetch as Blob to avoid Chrome cross-origin issues
+      const { data: pub } = supabase.storage.from('manifests').getPublicUrl(path);
+      const url = pub.publicUrl;
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error('Failed to fetch file');
+      const blob = await resp.blob();
+      const blobUrl = URL.createObjectURL(blob);
 
-      if (error) throw error;
-      
-      const link = document.createElement('a');
-      link.href = data.signedUrl;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 3000);
     } catch (err) {
-      toast({
-        title: 'Download failed',
-        description: 'Unable to download PDF. Opening in new tab instead.',
-      });
-      // Fallback to opening in new tab
-      try {
-        const { supabase } = await import('@/integrations/supabase/client');
-        const { data } = await supabase.storage
-          .from('manifests')
-          .createSignedUrl(path, 3600);
-        if (data?.signedUrl) {
-          window.open(data.signedUrl, '_blank', 'noopener');
-        }
-      } catch (fallbackErr) {
-        console.error('Fallback failed:', fallbackErr);
-      }
+      console.error('Download failed:', err);
+      toast({ title: 'Download failed', description: 'Please allow downloads and try again.', variant: 'destructive' });
     }
   };
 
@@ -66,14 +53,24 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
     if (!path) return;
     try {
       const { supabase } = await import('@/integrations/supabase/client');
-      const { data, error } = await supabase.storage
-        .from('manifests')
-        .createSignedUrl(path, 3600);
-      if (error) throw error;
-      setViewerUrl(data.signedUrl);
+      const { data: pub } = supabase.storage.from('manifests').getPublicUrl(path);
+      const url = pub.publicUrl;
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error('Failed to fetch file');
+      const blob = await resp.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      setViewerUrl(blobUrl);
       setViewerOpen(true);
     } catch (err) {
-      toast({ title: 'Preview failed', description: 'Unable to open PDF preview.' });
+      console.error('Preview failed:', err);
+      toast({ title: 'Preview failed', description: 'Opening in a new tab instead.' });
+      try {
+        const { supabase } = await import('@/integrations/supabase/client');
+        const { data: pub } = supabase.storage.from('manifests').getPublicUrl(path);
+        window.open(pub.publicUrl, '_blank', 'noopener');
+      } catch (e) {
+        console.error('Fallback open failed:', e);
+      }
     }
   };
 
@@ -167,9 +164,7 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
             <DialogTitle>Manifest Preview</DialogTitle>
           </DialogHeader>
           {viewerUrl ? (
-            <object data={viewerUrl} type="application/pdf" className="w-full h-[70vh] rounded-md">
-              <p className="text-sm">Your browser cannot display the PDF. Use Download instead.</p>
-            </object>
+            <iframe src={viewerUrl} className="w-full h-[70vh] rounded-md" title="Manifest Preview" />
           ) : (
             <div className="text-sm text-muted-foreground">Loading preview...</div>
           )}
