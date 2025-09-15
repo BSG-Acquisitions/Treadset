@@ -102,11 +102,24 @@ const handler = async (req: Request): Promise<Response> => {
                 .from('manifests')
                 .download(signaturePath);
               
-              if (downloadError) {
-                console.error(`Failed to download signature ${fieldName}:`, downloadError);
-                continue;
+              if (downloadError || !signatureBlob) {
+                console.warn(`Direct download failed for ${fieldName}. Trying signed URL...`, downloadError);
+                const { data: signed, error: signErr } = await supabase.storage
+                  .from('manifests')
+                  .createSignedUrl(signaturePath, 300);
+                if (signErr || !signed?.signedUrl) {
+                  console.error(`Failed to create signed URL for ${fieldName}:`, signErr);
+                  continue;
+                }
+                const resp = await fetch(signed.signedUrl);
+                if (!resp.ok) {
+                  console.error(`Failed to fetch signed URL for ${fieldName}: HTTP ${resp.status}`);
+                  continue;
+                }
+                signatureBytes = await resp.arrayBuffer();
+              } else {
+                signatureBytes = await signatureBlob.arrayBuffer();
               }
-              signatureBytes = await signatureBlob.arrayBuffer();
             }
             
             if (!signatureBytes) {
