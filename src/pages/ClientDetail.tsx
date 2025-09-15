@@ -135,16 +135,16 @@ export default function ClientDetail() {
         {/* Invoices and Finance */}
         <Card>
           <CardHeader>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex flex-col gap-4">
               <CardTitle className="flex items-center gap-2">
                 <FileText className="h-5 w-5" />
                 Recent Invoices
               </CardTitle>
-              <div className="flex flex-col sm:flex-row gap-2">
+              <div className="flex flex-col sm:flex-row gap-2 w-full">
                 <CreateInvoiceDialog 
                   clientId={client.id}
                   trigger={
-                    <Button size="sm" disabled={completedPickups.length === 0} className="w-full sm:w-auto">
+                    <Button size="sm" disabled={completedPickups.length === 0} className="w-full sm:flex-1 whitespace-nowrap">
                       Create Invoice
                     </Button>
                   }
@@ -152,7 +152,7 @@ export default function ClientDetail() {
                 <RecordPaymentDialog 
                   clientId={client.id}
                   trigger={
-                    <Button size="sm" variant="outline" className="w-full sm:w-auto">
+                    <Button size="sm" variant="outline" className="w-full sm:flex-1 whitespace-nowrap">
                       Record Payment
                     </Button>
                   }
