@@ -6,7 +6,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { SearchableDropdown } from "./SearchableDropdown";
 import { useToast } from "@/hooks/use-toast";
-import { useSendManifestEmail } from "@/hooks/useSendManifestEmail";
+import { useCreateManifest } from "@/hooks/useManifests";
+import { useManifestIntegration } from "@/hooks/useManifestIntegration";
+import { ManifestPDFControls } from "./ManifestPDFControls";
 import {
   Dialog,
   DialogContent,
@@ -67,17 +69,17 @@ interface Receiver {
 }
 
 const completePickupSchema = z.object({
-  // Passenger tire equipment
-  pte_off_rim: z.number().min(0, "PTE off rim count must be 0 or greater"),
-  pte_on_rim: z.number().min(0, "PTE on rim count must be 0 or greater"),
+  // Passenger tire equivalents  
+  equivalents_off_rim: z.number().min(0, "Equivalents off rim count must be 0 or greater"),
+  equivalents_on_rim: z.number().min(0, "Equivalents on rim count must be 0 or greater"),
   
-  // Commercial tires
+  // Commercial/truck tires
   commercial_17_5_19_5_off: z.number().min(0, "Commercial 17.5/19.5 off rim count must be 0 or greater"),
   commercial_17_5_19_5_on: z.number().min(0, "Commercial 17.5/19.5 on rim count must be 0 or greater"),
   commercial_22_5_off: z.number().min(0, "Commercial 22.5 off rim count must be 0 or greater"),
   commercial_22_5_on: z.number().min(0, "Commercial 22.5 on rim count must be 0 or greater"),
   
-  // Other categories
+  // Oversized (OTR + Tractor)
   otr_count: z.number().min(0, "OTR count must be 0 or greater"),
   tractor_count: z.number().min(0, "Tractor count must be 0 or greater"),
   
@@ -86,24 +88,14 @@ const completePickupSchema = z.object({
   volume_yards: z.number().min(0, "Volume must be 0 or greater").optional(),
   
   // Manifest data
-  manifest_number: z.string().min(1, "Manifest number is required"),
   generator_id: z.string().min(1, "Generator is required"),
   hauler_id: z.string().min(1, "Hauler is required"),
   receiver_id: z.string().min(1, "Receiver is required"),
-  generator_date: z.string().min(1, "Generator date is required"),
-  receiver_date: z.string().min(1, "Receiver date is required"),
   generator_print_name: z.string().min(1, "Generator print name is required"),
   hauler_print_name: z.string().min(1, "Hauler print name is required"),
   receiver_print_name: z.string().min(1, "Receiver print name is required"),
   gross_weight: z.number().min(0, "Gross weight must be 0 or greater"),
   tare_weight: z.number().min(0, "Tare weight must be 0 or greater"),
-  
-  // Pricing overrides
-  custom_pricing: z.boolean().optional(),
-  unit_price_pte: z.number().min(0).optional(),
-  unit_price_commercial: z.number().min(0).optional(),
-  unit_price_otr: z.number().min(0).optional(),
-  unit_price_tractor: z.number().min(0).optional(),
   
   notes: z.string().optional(),
 });
@@ -114,12 +106,14 @@ interface CompletePickupDialogProps {
   pickup: {
     id: string;
     client?: { 
+      id?: string;
       company_name: string;
       contact_name?: string;
       email?: string;
       phone?: string;
     };
     location?: { 
+      id?: string;
       name?: string; 
       address: string; 
     };
@@ -139,7 +133,7 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
   const [selectedGenerator, setSelectedGenerator] = useState<Generator | null>(null);
   const [selectedHauler, setSelectedHauler] = useState<Hauler | null>(null);
   const [selectedReceiver, setSelectedReceiver] = useState<Receiver | null>(null);
-  const [generatedPdf, setGeneratedPdf] = useState<{ pdfUrl: string; pdfPath: string } | null>(null);
+  const [completedManifest, setCompletedManifest] = useState<{ id: string; acroform_pdf_path?: string } | null>(null);
   
   const generatorSigRef = useRef<SignaturePad>(null);
   const haulerSigRef = useRef<SignaturePad>(null);
@@ -147,7 +141,8 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
   
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const sendManifestEmail = useSendManifestEmail();
+  const createManifest = useCreateManifest();
+  const manifestIntegration = useManifestIntegration();
 
   // Auto-populate generator with client data when dialog opens
   useEffect(() => {
@@ -237,8 +232,8 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
   const form = useForm<CompletePickupFormData>({
     resolver: zodResolver(completePickupSchema),
     defaultValues: {
-      pte_off_rim: 0,
-      pte_on_rim: 0,
+      equivalents_off_rim: pickup.pte_count || 0,
+      equivalents_on_rim: 0,
       commercial_17_5_19_5_off: 0,
       commercial_17_5_19_5_on: 0,
       commercial_22_5_off: 0,
@@ -247,27 +242,19 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
       tractor_count: pickup.tractor_count || 0,
       weight_tons: 0,
       volume_yards: 0,
-      manifest_number: '',
       generator_id: '',
       hauler_id: '',
       receiver_id: '',
-      generator_date: new Date().toISOString().split('T')[0],
-      receiver_date: new Date().toISOString().split('T')[0],
-      generator_print_name: '',
+      generator_print_name: pickup.client?.contact_name || '',
       hauler_print_name: '',
-      receiver_print_name: '',
+      receiver_print_name: 'BSG Processor',
       gross_weight: 0,
       tare_weight: 0,
-      custom_pricing: false,
-      unit_price_pte: 25,
-      unit_price_commercial: 35,
-      unit_price_otr: 45,
-      unit_price_tractor: 35,
       notes: pickup.notes || "",
     },
   });
 
-  const customPricing = form.watch("custom_pricing");
+  const customPricing = false; // Removed custom pricing for simplified flow
   const grossWeight = form.watch("gross_weight");
   const tareWeight = form.watch("tare_weight");
   const netWeight = grossWeight - tareWeight;
@@ -291,123 +278,45 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
     }
   }, [selectedReceiver, form]);
 
-  const generatePDF = async (data: CompletePickupFormData) => {
-    console.log('=== GENERATING PDF ===');
+  // Utility function to calculate tire equivalents based on standard conversions
+  const calculateEquivalents = (data: CompletePickupFormData) => {
+    // Standard tire-to-equivalent conversions
+    const passengerEquivalents = data.equivalents_off_rim + data.equivalents_on_rim;
+    const commercialEquivalents = (data.commercial_17_5_19_5_off + data.commercial_17_5_19_5_on) * 2 + 
+                                 (data.commercial_22_5_off + data.commercial_22_5_on) * 2.5;
+    const oversizedEquivalents = data.otr_count * 4 + data.tractor_count * 3;
+    
+    return {
+      passengerEquivalents,
+      commercialEquivalents, 
+      oversizedEquivalents,
+      totalEquivalents: passengerEquivalents + commercialEquivalents + oversizedEquivalents
+    };
+  };
+
+  const saveSignature = async (type: string, sigRef: React.RefObject<SignaturePad>) => {
+    if (!sigRef.current || sigRef.current.isEmpty()) return null;
+
     try {
-      // Get signatures as base64 strings
-      const generatorSig = generatorSigRef.current?.toDataURL();
-      const haulerSig = haulerSigRef.current?.toDataURL();
-      const receiverSig = receiverSigRef.current?.toDataURL();
+      const signatureDataUrl = sigRef.current.toDataURL();
+      const signatureBlob = await fetch(signatureDataUrl).then(r => r.blob());
+      
+      const fileName = `${type}_signature_${Date.now()}.png`;
+      const { data, error } = await supabase.storage
+        .from('manifests')
+        .upload(`signatures/${fileName}`, signatureBlob, {
+          contentType: 'image/png'
+        });
 
-      console.log('Signatures captured:', {
-        generator: generatorSig ? 'present' : 'missing',
-        hauler: haulerSig ? 'present' : 'missing', 
-        receiver: receiverSig ? 'present' : 'missing'
-      });
-
-      // Prepare overlay data in the format expected by the edge function
-      const overlayData = {
-        // Generator data (these field names should match calibration field_name)
-        generator_name: selectedGenerator?.generator_name || '',
-        generator_mailing_address: selectedGenerator?.generator_mailing_address || '',
-        generator_city: selectedGenerator?.generator_city || '',
-        generator_state: selectedGenerator?.generator_state || '',
-        generator_zip: selectedGenerator?.generator_zip || '',
-        generator_phone: pickup.client?.phone || '',
-        generator_physical_address: selectedGenerator?.generator_mailing_address || '',
-        generator_county: '',
-        generator_city_2: selectedGenerator?.generator_city || '',
-        generator_state_2: selectedGenerator?.generator_state || '',
-        generator_zip_2: selectedGenerator?.generator_zip || '',
-        generator_print_name: data.generator_print_name || '',
-        generator_date: data.generator_date || '',
-        generator_signature: generatorSig || '',
-        
-        // Hauler data
-        hauler_name: selectedHauler?.hauler_name || '',
-        hauler_mailing_address: selectedHauler?.hauler_mailing_address || '',
-        hauler_city: selectedHauler?.hauler_city || '',
-        hauler_state: selectedHauler?.hauler_state || '',
-        hauler_zip: selectedHauler?.hauler_zip || '',
-        hauler_phone: pickup.client?.phone || '',
-        hauler_mi_reg: selectedHauler?.hauler_mi_reg || '',
-        hauler_print_name: data.hauler_print_name || '',
-        hauler_signature: haulerSig || '',
-        
-        // Receiver data
-        receiver_name: selectedReceiver?.receiver_name || '',
-        receiver_mailing_address: selectedReceiver?.receiver_mailing_address || '',
-        receiver_city: selectedReceiver?.receiver_city || '',
-        receiver_state: selectedReceiver?.receiver_state || '',
-        receiver_zip: selectedReceiver?.receiver_zip || '',
-        receiver_phone: pickup.client?.phone || '',
-        receiver_print_name: data.receiver_print_name || '',
-        receiver_date: data.receiver_date || '',
-        receiver_signature: receiverSig || '',
-        
-        // Counts and weights
-        count_passenger_car: (data.pte_off_rim + data.pte_on_rim) || 0,
-        count_truck: (data.commercial_17_5_19_5_off + data.commercial_17_5_19_5_on + data.commercial_22_5_off + data.commercial_22_5_on) || 0,
-        count_oversized: data.otr_count || 0,
-        count_pte: data.tractor_count || 0,
-        gross_weight: data.gross_weight || 0,
-        tare_weight: data.tare_weight || 0,
-        net_weight: netWeight || 0,
-        manifest_number: data.manifest_number || '',
-      };
-
-      console.log('Overlay data prepared:', Object.keys(overlayData));
-      console.log('Sample overlay data:', {
-        generator_name: overlayData.generator_name,
-        hauler_name: overlayData.hauler_name,
-        receiver_name: overlayData.receiver_name,
-        manifest_number: overlayData.manifest_number
-      });
-
-      // Generate PDF with correct payload structure
-      console.log('Calling generate-manifest-pdf function...');
-      const { data: pdfResult, error: pdfError } = await supabase.functions.invoke('generate-manifest-pdf', {
-        body: {
-          template_name: 'STATE_Manifest_v1.pdf',
-          version: 'v1',
-          overlay_data: overlayData
-        }
-      });
-
-      console.log('PDF function response:', { pdfResult, pdfError });
-
-      if (pdfError) {
-        console.error('PDF Error:', pdfError);
-        throw pdfError;
-      }
-
-      if (!pdfResult || !pdfResult.success) {
-        console.error('PDF Generation failed:', pdfResult);
-        throw new Error(pdfResult?.error || 'Unknown PDF generation error');
-      }
-
-      console.log('PDF Generated successfully:', pdfResult);
-
-      // Store the PDF result for download/email options
-      setGeneratedPdf({
-        pdfUrl: pdfResult.pdf_url,
-        pdfPath: pdfResult.file_path
-      });
-
-      alert(`PDF Generated Successfully! URL: ${pdfResult.pdf_url}`);
-      return pdfResult;
+      if (error) throw error;
+      return data.path;
     } catch (error) {
-      throw error;
+      console.error(`Error saving ${type} signature:`, error);
+      return null;
     }
   };
 
   const onSubmit = async (data: CompletePickupFormData) => {
-    console.log('=== SUBMIT STARTED ===');
-    console.log('Form data:', data);
-    console.log('Selected Generator:', selectedGenerator);
-    console.log('Selected Hauler:', selectedHauler);
-    console.log('Selected Receiver:', selectedReceiver);
-    
     setIsSubmitting(true);
     try {
       // Validate required fields
@@ -425,31 +334,28 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
       if (haulerSig !== false) missingFields.push("Hauler Signature"); 
       if (receiverSig !== false) missingFields.push("Receiver Signature");
       
-      console.log('Missing fields check:', missingFields);
-      
       if (missingFields.length > 0) {
-        alert(`Please provide the following before completing pickup: ${missingFields.join(", ")}`);
+        toast({
+          title: "Missing Information",
+          description: `Please provide: ${missingFields.join(", ")}`,
+          variant: "destructive"
+        });
         return;
       }
 
-      // Also check form validation errors
-      const formErrors = form.formState.errors;
-      console.log('Form errors:', formErrors);
-      if (Object.keys(formErrors).length > 0) {
-        const errorMessages = Object.entries(formErrors).map(([field, error]) => 
-          `${field}: ${error.message}`
-        ).join('\n');
-        alert(`Please fix these errors:\n${errorMessages}`);
-        return;
-      }
+      // Save signatures to storage
+      const generatorSigPath = await saveSignature('generator', generatorSigRef);
+      const haulerSigPath = await saveSignature('hauler', haulerSigRef);
+      const receiverSigPath = await saveSignature('receiver', receiverSigRef);
 
-      // Calculate total PTE count for compatibility
-      const totalPte = data.pte_off_rim + data.pte_on_rim;
-      
-      const { error } = await supabase
+      // Calculate tire equivalents
+      const equivalents = calculateEquivalents(data);
+
+      // Update pickup status
+      const { error: pickupError } = await supabase
         .from('pickups')
         .update({
-          pte_count: totalPte,
+          pte_count: equivalents.totalEquivalents,
           otr_count: data.otr_count,
           tractor_count: data.tractor_count,
           notes: data.notes,
@@ -458,16 +364,57 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
         })
         .eq('id', pickup.id);
 
-      if (error) throw error;
+      if (pickupError) throw pickupError;
 
-      // Generate manifest PDF
-      await generatePDF(data);
+      // Create manifest record
+      const manifestData = {
+        pickup_id: pickup.id,
+        client_id: pickup.client?.id || null,
+        location_id: pickup.location?.id || null,
+        
+        // Tire counts
+        pte_off_rim: data.equivalents_off_rim,
+        pte_on_rim: data.equivalents_on_rim,
+        commercial_17_5_19_5_off: data.commercial_17_5_19_5_off,
+        commercial_17_5_19_5_on: data.commercial_17_5_19_5_on,
+        commercial_22_5_off: data.commercial_22_5_off,
+        commercial_22_5_on: data.commercial_22_5_on,
+        otr_count: data.otr_count,
+        tractor_count: data.tractor_count,
+        
+        // Weights
+        weight_tons: data.weight_tons,
+        volume_yards: data.volume_yards,
+        
+        // Signatures
+        customer_sig_path: generatorSigPath,
+        driver_sig_path: haulerSigPath,
+        
+        // Print names
+        signed_by_name: data.generator_print_name,
+        
+        status: 'COMPLETED',
+        signed_at: new Date().toISOString()
+      };
 
-      // Don't close dialog immediately - let user download/email first
+      const manifest = await createManifest.mutateAsync(manifestData);
+      
+      // Generate AcroForm PDF
+      await manifestIntegration.mutateAsync({ manifestId: manifest.id });
+      
+      setCompletedManifest({ 
+        id: manifest.id, 
+        acroform_pdf_path: manifest.acroform_pdf_path 
+      });
+
       queryClient.invalidateQueries({ queryKey: ['pickups'] });
       
-    } catch (error) {
-      alert(`Error completing pickup: ${error.message}`);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to complete pickup",
+        variant: "destructive"
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -517,50 +464,13 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="manifest_number"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Manifest Number *</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="Enter manifest number" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="generator_date"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Generator Date *</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="receiver_date"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Receiver Date *</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                 <div className="p-3 bg-muted rounded-lg">
+                   <div className="text-sm">
+                     <p><strong>Date:</strong> {new Date().toLocaleDateString()}</p>
+                     <p><strong>Pickup:</strong> {pickup.client?.company_name}</p>
+                     <p><strong>Location:</strong> {pickup.location?.address}</p>
+                   </div>
+                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
@@ -822,18 +732,18 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
 
             {/* Tire Counts */}
             <div className="space-y-6">
-              {/* Passenger Tire Equipment */}
+              {/* Passenger Tire Equivalents */}
               <div className="space-y-4">
                 <h3 className="text-lg font-medium flex items-center gap-2">
-                  <span>🚗</span> Passenger Tire Equipment (PTE)
+                  <span>🚗</span> Passenger Tire Equivalents
                 </h3>
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
-                    name="pte_off_rim"
+                    name="equivalents_off_rim"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>PTE Off Rim</FormLabel>
+                        <FormLabel>Equivalents Off Rim</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
@@ -848,10 +758,10 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                   />
                   <FormField
                     control={form.control}
-                    name="pte_on_rim"
+                    name="equivalents_on_rim"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>PTE On Rim</FormLabel>
+                        <FormLabel>Equivalents On Rim</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
@@ -869,10 +779,10 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
 
               <Separator />
 
-              {/* Commercial Tires */}
+              {/* Commercial/Truck Tires */}
               <div className="space-y-4">
                 <h3 className="text-lg font-medium flex items-center gap-2">
-                  <span>🚛</span> Commercial Tires
+                  <span>🚛</span> Commercial/Truck Tires
                 </h3>
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
@@ -956,10 +866,10 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
 
               <Separator />
 
-              {/* Other Tire Types */}
+              {/* Oversized Tires */}
               <div className="space-y-4">
                 <h3 className="text-lg font-medium flex items-center gap-2">
-                  <span>🏗️</span> Other Tire Types
+                  <span>🏗️</span> Oversized Tires
                 </h3>
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
@@ -1053,110 +963,39 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
 
               <Separator />
 
-              {/* Custom Pricing */}
+              {/* Tire Conversion Summary */}
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium flex items-center gap-2">
-                    <DollarSign className="h-5 w-5" />
-                    Custom Pricing
-                  </h3>
-                  <FormField
-                    control={form.control}
-                    name="custom_pricing"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center space-x-2">
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <FormLabel className="text-sm">Override default pricing</FormLabel>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                {customPricing && (
-                  <div className="grid grid-cols-2 gap-4 p-4 bg-secondary/10 rounded-lg">
-                    <FormField
-                      control={form.control}
-                      name="unit_price_pte"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>PTE Unit Price ($)</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value) || 0)}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="unit_price_commercial"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Commercial Unit Price ($)</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value) || 0)}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="unit_price_otr"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>OTR Unit Price ($)</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value) || 0)}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="unit_price_tractor"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Tractor Unit Price ($)</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value) || 0)}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                <h3 className="text-lg font-medium flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" />
+                  Tire Equivalent Summary
+                </h3>
+                <div className="p-4 bg-secondary/10 rounded-lg">
+                  <div className="grid grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <div className="font-medium">Passenger Tires</div>
+                      <div>Total: {form.watch("equivalents_off_rim") + form.watch("equivalents_on_rim")} equivalents</div>
+                    </div>
+                    <div>
+                      <div className="font-medium">Commercial/Truck</div>
+                      <div>Total: {((form.watch("commercial_17_5_19_5_off") + form.watch("commercial_17_5_19_5_on")) * 2 + 
+                                   (form.watch("commercial_22_5_off") + form.watch("commercial_22_5_on")) * 2.5).toFixed(1)} equivalents</div>
+                    </div>
+                    <div>
+                      <div className="font-medium">Oversized</div>
+                      <div>Total: {(form.watch("otr_count") * 4 + form.watch("tractor_count") * 3)} equivalents</div>
+                    </div>
                   </div>
-                )}
+                  <div className="mt-3 pt-3 border-t">
+                    <div className="font-semibold">
+                      Grand Total: {(
+                        form.watch("equivalents_off_rim") + form.watch("equivalents_on_rim") +
+                        ((form.watch("commercial_17_5_19_5_off") + form.watch("commercial_17_5_19_5_on")) * 2) +
+                        ((form.watch("commercial_22_5_off") + form.watch("commercial_22_5_on")) * 2.5) +
+                        (form.watch("otr_count") * 4) + (form.watch("tractor_count") * 3)
+                      ).toFixed(1)} tire equivalents
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <Separator />
@@ -1181,83 +1020,22 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
               />
             </div>
 
-            {/* PDF Actions - Show after successful generation */}
-            {generatedPdf && (
+            {/* PDF Controls - Show after successful generation */}
+            {completedManifest && (
               <div className="bg-brand-success/10 border border-brand-success/20 rounded-lg p-4 space-y-4">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-brand-success" />
-                  <h3 className="font-semibold text-brand-success">Manifest Generated Successfully!</h3>
+                  <h3 className="font-semibold text-brand-success">Pickup Completed & Manifest Generated!</h3>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  Your manifest has been generated. You can now download it or email it to the client.
-                </p>
-                <div className="flex gap-2 flex-wrap">
-                  <Button
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        console.log('Downloading PDF from path:', generatedPdf.pdfPath);
-                        
-                        // Use Supabase storage download instead of public URL
-                        const { data, error } = await supabase.storage
-                          .from('manifests')
-                          .download(generatedPdf.pdfPath);
-                        
-                        if (error) {
-                          console.error('Storage download error:', error);
-                          throw error;
-                        }
-                        
-                        console.log('PDF downloaded successfully, creating blob URL');
-                        
-                        // Create blob URL and trigger download
-                        const url = URL.createObjectURL(data);
-                        const link = document.createElement('a');
-                        link.href = url;
-                        link.download = `manifest-${pickup.client?.company_name || 'pickup'}-${new Date().toISOString().split('T')[0]}.pdf`;
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                        URL.revokeObjectURL(url);
-                        
-                        console.log('PDF download triggered successfully');
-                      } catch (error) {
-                        console.error('PDF download failed:', error);
-                        // Fallback: try opening the public URL
-                        console.log('Falling back to public URL:', generatedPdf.pdfUrl);
-                        window.open(generatedPdf.pdfUrl, '_blank');
-                      }
-                    }}
-                    className="bg-primary hover:bg-primary/90"
-                  >
-                    Download PDF
-                  </Button>
+                <ManifestPDFControls
+                  manifestId={completedManifest.id}
+                  acroformPdfPath={completedManifest.acroform_pdf_path}
+                  clientEmails={pickup.client?.email ? [pickup.client.email] : []}
+                />
+                <div className="flex justify-end">
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => {
-                      if (pickup.client?.email) {
-                        sendManifestEmail.mutate({
-                          to: pickup.client.email,
-                          pdfPath: generatedPdf.pdfPath,
-                          subject: `Tire Pickup Manifest - ${pickup.client.company_name}`,
-                          messageHtml: `<p>Dear ${pickup.client.company_name},</p><p>Please find attached your tire pickup manifest for the service completed on ${new Date(pickup.pickup_date).toLocaleDateString()}.</p><p>Thank you for your business!</p>`
-                        });
-                      } else {
-                        toast({
-                          title: "No Email Available",
-                          description: "Client email not found. Please download and send manually.",
-                          variant: "destructive",
-                        });
-                      }
-                    }}
-                    disabled={sendManifestEmail.isPending}
-                  >
-                    {sendManifestEmail.isPending ? "Sending..." : "Email to Client"}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
                     onClick={() => setOpen(false)}
                   >
                     Close
@@ -1272,15 +1050,10 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
               </Button>
               <Button 
                 type="submit" 
-                disabled={isSubmitting || generatedPdf !== null} 
+                disabled={isSubmitting || completedManifest !== null} 
                 className="bg-brand-success hover:bg-brand-success/90"
-                onClick={(e) => {
-                  console.log('Button clicked!', e);
-                  console.log('Form valid:', form.formState.isValid);
-                  console.log('Form errors:', JSON.stringify(form.formState.errors, null, 2));
-                }}
               >
-                {isSubmitting ? "Saving..." : generatedPdf ? "Manifest Generated" : "Complete Pickup & Generate Manifest"}
+                {isSubmitting ? "Processing..." : completedManifest ? "Completed" : "Complete Pickup & Generate Manifest"}
               </Button>
             </div>
             </div>
