@@ -30,6 +30,7 @@ import DriverDashboard from "./pages/DriverDashboard";
 import PublicBook from "./pages/PublicBook";
 import PublicBookingConfirmation from "./pages/PublicBookingConfirmation";
 import ManifestExample from '@/pages/ManifestExample';
+import AcroFormDemo from '@/pages/AcroFormDemo';
 
 const queryClient = new QueryClient();
 
@@ -48,6 +49,11 @@ const App = () => (
           <Route path="/test/manifest" element={
             <div>
               <ManifestExample />
+            </div>
+          } />
+          <Route path="/test/acroform" element={
+            <div>
+              <AcroFormDemo />
             </div>
           } />
             
