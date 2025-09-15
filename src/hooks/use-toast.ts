@@ -1,4 +1,5 @@
 import * as React from "react"
+import { toast as sonnerToast } from "sonner"
 
 import type {
   ToastActionElement,
@@ -139,23 +140,47 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, "id">
 
-function toast({ ...props }: Toast) {
-  // No-op function - all toasts are disabled
-  const noop = () => {};
+function toast({ title, description, ...props }: Toast) {
+  const id = genId()
+  const message =
+    typeof title === "string" ? title : title ? String(title) : "Notification"
+  const desc =
+    typeof description === "string"
+      ? description
+      : description
+      ? String(description)
+      : undefined
+
+  // Use Sonner to display the toast; passing id enables updates
+  sonnerToast(message, { description: desc, id })
+
   return {
-    id: "disabled",
-    dismiss: noop,
-    update: noop,
+    id,
+    dismiss: () => sonnerToast.dismiss(id),
+    update: (partial: Partial<Toast>) => {
+      const nextTitle =
+        typeof partial.title === "string"
+          ? partial.title
+          : partial.title
+          ? String(partial.title)
+          : message
+      const nextDesc =
+        typeof partial.description === "string"
+          ? partial.description
+          : partial.description
+          ? String(partial.description)
+          : desc
+      sonnerToast(nextTitle, { description: nextDesc, id })
+    },
   }
 }
 
 function useToast() {
-  // Return empty state and no-op functions - all toasts are disabled
-  const noop = () => {};
   return {
-    toasts: [],
+    toasts: [], // We delegate rendering to <Sonner />
     toast,
-    dismiss: noop,
+    dismiss: (toastId?: string) =>
+      toastId ? sonnerToast.dismiss(toastId) : sonnerToast.dismiss(),
   }
 }
 
