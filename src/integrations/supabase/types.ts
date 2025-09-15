@@ -20,6 +20,7 @@ export type Database = {
           created_at: string
           driver_id: string | null
           estimated_arrival: string | null
+          hauler_id: string | null
           id: string
           organization_id: string
           pickup_id: string
@@ -34,6 +35,7 @@ export type Database = {
           created_at?: string
           driver_id?: string | null
           estimated_arrival?: string | null
+          hauler_id?: string | null
           id?: string
           organization_id: string
           pickup_id: string
@@ -48,6 +50,7 @@ export type Database = {
           created_at?: string
           driver_id?: string | null
           estimated_arrival?: string | null
+          hauler_id?: string | null
           id?: string
           organization_id?: string
           pickup_id?: string
@@ -63,6 +66,20 @@ export type Database = {
             columns: ["driver_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignments_hauler_id_fkey"
+            columns: ["hauler_id"]
+            isOneToOne: false
+            referencedRelation: "hauler_overlay_view"
+            referencedColumns: ["hauler_id"]
+          },
+          {
+            foreignKeyName: "assignments_hauler_id_fkey"
+            columns: ["hauler_id"]
+            isOneToOne: false
+            referencedRelation: "haulers"
             referencedColumns: ["id"]
           },
           {

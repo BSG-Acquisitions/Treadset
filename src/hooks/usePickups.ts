@@ -16,6 +16,9 @@ export interface SchedulePickupData {
   otrCount: number;
   tractorCount: number;
   preferredWindow: 'AM' | 'PM' | 'Any';
+  assignmentType?: 'vehicle' | 'hauler' | 'auto';
+  vehicleId?: string;
+  haulerId?: string;
   notes?: string;
 }
 
@@ -63,6 +66,7 @@ export const useAssignments = (date?: string) => {
             location:locations(address, name)
           ),
           vehicle:vehicles(name, capacity),
+          hauler:haulers(hauler_name, hauler_mi_reg),
           assigned_driver:users!driver_id(
             id,
             first_name,
@@ -88,27 +92,7 @@ export const useSchedulePickup = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (data: SchedulePickupData): Promise<{ pickup: Pickup; assignment: Assignment; options: RouteOption[] }> => {
-      // Call the route planner edge function
-      const { data: plannerResult, error: plannerError } = await supabase.functions.invoke('route-planner', {
-        body: {
-          clientId: data.clientId,
-          locationId: data.locationId,
-          pickupDate: data.pickupDate,
-          pteCount: data.pteCount,
-          preferredWindow: data.preferredWindow
-        }
-      });
-
-      if (plannerError) throw plannerError;
-
-      if (!plannerResult?.options || plannerResult.options.length === 0) {
-        throw new Error('No available slots found for the requested date and requirements');
-      }
-
-      // Use the best option (first in the sorted list)
-      const bestOption = plannerResult.options[0];
-
+    mutationFn: async (data: SchedulePickupData): Promise<{ pickup: Pickup; assignment: Assignment; options?: RouteOption[] }> => {
       // Get current organization ID
       const orgSlug = 'bsg'; // For now, default to BSG
       const { data: orgData } = await supabase.rpc('get_current_user_organization', { org_slug: orgSlug });
@@ -132,26 +116,79 @@ export const useSchedulePickup = () => {
 
       if (pickupError) throw pickupError;
 
-      // Create the assignment
-      const { data: assignment, error: assignmentError } = await supabase
-        .from('assignments')
-        .insert({
+      let assignment: Assignment;
+      let options: RouteOption[] | undefined;
+
+      // Handle different assignment types
+      if (!data.assignmentType || data.assignmentType === 'auto') {
+        // Use the route planner for automatic assignment
+        const { data: plannerResult, error: plannerError } = await supabase.functions.invoke('route-planner', {
+          body: {
+            clientId: data.clientId,
+            locationId: data.locationId,
+            pickupDate: data.pickupDate,
+            pteCount: data.pteCount,
+            preferredWindow: data.preferredWindow
+          }
+        });
+
+        if (plannerError) throw plannerError;
+
+        if (!plannerResult?.options || plannerResult.options.length === 0) {
+          throw new Error('No available slots found for the requested date and requirements');
+        }
+
+        const bestOption = plannerResult.options[0];
+        options = plannerResult.options;
+
+        const { data: autoAssignment, error: assignmentError } = await supabase
+          .from('assignments')
+          .insert({
+            pickup_id: pickup.id,
+            vehicle_id: bestOption.vehicleId,
+            organization_id: orgData,
+            scheduled_date: data.pickupDate,
+            estimated_arrival: bestOption.eta,
+            sequence_order: bestOption.insertionIndex || 0
+          })
+          .select()
+          .single();
+
+        if (assignmentError) throw assignmentError;
+        assignment = autoAssignment;
+      } else {
+        // Manual assignment
+        const assignmentData: any = {
           pickup_id: pickup.id,
-          vehicle_id: bestOption.vehicleId,
           organization_id: orgData,
           scheduled_date: data.pickupDate,
-          estimated_arrival: bestOption.eta,
-          sequence_order: bestOption.insertionIndex || 0
-        })
-        .select()
-        .single();
+          sequence_order: 0, // Set to 0 for manual assignments
+          status: 'assigned'
+        };
 
-      if (assignmentError) throw assignmentError;
+        // Set either vehicle_id or hauler_id based on assignment type
+        if (data.assignmentType === 'vehicle' && data.vehicleId) {
+          assignmentData.vehicle_id = data.vehicleId;
+        } else if (data.assignmentType === 'hauler' && data.haulerId) {
+          assignmentData.hauler_id = data.haulerId;
+        } else {
+          throw new Error('Invalid assignment: must specify either vehicle or hauler');
+        }
+
+        const { data: manualAssignment, error: assignmentError } = await supabase
+          .from('assignments')
+          .insert(assignmentData)
+          .select()
+          .single();
+
+        if (assignmentError) throw assignmentError;
+        assignment = manualAssignment;
+      }
 
       return {
         pickup,
         assignment,
-        options: plannerResult.options
+        options
       };
     },
     onSuccess: () => {
