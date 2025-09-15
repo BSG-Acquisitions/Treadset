@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { PDFDocument, PDFForm, PDFTextField } from "https://esm.sh/pdf-lib@1.17.1";
+import { PDFDocument, PDFForm, PDFTextField, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -88,8 +88,16 @@ const handler = async (req: Request): Promise<Response> => {
       }
     });
 
-    // Flatten the form to make it non-editable (optional)
-    // form.flatten();
+    // Update field appearances with an embedded standard font so values render in all viewers
+    try {
+      const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      form.updateFieldAppearances(helvetica);
+    } catch (e) {
+      console.warn('Could not update field appearances:', e);
+    }
+
+    // Flatten the form to make it non-editable and ensure values are visible
+    form.flatten();
 
     // Generate the filled PDF
     const filledPdfBytes = await pdfDoc.save();
