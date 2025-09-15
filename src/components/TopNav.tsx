@@ -53,7 +53,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
     if (location.pathname.startsWith('/clients')) return 'clients';
     if (location.pathname.startsWith('/routes')) return 'routes';
     if (location.pathname.startsWith('/driver')) return 'driver';
-    if (location.pathname === '/book') return 'book';
+    
     if (location.pathname === '/employees') return 'employees';
     if (location.pathname === '/analytics') return 'analytics';
     if (location.pathname === '/pricing') return 'pricing';
@@ -65,7 +65,6 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
     { id: 'clients', label: 'Clients', icon: Users, path: '/clients', roles: ['admin', 'ops_manager', 'sales'] as const },
     { id: 'routes', label: 'Routes', icon: MapPin, path: '/routes/today', roles: ['admin', 'ops_manager', 'dispatcher', 'driver'] as const },
     { id: 'driver', label: 'Driver Hub', icon: UserCheck, path: '/driver/dashboard', roles: ['driver'] as const },
-    { id: 'book', label: 'Book', icon: Package, path: '/book', roles: ['admin', 'ops_manager', 'sales'] as const },
     { id: 'employees', label: 'Employees', icon: UserCheck, path: '/employees', roles: ['admin'] as const },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics', roles: ['admin', 'ops_manager'] as const },
     { id: 'pricing', label: 'Pricing', icon: DollarSign, path: '/pricing', roles: ['admin', 'ops_manager'] as const },
@@ -177,12 +176,6 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
             </PopoverContent>
           </Popover>
 
-          {/* Enhanced quick actions */}
-          <Button variant="outline" size="sm" asChild className="border-brand-primary/30 text-brand-primary hover:bg-brand-primary/10 hidden sm:flex">
-            <Link to="/book">
-              <span className="font-medium">Quick Book</span>
-            </Link>
-          </Button>
 
           {/* User menu */}
           <DropdownMenu>
