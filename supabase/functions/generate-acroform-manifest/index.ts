@@ -83,10 +83,15 @@ const handler = async (req: Request): Promise<Response> => {
           console.log(`Processing signature field: ${fieldName} with path: ${value}`);
           
           try {
+            // Normalize path: strip leading bucket name or slashes if present
+            const normalizeStoragePath = (p: string) => p.replace(/^manifests\//, '').replace(/^\/+/, '');
+            const signaturePath = normalizeStoragePath(String(value));
+            console.log(`Normalized signature path for download: ${signaturePath}`);
+
             // Download signature image from storage
             const { data: signatureBlob, error: downloadError } = await supabase.storage
               .from('manifests')
-              .download(value);
+              .download(signaturePath);
             
             if (downloadError) {
               console.error(`Failed to download signature ${fieldName}:`, downloadError);
@@ -125,7 +130,7 @@ const handler = async (req: Request): Promise<Response> => {
                 console.log(`Embedded signature image for ${fieldName}`);
               }
             } catch (fieldError) {
-              console.warn(`Could not process signature field "${fieldName}":`, fieldError.message);
+              console.warn(`Could not process signature field "${fieldName}":`, (fieldError as any).message);
             }
           } catch (signatureError) {
             console.error(`Failed to process signature for ${fieldName}:`, signatureError);
