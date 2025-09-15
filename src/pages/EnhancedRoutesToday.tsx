@@ -17,6 +17,7 @@ import { Separator } from "@/components/ui/separator";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { CapacityGauge } from "@/components/CapacityGauge";
 import { BSGLogo } from "@/components/BSGLogo";
+import { ManifestPDFControls } from "@/components/ManifestPDFControls";
 import { 
   Truck, 
   MapPin, 
@@ -513,6 +514,14 @@ export default function EnhancedRoutesToday() {
                               <Badge variant="outline">
                                 {pickup.status.replace('_', ' ')}
                               </Badge>
+                              {pickup.status === 'completed' && pickup.manifest_pdf_path && (
+                                <ManifestPDFControls
+                                  manifestId={pickup.manifest_id}
+                                  acroformPdfPath={pickup.manifest_pdf_path}
+                                  clientEmails={[]}
+                                  className="mt-2"
+                                />
+                              )}
                             </div>
                             
                             <div className="flex items-center gap-2">
