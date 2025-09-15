@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Bell, Menu, User, Settings, Package, BarChart3, UserCheck, Home, Users, MapPin, DollarSign, CreditCard } from 'lucide-react';
+import { Search, Bell, Menu, User, Settings, Package, BarChart3, UserCheck, Home, Users, MapPin, DollarSign, CreditCard, PenTool } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -214,6 +214,14 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                   Integrations
                 </Link>
               </DropdownMenuItem>
+              {hasAnyRole(['admin', 'ops_manager']) && (
+                <DropdownMenuItem asChild>
+                  <Link to="/receiver-signatures" className="flex items-center gap-2">
+                    <PenTool className="h-4 w-4" />
+                    Receiver Signatures
+                  </Link>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem 
                 onClick={signOut}

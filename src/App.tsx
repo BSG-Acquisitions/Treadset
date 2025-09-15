@@ -32,6 +32,7 @@ import PublicBookingConfirmation from "./pages/PublicBookingConfirmation";
 import ManifestExample from '@/pages/ManifestExample';
 import AcroFormDemo from '@/pages/AcroFormDemo';
 import ManifestViewer from './pages/ManifestViewer';
+import ReceiverSignatures from './pages/ReceiverSignatures';
 
 const queryClient = new QueryClient();
 
@@ -154,6 +155,11 @@ const App = () => (
             <Route path="/driver/dashboard" element={
               <ProtectedRoute roles={['driver', 'admin']}>
                 <DriverDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/receiver-signatures" element={
+              <ProtectedRoute roles={['admin', 'ops_manager']}>
+                <ReceiverSignatures />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

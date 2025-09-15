@@ -93,7 +93,6 @@ const completePickupSchema = z.object({
   receiver_id: z.string().min(1, "Receiver is required"),
   generator_print_name: z.string().min(1, "Generator print name is required"),
   hauler_print_name: z.string().min(1, "Hauler print name is required"),
-  receiver_print_name: z.string().optional(),
   gross_weight: z.number().min(0, "Gross weight must be 0 or greater"),
   tare_weight: z.number().min(0, "Tare weight must be 0 or greater"),
   
@@ -246,7 +245,6 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
       receiver_id: '',
       generator_print_name: pickup.client?.contact_name || '',
       hauler_print_name: '',
-      receiver_print_name: 'BSG Processor',
       gross_weight: 0,
       tare_weight: 0,
       notes: pickup.notes || "",
@@ -443,8 +441,6 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
         receiver_city: selectedReceiver?.receiver_city,
         receiver_state: selectedReceiver?.receiver_state,
         receiver_zip: selectedReceiver?.receiver_zip,
-        receiver_print_name: data.receiver_print_name,
-        receiver_date: today,
         // Signatures
         generator_signature: generatorSigPath,
         hauler_signature: haulerSigPath,
@@ -681,20 +677,6 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                       )}
                     </div>
                   )}
-                  
-                  <FormField
-                    control={form.control}
-                    name="receiver_print_name"
-                    render={({ field }) => (
-                      <FormItem className="mt-3">
-                        <FormLabel>Print Name *</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="Name to print on manifest" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </CardContent>
               </Card>
             </div>
