@@ -8,12 +8,14 @@ const corsHeaders = {
 };
 
 interface ManifestRequest {
-  pickup_id: string;
+  manifest_id?: string;
+  pickup_id?: string;
+  generate_acroform?: boolean;
   calibrate?: boolean;
   // Optional template location overrides
   template_bucket?: string; // e.g. "manifests" or "templates"
   template_path?: string;   // e.g. "templates/MI_Manifest_v1.pdf"
-  manifest_data: {
+  manifest_data?: {
     // Part 1 - Generator fields
     generator_name: string;
     generator_address: string;
