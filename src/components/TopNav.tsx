@@ -22,6 +22,7 @@ import { BSGLogoActual } from '@/components/BSGLogoActual';
 import { OrganizationSwitcher } from '@/components/auth/OrganizationSwitcher';
 import { useNotifications } from '@/hooks/useNotifications';
 import { formatDistanceToNow } from 'date-fns';
+import { LiveSearch } from '@/components/LiveSearch';
 
 interface TopNavProps {
   onMenuToggle?: () => void;
@@ -29,18 +30,10 @@ interface TopNavProps {
 }
 
 export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
-  const [searchQuery, setSearchQuery] = useState('');
   const { user, signOut, hasAnyRole } = useAuth();
   const location = useLocation();
   const { notifications, unreadCount, markAsRead, markAllAsRead, isMarkingAllAsRead } = useNotifications();
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      // Navigate to clients page with search query
-      window.location.href = `/clients?search=${encodeURIComponent(searchQuery.trim())}`;
-    }
-  };
 
   const getCurrentTab = () => {
     if (location.pathname === '/') return 'dashboard';
@@ -91,23 +84,9 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
           </Link>
         </div>
 
-        {/* Center - Search */}
+        {/* Center - Live Search */}
         <div className="flex-1 max-w-md mx-2 sm:mx-6 min-w-0">
-          <form onSubmit={handleSearch} className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search clients, routes..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-secondary/30 border-border/50 focus:bg-card focus:border-brand-primary/30 transition-all duration-300 text-sm"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleSearch(e);
-                }
-              }}
-            />
-          </form>
+          <LiveSearch />
         </div>
 
         {/* Right side - Actions and user menu */}
