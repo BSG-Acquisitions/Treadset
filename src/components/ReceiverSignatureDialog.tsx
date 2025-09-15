@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import SignatureCanvas from "react-signature-canvas";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface ReceiverSignatureDialogProps {
@@ -18,7 +18,7 @@ interface ReceiverSignatureDialogProps {
 export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manifestNumber }: ReceiverSignatureDialogProps) => {
   const [sigCanvas, setSigCanvas] = useState<SignatureCanvas | null>(null);
   const [receiverName, setReceiverName] = useState("BSG Processor");
-  const { toast } = useToast();
+  
   const queryClient = useQueryClient();
 
   const completeReceiverSignature = useMutation({
@@ -59,21 +59,13 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
       return { success: true };
     },
     onSuccess: () => {
-      toast({
-        title: "Receiver Signature Added",
-        description: `Manifest ${manifestNumber} has been completed with receiver signature.`
-      });
       queryClient.invalidateQueries({ queryKey: ['manifests'] });
       onOpenChange(false);
       setSigCanvas(null);
       setReceiverName("BSG Processor");
     },
     onError: (error: any) => {
-      toast({
-        title: "Signature Failed",
-        description: error?.message || "Failed to add receiver signature.",
-        variant: "destructive"
-      });
+      console.error("Failed to add receiver signature:", error);
     }
   });
 

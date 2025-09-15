@@ -5,7 +5,7 @@ import { z } from "zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { SearchableDropdown } from "./SearchableDropdown";
-import { useToast } from "@/hooks/use-toast";
+
 import { useCreateManifest } from "@/hooks/useManifests";
 import { useManifestIntegration } from "@/hooks/useManifestIntegration";
 import { ManifestPDFControls } from "./ManifestPDFControls";
@@ -138,7 +138,7 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
   const haulerSigRef = useRef<SignaturePad>(null);
   
   const queryClient = useQueryClient();
-  const { toast } = useToast();
+  
   const createManifest = useCreateManifest();
   const manifestIntegration = useManifestIntegration();
 
@@ -334,11 +334,7 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
       if (haulerSig !== false) missingFields.push("Hauler Signature");
       
       if (missingFields.length > 0) {
-        toast({
-          title: "Missing Information",
-          description: `Please provide: ${missingFields.join(", ")}`,
-          variant: "destructive"
-        });
+        console.error("Missing Information:", missingFields.join(", "));
         return;
       }
 
@@ -457,11 +453,7 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
       queryClient.invalidateQueries({ queryKey: ['pickups'] });
       
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error?.message || "Failed to complete pickup",
-        variant: "destructive"
-      });
+      console.error("Failed to complete pickup:", error);
     } finally {
       setIsSubmitting(false);
     }

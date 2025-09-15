@@ -8,7 +8,7 @@ import { Progress } from '@/components/ui/progress';
 import { Camera, CheckCircle, Clock, FileText, PenTool } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+
 import { useManifestIntegration } from '@/hooks/useManifestIntegration';
 import { AcroFormLivePreview } from '@/components/manifest/AcroFormLivePreview';
 
@@ -22,7 +22,7 @@ type WizardStep = 'arrive' | 'counts' | 'photos' | 'signatures' | 'review';
 export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onComplete }) => {
   const [step, setStep] = useState<WizardStep>('arrive');
   const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
+  
   const manifestIntegration = useManifestIntegration();
   const customerSigRef = useRef<SignatureCanvas>(null);
   const driverSigRef = useRef<SignatureCanvas>(null);
@@ -63,7 +63,7 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
 
   const saveSignature = async (type: 'customer' | 'driver', sigRef: React.RefObject<SignatureCanvas>) => {
     if (!sigRef.current || sigRef.current.isEmpty()) {
-      toast({ title: "Error", description: "Please provide a signature", variant: "destructive" });
+      console.error("Please provide a signature");
       return false;
     }
 
@@ -87,7 +87,7 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
 
       return true;
     } catch (error) {
-      toast({ title: "Error", description: "Failed to save signature", variant: "destructive" });
+      console.error("Failed to save signature:", error);
       return false;
     } finally {
       setLoading(false);
@@ -96,7 +96,7 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
 
   const handleFinalize = async () => {
     if (!data.customerSigned || !data.driverSigned) {
-      toast({ title: "Error", description: "Both signatures are required", variant: "destructive" });
+      console.error("Both signatures are required");
       return;
     }
 
@@ -134,16 +134,16 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
         const queued = JSON.parse(localStorage.getItem(queueKey) || '[]');
         queued.push(payload);
         localStorage.setItem(queueKey, JSON.stringify(queued));
-        toast({ title: "Queued", description: "Manifest will be finalized when online" });
+        console.log("Manifest will be finalized when online");
         onComplete();
         return;
       }
 
       await execute();
-      toast({ title: "Success", description: "Manifest finalized and sent to client" });
+      console.log("Manifest finalized and sent to client");
       onComplete();
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      console.error("Error:", error.message);
     } finally {
       setLoading(false);
     }
