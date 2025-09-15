@@ -93,53 +93,10 @@ export const useManifestIntegration = () => {
         outputPath: `manifests/acroform-${manifestId}-${Date.now()}.pdf`
       });
 
-      // 3. Generate coordinate-based PDF using existing system
-      const legacyManifestData = {
-        pickup_id: manifestData.pickup_id,
-        manifest_data: {
-          generator_name: manifestData.client?.[0]?.company_name || 'Generator',
-          generator_address: '2971 Bellevue Street, Detroit, MI 48207',
-          passenger_count: (manifestData.pte_off_rim || 0) + (manifestData.pte_on_rim || 0),
-          truck_count: (manifestData.commercial_22_5_off || 0) + (manifestData.commercial_22_5_on || 0),
-          oversized_count: manifestData.otr_count || 0,
-          pte_count: (manifestData.pte_off_rim || 0) + (manifestData.pte_on_rim || 0),
-          gross_weight: '',
-          tare_weight: '',
-          net_weight: '',
-          generator_signature_name: manifestData.client?.[0]?.contact_name || '',
-          generator_date: new Date().toISOString().split('T')[0],
-          generator_signature: '',
-          hauler_name: 'BSG Logistics',
-          hauler_address: '2971 Bellevue Street, Detroit, MI 48207',
-          hauler_license: 'H-12345',
-          vehicle_info: `V-${manifestData.vehicle_id || '123'}`,
-          driver_name: 'BSG Driver',
-          driver_signature_name: 'BSG Driver',
-          hauler_date: new Date().toISOString().split('T')[0],
-          hauler_signature: '',
-          processor_name: 'BSG Tire Recycling Center',
-          processor_address: '2971 Bellevue Street, Detroit, MI 48207',
-          processor_license: 'R-67890',
-          processing_method: 'Recycling',
-          processor_signature_name: 'Processor',
-          processor_date: new Date().toISOString().split('T')[0],
-          processor_signature: '',
-          pickup_date: manifestData.created_at?.split('T')[0] || new Date().toISOString().split('T')[0]
-        }
-      };
-
-      const { data: legacyResult, error: legacyError } = await supabase.functions.invoke(
-        'manifest-finalize',
-        { body: legacyManifestData }
-      );
-
-      if (legacyError) throw legacyError;
-
-      // 4. Update manifest with both PDF paths
+      // 3. Update manifest with AcroForm PDF path
       const { error: updateError } = await supabase
         .from('manifests')
         .update({
-          pdf_path: legacyResult.file_path,
           acroform_pdf_path: acroFormResult.pdfPath,
           status: 'COMPLETED',
           updated_at: new Date().toISOString()
@@ -150,22 +107,20 @@ export const useManifestIntegration = () => {
 
       return {
         success: true,
-        legacyPdfUrl: legacyResult.pdf_url,
-        legacyPdfPath: legacyResult.file_path,
-        acroformPdfUrl: acroFormResult.pdfUrl,
-        acroformPdfPath: acroFormResult.pdfPath
+        pdfUrl: acroFormResult.pdfUrl,
+        pdfPath: acroFormResult.pdfPath
       };
     },
     onSuccess: (data) => {
       toast({
         title: "Manifest Generated",
-        description: "Both coordinate-based and AcroForm PDFs created successfully."
+        description: "State compliant manifest PDF created successfully."
       });
     },
     onError: (error: any) => {
       toast({
         title: "Generation Failed",
-        description: error?.message || "Failed to generate manifest PDFs.",
+        description: error?.message || "Failed to generate manifest PDF.",
         variant: "destructive"
       });
     }

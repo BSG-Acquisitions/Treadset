@@ -204,7 +204,6 @@ export default function DriverManifests() {
                           <div className="mt-2 max-w-md">
                             <ManifestPDFControls
                               manifestId={manifest.id}
-                              pdfPath={manifest.pdf_path}
                               acroformPdfPath={manifest.acroform_pdf_path}
                               clientEmails={[]}
                               className="text-xs"

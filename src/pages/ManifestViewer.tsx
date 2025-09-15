@@ -212,7 +212,6 @@ export default function ManifestViewer() {
           <CardContent>
             <ManifestPDFControls
               manifestId={manifest.id}
-              pdfPath={manifest.pdf_path}
               acroformPdfPath={manifest.acroform_pdf_path}
               clientEmails={[]}
             />

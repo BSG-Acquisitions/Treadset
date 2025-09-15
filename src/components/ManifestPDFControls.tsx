@@ -7,7 +7,6 @@ import { useToast } from '@/hooks/use-toast';
 
 interface ManifestPDFControlsProps {
   manifestId: string;
-  pdfPath?: string;
   acroformPdfPath?: string;
   clientEmails?: string[];
   className?: string;
@@ -15,7 +14,6 @@ interface ManifestPDFControlsProps {
 
 export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
   manifestId,
-  pdfPath,
   acroformPdfPath,
   clientEmails = [],
   className = ""
@@ -83,14 +81,12 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
     }
   };
 
-  const hasPDFs = pdfPath || acroformPdfPath;
-
-  if (!hasPDFs) {
+  if (!acroformPdfPath) {
     return (
       <div className={`text-center py-4 ${className}`}>
         <Badge variant="outline" className="mb-2">
           <Calendar className="w-3 h-3 mr-1" />
-          PDFs will be generated when manifest is finalized
+          PDF will be generated when manifest is finalized
         </Badge>
       </div>
     );
@@ -99,76 +95,39 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
   return (
     <div className={`space-y-3 ${className}`}>
       <div className="text-sm font-medium text-muted-foreground">
-        Available Manifest PDFs:
+        State Compliant Manifest:
       </div>
       
-      {/* Coordinate-based PDF (Legacy) */}
-      {pdfPath && (
-        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-          <div className="flex items-center gap-2">
-            <FileText className="w-4 h-4 text-blue-600" />
-            <div>
-              <div className="font-medium">Standard Manifest</div>
-              <div className="text-xs text-muted-foreground">Coordinate-based PDF</div>
-            </div>
+      <div className="flex items-center justify-between p-3 bg-primary/5 rounded-lg border border-primary/20">
+        <div className="flex items-center gap-2">
+          <FileText className="w-4 h-4 text-primary" />
+          <div>
+            <div className="font-medium">Michigan Manifest PDF</div>
+            <div className="text-xs text-muted-foreground">AcroForm PDF with proper field mapping</div>
           </div>
-          <div className="flex gap-1">
+        </div>
+        <div className="flex gap-1">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleDownload(acroformPdfPath, `manifest-${manifestId}.pdf`)}
+          >
+            <Download className="w-3 h-3 mr-1" />
+            Download
+          </Button>
+          {clientEmails.length > 0 && (
             <Button
               size="sm"
               variant="outline"
-              onClick={() => handleDownload(pdfPath, `manifest-${manifestId}-standard.pdf`)}
+              onClick={() => handleEmail(acroformPdfPath, 'Michigan Manifest')}
+              disabled={sendEmail.isPending}
             >
-              <Download className="w-3 h-3 mr-1" />
-              Download
+              <Mail className="w-3 h-3 mr-1" />
+              Email
             </Button>
-            {clientEmails.length > 0 && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleEmail(pdfPath, 'Standard Manifest')}
-                disabled={sendEmail.isPending}
-              >
-                <Mail className="w-3 h-3 mr-1" />
-                Email
-              </Button>
-            )}
-          </div>
+          )}
         </div>
-      )}
-
-      {/* AcroForm PDF (State Compliant) */}
-      {acroformPdfPath && (
-        <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-          <div className="flex items-center gap-2">
-            <FileText className="w-4 h-4 text-green-600" />
-            <div>
-              <div className="font-medium">State Compliant Manifest</div>
-              <div className="text-xs text-muted-foreground">AcroForm PDF with proper field mapping</div>
-            </div>
-          </div>
-          <div className="flex gap-1">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => handleDownload(acroformPdfPath, `manifest-${manifestId}-acroform.pdf`)}
-            >
-              <Download className="w-3 h-3 mr-1" />
-              Download
-            </Button>
-            {clientEmails.length > 0 && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleEmail(acroformPdfPath, 'State Compliant Manifest')}
-                disabled={sendEmail.isPending}
-              >
-                <Mail className="w-3 h-3 mr-1" />
-                Email
-              </Button>
-            )}
-          </div>
-        </div>
-      )}
+      </div>
 
       {sendEmail.isPending && (
         <div className="text-center text-sm text-muted-foreground">
