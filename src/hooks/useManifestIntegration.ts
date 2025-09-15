@@ -15,20 +15,20 @@ export const convertManifestToAcroForm = (manifestData: any): Partial<AcroFormMa
     vehicle_trailer: `V-${manifestData.vehicle_id || '123'}`,
     
     // Generator (Client) information
-    generator_name: manifestData.client?.[0]?.company_name || 'Generator',
-    generator_mail_address: '2971 Bellevue Street',
-    generator_city: 'Detroit',
-    generator_state: 'MI',
-    generator_zip: '48207',
-    generator_physical_address: '2971 Bellevue Street',
-    generator_physical_city: 'Detroit',
-    generator_physical_state: 'MI',
-    generator_physical_zip: '48207',
-    generator_county: 'Wayne',
-    generator_phone: manifestData.client?.[0]?.phone || '(734) 415-6528',
+    generator_name: manifestData.client?.company_name || 'Generator',
+    generator_mail_address: manifestData.location?.address || manifestData.client?.mailing_address || '2971 Bellevue Street',
+    generator_city: manifestData.client?.city || 'Detroit',
+    generator_state: manifestData.client?.state || 'MI',
+    generator_zip: manifestData.client?.zip || '48207',
+    generator_physical_address: manifestData.location?.address || manifestData.client?.physical_address || '2971 Bellevue Street',
+    generator_physical_city: manifestData.client?.city || 'Detroit',
+    generator_physical_state: manifestData.client?.state || 'MI',
+    generator_physical_zip: manifestData.client?.zip || '48207',
+    generator_county: manifestData.client?.county || 'Wayne',
+    generator_phone: manifestData.client?.phone || '(734) 415-6528',
     generator_volume_weight: ((manifestData.pte_off_rim || 0) + (manifestData.pte_on_rim || 0)).toString(),
     generator_date_processed: new Date().toISOString().split('T')[0],
-    generator_print_name: manifestData.client?.[0]?.contact_name || 'Generator Rep',
+    generator_print_name: manifestData.client?.contact_name || 'Generator Rep',
     generator_date: new Date().toISOString().split('T')[0],
 
     // Hauler information (BSG Logistics)
@@ -75,7 +75,8 @@ export const useManifestIntegration = () => {
         .from('manifests')
         .select(`
           *,
-          client:clients(company_name, contact_name, phone)
+          client:clients(company_name, contact_name, phone),
+          location:locations(address, name)
         `)
         .eq('id', manifestId)
         .single();

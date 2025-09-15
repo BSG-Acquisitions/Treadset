@@ -167,18 +167,20 @@ export const useCreateManifest = () => {
 
   return useMutation({
     mutationFn: async (data: CreateManifestData) => {
-      // Generate manifest number
-      const { data: manifestNumber, error: numberError } = await supabase
-        .rpc('generate_manifest_number', { 
-          org_id: (await supabase.rpc('get_current_user_organization')).data 
-        });
+      // Resolve organization once
+      const { data: orgId, error: orgErr } = await supabase.rpc('get_current_user_organization');
+      if (orgErr) throw orgErr;
+      if (!orgId) throw new Error('No organization configured for current user');
 
+      // Generate manifest number with resolved org
+      const { data: manifestNumber, error: numberError } = await supabase
+        .rpc('generate_manifest_number', { org_id: orgId });
       if (numberError) throw numberError;
 
       const manifestData = {
         ...data,
-        manifest_number: manifestNumber,
-        organization_id: (await supabase.rpc('get_current_user_organization')).data,
+        manifest_number: manifestNumber as unknown as string,
+        organization_id: orgId as unknown as string,
         status: 'DRAFT' as const,
       };
 

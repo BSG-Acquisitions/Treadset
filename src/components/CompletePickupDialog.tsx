@@ -366,11 +366,19 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
 
       if (pickupError) throw pickupError;
 
+      // Ensure we have client_id and location_id from DB
+      const { data: pickupRef, error: pickupRefErr } = await supabase
+        .from('pickups')
+        .select('client_id, location_id')
+        .eq('id', pickup.id)
+        .single();
+      if (pickupRefErr) throw pickupRefErr;
+
       // Create manifest record
       const manifestData = {
         pickup_id: pickup.id,
-        client_id: pickup.client?.id || null,
-        location_id: pickup.location?.id || null,
+        client_id: pickupRef?.client_id || pickup.client?.id || null,
+        location_id: pickupRef?.location_id || pickup.location?.id || null,
         
         // Tire counts
         pte_off_rim: data.equivalents_off_rim,
