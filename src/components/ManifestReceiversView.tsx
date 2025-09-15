@@ -1,0 +1,158 @@
+import { useState } from "react";
+import { useManifests } from "@/hooks/useManifests";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ReceiverSignatureDialog } from "./ReceiverSignatureDialog";
+import { format } from "date-fns";
+import { Clock, FileText, Signature } from "lucide-react";
+
+export const ManifestReceiversView = () => {
+  const { data: manifests, isLoading } = useManifests();
+  const [selectedManifest, setSelectedManifest] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  // Filter manifests that need receiver signature (completed but no receiver signature)
+  const pendingReceiverSignature = manifests?.filter(m => 
+    m.status === 'COMPLETED' && 
+    m.signed_at && 
+    !m.receiver_signed_at
+  ) || [];
+
+  // Filter manifests that have all signatures
+  const completedManifests = manifests?.filter(m => 
+    m.status === 'COMPLETED' && 
+    m.signed_at && 
+    m.receiver_signed_at
+  ) || [];
+
+  const handleAddReceiverSignature = (manifestId: string) => {
+    setSelectedManifest(manifestId);
+    setDialogOpen(true);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="p-6">
+        <div className="text-center">Loading manifests...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 space-y-6">
+      <div className="flex items-center gap-2">
+        <Signature className="h-6 w-6" />
+        <h1 className="text-2xl font-bold">Receiver Signatures</h1>
+      </div>
+
+      {/* Pending Receiver Signatures */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5 text-orange-500" />
+            Awaiting Receiver Signature ({pendingReceiverSignature.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {pendingReceiverSignature.length === 0 ? (
+            <p className="text-gray-500">No manifests awaiting receiver signature</p>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {pendingReceiverSignature.map((manifest) => (
+                <Card key={manifest.id} className="border-orange-200">
+                  <CardContent className="p-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Badge variant="outline" className="text-orange-600">
+                          {manifest.manifest_number}
+                        </Badge>
+                        <Badge variant="secondary">Awaiting Receiver</Badge>
+                      </div>
+                      
+                      <h3 className="font-medium">{manifest.client?.company_name}</h3>
+                      
+                      {manifest.signed_at && (
+                        <p className="text-sm text-gray-500">
+                          Signed: {format(new Date(manifest.signed_at), 'MMM d, yyyy h:mm a')}
+                        </p>
+                      )}
+                      
+                      <Button 
+                        size="sm" 
+                        className="w-full"
+                        onClick={() => handleAddReceiverSignature(manifest.id)}
+                      >
+                        <Signature className="h-4 w-4 mr-2" />
+                        Add Receiver Signature
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Completed Manifests */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5 text-green-500" />
+            Fully Completed Manifests ({completedManifests.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {completedManifests.length === 0 ? (
+            <p className="text-gray-500">No fully completed manifests</p>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {completedManifests.map((manifest) => (
+                <Card key={manifest.id} className="border-green-200">
+                  <CardContent className="p-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Badge variant="outline" className="text-green-600">
+                          {manifest.manifest_number}
+                        </Badge>
+                        <Badge className="bg-green-100 text-green-800">Complete</Badge>
+                      </div>
+                      
+                      <h3 className="font-medium">{manifest.client?.company_name}</h3>
+                      
+                      <div className="text-xs space-y-1">
+                        {manifest.signed_at && (
+                          <p className="text-gray-500">
+                            Initial: {format(new Date(manifest.signed_at), 'MMM d, yyyy h:mm a')}
+                          </p>
+                        )}
+                        {manifest.receiver_signed_at && (
+                          <p className="text-gray-500">
+                            Receiver: {format(new Date(manifest.receiver_signed_at), 'MMM d, yyyy h:mm a')}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Receiver Signature Dialog */}
+      {selectedManifest && (
+        <ReceiverSignatureDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          manifestId={selectedManifest}
+          manifestNumber={
+            manifests?.find(m => m.id === selectedManifest)?.manifest_number || ''
+          }
+        />
+      )}
+    </div>
+  );
+};

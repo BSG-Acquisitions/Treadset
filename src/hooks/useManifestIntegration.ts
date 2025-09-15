@@ -43,7 +43,8 @@ export const convertManifestToAcroForm = (manifestData: any): Partial<AcroFormMa
     oversized_count: ((manifestData.otr_count || 0) + (manifestData.tractor_count || 0)).toString(),
     generator_date_processed: new Date().toISOString().split('T')[0],
     generator_print_name: manifestData.signed_by_name || manifestData.client?.contact_name || 'Generator Rep',
-    generator_date: new Date().toISOString().split('T')[0],
+    generator_date: manifestData.signed_at ? new Date(manifestData.signed_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+    generator_time: manifestData.signed_at ? new Date(manifestData.signed_at).toLocaleTimeString('en-US', { hour12: false }) : new Date().toLocaleTimeString('en-US', { hour12: false }),
     generator_signature: manifestData.customer_sig_path || '',
 
     // Hauler information (BSG Logistics)
@@ -56,7 +57,8 @@ export const convertManifestToAcroForm = (manifestData: any): Partial<AcroFormMa
     hauler_zip: '48210',
     hauler_phone: '(734) 415-6528',
     hauler_print_name: manifestData.signed_by_name || 'hauler ',
-    hauler_date: new Date().toISOString().split('T')[0],
+    hauler_date: manifestData.signed_at ? new Date(manifestData.signed_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+    hauler_time: manifestData.signed_at ? new Date(manifestData.signed_at).toLocaleTimeString('en-US', { hour12: false }) : new Date().toLocaleTimeString('en-US', { hour12: false }),
     hauler_gross_weight: (manifestData.gross_weight || manifestData.weight_tons || '').toString(),
     hauler_tare_weight: (manifestData.tare_weight || '').toString(), 
     hauler_net_weight: (manifestData.net_weight || manifestData.weight_tons || '').toString(),
@@ -79,7 +81,8 @@ export const convertManifestToAcroForm = (manifestData: any): Partial<AcroFormMa
     receiver_zip: '48207',
     receiver_phone: '(734) 415-6528',
     receiver_print_name: 'BSG Processor',
-    receiver_date: new Date().toISOString().split('T')[0],
+    receiver_date: manifestData.receiver_signed_at ? new Date(manifestData.receiver_signed_at).toISOString().split('T')[0] : '',
+    receiver_time: manifestData.receiver_signed_at ? new Date(manifestData.receiver_signed_at).toLocaleTimeString('en-US', { hour12: false }) : '',
     receiver_gross_weight: '',
     receiver_total_pte: (() => {
       // Same total PTE calculation as generator and hauler

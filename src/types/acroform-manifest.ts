@@ -26,6 +26,7 @@ export interface AcroFormManifestData {
   generator_signature: string;
   generator_print_name: string;
   generator_date: string;
+  generator_time: string;
   
   // Part 2: Hauler Information - State Compliance
   hauler_mi_reg: string;
@@ -39,6 +40,7 @@ export interface AcroFormManifestData {
   hauler_signature: string;
   hauler_print_name: string;
   hauler_date: string;
+  hauler_time: string;
   hauler_gross_weight: string;
   hauler_tare_weight: string;
   hauler_net_weight: string;
@@ -55,6 +57,7 @@ export interface AcroFormManifestData {
   receiver_signature: string;
   receiver_print_name: string;
   receiver_date: string;
+  receiver_time: string;
   receiver_gross_weight: string;
   receiver_total_pte: string;
   receiver_tare_weight: string;
