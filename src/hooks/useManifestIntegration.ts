@@ -27,26 +27,48 @@ export const convertManifestToAcroForm = (manifestData: any): Partial<AcroFormMa
     generator_physical_zip: manifestData.client?.zip || '48207',
     generator_county: manifestData.client?.county || 'Wayne',
     generator_phone: manifestData.client?.phone || '(734) 415-6528',
-    generator_volume_weight: ((manifestData.pte_off_rim || 0) + (manifestData.pte_on_rim || 0)).toString(),
+    generator_volume_weight: (() => {
+      // Calculate total PTE from individual tire types
+      const passengerPTE = (manifestData.pte_off_rim || 0) + (manifestData.pte_on_rim || 0);
+      const truckPTE = ((manifestData.commercial_17_5_19_5_off || 0) + (manifestData.commercial_17_5_19_5_on || 0)) * 3 + 
+                      ((manifestData.commercial_22_5_off || 0) + (manifestData.commercial_22_5_on || 0)) * 5;
+      const oversizedPTE = (manifestData.otr_count || 0) * 8 + (manifestData.tractor_count || 0) * 8;
+      return (passengerPTE + truckPTE + oversizedPTE).toString();
+    })(),
+    
+    // Individual tire counts for manifest fields
+    passenger_car_count: ((manifestData.pte_off_rim || 0) + (manifestData.pte_on_rim || 0)).toString(),
+    truck_count: (((manifestData.commercial_17_5_19_5_off || 0) + (manifestData.commercial_17_5_19_5_on || 0)) + 
+                 ((manifestData.commercial_22_5_off || 0) + (manifestData.commercial_22_5_on || 0))).toString(),
+    oversized_count: ((manifestData.otr_count || 0) + (manifestData.tractor_count || 0)).toString(),
     generator_date_processed: new Date().toISOString().split('T')[0],
-    generator_print_name: manifestData.client?.contact_name || 'Generator Rep',
+    generator_print_name: manifestData.signed_by_name || manifestData.client?.contact_name || 'Generator Rep',
     generator_date: new Date().toISOString().split('T')[0],
+    generator_signature: manifestData.customer_sig_path || '',
 
     // Hauler information (BSG Logistics)
-    hauler_mi_reg: 'H-12345',
+    hauler_mi_reg: 'H123456',
     hauler_other_id: '',
     hauler_name: 'BSG Logistics',
-    hauler_mail_address: '2971 Bellevue Street',
+    hauler_mail_address: '100 Industrial Blvd',
     hauler_city: 'Detroit',
     hauler_state: 'MI',
-    hauler_zip: '48207',
+    hauler_zip: '48210',
     hauler_phone: '(734) 415-6528',
-    hauler_print_name: 'BSG Driver',
+    hauler_print_name: manifestData.signed_by_name || 'hauler ',
     hauler_date: new Date().toISOString().split('T')[0],
-    hauler_gross_weight: '',
-    hauler_tare_weight: '',
-    hauler_net_weight: '',
-    hauler_total_pte: ((manifestData.pte_off_rim || 0) + (manifestData.pte_on_rim || 0)).toString(),
+    hauler_gross_weight: (manifestData.gross_weight || manifestData.weight_tons || '').toString(),
+    hauler_tare_weight: (manifestData.tare_weight || '').toString(), 
+    hauler_net_weight: (manifestData.net_weight || manifestData.weight_tons || '').toString(),
+    hauler_total_pte: (() => {
+      // Same total PTE calculation as generator
+      const passengerPTE = (manifestData.pte_off_rim || 0) + (manifestData.pte_on_rim || 0);
+      const truckPTE = ((manifestData.commercial_17_5_19_5_off || 0) + (manifestData.commercial_17_5_19_5_on || 0)) * 3 + 
+                      ((manifestData.commercial_22_5_off || 0) + (manifestData.commercial_22_5_on || 0)) * 5;
+      const oversizedPTE = (manifestData.otr_count || 0) * 8 + (manifestData.tractor_count || 0) * 8;
+      return (passengerPTE + truckPTE + oversizedPTE).toString();
+    })(),
+    hauler_signature: manifestData.driver_sig_path || '',
 
     // Receiver information (Processing facility)
     receiver_mi_reg: 'R-67890',
@@ -59,9 +81,17 @@ export const convertManifestToAcroForm = (manifestData: any): Partial<AcroFormMa
     receiver_print_name: 'BSG Processor',
     receiver_date: new Date().toISOString().split('T')[0],
     receiver_gross_weight: '',
-    receiver_total_pte: ((manifestData.pte_off_rim || 0) + (manifestData.pte_on_rim || 0)).toString(),
+    receiver_total_pte: (() => {
+      // Same total PTE calculation as generator and hauler
+      const passengerPTE = (manifestData.pte_off_rim || 0) + (manifestData.pte_on_rim || 0);
+      const truckPTE = ((manifestData.commercial_17_5_19_5_off || 0) + (manifestData.commercial_17_5_19_5_on || 0)) * 3 + 
+                      ((manifestData.commercial_22_5_off || 0) + (manifestData.commercial_22_5_on || 0)) * 5;
+      const oversizedPTE = (manifestData.otr_count || 0) * 8 + (manifestData.tractor_count || 0) * 8;
+      return (passengerPTE + truckPTE + oversizedPTE).toString();
+    })(),
     receiver_tare_weight: '',
-    receiver_net_weight: ''
+    receiver_net_weight: '',
+    receiver_signature: manifestData.receiver_sig_path || '' // This would need to be added to manifest creation
   };
 };
 

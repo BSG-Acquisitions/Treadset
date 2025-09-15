@@ -17,6 +17,11 @@ export interface AcroFormManifestData {
   generator_county: string;
   generator_phone: string;
   generator_volume_weight: string;
+  
+  // Individual tire counts for manifest fields
+  passenger_car_count?: string;
+  truck_count?: string;
+  oversized_count?: string;
   generator_date_processed: string;
   generator_signature: string;
   generator_print_name: string;

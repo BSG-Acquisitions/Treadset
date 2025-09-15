@@ -68,6 +68,12 @@ export const convertToAcroFormFields = (data: Partial<AcroFormManifestData>): Re
   if (data.generator_physical_zip) fields['Generator_Zip'] = data.generator_physical_zip; // May be same as mailing zip
   if (data.generator_county) fields['Generator_County'] = data.generator_county;
   if (data.generator_phone) fields['Generator_Phone'] = data.generator_phone;
+  // Individual tire type fields for Michigan Manifest
+  if (data.passenger_car_count) fields['Passenger_Car'] = String(data.passenger_car_count);
+  if (data.truck_count) fields['Truck'] = String(data.truck_count);  
+  if (data.oversized_count) fields['Oversized'] = String(data.oversized_count);
+  
+  // Total PTE calculation
   if (data.generator_volume_weight) fields['Passenger tire equivalents'] = data.generator_volume_weight;
   if (data.generator_date_processed) fields['Generator_Date'] = data.generator_date_processed;
   if (data.generator_print_name) fields['Generator_Print_Name'] = data.generator_print_name;

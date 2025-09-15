@@ -69,17 +69,17 @@ interface Receiver {
 }
 
 const completePickupSchema = z.object({
-  // Passenger tire equivalents  
-  equivalents_off_rim: z.number().min(0, "Equivalents off rim count must be 0 or greater"),
-  equivalents_on_rim: z.number().min(0, "Equivalents on rim count must be 0 or greater"),
+  // Passenger car tires (PTE = 1:1)  
+  equivalents_off_rim: z.number().min(0, "Passenger car tires off rim count must be 0 or greater"),
+  equivalents_on_rim: z.number().min(0, "Passenger car tires on rim count must be 0 or greater"),
   
-  // Commercial/truck tires
-  commercial_17_5_19_5_off: z.number().min(0, "Commercial 17.5/19.5 off rim count must be 0 or greater"),
-  commercial_17_5_19_5_on: z.number().min(0, "Commercial 17.5/19.5 on rim count must be 0 or greater"),
-  commercial_22_5_off: z.number().min(0, "Commercial 22.5 off rim count must be 0 or greater"),
-  commercial_22_5_on: z.number().min(0, "Commercial 22.5 on rim count must be 0 or greater"),
+  // Commercial/truck tires (different PTE ratios)
+  commercial_17_5_19_5_off: z.number().min(0, "Truck 17.5/19.5 off rim count must be 0 or greater"),
+  commercial_17_5_19_5_on: z.number().min(0, "Truck 17.5/19.5 on rim count must be 0 or greater"),
+  commercial_22_5_off: z.number().min(0, "Truck 22.5 off rim count must be 0 or greater"),
+  commercial_22_5_on: z.number().min(0, "Truck 22.5 on rim count must be 0 or greater"),
   
-  // Oversized (OTR + Tractor)
+  // Oversized (OTR + Tractor) - higher PTE ratios
   otr_count: z.number().min(0, "OTR count must be 0 or greater"),
   tractor_count: z.number().min(0, "Tractor count must be 0 or greater"),
   
@@ -788,10 +788,10 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
 
             {/* Tire Counts */}
             <div className="space-y-6">
-              {/* Passenger Tire Equivalents */}
+              {/* Passenger Car Tires */}
               <div className="space-y-4">
                 <h3 className="text-lg font-medium flex items-center gap-2">
-                  <span>🚗</span> Passenger Tire Equivalents
+                  <span>🚗</span> Passenger Car Tires (PTE = 1:1)
                 </h3>
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
@@ -799,7 +799,7 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                     name="equivalents_off_rim"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Equivalents Off Rim</FormLabel>
+                        <FormLabel>Passenger Car Off Rim</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
@@ -817,7 +817,7 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                     name="equivalents_on_rim"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Equivalents On Rim</FormLabel>
+                        <FormLabel>Passenger Car On Rim</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
@@ -835,10 +835,10 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
 
               <Separator />
 
-              {/* Commercial/Truck Tires */}
+              {/* Truck Tires */}
               <div className="space-y-4">
                 <h3 className="text-lg font-medium flex items-center gap-2">
-                  <span>🚛</span> Commercial/Truck Tires
+                  <span>🚛</span> Truck Tires (Commercial)
                 </h3>
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
@@ -847,7 +847,7 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                       name="commercial_17_5_19_5_off"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>17.5/19.5 Off Rim</FormLabel>
+                          <FormLabel>Truck 17.5/19.5 Off Rim</FormLabel>
                           <FormControl>
                             <Input
                               type="number"
@@ -865,7 +865,7 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                       name="commercial_17_5_19_5_on"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>17.5/19.5 On Rim</FormLabel>
+                          <FormLabel>Truck 17.5/19.5 On Rim</FormLabel>
                           <FormControl>
                             <Input
                               type="number"
@@ -885,7 +885,7 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                       name="commercial_22_5_off"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>22.5 Off Rim</FormLabel>
+                          <FormLabel>Truck 22.5 Off Rim</FormLabel>
                           <FormControl>
                             <Input
                               type="number"
@@ -903,7 +903,7 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                       name="commercial_22_5_on"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>22.5 On Rim</FormLabel>
+                          <FormLabel>Truck 22.5 On Rim</FormLabel>
                           <FormControl>
                             <Input
                               type="number"
@@ -964,6 +964,33 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                       </FormItem>
                     )}
                   />
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Total PTE Calculation */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium flex items-center gap-2">
+                  <span>🔢</span> Total Passenger Tire Equivalents (PTE)
+                </h3>
+                <div className="bg-primary/5 p-4 rounded-lg">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-primary">
+                      {(() => {
+                        const formValues = form.watch();
+                        // Calculate total PTE (simplified calculation - adjust ratios as needed)
+                        const passengerPTE = (formValues.equivalents_off_rim || 0) + (formValues.equivalents_on_rim || 0);
+                        const truckPTE = ((formValues.commercial_17_5_19_5_off || 0) + (formValues.commercial_17_5_19_5_on || 0)) * 3 + 
+                                        ((formValues.commercial_22_5_off || 0) + (formValues.commercial_22_5_on || 0)) * 5;
+                        const oversizedPTE = (formValues.otr_count || 0) * 8 + (formValues.tractor_count || 0) * 8;
+                        return passengerPTE + truckPTE + oversizedPTE;
+                      })()}
+                    </div>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      Total PTE (Passenger Car × 1) + (Truck × 3-5) + (Oversized × 8)
+                    </div>
+                  </div>
                 </div>
               </div>
 
