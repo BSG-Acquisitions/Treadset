@@ -20,6 +20,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BSGLogoActual } from '@/components/BSGLogoActual';
 import { OrganizationSwitcher } from '@/components/auth/OrganizationSwitcher';
+import { useNotifications } from '@/hooks/useNotifications';
+import { formatDistanceToNow } from 'date-fns';
 
 interface TopNavProps {
   onMenuToggle?: () => void;
@@ -30,6 +32,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const { user, signOut, hasAnyRole } = useAuth();
   const location = useLocation();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, isMarkingAllAsRead } = useNotifications();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,52 +130,63 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
               <Button variant="ghost" size="sm" className="relative hover:bg-brand-primary/10 transition-colors" aria-label="Notifications">
                 <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-brand-tire-black/70" />
                 <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs bg-brand-accent flex items-center justify-center min-w-[20px]">
-                  3
+                  {unreadCount > 0 ? unreadCount : null}
                 </Badge>
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-80 p-0" align="end">
               <div className="border-b border-border p-4">
                 <h3 className="font-semibold text-foreground">Notifications</h3>
-                <p className="text-sm text-muted-foreground">You have 3 unread notifications</p>
+                <p className="text-sm text-muted-foreground">
+                  {unreadCount > 0 ? `You have ${unreadCount} unread notifications` : 'No unread notifications'}
+                </p>
               </div>
               <div className="max-h-64 overflow-y-auto">
-                <div className="p-3 border-b border-border/50 hover:bg-muted/50 cursor-pointer">
-                  <div className="flex items-start gap-3">
-                    <div className="w-2 h-2 bg-brand-accent rounded-full mt-2 flex-shrink-0"></div>
-                    <div>
-                      <p className="text-sm font-medium text-foreground">New route assigned</p>
-                      <p className="text-xs text-muted-foreground">Route #1234 has been assigned to driver John</p>
-                      <p className="text-xs text-muted-foreground mt-1">2 minutes ago</p>
-                    </div>
+                {notifications.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    No notifications yet
                   </div>
-                </div>
-                <div className="p-3 border-b border-border/50 hover:bg-muted/50 cursor-pointer">
-                  <div className="flex items-start gap-3">
-                    <div className="w-2 h-2 bg-brand-accent rounded-full mt-2 flex-shrink-0"></div>
-                    <div>
-                      <p className="text-sm font-medium text-foreground">Pickup completed</p>
-                      <p className="text-xs text-muted-foreground">Client pickup at 123 Main St completed successfully</p>
-                      <p className="text-xs text-muted-foreground mt-1">15 minutes ago</p>
+                ) : (
+                  notifications.slice(0, 10).map((notification) => (
+                    <div 
+                      key={notification.id}
+                      className="p-3 border-b border-border/50 hover:bg-muted/50 cursor-pointer"
+                      onClick={() => !notification.is_read && markAsRead(notification.id)}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
+                          notification.is_read ? 'bg-muted' : 'bg-brand-accent'
+                        }`}></div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-medium ${
+                            notification.is_read ? 'text-muted-foreground' : 'text-foreground'
+                          }`}>
+                            {notification.title}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {notification.message}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-                <div className="p-3 hover:bg-muted/50 cursor-pointer">
-                  <div className="flex items-start gap-3">
-                    <div className="w-2 h-2 bg-brand-accent rounded-full mt-2 flex-shrink-0"></div>
-                    <div>
-                      <p className="text-sm font-medium text-foreground">Payment received</p>
-                      <p className="text-xs text-muted-foreground">Payment of $125.50 received from ABC Corp</p>
-                      <p className="text-xs text-muted-foreground mt-1">1 hour ago</p>
-                    </div>
-                  </div>
-                </div>
+                  ))
+                )}
               </div>
-              <div className="border-t border-border p-3">
-                <Button variant="ghost" className="w-full text-sm">
-                  Mark all as read
-                </Button>
-              </div>
+              {unreadCount > 0 && (
+                <div className="border-t border-border p-3">
+                  <Button 
+                    variant="ghost" 
+                    className="w-full text-sm"
+                    onClick={() => markAllAsRead()}
+                    disabled={isMarkingAllAsRead}
+                  >
+                    {isMarkingAllAsRead ? 'Marking as read...' : 'Mark all as read'}
+                  </Button>
+                </div>
+              )}
             </PopoverContent>
           </Popover>
 
