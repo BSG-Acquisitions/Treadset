@@ -77,7 +77,7 @@ export function EditEmployeeDialog({ employee, trigger }: EditEmployeeDialogProp
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Employee</DialogTitle>
           <DialogDescription>
@@ -86,7 +86,7 @@ export function EditEmployeeDialog({ employee, trigger }: EditEmployeeDialogProp
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="firstName">First Name</Label>
               <Input
@@ -143,7 +143,7 @@ export function EditEmployeeDialog({ employee, trigger }: EditEmployeeDialogProp
 
           <div className="space-y-3">
             <Label>Roles * (Select at least one)</Label>
-            <div className="space-y-3">
+            <div className="space-y-2 max-h-48 overflow-y-auto border rounded-md p-3">
               {ROLE_OPTIONS.map((role) => (
                 <div key={role.value} className="flex items-start space-x-3">
                   <Checkbox
@@ -153,7 +153,7 @@ export function EditEmployeeDialog({ employee, trigger }: EditEmployeeDialogProp
                       handleRoleChange(role.value, checked as boolean)
                     }
                   />
-                  <div className="grid gap-1.5 leading-none">
+                  <div className="grid gap-1 leading-none flex-1">
                     <Label
                       htmlFor={role.value}
                       className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
@@ -169,17 +169,19 @@ export function EditEmployeeDialog({ employee, trigger }: EditEmployeeDialogProp
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => setOpen(false)}
+              className="w-full sm:w-auto"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={updateEmployee.isPending || !formData.roles?.length}
+              className="w-full sm:w-auto"
             >
               {updateEmployee.isPending ? 'Updating...' : 'Update Employee'}
             </Button>
