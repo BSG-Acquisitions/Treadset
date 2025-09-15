@@ -130,47 +130,106 @@ const handler = async (req: Request): Promise<Response> => {
             const signatureImage = await pdfDoc.embedPng(signatureBytes);
             
             // Try to use the actual AcroForm field's widget rectangle
+            let targetField = null;
             try {
-              const field = form.getField(fieldName);
-              const anyField: any = field as any;
-
-              const widgets =
-                anyField?.acroField?.getWidgets?.() ??
-                anyField?.getWidgets?.() ??
-                [];
-
-              if (widgets.length > 0) {
-                const widget: any = widgets[0];
-                const rect: any = widget.getRectangle?.() ?? {};
-                // Normalize rectangle fields across pdf-lib versions
-                const x = rect.x ?? rect.left ?? rect.x1 ?? rect.lowerLeftX;
-                const y = rect.y ?? rect.bottom ?? rect.y1 ?? rect.lowerLeftY;
-                const width = rect.width ?? (rect.x2 !== undefined && rect.x1 !== undefined ? rect.x2 - rect.x1 : undefined);
-                const height = rect.height ?? (rect.y2 !== undefined && rect.y1 !== undefined ? rect.y2 - rect.y1 : undefined);
-
-                const signatureSize = { width: 110, height: 45 };
-                const pages = pdfDoc.getPages();
-                const targetPage = pages[0];
-
-                targetPage.drawImage(signatureImage, {
-                  x: Number(x ?? 440),
-                  y: Number(y ?? 300),
-                  width: Number(width ?? signatureSize.width),
-                  height: Number(height ?? signatureSize.height),
-                });
-                console.log(`Embedded signature image for ${fieldName} at acro widget position`);
-              } else {
-                throw new Error('No widgets found for field');
-              }
-            } catch (fieldError) {
-              console.warn(`Signature field "${fieldName}" not found or invalid, drawing at default position:`, (fieldError as any)?.message);
+              // First, try to find the exact field name
+              targetField = form.getField(fieldName);
+              console.log(`Found exact field match: ${fieldName}`);
+            } catch {
+              // Field not found, try fuzzy matching
+              console.log(`Exact field "${fieldName}" not found, trying fuzzy matching...`);
               
-              // Fallback to drawing at default coordinates
+              // Get all field names and find signature-related ones
+              const allFieldNames = form.getFields().map(f => f.getName());
+              console.log('All available form fields for signature matching:', allFieldNames);
+              
+              // Look for fields containing "signature" or similar patterns
+              const signatureFields = allFieldNames.filter(name => 
+                name.toLowerCase().includes('signature') || 
+                name.toLowerCase().includes('sign') ||
+                name.includes('_es_:signer:')
+              );
+              console.log('Found signature-related fields:', signatureFields);
+              
+              // Try to match based on the signature type
+              let matchedFieldName = null;
+              if (fieldName === 'Generator_Signature') {
+                matchedFieldName = signatureFields.find(name => 
+                  name.toLowerCase().includes('generator') || 
+                  name.toLowerCase().includes('gen')
+                );
+              } else if (fieldName === 'Hauler_Signature') {
+                matchedFieldName = signatureFields.find(name => 
+                  name.toLowerCase().includes('hauler') || 
+                  name.toLowerCase().includes('haul')
+                );
+              } else if (fieldName === 'Receiver_Signature') {
+                matchedFieldName = signatureFields.find(name => 
+                  name.toLowerCase().includes('receiver') || 
+                  name.toLowerCase().includes('processor') ||
+                  name.toLowerCase().includes('recv')
+                );
+              }
+              
+              // If no specific match found, try to get fields in order
+              if (!matchedFieldName && signatureFields.length > 0) {
+                if (fieldName === 'Generator_Signature') matchedFieldName = signatureFields[0];
+                else if (fieldName === 'Hauler_Signature') matchedFieldName = signatureFields[1];
+                else if (fieldName === 'Receiver_Signature') matchedFieldName = signatureFields[2];
+              }
+              
+              if (matchedFieldName) {
+                console.log(`Fuzzy matched "${fieldName}" to "${matchedFieldName}"`);
+                try {
+                  targetField = form.getField(matchedFieldName);
+                } catch {
+                  console.warn(`Could not get fuzzy matched field: ${matchedFieldName}`);
+                }
+              }
+            }
+
+            // Try to use the field's widget rectangle if we found a field
+            let signaturePlaced = false;
+            if (targetField) {
+              try {
+                const anyField: any = targetField as any;
+                const widgets = anyField?.acroField?.getWidgets?.() ?? anyField?.getWidgets?.() ?? [];
+
+                if (widgets.length > 0) {
+                  const widget: any = widgets[0];
+                  const rect: any = widget.getRectangle?.() ?? {};
+                  
+                  const x = rect.x ?? rect.left ?? rect.x1 ?? rect.lowerLeftX;
+                  const y = rect.y ?? rect.bottom ?? rect.y1 ?? rect.lowerLeftY;
+                  const width = rect.width ?? (rect.x2 !== undefined && rect.x1 !== undefined ? rect.x2 - rect.x1 : undefined);
+                  const height = rect.height ?? (rect.y2 !== undefined && rect.y1 !== undefined ? rect.y2 - rect.y1 : undefined);
+
+                  const signatureSize = { width: 110, height: 45 };
+                  const pages = pdfDoc.getPages();
+                  const targetPage = pages[0];
+
+                  targetPage.drawImage(signatureImage, {
+                    x: Number(x ?? 440),
+                    y: Number(y ?? 300),
+                    width: Math.min(Number(width ?? signatureSize.width), signatureSize.width),
+                    height: Math.min(Number(height ?? signatureSize.height), signatureSize.height),
+                  });
+                  console.log(`Embedded signature image for ${fieldName} at field widget position (${x}, ${y})`);
+                  signaturePlaced = true;
+                }
+              } catch (widgetError) {
+                console.warn(`Could not get widget position for field:`, (widgetError as any)?.message);
+              }
+            }
+            
+            // Fallback to default coordinates if we couldn't place it at a field position
+            if (!signaturePlaced) {
+              console.warn(`Using fallback position for ${fieldName}`);
               const pages = pdfDoc.getPages();
               if (pages.length > 0) {
                 const firstPage = pages[0];
                 const signatureSize = { width: 110, height: 45 };
-                let yPosition = 300; // Default position
+                let yPosition = 300;
                 
                 if (fieldName === 'Generator_Signature') yPosition = 400;
                 else if (fieldName === 'Hauler_Signature') yPosition = 300;
@@ -182,7 +241,7 @@ const handler = async (req: Request): Promise<Response> => {
                   width: signatureSize.width,
                   height: signatureSize.height,
                 });
-                console.log(`Embedded signature image for ${fieldName} at fallback position`);
+                console.log(`Embedded signature image for ${fieldName} at fallback position (440, ${yPosition})`);
               }
             }
           } catch (signatureError) {
