@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { PDFDocument, PDFForm, PDFTextField, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
+import { PDFDocument, PDFForm, PDFTextField, PDFSignatureField, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -129,31 +129,58 @@ const handler = async (req: Request): Promise<Response> => {
 
             const signatureImage = await pdfDoc.embedPng(signatureBytes);
             
-            // Try to reference the field (may not exist); we'll draw on the page either way
+            // Try to use the actual AcroForm signature field
             try {
-              form.getField(fieldName);
-            } catch (_) {
-              console.warn(`Signature field "${fieldName}" not found in form; drawing image directly.`);
-            }
-
-            const pages = pdfDoc.getPages();
-            if (pages.length > 0) {
-              const firstPage = pages[0];
-              // Basic placement; adjust if needed to match your template
-              const signatureSize = { width: 110, height: 45 };
-              let yPosition = 300; // Default position
+              const signatureField = form.getField(fieldName);
               
-              if (fieldName === 'Generator_Signature') yPosition = 400;
-              else if (fieldName === 'Hauler_Signature') yPosition = 300;
-              else if (fieldName === 'Receiver_Signature') yPosition = 200;
+              if (signatureField instanceof PDFSignatureField) {
+                // For signature fields, we need to create an appearance
+                const signatureSize = { width: 110, height: 45 };
+                const pages = pdfDoc.getPages();
+                const firstPage = pages[0];
+                
+                // Get the field's widget position
+                const widgets = signatureField.acroField.getWidgets();
+                if (widgets.length > 0) {
+                  const widget = widgets[0];
+                  const rect = widget.getRectangle();
+                  
+                  // Draw signature image at the field's actual position
+                  firstPage.drawImage(signatureImage, {
+                    x: rect.x,
+                    y: rect.y,
+                    width: Math.min(rect.width, signatureSize.width),
+                    height: Math.min(rect.height, signatureSize.height),
+                  });
+                  console.log(`Embedded signature image for ${fieldName} at field position (${rect.x}, ${rect.y})`);
+                } else {
+                  throw new Error('No widgets found for signature field');
+                }
+              } else {
+                throw new Error('Field is not a signature field');
+              }
+            } catch (fieldError) {
+              console.warn(`Signature field "${fieldName}" not found or invalid, drawing at default position:`, fieldError.message);
               
-              firstPage.drawImage(signatureImage, {
-                x: 440,
-                y: yPosition,
-                width: signatureSize.width,
-                height: signatureSize.height,
-              });
-              console.log(`Embedded signature image for ${fieldName}`);
+              // Fallback to drawing at default coordinates
+              const pages = pdfDoc.getPages();
+              if (pages.length > 0) {
+                const firstPage = pages[0];
+                const signatureSize = { width: 110, height: 45 };
+                let yPosition = 300; // Default position
+                
+                if (fieldName === 'Generator_Signature') yPosition = 400;
+                else if (fieldName === 'Hauler_Signature') yPosition = 300;
+                else if (fieldName === 'Receiver_Signature') yPosition = 200;
+                
+                firstPage.drawImage(signatureImage, {
+                  x: 440,
+                  y: yPosition,
+                  width: signatureSize.width,
+                  height: signatureSize.height,
+                });
+                console.log(`Embedded signature image for ${fieldName} at fallback position`);
+              }
             }
           } catch (signatureError) {
             console.error(`Failed to process signature for ${fieldName}:`, signatureError);
