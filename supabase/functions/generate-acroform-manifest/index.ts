@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { PDFDocument, PDFForm, PDFTextField, PDFSignatureField, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
+import { PDFDocument, PDFForm, PDFTextField, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -129,38 +129,41 @@ const handler = async (req: Request): Promise<Response> => {
 
             const signatureImage = await pdfDoc.embedPng(signatureBytes);
             
-            // Try to use the actual AcroForm signature field
+            // Try to use the actual AcroForm field's widget rectangle
             try {
-              const signatureField = form.getField(fieldName);
-              
-              if (signatureField instanceof PDFSignatureField) {
-                // For signature fields, we need to create an appearance
+              const field = form.getField(fieldName);
+              const anyField: any = field as any;
+
+              const widgets =
+                anyField?.acroField?.getWidgets?.() ??
+                anyField?.getWidgets?.() ??
+                [];
+
+              if (widgets.length > 0) {
+                const widget: any = widgets[0];
+                const rect: any = widget.getRectangle?.() ?? {};
+                // Normalize rectangle fields across pdf-lib versions
+                const x = rect.x ?? rect.left ?? rect.x1 ?? rect.lowerLeftX;
+                const y = rect.y ?? rect.bottom ?? rect.y1 ?? rect.lowerLeftY;
+                const width = rect.width ?? (rect.x2 !== undefined && rect.x1 !== undefined ? rect.x2 - rect.x1 : undefined);
+                const height = rect.height ?? (rect.y2 !== undefined && rect.y1 !== undefined ? rect.y2 - rect.y1 : undefined);
+
                 const signatureSize = { width: 110, height: 45 };
                 const pages = pdfDoc.getPages();
-                const firstPage = pages[0];
-                
-                // Get the field's widget position
-                const widgets = signatureField.acroField.getWidgets();
-                if (widgets.length > 0) {
-                  const widget = widgets[0];
-                  const rect = widget.getRectangle();
-                  
-                  // Draw signature image at the field's actual position
-                  firstPage.drawImage(signatureImage, {
-                    x: rect.x,
-                    y: rect.y,
-                    width: Math.min(rect.width, signatureSize.width),
-                    height: Math.min(rect.height, signatureSize.height),
-                  });
-                  console.log(`Embedded signature image for ${fieldName} at field position (${rect.x}, ${rect.y})`);
-                } else {
-                  throw new Error('No widgets found for signature field');
-                }
+                const targetPage = pages[0];
+
+                targetPage.drawImage(signatureImage, {
+                  x: Number(x ?? 440),
+                  y: Number(y ?? 300),
+                  width: Number(width ?? signatureSize.width),
+                  height: Number(height ?? signatureSize.height),
+                });
+                console.log(`Embedded signature image for ${fieldName} at acro widget position`);
               } else {
-                throw new Error('Field is not a signature field');
+                throw new Error('No widgets found for field');
               }
             } catch (fieldError) {
-              console.warn(`Signature field "${fieldName}" not found or invalid, drawing at default position:`, fieldError.message);
+              console.warn(`Signature field "${fieldName}" not found or invalid, drawing at default position:`, (fieldError as any)?.message);
               
               // Fallback to drawing at default coordinates
               const pages = pdfDoc.getPages();
