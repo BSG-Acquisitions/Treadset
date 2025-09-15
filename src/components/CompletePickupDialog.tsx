@@ -93,7 +93,7 @@ const completePickupSchema = z.object({
   receiver_id: z.string().min(1, "Receiver is required"),
   generator_print_name: z.string().min(1, "Generator print name is required"),
   hauler_print_name: z.string().min(1, "Hauler print name is required"),
-  receiver_print_name: z.string().min(1, "Receiver print name is required"),
+  receiver_print_name: z.string().optional(),
   gross_weight: z.number().min(0, "Gross weight must be 0 or greater"),
   tare_weight: z.number().min(0, "Tare weight must be 0 or greater"),
   
@@ -137,7 +137,6 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
   
   const generatorSigRef = useRef<SignaturePad>(null);
   const haulerSigRef = useRef<SignaturePad>(null);
-  const receiverSigRef = useRef<SignaturePad>(null);
   
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -332,11 +331,9 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
       // Check for signatures
       const generatorSig = generatorSigRef.current?.isEmpty();
       const haulerSig = haulerSigRef.current?.isEmpty();
-      const receiverSig = receiverSigRef.current?.isEmpty();
       
       if (generatorSig !== false) missingFields.push("Generator Signature");
-      if (haulerSig !== false) missingFields.push("Hauler Signature"); 
-      if (receiverSig !== false) missingFields.push("Receiver Signature");
+      if (haulerSig !== false) missingFields.push("Hauler Signature");
       
       if (missingFields.length > 0) {
         toast({
@@ -350,10 +347,9 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
       // Save signatures to storage
       const generatorSigPath = await saveSignature('generator', generatorSigRef);
       const haulerSigPath = await saveSignature('hauler', haulerSigRef);
-      const receiverSigPath = await saveSignature('receiver', receiverSigRef);
 
-      if (!generatorSigPath || !haulerSigPath || !receiverSigPath) {
-        throw new Error('Could not save one or more signature images (generator/hauler/receiver). Please re-sign and try again.');
+      if (!generatorSigPath || !haulerSigPath) {
+        throw new Error('Could not save one or more signature images (generator/hauler). Please re-sign and try again.');
       }
 
       // Calculate tire equivalents
@@ -409,7 +405,7 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
         // Print names
         signed_by_name: data.generator_print_name,
         
-        status: 'COMPLETED',
+        status: 'AWAITING_RECEIVER_SIGNATURE',
         signed_at: new Date().toISOString()
       };
 
@@ -452,7 +448,6 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
         // Signatures
         generator_signature: generatorSigPath,
         hauler_signature: haulerSigPath,
-        receiver_signature: receiverSigPath,
       } as any;
       
       // Generate AcroForm PDF with overrides
@@ -760,28 +755,6 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                     </Button>
                   </div>
 
-                  <div>
-                    <label className="text-sm font-medium">Receiver Signature</label>
-                    <div className="border rounded-lg mt-2">
-                      <SignaturePad
-                        ref={receiverSigRef}
-                        canvasProps={{
-                          width: 300,
-                          height: 150,
-                          className: 'signature-canvas w-full'
-                        }}
-                      />
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="mt-2 w-full"
-                      onClick={() => receiverSigRef.current?.clear()}
-                    >
-                      Clear
-                    </Button>
-                  </div>
                 </div>
               </CardContent>
             </Card>

@@ -42,16 +42,17 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
 
       if (uploadError) throw uploadError;
 
-      // Update manifest with receiver signature info
-      const { error: updateError } = await supabase
-        .from('manifests')
-        .update({
-          receiver_sig_path: `signatures/${fileName}`,
-          receiver_signed_at: timestamp,
-          receiver_signed_by: receiverName,
-          updated_at: timestamp
-        })
-        .eq('id', manifestId);
+       // Update manifest with receiver signature info
+       const { error: updateError } = await supabase
+         .from('manifests')
+         .update({
+           receiver_sig_path: `signatures/${fileName}`,
+           receiver_signed_at: timestamp,
+           receiver_signed_by: receiverName,
+           status: 'COMPLETED',
+           updated_at: timestamp
+         })
+         .eq('id', manifestId);
 
       if (updateError) throw updateError;
 

@@ -58,7 +58,7 @@ export interface Manifest {
   total: number;
   
   // Status
-  status: 'DRAFT' | 'IN_PROGRESS' | 'AWAITING_SIGNATURE' | 'AWAITING_PAYMENT' | 'COMPLETED';
+  status: 'DRAFT' | 'IN_PROGRESS' | 'AWAITING_SIGNATURE' | 'AWAITING_PAYMENT' | 'AWAITING_RECEIVER_SIGNATURE' | 'COMPLETED';
   
   // Relations
   client?: {
@@ -107,7 +107,7 @@ export interface UpdateManifestData {
   stripe_payment_intent_id?: string;
   paid_amount?: number;
   receipt_url?: string;
-  status?: 'DRAFT' | 'IN_PROGRESS' | 'AWAITING_SIGNATURE' | 'AWAITING_PAYMENT' | 'COMPLETED';
+  status?: 'DRAFT' | 'IN_PROGRESS' | 'AWAITING_SIGNATURE' | 'AWAITING_PAYMENT' | 'AWAITING_RECEIVER_SIGNATURE' | 'COMPLETED';
   photos?: string[];
 }
 

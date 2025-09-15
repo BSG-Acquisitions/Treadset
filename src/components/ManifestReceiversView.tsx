@@ -12,11 +12,9 @@ export const ManifestReceiversView = () => {
   const [selectedManifest, setSelectedManifest] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  // Filter manifests that need receiver signature (completed but no receiver signature)
+  // Filter manifests that need receiver signature 
   const pendingReceiverSignature = manifests?.filter(m => 
-    m.status === 'COMPLETED' && 
-    m.signed_at && 
-    !m.receiver_signed_at
+    m.status === 'AWAITING_RECEIVER_SIGNATURE'
   ) || [];
 
   // Filter manifests that have all signatures
