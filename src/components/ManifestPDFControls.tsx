@@ -5,6 +5,7 @@ import { Download, Mail, FileText, Calendar, Eye } from 'lucide-react';
 import { useSendManifestEmail } from '@/hooks/useSendManifestEmail';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { PdfInlineViewer } from '@/components/PdfInlineViewer';
 
 interface ManifestPDFControlsProps {
   manifestId: string;
@@ -22,7 +23,6 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
   const { toast } = useToast();
   const sendEmail = useSendManifestEmail();
   const [viewerOpen, setViewerOpen] = useState(false);
-  const [viewerUrl, setViewerUrl] = useState<string | null>(null);
   
 
   const handleDownload = async (path: string, filename: string) => {
@@ -52,27 +52,7 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
 
   const handleView = async (path: string) => {
     if (!path) return;
-    try {
-      const { supabase } = await import('@/integrations/supabase/client');
-      const { data: pub } = supabase.storage.from('manifests').getPublicUrl(path);
-      const url = pub.publicUrl;
-      const resp = await fetch(url);
-      if (!resp.ok) throw new Error('Failed to fetch file');
-      const blob = await resp.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      setViewerUrl(blobUrl);
-      setViewerOpen(true);
-    } catch (err) {
-      console.error('Preview failed:', err);
-      toast({ title: 'Preview failed', description: 'Opening in a new tab instead.' });
-      try {
-        const { supabase } = await import('@/integrations/supabase/client');
-        const { data: pub } = supabase.storage.from('manifests').getPublicUrl(path);
-        window.open(pub.publicUrl, '_blank', 'noopener');
-      } catch (e) {
-        console.error('Fallback open failed:', e);
-      }
-    }
+    setViewerOpen(true);
   };
 
   const resolvePublicUrl = async (path: string) => {
@@ -205,11 +185,7 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
           <DialogHeader>
             <DialogTitle>Manifest Preview</DialogTitle>
           </DialogHeader>
-          {viewerUrl ? (
-            <iframe src={viewerUrl} className="w-full h-[70vh] rounded-md" title="Manifest Preview" />
-          ) : (
-            <div className="text-sm text-muted-foreground">Loading preview...</div>
-          )}
+          <PdfInlineViewer filePath={acroformPdfPath} />
         </DialogContent>
       </Dialog>
     </div>
