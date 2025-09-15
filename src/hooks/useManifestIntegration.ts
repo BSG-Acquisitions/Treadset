@@ -6,6 +6,7 @@ import { AcroFormManifestData } from "@/types/acroform-manifest";
 
 export interface ManifestIntegrationParams {
   manifestId: string;
+  overrides?: Partial<AcroFormManifestData>;
 }
 
 // Convert manifest database data to AcroForm structure
@@ -69,23 +70,20 @@ export const useManifestIntegration = () => {
   const generateAcroForm = useGenerateAcroFormManifest();
 
   return useMutation({
-    mutationFn: async ({ manifestId }: ManifestIntegrationParams) => {
+    mutationFn: async ({ manifestId, overrides }: ManifestIntegrationParams) => {
       // 1. Fetch manifest data from database
       const { data: manifestData, error: fetchError } = await supabase
         .from('manifests')
-        .select(`
-          *,
-          client:clients(company_name, contact_name, phone),
-          location:locations(address, name)
-        `)
+        .select(`*`)
         .eq('id', manifestId)
         .single();
 
       if (fetchError) throw fetchError;
 
-      // 2. Generate AcroForm PDF
+      // 2. Generate AcroForm PDF (merge overrides from UI when provided)
       const acroFormData = convertManifestToAcroForm(manifestData);
-      const acroFormFields = convertToAcroFormFields(acroFormData);
+      const mergedData = { ...acroFormData, ...(overrides || {}) };
+      const acroFormFields = convertToAcroFormFields(mergedData);
       
       const acroFormResult = await generateAcroForm.mutateAsync({
         templatePath: 'Michigan_Manifest_AcroForm.pdf',
@@ -97,7 +95,7 @@ export const useManifestIntegration = () => {
       // 3. Update manifest with AcroForm PDF path
       const { error: updateError } = await supabase
         .from('manifests')
-        .update({
+        .update({ 
           acroform_pdf_path: acroFormResult.pdfPath,
           status: 'COMPLETED',
           updated_at: new Date().toISOString()

@@ -407,8 +407,44 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
 
       const manifest = await createManifest.mutateAsync(manifestData);
       
-      // Generate AcroForm PDF
-      await manifestIntegration.mutateAsync({ manifestId: manifest.id });
+      // Build AcroForm overrides directly from the UI selections
+      const today = new Date().toISOString().split('T')[0];
+      const net = (data.gross_weight - data.tare_weight).toFixed(1);
+      const overrides = {
+        // Generator
+        generator_name: selectedGenerator?.generator_name,
+        generator_mail_address: selectedGenerator?.generator_mailing_address || pickup.location?.address,
+        generator_city: selectedGenerator?.generator_city,
+        generator_state: selectedGenerator?.generator_state,
+        generator_zip: selectedGenerator?.generator_zip,
+        generator_physical_address: pickup.location?.address || selectedGenerator?.generator_mailing_address,
+        generator_print_name: data.generator_print_name,
+        generator_date: today,
+        // Hauler
+        hauler_mi_reg: selectedHauler?.hauler_mi_reg,
+        hauler_name: selectedHauler?.hauler_name,
+        hauler_mail_address: selectedHauler?.hauler_mailing_address,
+        hauler_city: selectedHauler?.hauler_city,
+        hauler_state: selectedHauler?.hauler_state,
+        hauler_zip: selectedHauler?.hauler_zip,
+        hauler_print_name: data.hauler_print_name,
+        hauler_date: today,
+        hauler_gross_weight: String(data.gross_weight || ''),
+        hauler_tare_weight: String(data.tare_weight || ''),
+        hauler_net_weight: String(net || ''),
+        hauler_total_pte: String(equivalents.totalEquivalents),
+        // Receiver
+        receiver_name: selectedReceiver?.receiver_name,
+        receiver_physical_address: selectedReceiver?.receiver_mailing_address,
+        receiver_city: selectedReceiver?.receiver_city,
+        receiver_state: selectedReceiver?.receiver_state,
+        receiver_zip: selectedReceiver?.receiver_zip,
+        receiver_print_name: data.receiver_print_name,
+        receiver_date: today,
+      } as any;
+      
+      // Generate AcroForm PDF with overrides
+      await manifestIntegration.mutateAsync({ manifestId: manifest.id, overrides });
       
       setCompletedManifest({ 
         id: manifest.id, 
