@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { usePickups } from "@/hooks/usePickups";
 import { CompletePickupDialog } from "@/components/CompletePickupDialog";
 import { MovePickupDialog } from "@/components/MovePickupDialog";
+import { ManifestPDFControls } from "@/components/ManifestPDFControls";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -214,12 +215,20 @@ export default function RoutesToday() {
                                       <div className="text-xs text-muted-foreground mb-2">
                                         Revenue: ${pickup.computed_revenue?.toFixed(2) || '0.00'}
                                       </div>
-                                      <Badge variant={getStatusColor(pickup.status)}>
-                                        {pickup.status.replace('_', ' ')}
-                                      </Badge>
-                                    </div>
-                                    
-                                    <div className="flex items-center gap-2">
+                                       <Badge variant={getStatusColor(pickup.status)}>
+                                         {pickup.status.replace('_', ' ')}
+                                       </Badge>
+                                       {pickup.status === 'completed' && pickup.manifest_pdf_path && (
+                                         <ManifestPDFControls 
+                                           manifestId={pickup.manifest_id}
+                                           acroformPdfPath={pickup.manifest_pdf_path}
+                                           clientEmails={[]}
+                                           className="mt-2"
+                                         />
+                                       )}
+                                     </div>
+                                     
+                                     <div className="flex items-center gap-2">
                                       <CompletePickupDialog
                                         pickup={pickup}
                                         trigger={
