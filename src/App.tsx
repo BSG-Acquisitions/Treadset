@@ -33,6 +33,8 @@ import ManifestExample from '@/pages/ManifestExample';
 import AcroFormDemo from '@/pages/AcroFormDemo';
 import ManifestViewer from './pages/ManifestViewer';
 import ReceiverSignatures from './pages/ReceiverSignatures';
+import HaulerManagement from './pages/HaulerManagement';
+import ReceiverManagement from './pages/ReceiverManagement';
 
 const queryClient = new QueryClient();
 
@@ -160,6 +162,16 @@ const App = () => (
             <Route path="/receiver-signatures" element={
               <ProtectedRoute roles={['admin', 'ops_manager']}>
                 <ReceiverSignatures />
+              </ProtectedRoute>
+            } />
+            <Route path="/haulers" element={
+              <ProtectedRoute roles={['admin', 'ops_manager']}>
+                <HaulerManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="/receivers" element={
+              <ProtectedRoute roles={['admin', 'ops_manager']}>
+                <ReceiverManagement />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Bell, Menu, User, Settings, Package, BarChart3, UserCheck, Home, Users, MapPin, DollarSign, CreditCard, PenTool } from 'lucide-react';
+import { Search, Bell, Menu, User, Settings, Package, BarChart3, UserCheck, Home, Users, MapPin, DollarSign, CreditCard, PenTool, Truck, Building } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -219,6 +219,22 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                   <Link to="/receiver-signatures" className="flex items-center gap-2">
                     <PenTool className="h-4 w-4" />
                     Receiver Signatures
+                  </Link>
+                </DropdownMenuItem>
+              )}
+              {hasAnyRole(['admin', 'ops_manager']) && (
+                <DropdownMenuItem asChild>
+                  <Link to="/haulers" className="flex items-center gap-2">
+                    <Truck className="h-4 w-4" />
+                    Haulers
+                  </Link>
+                </DropdownMenuItem>
+              )}
+              {hasAnyRole(['admin', 'ops_manager']) && (
+                <DropdownMenuItem asChild>
+                  <Link to="/receivers" className="flex items-center gap-2">
+                    <Building className="h-4 w-4" />
+                    Receivers
                   </Link>
                 </DropdownMenuItem>
               )}
