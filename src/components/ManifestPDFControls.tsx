@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Download, Mail, FileText, Calendar } from 'lucide-react';
+import { Download, Mail, FileText, Calendar, Eye } from 'lucide-react';
 import { useSendManifestEmail } from '@/hooks/useSendManifestEmail';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface ManifestPDFControlsProps {
   manifestId: string;
@@ -20,6 +21,8 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
 }) => {
   const { toast } = useToast();
   const sendEmail = useSendManifestEmail();
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerUrl, setViewerUrl] = useState<string | null>(null);
 
   const handleDownload = async (path: string, filename: string) => {
     if (!path) return;
@@ -56,6 +59,21 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
       } catch (fallbackErr) {
         console.error('Fallback failed:', fallbackErr);
       }
+    }
+  };
+
+  const handleView = async (path: string) => {
+    if (!path) return;
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data, error } = await supabase.storage
+        .from('manifests')
+        .createSignedUrl(path, 3600);
+      if (error) throw error;
+      setViewerUrl(data.signedUrl);
+      setViewerOpen(true);
+    } catch (err) {
+      toast({ title: 'Preview failed', description: 'Unable to open PDF preview.' });
     }
   };
 
@@ -110,6 +128,14 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
           <Button
             size="sm"
             variant="outline"
+            onClick={() => handleView(acroformPdfPath)}
+          >
+            <Eye className="w-3 h-3 mr-1" />
+            View
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
             onClick={() => handleDownload(acroformPdfPath, `manifest-${manifestId}.pdf`)}
           >
             <Download className="w-3 h-3 mr-1" />
@@ -134,6 +160,21 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
           Sending email...
         </div>
       )}
+
+      <Dialog open={viewerOpen} onOpenChange={setViewerOpen}>
+        <DialogContent className="max-w-4xl w-[90vw] h-[85vh]">
+          <DialogHeader>
+            <DialogTitle>Manifest Preview</DialogTitle>
+          </DialogHeader>
+          {viewerUrl ? (
+            <object data={viewerUrl} type="application/pdf" className="w-full h-[70vh] rounded-md">
+              <p className="text-sm">Your browser cannot display the PDF. Use Download instead.</p>
+            </object>
+          ) : (
+            <div className="text-sm text-muted-foreground">Loading preview...</div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

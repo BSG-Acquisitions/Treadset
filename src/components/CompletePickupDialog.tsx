@@ -444,11 +444,11 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
       } as any;
       
       // Generate AcroForm PDF with overrides
-      await manifestIntegration.mutateAsync({ manifestId: manifest.id, overrides });
+      const genResult = await manifestIntegration.mutateAsync({ manifestId: manifest.id, overrides });
       
       setCompletedManifest({ 
         id: manifest.id, 
-        acroform_pdf_path: manifest.acroform_pdf_path 
+        acroform_pdf_path: genResult.pdfPath 
       });
 
       queryClient.invalidateQueries({ queryKey: ['pickups'] });
