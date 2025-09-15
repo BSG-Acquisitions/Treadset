@@ -89,3 +89,6 @@ verify_jwt = false
 
 [functions.diag-storage]
 verify_jwt = false
+
+[functions.generate-acroform-manifest]
+verify_jwt = false
