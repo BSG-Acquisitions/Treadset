@@ -10,6 +10,7 @@ import SignatureCanvas from 'react-signature-canvas';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useManifestIntegration } from '@/hooks/useManifestIntegration';
+import { AcroFormLivePreview } from '@/components/manifest/AcroFormLivePreview';
 
 interface ManifestWizardProps {
   manifestId: string;
@@ -387,6 +388,20 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
             <div className="text-sm">
               Signatures: Customer ✓, Driver ✓
             </div>
+
+            <AcroFormLivePreview
+              manifestId={manifestId}
+              overrides={{
+                pte_off_rim: data.pteOff,
+                pte_on_rim: data.pteOn,
+                commercial_17_5_19_5_off: data.c175Off,
+                commercial_17_5_19_5_on: data.c175On,
+                commercial_22_5_off: data.c225Off,
+                commercial_22_5_on: data.c225On,
+                generator_date: new Date().toISOString().split('T')[0],
+                hauler_date: new Date().toISOString().split('T')[0],
+              }}
+            />
             
             <Button 
               onClick={handleFinalize} 

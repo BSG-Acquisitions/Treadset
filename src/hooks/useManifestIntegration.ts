@@ -9,7 +9,7 @@ export interface ManifestIntegrationParams {
 }
 
 // Convert manifest database data to AcroForm structure
-const convertManifestToAcroForm = (manifestData: any): Partial<AcroFormManifestData> => {
+export const convertManifestToAcroForm = (manifestData: any): Partial<AcroFormManifestData> => {
   return {
     manifest_number: manifestData.manifest_number || `M-${Date.now()}`,
     vehicle_trailer: `V-${manifestData.vehicle_id || '123'}`,
