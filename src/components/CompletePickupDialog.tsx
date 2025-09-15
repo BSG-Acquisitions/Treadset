@@ -405,7 +405,6 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
         // Signatures
         customer_sig_path: generatorSigPath,
         driver_sig_path: haulerSigPath,
-        receiver_sig_path: receiverSigPath,
         
         // Print names
         signed_by_name: data.generator_print_name,
