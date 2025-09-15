@@ -41,53 +41,22 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Download the AcroForm template from storage (try 'templates' bucket first, then fallback)
-    const primaryBucket = 'templates';
-    const fallbackBucket = 'manifests';
-    const primaryPath = body.templatePath; // e.g., "Michigan_Manifest_AcroForm.pdf" at root of 'templates'
-    const fallbackPath = `templates/${body.templatePath}`; // e.g., 'templates/Michigan_Manifest_AcroForm.pdf' under 'manifests'
+    // Download the AcroForm template from storage - user confirmed it's in manifests bucket
+    const templatePath = `templates/${body.templatePath}`;
+    console.log(`Downloading template from: manifests bucket, path: ${templatePath}`);
 
-    console.log(`Attempting to download template: bucket=${primaryBucket}, path=${primaryPath}`);
+    const { data: templateFile, error: downloadError } = await supabase.storage
+      .from('manifests')
+      .download(templatePath);
 
-    let templateFile: Blob | null = null;
-    let downloadErrorMsg: string | null = null;
-
-    // Try primary bucket
-    {
-      const { data, error } = await supabase.storage
-        .from(primaryBucket)
-        .download(primaryPath);
-      if (error) {
-        downloadErrorMsg = `[primary] ${error.message}`;
-        console.warn('Primary bucket download failed:', error.message);
-      } else {
-        templateFile = data as unknown as Blob;
-      }
-    }
-
-    // Fallback to manifests bucket if needed
-    if (!templateFile) {
-      console.log(`Attempting fallback download: bucket=${fallbackBucket}, path=${fallbackPath}`);
-      const { data, error } = await supabase.storage
-        .from(fallbackBucket)
-        .download(fallbackPath);
-      if (error) {
-        downloadErrorMsg = `${downloadErrorMsg || ''} | [fallback] ${error.message}`;
-        console.error('Fallback bucket download failed:', error.message);
-      } else {
-        templateFile = data as unknown as Blob;
-      }
-    }
-
-    if (!templateFile) {
+    if (downloadError) {
+      console.error('Error downloading template:', downloadError);
       return new Response(
         JSON.stringify({ 
           error: 'Template not found', 
-          details: downloadErrorMsg,
-          tried: [
-            { bucket: primaryBucket, path: primaryPath },
-            { bucket: fallbackBucket, path: fallbackPath },
-          ]
+          details: downloadError.message,
+          path: templatePath,
+          bucket: 'manifests'
         }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );

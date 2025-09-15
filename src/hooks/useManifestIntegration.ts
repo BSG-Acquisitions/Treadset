@@ -86,7 +86,7 @@ export const useManifestIntegration = () => {
       const acroFormFields = convertToAcroFormFields(mergedData);
       
       const acroFormResult = await generateAcroForm.mutateAsync({
-        templatePath: 'Michigan_Manifest_AcroForm.pdf',
+        templatePath: 'Michigan_Manifest_Acroform.pdf', // Fixed: lowercase 'f' to match storage
         manifestData: acroFormFields,
         manifestId: manifestId,
         outputPath: `manifests/acroform-${manifestId}-${Date.now()}.pdf`
