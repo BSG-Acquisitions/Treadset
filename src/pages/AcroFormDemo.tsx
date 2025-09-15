@@ -82,12 +82,25 @@ export default function AcroFormDemo() {
     }
   };
 
-  const handleDownload = () => {
-    if (generatedPdfUrl) {
+  const handleDownload = async () => {
+    if (!generatedPdfUrl) return;
+    try {
+      const res = await fetch(generatedPdfUrl);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = generatedPdfUrl;
+      link.href = url;
       link.download = 'manifest.pdf';
+      document.body.appendChild(link);
       link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toast({
+        title: 'Download blocked by browser',
+        description: 'Opening the PDF in a new tab instead. Use your browser’s Save action to download.',
+      });
+      window.open(generatedPdfUrl, '_blank', 'noopener');
     }
   };
 
@@ -171,22 +184,32 @@ export default function AcroFormDemo() {
           </Button>
           
           {generatedPdfUrl && (
-            <div className="flex gap-2">
-              <Button 
-                onClick={handleDownload}
-                variant="outline"
-                className="flex-1"
-              >
-                Download PDF
-              </Button>
-              <Button 
-                onClick={handleEmail}
-                disabled={sendEmail.isPending}
-                variant="outline"
-                className="flex-1"
-              >
-                {sendEmail.isPending ? 'Sending...' : 'Email PDF'}
-              </Button>
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-2">
+                <Button asChild variant="outline" className="flex-1">
+                  <a href={generatedPdfUrl} target="_blank" rel="noopener">
+                    Open PDF in new tab
+                  </a>
+                </Button>
+                <Button 
+                  onClick={handleDownload}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Download PDF
+                </Button>
+                <Button 
+                  onClick={handleEmail}
+                  disabled={sendEmail.isPending}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  {sendEmail.isPending ? 'Sending...' : 'Email PDF'}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                If Chrome blocks downloads in this preview, use “Open PDF in new tab”.
+              </p>
             </div>
           )}
         </CardContent>
