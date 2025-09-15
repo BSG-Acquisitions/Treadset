@@ -352,6 +352,10 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
       const haulerSigPath = await saveSignature('hauler', haulerSigRef);
       const receiverSigPath = await saveSignature('receiver', receiverSigRef);
 
+      if (!generatorSigPath || !haulerSigPath || !receiverSigPath) {
+        throw new Error('Could not save one or more signature images (generator/hauler/receiver). Please re-sign and try again.');
+      }
+
       // Calculate tire equivalents
       const equivalents = calculateEquivalents(data);
 

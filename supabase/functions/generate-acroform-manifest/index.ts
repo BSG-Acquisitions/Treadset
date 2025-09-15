@@ -83,54 +83,64 @@ const handler = async (req: Request): Promise<Response> => {
           console.log(`Processing signature field: ${fieldName} with path: ${value}`);
           
           try {
-            // Normalize path: strip leading bucket name or slashes if present
-            const normalizeStoragePath = (p: string) => p.replace(/^manifests\//, '').replace(/^\/+/, '');
-            const signaturePath = normalizeStoragePath(String(value));
-            console.log(`Normalized signature path for download: ${signaturePath}`);
+            const strVal = String(value);
 
-            // Download signature image from storage
-            const { data: signatureBlob, error: downloadError } = await supabase.storage
-              .from('manifests')
-              .download(signaturePath);
-            
-            if (downloadError) {
-              console.error(`Failed to download signature ${fieldName}:`, downloadError);
-              continue;
+            // If a full URL was provided, fetch directly. Otherwise, treat as storage path.
+            let signatureBytes: ArrayBuffer | null = null;
+            if (/^https?:\/\//i.test(strVal)) {
+              console.log(`Fetching signature from URL for ${fieldName}`);
+              const resp = await fetch(strVal);
+              if (!resp.ok) throw new Error(`HTTP ${resp.status} when fetching signature URL`);
+              signatureBytes = await resp.arrayBuffer();
+            } else {
+              // Normalize path: strip leading bucket name or slashes if present
+              const normalizeStoragePath = (p: string) => p.replace(/^manifests\//, '').replace(/^\/+/, '');
+              const signaturePath = normalizeStoragePath(strVal);
+              console.log(`Normalized signature path for download: ${signaturePath}`);
+
+              const { data: signatureBlob, error: downloadError } = await supabase.storage
+                .from('manifests')
+                .download(signaturePath);
+              
+              if (downloadError) {
+                console.error(`Failed to download signature ${fieldName}:`, downloadError);
+                continue;
+              }
+              signatureBytes = await signatureBlob.arrayBuffer();
             }
             
-            // Convert blob to array buffer and embed as image
-            const signatureBytes = await signatureBlob.arrayBuffer();
+            if (!signatureBytes) {
+              console.warn(`No bytes for signature ${fieldName}`);
+              continue;
+            }
+
             const signatureImage = await pdfDoc.embedPng(signatureBytes);
             
-            // Get the form field and add the signature image
+            // Try to reference the field (may not exist); we'll draw on the page either way
             try {
-              const field = form.getField(fieldName);
-              // For signature fields, we'll add the image to the page directly
-              // since AcroForm signature fields may not support direct image embedding
-              const pages = pdfDoc.getPages();
-              if (pages.length > 0) {
-                const firstPage = pages[0];
-                // Add signature image at a reasonable size and position
-                // You may need to adjust coordinates based on your PDF layout
-                const signatureSize = { width: 100, height: 50 };
-                let yPosition = 300; // Default position
-                
-                // Adjust position based on signature type
-                if (fieldName === 'Generator_Signature') yPosition = 400;
-                else if (fieldName === 'Hauler_Signature') yPosition = 300;
-                else if (fieldName === 'Receiver_Signature') yPosition = 200;
-                
-                firstPage.drawImage(signatureImage, {
-                  x: 450, // Right side of page
-                  y: yPosition,
-                  width: signatureSize.width,
-                  height: signatureSize.height,
-                });
-                
-                console.log(`Embedded signature image for ${fieldName}`);
-              }
-            } catch (fieldError) {
-              console.warn(`Could not process signature field "${fieldName}":`, (fieldError as any).message);
+              form.getField(fieldName);
+            } catch (_) {
+              console.warn(`Signature field "${fieldName}" not found in form; drawing image directly.`);
+            }
+
+            const pages = pdfDoc.getPages();
+            if (pages.length > 0) {
+              const firstPage = pages[0];
+              // Basic placement; adjust if needed to match your template
+              const signatureSize = { width: 110, height: 45 };
+              let yPosition = 300; // Default position
+              
+              if (fieldName === 'Generator_Signature') yPosition = 400;
+              else if (fieldName === 'Hauler_Signature') yPosition = 300;
+              else if (fieldName === 'Receiver_Signature') yPosition = 200;
+              
+              firstPage.drawImage(signatureImage, {
+                x: 440,
+                y: yPosition,
+                width: signatureSize.width,
+                height: signatureSize.height,
+              });
+              console.log(`Embedded signature image for ${fieldName}`);
             }
           } catch (signatureError) {
             console.error(`Failed to process signature for ${fieldName}:`, signatureError);
