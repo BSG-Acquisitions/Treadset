@@ -397,6 +397,7 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
         // Signatures
         customer_sig_path: generatorSigPath,
         driver_sig_path: haulerSigPath,
+        receiver_sig_path: receiverSigPath,
         
         // Print names
         signed_by_name: data.generator_print_name,
@@ -441,6 +442,10 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
         receiver_zip: selectedReceiver?.receiver_zip,
         receiver_print_name: data.receiver_print_name,
         receiver_date: today,
+        // Signatures
+        generator_signature: generatorSigPath,
+        hauler_signature: haulerSigPath,
+        receiver_signature: receiverSigPath,
       } as any;
       
       // Generate AcroForm PDF with overrides

@@ -73,21 +73,78 @@ const handler = async (req: Request): Promise<Response> => {
       console.log(`- ${field.getName()}: ${field.constructor.name}`);
     });
 
-    // Fill the form fields
-    Object.entries(body.manifestData).forEach(([fieldName, value]) => {
+    // Fill the form fields and handle signatures
+    const signatureFields = ['Generator_Signature', 'Hauler_Signature', 'Receiver_Signature'];
+    
+    for (const [fieldName, value] of Object.entries(body.manifestData)) {
       try {
-        const field = form.getField(fieldName);
-        
-        if (field instanceof PDFTextField) {
-          field.setText(String(value || ''));
-          console.log(`Set text field "${fieldName}" to: "${value}"`);
+        // Special handling for signature fields
+        if (signatureFields.includes(fieldName) && value) {
+          console.log(`Processing signature field: ${fieldName} with path: ${value}`);
+          
+          try {
+            // Download signature image from storage
+            const { data: signatureBlob, error: downloadError } = await supabase.storage
+              .from('manifests')
+              .download(value);
+            
+            if (downloadError) {
+              console.error(`Failed to download signature ${fieldName}:`, downloadError);
+              continue;
+            }
+            
+            // Convert blob to array buffer and embed as image
+            const signatureBytes = await signatureBlob.arrayBuffer();
+            const signatureImage = await pdfDoc.embedPng(signatureBytes);
+            
+            // Get the form field and add the signature image
+            try {
+              const field = form.getField(fieldName);
+              // For signature fields, we'll add the image to the page directly
+              // since AcroForm signature fields may not support direct image embedding
+              const pages = pdfDoc.getPages();
+              if (pages.length > 0) {
+                const firstPage = pages[0];
+                // Add signature image at a reasonable size and position
+                // You may need to adjust coordinates based on your PDF layout
+                const signatureSize = { width: 100, height: 50 };
+                let yPosition = 300; // Default position
+                
+                // Adjust position based on signature type
+                if (fieldName === 'Generator_Signature') yPosition = 400;
+                else if (fieldName === 'Hauler_Signature') yPosition = 300;
+                else if (fieldName === 'Receiver_Signature') yPosition = 200;
+                
+                firstPage.drawImage(signatureImage, {
+                  x: 450, // Right side of page
+                  y: yPosition,
+                  width: signatureSize.width,
+                  height: signatureSize.height,
+                });
+                
+                console.log(`Embedded signature image for ${fieldName}`);
+              }
+            } catch (fieldError) {
+              console.warn(`Could not process signature field "${fieldName}":`, fieldError.message);
+            }
+          } catch (signatureError) {
+            console.error(`Failed to process signature for ${fieldName}:`, signatureError);
+          }
         } else {
-          console.log(`Field "${fieldName}" is not a text field, type: ${field.constructor.name}`);
+          // Regular text field handling
+          const field = form.getField(fieldName);
+          
+          if (field instanceof PDFTextField) {
+            field.setText(String(value || ''));
+            console.log(`Set text field "${fieldName}" to: "${value}"`);
+          } else {
+            console.log(`Field "${fieldName}" is not a text field, type: ${field.constructor.name}`);
+          }
         }
       } catch (error) {
         console.warn(`Could not set field "${fieldName}":`, error.message);
       }
-    });
+    }
 
     // Update field appearances with an embedded standard font so values render in all viewers
     try {

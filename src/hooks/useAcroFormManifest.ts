@@ -104,5 +104,10 @@ export const convertToAcroFormFields = (data: Partial<AcroFormManifestData>): Re
   if (data.receiver_tare_weight) fields['Tare'] = data.receiver_tare_weight;
   if (data.receiver_net_weight) fields['Net_Weight'] = data.receiver_net_weight;
 
+  // Signature fields - these will be handled by the Edge Function as image overlays
+  if (data.generator_signature) fields['Generator_Signature'] = data.generator_signature;
+  if (data.hauler_signature) fields['Hauler_Signature'] = data.hauler_signature;
+  if (data.receiver_signature) fields['Receiver_Signature'] = data.receiver_signature;
+
   return fields;
 };
