@@ -23,6 +23,7 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
   const sendEmail = useSendManifestEmail();
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
+  
 
   const handleDownload = async (path: string, filename: string) => {
     if (!path) return;
@@ -71,6 +72,33 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
       } catch (e) {
         console.error('Fallback open failed:', e);
       }
+    }
+  };
+
+  const resolvePublicUrl = async (path: string) => {
+    const { supabase } = await import('@/integrations/supabase/client');
+    const { data: pub } = supabase.storage.from('manifests').getPublicUrl(path);
+    return pub.publicUrl;
+  };
+
+  const handleOpenTab = async (path: string) => {
+    try {
+      const url = await resolvePublicUrl(path);
+      window.open(url, '_blank', 'noopener');
+    } catch (e) {
+      console.error('Open in new tab failed:', e);
+      toast({ title: 'Open failed', description: 'Could not open in a new tab.' });
+    }
+  };
+
+  const handleCopyLink = async (path: string) => {
+    try {
+      const url = await resolvePublicUrl(path);
+      await navigator.clipboard.writeText(url);
+      toast({ title: 'Link copied', description: 'PDF link copied to clipboard.' });
+    } catch (e) {
+      console.error('Copy link failed:', e);
+      toast({ title: 'Copy failed', description: 'Could not copy link.' });
     }
   };
 
@@ -137,6 +165,20 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
           >
             <Download className="w-3 h-3 mr-1" />
             Download
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleOpenTab(acroformPdfPath)}
+          >
+            Open Tab
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleCopyLink(acroformPdfPath)}
+          >
+            Copy Link
           </Button>
           {clientEmails.length > 0 && (
             <Button
