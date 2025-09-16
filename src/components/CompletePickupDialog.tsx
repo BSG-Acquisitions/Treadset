@@ -253,9 +253,38 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
   });
 
   const customPricing = false; // Removed custom pricing for simplified flow
-  const grossWeight = form.watch("gross_weight");
+  
+  // Standard tire weights (in lbs)
+  const TIRE_WEIGHTS = {
+    PTE_OFF_RIM: 18,
+    PTE_ON_RIM: 38, // tire + rim weight
+    COMMERCIAL_17_5_19_5_OFF: 55,
+    COMMERCIAL_17_5_19_5_ON: 85,
+    COMMERCIAL_22_5_OFF: 75,
+    COMMERCIAL_22_5_ON: 115,
+    OTR: 450,
+    TRACTOR: 110
+  };
+
+  // Watch tire counts for auto-calculation
+  const watchedValues = form.watch();
+  const calculatedGrossWeight = 
+    (watchedValues.equivalents_off_rim * TIRE_WEIGHTS.PTE_OFF_RIM) +
+    (watchedValues.equivalents_on_rim * TIRE_WEIGHTS.PTE_ON_RIM) +
+    (watchedValues.commercial_17_5_19_5_off * TIRE_WEIGHTS.COMMERCIAL_17_5_19_5_OFF) +
+    (watchedValues.commercial_17_5_19_5_on * TIRE_WEIGHTS.COMMERCIAL_17_5_19_5_ON) +
+    (watchedValues.commercial_22_5_off * TIRE_WEIGHTS.COMMERCIAL_22_5_OFF) +
+    (watchedValues.commercial_22_5_on * TIRE_WEIGHTS.COMMERCIAL_22_5_ON) +
+    (watchedValues.otr_count * TIRE_WEIGHTS.OTR) +
+    (watchedValues.tractor_count * TIRE_WEIGHTS.TRACTOR);
+
+  // Auto-update gross weight when tire counts change
+  useEffect(() => {
+    form.setValue("gross_weight", calculatedGrossWeight);
+  }, [calculatedGrossWeight, form]);
+
   const tareWeight = form.watch("tare_weight");
-  const netWeight = grossWeight - tareWeight;
+  const netWeight = calculatedGrossWeight - tareWeight;
 
   // Update hidden fields when selections change
   useEffect(() => {
@@ -518,17 +547,19 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                     name="gross_weight"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Gross Weight (lbs) *</FormLabel>
+                        <FormLabel>Gross Weight (lbs) - Calculated</FormLabel>
                         <FormControl>
-                          <Input
-                            type="number"
-                            min="0"
-                            step="0.1"
-                            {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value) || 0)}
-                          />
+                          <div className="flex items-center space-x-2">
+                            <Input
+                              type="number"
+                              value={calculatedGrossWeight.toFixed(1)}
+                              readOnly
+                              className="bg-secondary/50 cursor-not-allowed"
+                            />
+                            <span className="text-sm text-muted-foreground">Auto-calculated</span>
+                          </div>
                         </FormControl>
-                        <FormMessage />
+                        <p className="text-xs text-muted-foreground">Based on tire counts and standard weights</p>
                       </FormItem>
                     )}
                   />
@@ -539,12 +570,13 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                       <FormItem>
                         <FormLabel>Tare Weight (lbs) *</FormLabel>
                         <FormControl>
-                          <Input
-                            type="number"
-                            min="0"
-                            step="0.1"
-                            {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value) || 0)}
+                          <NumericInput
+                            min={0}
+                            step={0.1}
+                            allowDecimals={true}
+                            placeholder="Vehicle/container weight"
+                            value={field.value}
+                            onChange={field.onChange}
                           />
                         </FormControl>
                         <FormMessage />
@@ -552,9 +584,14 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                     )}
                   />
                 </div>
-
-                <div className="p-3 bg-muted rounded-lg">
-                  <div className="text-sm font-medium">Net Weight: {netWeight.toFixed(1)} lbs</div>
+                
+                {/* Net Weight Display */}
+                <div className="bg-brand-primary/5 border border-brand-primary/20 rounded-lg p-4">
+                  <div className="flex items-center gap-2">
+                    <Weight className="h-4 w-4 text-brand-primary" />
+                    <span className="font-medium">Net Weight: {netWeight > 0 ? netWeight.toFixed(1) : '0.0'} lbs</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">Gross weight minus tare weight</p>
                 </div>
               </CardContent>
             </Card>

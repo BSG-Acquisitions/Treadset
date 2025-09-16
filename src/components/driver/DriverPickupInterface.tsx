@@ -38,8 +38,8 @@ const driverPickupSchema = z.object({
   otr_count: z.number().min(0, "OTR count must be 0 or greater"),
   tractor_count: z.number().min(0, "Tractor count must be 0 or greater"),
   
-  // Measurements
-  weight_tons: z.number().min(0, "Weight must be 0 or greater").optional(),
+  // Measurements (auto-calculated)
+  gross_weight_lbs: z.number().min(0, "Gross weight must be 0 or greater"),
   volume_yards: z.number().min(0, "Volume must be 0 or greater").optional(),
   
   // Driver notes
@@ -81,6 +81,18 @@ export function DriverPickupInterface({ pickup, onComplete }: DriverPickupInterf
     loadOrgSettings();
   }, []);
 
+  // Standard tire weights (in lbs)
+  const TIRE_WEIGHTS = {
+    PTE_OFF_RIM: 18,
+    PTE_ON_RIM: 38,
+    COMMERCIAL_17_5_19_5_OFF: 55,
+    COMMERCIAL_17_5_19_5_ON: 85,
+    COMMERCIAL_22_5_OFF: 75,
+    COMMERCIAL_22_5_ON: 115,
+    OTR: 450,
+    TRACTOR: 110
+  };
+
   const form = useForm<DriverPickupFormData>({
     resolver: zodResolver(driverPickupSchema),
     defaultValues: {
@@ -92,7 +104,7 @@ export function DriverPickupInterface({ pickup, onComplete }: DriverPickupInterf
       commercial_22_5_on: 0,
       otr_count: 0,
       tractor_count: 0,
-      weight_tons: 0,
+      gross_weight_lbs: 0,
       volume_yards: 0,
       driver_notes: "",
       condition_notes: "",
@@ -102,6 +114,23 @@ export function DriverPickupInterface({ pickup, onComplete }: DriverPickupInterf
 
   // Calculate total in real-time
   const watchedValues = form.watch();
+  
+  // Calculate gross weight based on tire counts
+  const calculatedGrossWeight = 
+    (watchedValues.pte_off_rim * TIRE_WEIGHTS.PTE_OFF_RIM) +
+    (watchedValues.pte_on_rim * TIRE_WEIGHTS.PTE_ON_RIM) +
+    (watchedValues.commercial_17_5_19_5_off * TIRE_WEIGHTS.COMMERCIAL_17_5_19_5_OFF) +
+    (watchedValues.commercial_17_5_19_5_on * TIRE_WEIGHTS.COMMERCIAL_17_5_19_5_ON) +
+    (watchedValues.commercial_22_5_off * TIRE_WEIGHTS.COMMERCIAL_22_5_OFF) +
+    (watchedValues.commercial_22_5_on * TIRE_WEIGHTS.COMMERCIAL_22_5_ON) +
+    (watchedValues.otr_count * TIRE_WEIGHTS.OTR) +
+    (watchedValues.tractor_count * TIRE_WEIGHTS.TRACTOR);
+
+  // Auto-update gross weight when tire counts change
+  useEffect(() => {
+    form.setValue("gross_weight_lbs", calculatedGrossWeight);
+  }, [calculatedGrossWeight, form]);
+
   useEffect(() => {
     if (orgSettings) {
       const pteTotal = (watchedValues.pte_off_rim + watchedValues.pte_on_rim) * orgSettings.default_pte_rate;
@@ -399,20 +428,25 @@ export function DriverPickupInterface({ pickup, onComplete }: DriverPickupInterf
                 <div className="grid grid-cols-2 gap-3">
                   <FormField
                     control={form.control}
-                    name="weight_tons"
+                    name="gross_weight_lbs"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Weight (Tons)</FormLabel>
+                        <FormLabel>Gross Weight (lbs) - Calculated</FormLabel>
                          <FormControl>
-                           <NumericInput
-                             min={0}
-                             step={0.1}
-                             allowDecimals={true}
-                             value={field.value}
-                             onChange={field.onChange}
-                           />
+                           <div className="flex items-center space-x-2">
+                             <NumericInput
+                               min={0}
+                               step={0.1}
+                               allowDecimals={true}
+                               value={calculatedGrossWeight}
+                               onChange={() => {}} // Read-only
+                               className="bg-secondary/50 cursor-not-allowed"
+                               readOnly
+                             />
+                             <span className="text-sm text-muted-foreground">Auto</span>
+                           </div>
                          </FormControl>
-                        <FormMessage />
+                        <p className="text-xs text-muted-foreground">Based on tire counts</p>
                       </FormItem>
                     )}
                   />

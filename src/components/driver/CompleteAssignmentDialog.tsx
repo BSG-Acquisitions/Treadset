@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -15,6 +15,7 @@ const completeAssignmentSchema = z.object({
   actualPteCount: z.number().min(0, "PTE count must be 0 or greater"),
   actualOtrCount: z.number().min(0, "OTR count must be 0 or greater"),
   actualTractorCount: z.number().min(0, "Tractor count must be 0 or greater"),
+  calculatedGrossWeight: z.number().min(0, "Gross weight must be 0 or greater"),
   manifestUrl: z.string().url().optional().or(z.literal("")),
   notes: z.string().optional(),
 });
@@ -35,16 +36,36 @@ export function CompleteAssignmentDialog({
   const [photos, setPhotos] = useState<File[]>([]);
   const updateStatus = useUpdateAssignmentStatus();
 
+  // Standard tire weights (in lbs)
+  const TIRE_WEIGHTS = {
+    PTE: 25, // Average weight for PTE 
+    OTR: 450,
+    TRACTOR: 110
+  };
+
   const form = useForm<CompleteAssignmentData>({
     resolver: zodResolver(completeAssignmentSchema),
     defaultValues: {
       actualPteCount: assignment?.pickup?.pte_count || 0,
       actualOtrCount: assignment?.pickup?.otr_count || 0,
       actualTractorCount: assignment?.pickup?.tractor_count || 0,
+      calculatedGrossWeight: 0,
       manifestUrl: "",
       notes: "",
     },
   });
+
+  // Calculate gross weight in real-time
+  const watchedValues = form.watch();
+  const calculatedGrossWeight = 
+    (watchedValues.actualPteCount * TIRE_WEIGHTS.PTE) +
+    (watchedValues.actualOtrCount * TIRE_WEIGHTS.OTR) +
+    (watchedValues.actualTractorCount * TIRE_WEIGHTS.TRACTOR);
+
+  // Auto-update gross weight when tire counts change
+  useEffect(() => {
+    form.setValue("calculatedGrossWeight", calculatedGrossWeight);
+  }, [calculatedGrossWeight, form]);
 
   const handleSubmit = async (data: CompleteAssignmentData) => {
     try {
@@ -146,6 +167,17 @@ export function CompleteAssignmentDialog({
                   )}
                 />
               </div>
+            </div>
+
+            {/* Calculated Gross Weight Display */}
+            <div className="bg-brand-primary/5 border border-brand-primary/20 rounded-lg p-3">
+              <div className="flex items-center gap-2">
+                <span className="font-medium">Calculated Gross Weight:</span>
+                <span className="text-lg font-bold text-brand-primary">{calculatedGrossWeight.toFixed(1)} lbs</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                PTE: {watchedValues.actualPteCount} × 25 lbs + OTR: {watchedValues.actualOtrCount} × 450 lbs + Tractor: {watchedValues.actualTractorCount} × 110 lbs
+              </p>
             </div>
 
             <FormField
