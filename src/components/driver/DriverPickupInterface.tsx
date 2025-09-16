@@ -25,7 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { CheckCircle2, Camera, Upload, Truck, DollarSign, Calculator, Weight } from "lucide-react";
+import { CheckCircle2, Camera, Upload, Truck, DollarSign, Calculator, Weight, PenTool } from "lucide-react";
 
 const driverPickupSchema = z.object({
   // Tire counts
@@ -589,6 +589,28 @@ export function DriverPickupInterface({ pickup, onComplete }: DriverPickupInterf
                   <p className="text-xs text-muted-foreground mt-1">
                     Based on tire counts and standard weights
                   </p>
+                </div>
+              </div>
+
+              {/* Signatures */}
+              <div className="space-y-4 mt-6">
+                <h3 className="text-lg font-medium flex items-center gap-2">
+                  <PenTool className="h-5 w-5" />
+                  Signatures
+                </h3>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="text-sm font-medium">Driver Signature</label>
+                    <div className="border rounded-lg mt-2 bg-secondary/20 flex items-center justify-center h-24">
+                      <span className="text-sm text-muted-foreground">Signature capture not available in mobile view</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Generator Signature</label>
+                    <div className="border rounded-lg mt-2 bg-secondary/20 flex items-center justify-center h-24">
+                      <span className="text-sm text-muted-foreground">Signature capture not available in mobile view</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 

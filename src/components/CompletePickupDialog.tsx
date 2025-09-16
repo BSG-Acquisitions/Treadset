@@ -653,16 +653,35 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                       {selectedReceiver.receiver_mailing_address && (
                         <div><strong>Address:</strong> {selectedReceiver.receiver_mailing_address}</div>
                       )}
-                      {selectedReceiver.receiver_city && (
-                        <div><strong>Location:</strong> {selectedReceiver.receiver_city}, {selectedReceiver.receiver_state} {selectedReceiver.receiver_zip}</div>
-              )}
-              
-              {/* Weight Summary - Bottom of Form */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium flex items-center gap-2">
-                  <Weight className="h-5 w-5" />
-                  Weight Summary
-                </h3>
+                       {selectedReceiver.receiver_city && (
+                         <div><strong>Location:</strong> {selectedReceiver.receiver_city}, {selectedReceiver.receiver_state} {selectedReceiver.receiver_zip}</div>
+                       )}
+                     </div>
+                   )}
+                   
+                   <FormField
+                     control={form.control}
+                     name="hauler_print_name"
+                     render={({ field }) => (
+                       <FormItem className="mt-3">
+                         <FormLabel>Print Name *</FormLabel>
+                         <FormControl>
+                           <Input {...field} placeholder="Name to print on manifest" />
+                         </FormControl>
+                         <FormMessage />
+                       </FormItem>
+                     )}
+                   />
+                 </CardContent>
+               </Card>
+             </div>
+
+             {/* Weight Summary - Bottom of Form */}
+             <div className="space-y-4">
+               <h3 className="text-lg font-medium flex items-center gap-2">
+                 <Weight className="h-5 w-5" />
+                 Weight Summary
+               </h3>
                 
                 {/* Tare Weight Input */}
                 <FormField
@@ -763,10 +782,6 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                       </Button>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-                  )}
                 </CardContent>
               </Card>
             </div>
@@ -1115,7 +1130,6 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
               >
                 {isSubmitting ? "Processing..." : completedManifest ? "Completed" : "Complete Pickup & Generate Manifest"}
               </Button>
-            </div>
             </div>
           </form>
         </Form>

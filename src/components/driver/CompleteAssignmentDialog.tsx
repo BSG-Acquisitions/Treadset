@@ -249,6 +249,17 @@ export function CompleteAssignmentDialog({
               )}
             />
 
+            {/* Weight Summary - Bottom of Form */}
+            <div className="bg-brand-primary/5 border border-brand-primary/20 rounded-lg p-3">
+              <div className="flex items-center gap-2">
+                <span className="font-medium">Calculated Gross Weight:</span>
+                <span className="text-lg font-bold text-brand-primary">{calculatedGrossWeight.toFixed(1)} lbs</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                PTE: {watchedValues.actualPteCount} × 25 lbs + OTR: {watchedValues.actualOtrCount} × 450 lbs + Tractor: {watchedValues.actualTractorCount} × 110 lbs
+              </p>
+            </div>
+
             {/* Calculated Gross Weight at Bottom */}
             <div className="bg-brand-primary/5 border border-brand-primary/20 rounded-lg p-3">
               <div className="flex items-center gap-2">
