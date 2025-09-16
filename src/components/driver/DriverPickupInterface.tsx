@@ -25,7 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { CheckCircle2, Camera, Upload, Truck, DollarSign, Calculator } from "lucide-react";
+import { CheckCircle2, Camera, Upload, Truck, DollarSign, Calculator, Weight } from "lucide-react";
 
 const driverPickupSchema = z.object({
   // Tire counts
@@ -573,6 +573,23 @@ export function DriverPickupInterface({ pickup, onComplete }: DriverPickupInterf
                     </FormItem>
                   )}
                 />
+              </div>
+
+              {/* Weight Summary - Bottom of Form */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium flex items-center gap-2">
+                  <Weight className="h-5 w-5" />
+                  Weight Summary
+                </h3>
+                <div className="bg-brand-primary/5 border border-brand-primary/20 rounded-lg p-4">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">Calculated Gross Weight:</span>
+                    <span className="text-2xl font-bold text-brand-primary">{calculatedGrossWeight.toFixed(1)} lbs</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Based on tire counts and standard weights
+                  </p>
+                </div>
               </div>
 
               <Button

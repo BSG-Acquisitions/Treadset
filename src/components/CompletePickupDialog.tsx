@@ -541,58 +541,28 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                    </div>
                  </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="gross_weight"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Gross Weight (lbs) - Calculated</FormLabel>
-                        <FormControl>
-                          <div className="flex items-center space-x-2">
-                            <Input
-                              type="number"
-                              value={calculatedGrossWeight.toFixed(1)}
-                              readOnly
-                              className="bg-secondary/50 cursor-not-allowed"
-                            />
-                            <span className="text-sm text-muted-foreground">Auto-calculated</span>
-                          </div>
-                        </FormControl>
-                        <p className="text-xs text-muted-foreground">Based on tire counts and standard weights</p>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="tare_weight"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Tare Weight (lbs) *</FormLabel>
-                        <FormControl>
-                          <NumericInput
-                            min={0}
-                            step={0.1}
-                            allowDecimals={true}
-                            placeholder="Vehicle/container weight"
-                            value={field.value}
-                            onChange={field.onChange}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                
-                {/* Net Weight Display */}
-                <div className="bg-brand-primary/5 border border-brand-primary/20 rounded-lg p-4">
-                  <div className="flex items-center gap-2">
-                    <Weight className="h-4 w-4 text-brand-primary" />
-                    <span className="font-medium">Net Weight: {netWeight > 0 ? netWeight.toFixed(1) : '0.0'} lbs</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">Gross weight minus tare weight</p>
-                </div>
+                 <div className="grid grid-cols-1 gap-4">
+                   <FormField
+                     control={form.control}
+                     name="tare_weight"
+                     render={({ field }) => (
+                       <FormItem>
+                         <FormLabel>Tare Weight (lbs) *</FormLabel>
+                         <FormControl>
+                           <NumericInput
+                             min={0}
+                             step={0.1}
+                             allowDecimals={true}
+                             placeholder="Vehicle/container weight"
+                             value={field.value}
+                             onChange={field.onChange}
+                           />
+                         </FormControl>
+                         <FormMessage />
+                       </FormItem>
+                     )}
+                   />
+                 </div>
               </CardContent>
             </Card>
 
@@ -704,8 +674,35 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                       )}
                       {selectedReceiver.receiver_city && (
                         <div><strong>Location:</strong> {selectedReceiver.receiver_city}, {selectedReceiver.receiver_state} {selectedReceiver.receiver_zip}</div>
-                      )}
-                    </div>
+              )}
+              
+              {/* Weight Summary - Bottom of Form */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium flex items-center gap-2">
+                  <Weight className="h-5 w-5" />
+                  Weight Summary
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-secondary/10 rounded-lg p-4">
+                    <div className="text-sm font-medium mb-2">Gross Weight (Calculated)</div>
+                    <div className="text-2xl font-bold text-brand-primary">{calculatedGrossWeight.toFixed(1)} lbs</div>
+                    <div className="text-xs text-muted-foreground">Based on tire counts</div>
+                  </div>
+                  <div className="bg-secondary/10 rounded-lg p-4">
+                    <div className="text-sm font-medium mb-2">Tare Weight</div>
+                    <div className="text-2xl font-bold">{tareWeight.toFixed(1)} lbs</div>
+                    <div className="text-xs text-muted-foreground">Vehicle/container weight</div>
+                  </div>
+                </div>
+                <div className="bg-brand-primary/5 border border-brand-primary/20 rounded-lg p-4">
+                  <div className="flex items-center gap-2">
+                    <Weight className="h-4 w-4 text-brand-primary" />
+                    <span className="font-medium">Net Weight: {netWeight > 0 ? netWeight.toFixed(1) : '0.0'} lbs</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">Gross weight minus tare weight</p>
+                </div>
+              </div>
+            </div>
                   )}
                 </CardContent>
               </Card>
