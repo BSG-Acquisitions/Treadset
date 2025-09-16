@@ -31,6 +31,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -747,14 +748,13 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Passenger Car Off Rim</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min="0"
-                            {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value) || 0)}
-                          />
-                        </FormControl>
+                          <FormControl>
+                            <NumericInput
+                              min={0}
+                              value={field.value}
+                              onChange={field.onChange}
+                            />
+                          </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -765,14 +765,13 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Passenger Car On Rim</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min="0"
-                            {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value) || 0)}
-                          />
-                        </FormControl>
+                          <FormControl>
+                            <NumericInput
+                              min={0}
+                              value={field.value}
+                              onChange={field.onChange}
+                            />
+                          </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -796,11 +795,10 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                         <FormItem>
                           <FormLabel>Truck 17.5/19.5 Off Rim</FormLabel>
                           <FormControl>
-                            <Input
-                              type="number"
-                              min="0"
-                              {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value) || 0)}
+                            <NumericInput
+                              min={0}
+                              value={field.value}
+                              onChange={field.onChange}
                             />
                           </FormControl>
                           <FormMessage />
@@ -814,11 +812,10 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                         <FormItem>
                           <FormLabel>Truck 17.5/19.5 On Rim</FormLabel>
                           <FormControl>
-                            <Input
-                              type="number"
-                              min="0"
-                              {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value) || 0)}
+                            <NumericInput
+                              min={0}
+                              value={field.value}
+                              onChange={field.onChange}
                             />
                           </FormControl>
                           <FormMessage />
@@ -834,11 +831,10 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                         <FormItem>
                           <FormLabel>Truck 22.5 Off Rim</FormLabel>
                           <FormControl>
-                            <Input
-                              type="number"
-                              min="0"
-                              {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value) || 0)}
+                            <NumericInput
+                              min={0}
+                              value={field.value}
+                              onChange={field.onChange}
                             />
                           </FormControl>
                           <FormMessage />
@@ -852,11 +848,10 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                         <FormItem>
                           <FormLabel>Truck 22.5 On Rim</FormLabel>
                           <FormControl>
-                            <Input
-                              type="number"
-                              min="0"
-                              {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value) || 0)}
+                            <NumericInput
+                              min={0}
+                              value={field.value}
+                              onChange={field.onChange}
                             />
                           </FormControl>
                           <FormMessage />
@@ -881,14 +876,13 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>OTR (Off-the-Road)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min="0"
-                            {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value) || 0)}
-                          />
-                        </FormControl>
+                          <FormControl>
+                            <NumericInput
+                              min={0}
+                              value={field.value}
+                              onChange={field.onChange}
+                            />
+                          </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -899,14 +893,13 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Tractor Tires</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min="0"
-                            {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value) || 0)}
-                          />
-                        </FormControl>
+                          <FormControl>
+                            <NumericInput
+                              min={0}
+                              value={field.value}
+                              onChange={field.onChange}
+                            />
+                          </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -956,15 +949,15 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Weight (Tons)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min="0"
-                            step="0.1"
-                            {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value) || 0)}
-                          />
-                        </FormControl>
+                          <FormControl>
+                            <NumericInput
+                              min={0}
+                              step={0.1}
+                              allowDecimals={true}
+                              value={field.value}
+                              onChange={field.onChange}
+                            />
+                          </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -975,15 +968,15 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Volume (Cubic Yards)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min="0"
-                            step="0.1"
-                            {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value) || 0)}
-                          />
-                        </FormControl>
+                          <FormControl>
+                            <NumericInput
+                              min={0}
+                              step={0.1}
+                              allowDecimals={true}
+                              value={field.value}
+                              onChange={field.onChange}
+                            />
+                          </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}

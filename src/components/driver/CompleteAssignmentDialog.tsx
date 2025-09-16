@@ -5,6 +5,7 @@ import { z } from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useUpdateAssignmentStatus } from "@/hooks/useDriverWorkflow";
@@ -97,14 +98,13 @@ export function CompleteAssignmentDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs">PTE</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          min="0"
-                          {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                        />
-                      </FormControl>
+                       <FormControl>
+                         <NumericInput
+                           min={0}
+                           value={field.value}
+                           onChange={field.onChange}
+                         />
+                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -116,14 +116,13 @@ export function CompleteAssignmentDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs">OTR</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          min="0"
-                          {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                        />
-                      </FormControl>
+                       <FormControl>
+                         <NumericInput
+                           min={0}
+                           value={field.value}
+                           onChange={field.onChange}
+                         />
+                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -135,14 +134,13 @@ export function CompleteAssignmentDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs">Tractor</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          min="0"
-                          {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                        />
-                      </FormControl>
+                       <FormControl>
+                         <NumericInput
+                           min={0}
+                           value={field.value}
+                           onChange={field.onChange}
+                         />
+                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

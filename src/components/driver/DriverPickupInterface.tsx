@@ -20,6 +20,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -224,15 +225,14 @@ export function DriverPickupInterface({ pickup, onComplete }: DriverPickupInterf
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Off Rim</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min="0"
-                            className="text-lg text-center"
-                            {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value) || 0)}
-                          />
-                        </FormControl>
+                         <FormControl>
+                           <NumericInput
+                             min={0}
+                             className="text-lg text-center"
+                             value={field.value}
+                             onChange={field.onChange}
+                           />
+                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -243,15 +243,14 @@ export function DriverPickupInterface({ pickup, onComplete }: DriverPickupInterf
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>On Rim</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min="0"
-                            className="text-lg text-center"
-                            {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value) || 0)}
-                          />
-                        </FormControl>
+                         <FormControl>
+                           <NumericInput
+                             min={0}
+                             className="text-lg text-center"
+                             value={field.value}
+                             onChange={field.onChange}
+                           />
+                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -273,15 +272,14 @@ export function DriverPickupInterface({ pickup, onComplete }: DriverPickupInterf
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Off Rim</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min="0"
-                              className="text-lg text-center"
-                              {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value) || 0)}
-                            />
-                          </FormControl>
+                           <FormControl>
+                             <NumericInput
+                               min={0}
+                               className="text-lg text-center"
+                               value={field.value}
+                               onChange={field.onChange}
+                             />
+                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -292,15 +290,14 @@ export function DriverPickupInterface({ pickup, onComplete }: DriverPickupInterf
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>On Rim</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min="0"
-                              className="text-lg text-center"
-                              {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value) || 0)}
-                            />
-                          </FormControl>
+                           <FormControl>
+                             <NumericInput
+                               min={0}
+                               className="text-lg text-center"
+                               value={field.value}
+                               onChange={field.onChange}
+                             />
+                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -315,15 +312,14 @@ export function DriverPickupInterface({ pickup, onComplete }: DriverPickupInterf
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Off Rim</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min="0"
-                              className="text-lg text-center"
-                              {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value) || 0)}
-                            />
-                          </FormControl>
+                           <FormControl>
+                             <NumericInput
+                               min={0}
+                               className="text-lg text-center"
+                               value={field.value}
+                               onChange={field.onChange}
+                             />
+                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -334,15 +330,14 @@ export function DriverPickupInterface({ pickup, onComplete }: DriverPickupInterf
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>On Rim</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min="0"
-                              className="text-lg text-center"
-                              {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value) || 0)}
-                            />
-                          </FormControl>
+                           <FormControl>
+                             <NumericInput
+                               min={0}
+                               className="text-lg text-center"
+                               value={field.value}
+                               onChange={field.onChange}
+                             />
+                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -363,15 +358,14 @@ export function DriverPickupInterface({ pickup, onComplete }: DriverPickupInterf
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>OTR (Off-Road)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min="0"
-                            className="text-lg text-center"
-                            {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value) || 0)}
-                          />
-                        </FormControl>
+                         <FormControl>
+                           <NumericInput
+                             min={0}
+                             className="text-lg text-center"
+                             value={field.value}
+                             onChange={field.onChange}
+                           />
+                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -382,15 +376,14 @@ export function DriverPickupInterface({ pickup, onComplete }: DriverPickupInterf
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Tractor</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min="0"
-                            className="text-lg text-center"
-                            {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value) || 0)}
-                          />
-                        </FormControl>
+                         <FormControl>
+                           <NumericInput
+                             min={0}
+                             className="text-lg text-center"
+                             value={field.value}
+                             onChange={field.onChange}
+                           />
+                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -410,15 +403,15 @@ export function DriverPickupInterface({ pickup, onComplete }: DriverPickupInterf
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Weight (Tons)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min="0"
-                            step="0.1"
-                            {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value) || 0)}
-                          />
-                        </FormControl>
+                         <FormControl>
+                           <NumericInput
+                             min={0}
+                             step={0.1}
+                             allowDecimals={true}
+                             value={field.value}
+                             onChange={field.onChange}
+                           />
+                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -429,15 +422,15 @@ export function DriverPickupInterface({ pickup, onComplete }: DriverPickupInterf
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Volume (Yards³)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min="0"
-                            step="0.1"
-                            {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value) || 0)}
-                          />
-                        </FormControl>
+                         <FormControl>
+                           <NumericInput
+                             min={0}
+                             step={0.1}
+                             allowDecimals={true}
+                             value={field.value}
+                             onChange={field.onChange}
+                           />
+                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
