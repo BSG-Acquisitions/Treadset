@@ -542,26 +542,7 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                  </div>
 
                  <div className="grid grid-cols-1 gap-4">
-                   <FormField
-                     control={form.control}
-                     name="tare_weight"
-                     render={({ field }) => (
-                       <FormItem>
-                         <FormLabel>Tare Weight (lbs) *</FormLabel>
-                         <FormControl>
-                           <NumericInput
-                             min={0}
-                             step={0.1}
-                             allowDecimals={true}
-                             placeholder="Vehicle/container weight"
-                             value={field.value}
-                             onChange={field.onChange}
-                           />
-                         </FormControl>
-                         <FormMessage />
-                       </FormItem>
-                     )}
-                   />
+                   {/* Tare weight moved to bottom with other weights */}
                  </div>
               </CardContent>
             </Card>
@@ -682,6 +663,29 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                   <Weight className="h-5 w-5" />
                   Weight Summary
                 </h3>
+                
+                {/* Tare Weight Input */}
+                <FormField
+                  control={form.control}
+                  name="tare_weight"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tare Weight (lbs) *</FormLabel>
+                      <FormControl>
+                        <NumericInput
+                          min={0}
+                          step={0.1}
+                          allowDecimals={true}
+                          placeholder="Vehicle/container weight"
+                          value={field.value}
+                          onChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-secondary/10 rounded-lg p-4">
                     <div className="text-sm font-medium mb-2">Gross Weight (Calculated)</div>
