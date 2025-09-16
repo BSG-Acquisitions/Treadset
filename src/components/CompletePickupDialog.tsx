@@ -706,71 +706,70 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                   <p className="text-xs text-muted-foreground mt-1">Gross weight minus tare weight</p>
                 </div>
               </div>
+
+              {/* Signatures */}
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <PenTool className="h-5 w-5" />
+                    Signatures
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div>
+                      <label className="text-sm font-medium">Generator Signature</label>
+                      <div className="border rounded-lg mt-2">
+                        <SignaturePad
+                          ref={generatorSigRef}
+                          canvasProps={{
+                            width: 300,
+                            height: 150,
+                            className: 'signature-canvas w-full'
+                          }}
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="mt-2 w-full"
+                        onClick={() => generatorSigRef.current?.clear()}
+                      >
+                        Clear
+                      </Button>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium">Hauler Signature</label>
+                      <div className="border rounded-lg mt-2">
+                        <SignaturePad
+                          ref={haulerSigRef}
+                          canvasProps={{
+                            width: 300,
+                            height: 150,
+                            className: 'signature-canvas w-full'
+                          }}
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="mt-2 w-full"
+                        onClick={() => haulerSigRef.current?.clear()}
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
                   )}
                 </CardContent>
               </Card>
             </div>
-
-            {/* Signature Pads */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <PenTool className="h-5 w-5" />
-                  Signatures
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div>
-                    <label className="text-sm font-medium">Generator Signature</label>
-                    <div className="border rounded-lg mt-2">
-                      <SignaturePad
-                        ref={generatorSigRef}
-                        canvasProps={{
-                          width: 300,
-                          height: 150,
-                          className: 'signature-canvas w-full'
-                        }}
-                      />
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="mt-2 w-full"
-                      onClick={() => generatorSigRef.current?.clear()}
-                    >
-                      Clear
-                    </Button>
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium">Hauler Signature</label>
-                    <div className="border rounded-lg mt-2">
-                      <SignaturePad
-                        ref={haulerSigRef}
-                        canvasProps={{
-                          width: 300,
-                          height: 150,
-                          className: 'signature-canvas w-full'
-                        }}
-                      />
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="mt-2 w-full"
-                      onClick={() => haulerSigRef.current?.clear()}
-                    >
-                      Clear
-                    </Button>
-                  </div>
-
-                </div>
-              </CardContent>
-            </Card>
 
             {/* Tire Counts */}
             <div className="space-y-6">
