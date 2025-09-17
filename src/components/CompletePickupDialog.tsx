@@ -254,7 +254,7 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
 
   const customPricing = false; // Removed custom pricing for simplified flow
   
-  // Simplified weight calculations: 1 PTE = 22.47 lbs, 1 Truck = 5 PTE, 1 OTR = 15 PTE
+  // Simplified weight calculations: 1 PTE = 22.47 lbs, 1 Truck = 5 PTE, 1 OTR = 15 PTE, 1 Tractor = 15 PTE
   const TIRE_WEIGHTS = {
     PTE_OFF_RIM: 22.47, // lbs (1 PTE)
     PTE_ON_RIM: 22.47, // lbs (1 PTE) 
@@ -263,7 +263,7 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
     COMMERCIAL_22_5_OFF: 112.35, // lbs (5 PTE)
     COMMERCIAL_22_5_ON: 112.35, // lbs (5 PTE)
     OTR: 337.05, // lbs (15 PTE)
-    TRACTOR: 112.35 // lbs (5 PTE)
+    TRACTOR: 337.05 // lbs (15 PTE)
   };
 
   // Watch tire counts for auto-calculation
@@ -328,7 +328,7 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
     const passengerEquivalents = data.equivalents_off_rim + data.equivalents_on_rim;
     const commercialEquivalents = (data.commercial_17_5_19_5_off + data.commercial_17_5_19_5_on + 
                                   data.commercial_22_5_off + data.commercial_22_5_on) * 5; // Each truck tire = 5 PTE
-    const oversizedEquivalents = data.otr_count * 15 + data.tractor_count * 5; // OTR = 15 PTE, Tractor = 5 PTE
+    const oversizedEquivalents = data.otr_count * 15 + data.tractor_count * 15; // OTR = 15 PTE, Tractor = 15 PTE
     
     return {
       passengerEquivalents,
@@ -996,12 +996,12 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                           (formValues.commercial_22_5_off || 0) +
                           (formValues.commercial_22_5_on || 0)
                         ) * 5; // All truck/semi tires = 5 PTE each
-                        const oversizedPTE = (formValues.otr_count || 0) * 15 + (formValues.tractor_count || 0) * 5; // OTR = 15, Tractor = 5
+                        const oversizedPTE = (formValues.otr_count || 0) * 15 + (formValues.tractor_count || 0) * 15; // OTR = 15, Tractor = 15
                         return passengerPTE + truckPTE + oversizedPTE;
                       })()}
                     </div>
                     <div className="text-sm text-muted-foreground mt-1">
-                      Total PTE (Passenger × 1) + (Truck × 5) + (OTR × 15) + (Tractor × 5)
+                      Total PTE (Passenger × 1) + (Truck × 5) + (OTR × 15) + (Tractor × 15)
                     </div>
                   </div>
                 </div>

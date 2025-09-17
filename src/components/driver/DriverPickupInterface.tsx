@@ -81,7 +81,7 @@ export function DriverPickupInterface({ pickup, onComplete }: DriverPickupInterf
     loadOrgSettings();
   }, []);
 
-  // Simplified weight calculations: 1 PTE = 22.47 lbs, 1 Truck = 5 PTE, 1 OTR = 15 PTE
+  // Simplified weight calculations: 1 PTE = 22.47 lbs, 1 Truck = 5 PTE, 1 OTR = 15 PTE, 1 Tractor = 15 PTE
   const TIRE_WEIGHTS = {
     PTE_OFF_RIM: 22.47, // lbs (1 PTE)
     PTE_ON_RIM: 22.47, // lbs (1 PTE)
@@ -90,7 +90,7 @@ export function DriverPickupInterface({ pickup, onComplete }: DriverPickupInterf
     COMMERCIAL_22_5_OFF: 112.35, // lbs (5 PTE)
     COMMERCIAL_22_5_ON: 112.35, // lbs (5 PTE)
     OTR: 337.05, // lbs (15 PTE)
-    TRACTOR: 112.35 // lbs (5 PTE)
+    TRACTOR: 337.05 // lbs (15 PTE)
   };
 
   const form = useForm<DriverPickupFormData>({

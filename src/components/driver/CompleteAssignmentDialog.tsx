@@ -36,11 +36,11 @@ export function CompleteAssignmentDialog({
   const [photos, setPhotos] = useState<File[]>([]);
   const updateStatus = useUpdateAssignmentStatus();
 
-  // Simplified weight calculations: 1 PTE = 22.47 lbs, 1 Truck = 5 PTE, 1 OTR = 15 PTE
+  // Simplified weight calculations: 1 PTE = 22.47 lbs, 1 Truck = 5 PTE, 1 OTR = 15 PTE, 1 Tractor = 15 PTE
   const TIRE_WEIGHTS = {
     PTE: 22.47, // lbs per tire (1 PTE)
     OTR: 337.05, // lbs per tire (15 PTE)
-    TRACTOR: 112.35, // lbs per tire (5 PTE)
+    TRACTOR: 337.05, // lbs per tire (15 PTE)
   };
 
   const form = useForm<CompleteAssignmentData>({
@@ -268,7 +268,7 @@ export function CompleteAssignmentDialog({
                 <span className="text-sm font-semibold text-brand-secondary">{(calculatedGrossWeight / 2000).toFixed(2)} tons</span>
               </div>
               <p className="text-xs text-muted-foreground">
-                PTE: {watchedValues.actualPteCount} × 22.47 lbs + OTR: {watchedValues.actualOtrCount} × 337.05 lbs + Tractor: {watchedValues.actualTractorCount} × 112.35 lbs
+                PTE: {watchedValues.actualPteCount} × 22.47 lbs + OTR: {watchedValues.actualOtrCount} × 337.05 lbs + Tractor: {watchedValues.actualTractorCount} × 337.05 lbs
               </p>
             </div>
 
