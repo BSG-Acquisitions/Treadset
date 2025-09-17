@@ -2,10 +2,12 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, TrendingUp, Scale, Recycle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { CalendarDays, TrendingUp, Scale, Recycle, ArrowLeft, Home } from "lucide-react";
 import { format } from "date-fns";
 import { useRecyclingReports } from "@/hooks/useRecyclingReports";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Link } from "react-router-dom";
 
 const Reports = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -43,6 +45,18 @@ const Reports = () => {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Breadcrumb Navigation */}
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Button asChild variant="ghost" size="sm" className="p-0 h-auto font-normal hover:text-foreground">
+          <Link to="/" className="flex items-center gap-1">
+            <Home className="h-4 w-4" />
+            Dashboard
+          </Link>
+        </Button>
+        <span>/</span>
+        <span className="text-foreground">Reports</span>
+      </div>
+
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Tire Recycling Reports</h1>
