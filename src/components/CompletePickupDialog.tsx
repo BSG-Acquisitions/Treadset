@@ -254,16 +254,16 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
 
   const customPricing = false; // Removed custom pricing for simplified flow
   
-  // Standard tire weights (in lbs)
+  // Simplified weight calculations: 1 PTE = 22.47 lbs, 1 Truck = 5 PTE, 1 OTR = 15 PTE
   const TIRE_WEIGHTS = {
-    PTE_OFF_RIM: 18,
-    PTE_ON_RIM: 38, // tire + rim weight
-    COMMERCIAL_17_5_19_5_OFF: 55,
-    COMMERCIAL_17_5_19_5_ON: 85,
-    COMMERCIAL_22_5_OFF: 75,
-    COMMERCIAL_22_5_ON: 115,
-    OTR: 450,
-    TRACTOR: 110
+    PTE_OFF_RIM: 22.47, // lbs (1 PTE)
+    PTE_ON_RIM: 22.47, // lbs (1 PTE) 
+    COMMERCIAL_17_5_19_5_OFF: 112.35, // lbs (5 PTE)
+    COMMERCIAL_17_5_19_5_ON: 112.35, // lbs (5 PTE)
+    COMMERCIAL_22_5_OFF: 112.35, // lbs (5 PTE)
+    COMMERCIAL_22_5_ON: 112.35, // lbs (5 PTE)
+    OTR: 337.05, // lbs (15 PTE)
+    TRACTOR: 112.35 // lbs (5 PTE)
   };
 
   // Watch tire counts for auto-calculation
