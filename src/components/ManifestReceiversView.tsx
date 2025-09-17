@@ -35,7 +35,7 @@ export const ManifestReceiversView = () => {
 
   // Filter manifests that need receiver signature 
   const pendingReceiverSignature = manifests?.filter(m => 
-    m.status === 'AWAITING_RECEIVER_SIGNATURE'
+    (m.receiver_signed_at == null) && !!m.signed_at && m.status !== 'COMPLETED'
   ) || [];
 
   // Filter manifests that have all signatures
