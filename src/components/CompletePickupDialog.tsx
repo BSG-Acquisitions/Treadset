@@ -307,13 +307,13 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
     }
   }, [selectedReceiver, form]);
 
-  // Utility function to calculate tire equivalents based on standard conversions
+  // Utility function to calculate tire equivalents based on simplified PTE system
   const calculateEquivalents = (data: CompletePickupFormData) => {
-    // Standard tire-to-equivalent conversions
+    // Simplified PTE conversions: 1 PTE = 22.47 lbs, 1 Truck = 5 PTE, 1 OTR = 15 PTE
     const passengerEquivalents = data.equivalents_off_rim + data.equivalents_on_rim;
-    const commercialEquivalents = (data.commercial_17_5_19_5_off + data.commercial_17_5_19_5_on) * 2 + 
-                                 (data.commercial_22_5_off + data.commercial_22_5_on) * 2.5;
-    const oversizedEquivalents = data.otr_count * 4 + data.tractor_count * 3;
+    const commercialEquivalents = (data.commercial_17_5_19_5_off + data.commercial_17_5_19_5_on + 
+                                  data.commercial_22_5_off + data.commercial_22_5_on) * 5; // Each truck tire = 5 PTE
+    const oversizedEquivalents = data.otr_count * 15 + data.tractor_count * 5; // OTR = 15 PTE, Tractor = 5 PTE
     
     return {
       passengerEquivalents,
