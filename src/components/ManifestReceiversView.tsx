@@ -35,9 +35,8 @@ export const ManifestReceiversView = () => {
 
   // Filter manifests that need receiver signature 
   const pendingReceiverSignature = manifests?.filter(m => 
-    (m.receiver_signed_at == null) && !!m.signed_at && m.status !== 'COMPLETED'
+    (m.receiver_signed_at == null) && m.status !== 'COMPLETED'
   ) || [];
-
   // Filter manifests that have all signatures
   const completedManifests = manifests?.filter(m => 
     m.status === 'COMPLETED' && 
@@ -45,11 +44,37 @@ export const ManifestReceiversView = () => {
     m.receiver_signed_at
   ) || [];
 
+  // Fallback: fetch pending directly if query returns none (e.g., relation join issues)
+  const [fallbackPending, setFallbackPending] = useState<any[]>([]);
+  useEffect(() => {
+    const fetchFallback = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('manifests')
+          .select('id, manifest_number, status, signed_at, receiver_signed_at')
+          .is('receiver_signed_at', null)
+          .not('signed_at', 'is', null)
+          .neq('status', 'COMPLETED')
+          .order('created_at', { ascending: false });
+        if (error) throw error;
+        setFallbackPending(data || []);
+        console.log('ReceiverSignatures fallback count:', (data || []).length);
+      } catch (e) {
+        console.error('Fallback fetch failed:', e);
+      }
+    };
+
+    if ((pendingReceiverSignature?.length || 0) === 0) {
+      fetchFallback();
+    } else {
+      setFallbackPending([]);
+    }
+  }, [pendingReceiverSignature?.length]);
+
   const handleAddReceiverSignature = (manifestId: string) => {
     setSelectedManifest(manifestId);
     setDialogOpen(true);
   };
-
   if (isLoading) {
     return (
       <div className="p-6">
@@ -57,6 +82,8 @@ export const ManifestReceiversView = () => {
       </div>
     );
   }
+
+  const pendingList = pendingReceiverSignature.length ? pendingReceiverSignature : fallbackPending;
 
   return (
     <div className="p-6 space-y-6">
@@ -70,15 +97,15 @@ export const ManifestReceiversView = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5 text-orange-500" />
-            Awaiting Receiver Signature ({pendingReceiverSignature.length})
+            Awaiting Receiver Signature ({pendingList.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {pendingReceiverSignature.length === 0 ? (
+          {pendingList.length === 0 ? (
             <p className="text-gray-500">No manifests awaiting receiver signature</p>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {pendingReceiverSignature.map((manifest) => (
+              {pendingList.map((manifest) => (
                 <Card key={manifest.id} className="border-orange-200">
                   <CardContent className="p-4">
                     <div className="space-y-2">
