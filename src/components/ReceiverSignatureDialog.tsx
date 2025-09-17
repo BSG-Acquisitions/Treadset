@@ -209,6 +209,17 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
               </div>
             </div>
 
+            {/* If a PDF already exists (e.g., from a previous attempt), show controls here too */}
+            {manifest?.acroform_pdf_path && (
+              <div className="pt-2">
+                <ManifestPDFControls
+                  manifestId={manifestId}
+                  acroformPdfPath={manifest.acroform_pdf_path}
+                  clientEmails={[]}
+                />
+              </div>
+            )}
+
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isCompleting}>
                 Cancel
