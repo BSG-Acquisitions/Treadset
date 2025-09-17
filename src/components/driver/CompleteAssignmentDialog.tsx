@@ -62,6 +62,14 @@ export function CompleteAssignmentDialog({
     (watchedValues.actualOtrCount * TIRE_WEIGHTS.OTR) +
     (watchedValues.actualTractorCount * TIRE_WEIGHTS.TRACTOR);
 
+  // Debug logging
+  console.log('Weight Calculation Debug:', {
+    pte: `${watchedValues.actualPteCount} × ${TIRE_WEIGHTS.PTE} = ${watchedValues.actualPteCount * TIRE_WEIGHTS.PTE}`,
+    otr: `${watchedValues.actualOtrCount} × ${TIRE_WEIGHTS.OTR} = ${watchedValues.actualOtrCount * TIRE_WEIGHTS.OTR}`,
+    tractor: `${watchedValues.actualTractorCount} × ${TIRE_WEIGHTS.TRACTOR} = ${watchedValues.actualTractorCount * TIRE_WEIGHTS.TRACTOR}`,
+    total: calculatedGrossWeight
+  });
+
   // Auto-update gross weight when tire counts change
   useEffect(() => {
     form.setValue("calculatedGrossWeight", calculatedGrossWeight);
@@ -257,7 +265,7 @@ export function CompleteAssignmentDialog({
               </div>
               <div className="flex items-center gap-2 mb-1">
                 <span className="font-medium">Weight in Tons:</span>
-                <span className="text-sm font-semibold text-brand-secondary">{(calculatedGrossWeight / 2000).toFixed(3)} tons</span>
+                <span className="text-sm font-semibold text-brand-secondary">{(calculatedGrossWeight / 2000).toFixed(2)} tons</span>
               </div>
               <p className="text-xs text-muted-foreground">
                 PTE: {watchedValues.actualPteCount} × 22.47 lbs + OTR: {watchedValues.actualOtrCount} × 337.05 lbs + Tractor: {watchedValues.actualTractorCount} × 112.35 lbs

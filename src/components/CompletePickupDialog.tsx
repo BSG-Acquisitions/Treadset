@@ -278,6 +278,20 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
     (watchedValues.otr_count * TIRE_WEIGHTS.OTR) +
     (watchedValues.tractor_count * TIRE_WEIGHTS.TRACTOR);
 
+  // Debug logging for weight calculation
+  console.log('Complete Pickup Weight Debug:', {
+    equiv_off: `${watchedValues.equivalents_off_rim} × ${TIRE_WEIGHTS.PTE_OFF_RIM} = ${watchedValues.equivalents_off_rim * TIRE_WEIGHTS.PTE_OFF_RIM}`,
+    equiv_on: `${watchedValues.equivalents_on_rim} × ${TIRE_WEIGHTS.PTE_ON_RIM} = ${watchedValues.equivalents_on_rim * TIRE_WEIGHTS.PTE_ON_RIM}`,
+    comm_17_5_off: `${watchedValues.commercial_17_5_19_5_off} × ${TIRE_WEIGHTS.COMMERCIAL_17_5_19_5_OFF} = ${watchedValues.commercial_17_5_19_5_off * TIRE_WEIGHTS.COMMERCIAL_17_5_19_5_OFF}`,
+    comm_17_5_on: `${watchedValues.commercial_17_5_19_5_on} × ${TIRE_WEIGHTS.COMMERCIAL_17_5_19_5_ON} = ${watchedValues.commercial_17_5_19_5_on * TIRE_WEIGHTS.COMMERCIAL_17_5_19_5_ON}`,
+    comm_22_5_off: `${watchedValues.commercial_22_5_off} × ${TIRE_WEIGHTS.COMMERCIAL_22_5_OFF} = ${watchedValues.commercial_22_5_off * TIRE_WEIGHTS.COMMERCIAL_22_5_OFF}`,
+    comm_22_5_on: `${watchedValues.commercial_22_5_on} × ${TIRE_WEIGHTS.COMMERCIAL_22_5_ON} = ${watchedValues.commercial_22_5_on * TIRE_WEIGHTS.COMMERCIAL_22_5_ON}`,
+    otr: `${watchedValues.otr_count} × ${TIRE_WEIGHTS.OTR} = ${watchedValues.otr_count * TIRE_WEIGHTS.OTR}`,
+    tractor: `${watchedValues.tractor_count} × ${TIRE_WEIGHTS.TRACTOR} = ${watchedValues.tractor_count * TIRE_WEIGHTS.TRACTOR}`,
+    total: calculatedGrossWeight,
+    totalTons: (calculatedGrossWeight / 2000).toFixed(2)
+  });
+
   // Auto-update gross weight when tire counts change
   useEffect(() => {
     form.setValue("gross_weight", calculatedGrossWeight);

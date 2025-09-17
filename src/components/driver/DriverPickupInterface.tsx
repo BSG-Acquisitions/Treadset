@@ -126,6 +126,20 @@ export function DriverPickupInterface({ pickup, onComplete }: DriverPickupInterf
     (watchedValues.otr_count * TIRE_WEIGHTS.OTR) +
     (watchedValues.tractor_count * TIRE_WEIGHTS.TRACTOR);
 
+  // Debug logging for weight calculation
+  console.log('Driver Interface Weight Debug:', {
+    pte_off: `${watchedValues.pte_off_rim} × ${TIRE_WEIGHTS.PTE_OFF_RIM} = ${watchedValues.pte_off_rim * TIRE_WEIGHTS.PTE_OFF_RIM}`,
+    pte_on: `${watchedValues.pte_on_rim} × ${TIRE_WEIGHTS.PTE_ON_RIM} = ${watchedValues.pte_on_rim * TIRE_WEIGHTS.PTE_ON_RIM}`,
+    comm_17_5_off: `${watchedValues.commercial_17_5_19_5_off} × ${TIRE_WEIGHTS.COMMERCIAL_17_5_19_5_OFF} = ${watchedValues.commercial_17_5_19_5_off * TIRE_WEIGHTS.COMMERCIAL_17_5_19_5_OFF}`,
+    comm_17_5_on: `${watchedValues.commercial_17_5_19_5_on} × ${TIRE_WEIGHTS.COMMERCIAL_17_5_19_5_ON} = ${watchedValues.commercial_17_5_19_5_on * TIRE_WEIGHTS.COMMERCIAL_17_5_19_5_ON}`,
+    comm_22_5_off: `${watchedValues.commercial_22_5_off} × ${TIRE_WEIGHTS.COMMERCIAL_22_5_OFF} = ${watchedValues.commercial_22_5_off * TIRE_WEIGHTS.COMMERCIAL_22_5_OFF}`,
+    comm_22_5_on: `${watchedValues.commercial_22_5_on} × ${TIRE_WEIGHTS.COMMERCIAL_22_5_ON} = ${watchedValues.commercial_22_5_on * TIRE_WEIGHTS.COMMERCIAL_22_5_ON}`,
+    otr: `${watchedValues.otr_count} × ${TIRE_WEIGHTS.OTR} = ${watchedValues.otr_count * TIRE_WEIGHTS.OTR}`,
+    tractor: `${watchedValues.tractor_count} × ${TIRE_WEIGHTS.TRACTOR} = ${watchedValues.tractor_count * TIRE_WEIGHTS.TRACTOR}`,
+    total: calculatedGrossWeight,
+    totalTons: (calculatedGrossWeight / 2000).toFixed(2)
+  });
+
   // Auto-update gross weight when tire counts change
   useEffect(() => {
     form.setValue("gross_weight_lbs", calculatedGrossWeight);
@@ -590,7 +604,7 @@ export function DriverPickupInterface({ pickup, onComplete }: DriverPickupInterf
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="font-medium">Weight in Tons:</span>
-                    <span className="text-lg font-bold text-brand-secondary">{(calculatedGrossWeight / 2000).toFixed(3)} tons</span>
+                    <span className="text-lg font-bold text-brand-secondary">{(calculatedGrossWeight / 2000).toFixed(2)} tons</span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">
                     Based on tire counts and standard weights (89 PTE = 1 ton)
