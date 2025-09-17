@@ -14,7 +14,8 @@ export const ManifestReceiversView = () => {
   const { data: manifests, isLoading } = useManifests();
   const [selectedManifest, setSelectedManifest] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const queryClient = useQueryClient();
+   const queryClient = useQueryClient();
+   const [clientNames, setClientNames] = useState<Record<string, string>>({});
 
   // One-time sync: move manifests without receiver signature into AWAITING_RECEIVER_SIGNATURE
   useEffect(() => {
@@ -58,7 +59,7 @@ export const ManifestReceiversView = () => {
             status, 
             signed_at, 
             receiver_signed_at,
-            client:clients(id, company_name)
+            client_id
           `)
           .is('receiver_signed_at', null)
           .not('signed_at', 'is', null)
@@ -77,7 +78,30 @@ export const ManifestReceiversView = () => {
     } else {
       setFallbackPending([]);
     }
-  }, [pendingReceiverSignature?.length]);
+   }, [pendingReceiverSignature?.length]);
+
+  // Build a map of client_id -> company_name for display without DB joins
+  useEffect(() => {
+    const fetchClientNames = async () => {
+      try {
+        const ids = new Set<string>();
+        (manifests || []).forEach((m: any) => m.client_id && ids.add(m.client_id));
+        (fallbackPending || []).forEach((m: any) => m.client_id && ids.add(m.client_id));
+        if (ids.size === 0) return;
+        const { data, error } = await supabase
+          .from('clients')
+          .select('id, company_name')
+          .in('id', Array.from(ids));
+        if (error) throw error;
+        const map: Record<string, string> = {};
+        (data || []).forEach((c: any) => { map[c.id] = c.company_name; });
+        setClientNames(map);
+      } catch (e) {
+        console.error('Failed fetching client names', e);
+      }
+    };
+    fetchClientNames();
+  }, [manifests, fallbackPending]);
 
   const handleAddReceiverSignature = (manifestId: string) => {
     setSelectedManifest(manifestId);
@@ -124,7 +148,7 @@ export const ManifestReceiversView = () => {
                         <Badge variant="secondary">Awaiting Receiver</Badge>
                       </div>
                       
-                      <h3 className="font-medium">{manifest.client?.company_name}</h3>
+                       <h3 className="font-medium">{clientNames[manifest.client_id] || 'Unknown Client'}</h3>
                       
                       {manifest.signed_at && (
                         <p className="text-sm text-gray-500">
@@ -173,7 +197,7 @@ export const ManifestReceiversView = () => {
                         <Badge className="bg-green-100 text-green-800">Complete</Badge>
                       </div>
                       
-                      <h3 className="font-medium">{manifest.client?.company_name}</h3>
+                      <h3 className="font-medium">{clientNames[manifest.client_id] || 'Unknown Client'}</h3>
                       
                       <div className="text-xs space-y-1">
                         {manifest.signed_at && (
