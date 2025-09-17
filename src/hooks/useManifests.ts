@@ -124,12 +124,7 @@ export const useManifests = (clientId?: string, driverId?: string) => {
     queryFn: async () => {
       let query = supabase
         .from('manifests')
-        .select(`
-          *,
-          client:clients(id, company_name),
-          location:locations(id, name, address),
-          pickup:pickups(id, pickup_date)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (clientId) {
@@ -154,14 +149,9 @@ export const useManifest = (id: string) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('manifests')
-        .select(`
-          *,
-          client:clients(id, company_name),
-          location:locations(id, name, address),
-          pickup:pickups(id, pickup_date)
-        `)
+        .select('*')
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       return data as unknown as Manifest;
