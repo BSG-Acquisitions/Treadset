@@ -35,6 +35,7 @@ import ManifestViewer from './pages/ManifestViewer';
 import ReceiverSignatures from './pages/ReceiverSignatures';
 import HaulerManagement from './pages/HaulerManagement';
 import ReceiverManagement from './pages/ReceiverManagement';
+import Reports from './pages/Reports';
 
 const queryClient = new QueryClient();
 
@@ -172,6 +173,11 @@ const App = () => (
             <Route path="/receivers" element={
               <ProtectedRoute roles={['admin', 'ops_manager']}>
                 <ReceiverManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="/reports" element={
+              <ProtectedRoute roles={['admin', 'ops_manager']}>
+                <Reports />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
