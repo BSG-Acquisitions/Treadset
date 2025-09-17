@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useManifests } from "@/hooks/useManifests";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,11 +6,32 @@ import { Badge } from "@/components/ui/badge";
 import { ReceiverSignatureDialog } from "./ReceiverSignatureDialog";
 import { format } from "date-fns";
 import { Clock, FileText, Signature } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 
 export const ManifestReceiversView = () => {
   const { data: manifests, isLoading } = useManifests();
   const [selectedManifest, setSelectedManifest] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const queryClient = useQueryClient();
+
+  // One-time sync: move manifests without receiver signature into AWAITING_RECEIVER_SIGNATURE
+  useEffect(() => {
+    const syncStatuses = async () => {
+      try {
+        await supabase
+          .from('manifests')
+          .update({ status: 'AWAITING_RECEIVER_SIGNATURE', updated_at: new Date().toISOString() })
+          .in('status', ['DRAFT', 'COMPLETED', 'AWAITING_SIGNATURE', 'IN_PROGRESS'])
+          .is('receiver_signed_at', null)
+          .not('signed_at', 'is', null);
+        queryClient.invalidateQueries({ queryKey: ['manifests'] });
+      } catch (e) {
+        console.error('Sync statuses failed', e);
+      }
+    };
+    syncStatuses();
+  }, [queryClient]);
 
   // Filter manifests that need receiver signature 
   const pendingReceiverSignature = manifests?.filter(m => 
