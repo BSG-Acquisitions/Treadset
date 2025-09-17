@@ -52,7 +52,14 @@ export const ManifestReceiversView = () => {
       try {
         const { data, error } = await supabase
           .from('manifests')
-          .select('id, manifest_number, status, signed_at, receiver_signed_at')
+          .select(`
+            id, 
+            manifest_number, 
+            status, 
+            signed_at, 
+            receiver_signed_at,
+            client:clients(id, company_name)
+          `)
           .is('receiver_signed_at', null)
           .not('signed_at', 'is', null)
           .neq('status', 'COMPLETED')

@@ -124,7 +124,10 @@ export const useManifests = (clientId?: string, driverId?: string) => {
     queryFn: async () => {
       let query = supabase
         .from('manifests')
-        .select('*')
+        .select(`
+          *,
+          client:clients(id, company_name)
+        `)
         .order('created_at', { ascending: false });
 
       if (clientId) {
@@ -149,7 +152,10 @@ export const useManifest = (id: string) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('manifests')
-        .select('*')
+        .select(`
+          *,
+          client:clients(id, company_name)
+        `)
         .eq('id', id)
         .maybeSingle();
 
