@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { Clock, FileText, Signature } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import { ManifestPDFControls } from "@/components/ManifestPDFControls";
 
 export const ManifestReceiversView = () => {
   const { data: manifests, isLoading } = useManifests();
@@ -179,8 +180,16 @@ export const ManifestReceiversView = () => {
                           </p>
                         )}
                       </div>
-                    </div>
-                  </CardContent>
+                      </div>
+                      {manifest.acroform_pdf_path && (
+                        <ManifestPDFControls
+                          manifestId={manifest.id}
+                          acroformPdfPath={manifest.acroform_pdf_path}
+                          clientEmails={[]}
+                          className="mt-2"
+                        />
+                      )}
+                    </CardContent>
                 </Card>
               ))}
             </div>
