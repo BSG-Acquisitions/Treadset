@@ -8,7 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useManifestIntegration } from "@/hooks/useManifestIntegration";
 import { useSendManifestEmail } from "@/hooks/useSendManifestEmail";
 import { useManifest } from "@/hooks/useManifests";
-import { Mail } from "lucide-react";
+import { ManifestPDFControls } from "@/components/ManifestPDFControls";
+import { Mail, CheckCircle2 } from "lucide-react";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -23,11 +24,23 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
   const [sigCanvas, setSigCanvas] = useState<SignatureCanvas | null>(null);
   const [receiverName, setReceiverName] = useState("BSG Processor");
   const [isCompleting, setIsCompleting] = useState(false);
+  const [completionData, setCompletionData] = useState<{ pdfPath: string } | null>(null);
   
   const queryClient = useQueryClient();
   const { data: manifest } = useManifest(manifestId);
   const manifestIntegration = useManifestIntegration();
   const sendEmail = useSendManifestEmail();
+
+  // Reset state when dialog opens/closes
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      setCompletionData(null);
+      setSigCanvas(null);
+      setReceiverName("BSG Processor");
+      setIsCompleting(false);
+    }
+    onOpenChange(newOpen);
+  };
 
   const completeReceiverSignature = useMutation({
     mutationFn: async () => {
@@ -83,6 +96,10 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
     onSuccess: async (result) => {
       queryClient.invalidateQueries({ queryKey: ['manifests'] });
       
+      // Set completion data to show success view
+      setCompletionData({ pdfPath: result.pdfPath });
+      setIsCompleting(false);
+      
       // Auto-send email if client has email
       if (manifest?.client?.company_name && result.pdfPath) {
         try {
@@ -101,11 +118,6 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
           console.error('Failed to send completion email:', emailError);
         }
       }
-      
-      onOpenChange(false);
-      setSigCanvas(null);
-      setReceiverName("BSG Processor");
-      setIsCompleting(false);
     },
     onError: (error: any) => {
       console.error("Failed to add receiver signature:", error);
@@ -122,69 +134,108 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Complete Receiver Signature - Manifest {manifestNumber}</DialogTitle>
+          <DialogTitle>
+            {completionData ? (
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                Manifest {manifestNumber} - Completed!
+              </div>
+            ) : (
+              `Complete Receiver Signature - Manifest ${manifestNumber}`
+            )}
+          </DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="receiverName">Receiver Name</Label>
-            <Input
-              id="receiverName"
-              value={receiverName}
-              onChange={(e) => setReceiverName(e.target.value)}
-              placeholder="Enter receiver name"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Receiver Signature</Label>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
-              <SignatureCanvas
-                ref={(ref) => setSigCanvas(ref)}
-                penColor="black"
-                canvasProps={{
-                  width: 500,
-                  height: 200,
-                  className: 'signature-canvas w-full h-48 border rounded'
-                }}
-              />
+        {completionData ? (
+          /* Success View with PDF Controls */
+          <div className="space-y-6">
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-green-700 mb-2">
+                <CheckCircle2 className="h-4 w-4" />
+                <span className="font-medium">Manifest Successfully Completed!</span>
+              </div>
+              <p className="text-sm text-green-600">
+                The manifest has been completed with all required signatures and is ready for viewing or download.
+                {manifest?.client?.company_name && ` A completion notice has been sent to ${manifest.client.company_name}.`}
+              </p>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={clearSignature} size="sm">
-                Clear Signature
+            
+            <ManifestPDFControls
+              manifestId={manifestId}
+              acroformPdfPath={completionData.pdfPath}
+              clientEmails={manifest?.client?.company_name ? [manifest.client.company_name] : []}
+              className="mt-4"
+            />
+            
+            <div className="flex justify-end">
+              <Button onClick={() => handleOpenChange(false)}>
+                Close
               </Button>
             </div>
           </div>
-
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isCompleting}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleSubmit}
-              disabled={completeReceiverSignature.isPending || isCompleting}
-              className="min-w-[160px]"
-            >
-              {isCompleting ? (
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 animate-spin" />
-                  Completing...
-                </div>
-              ) : (
-                "Complete & Email"
-              )}
-            </Button>
-          </div>
-          
-          {manifest?.client?.company_name && (
-            <div className="text-sm text-muted-foreground">
-              Completion notice will be emailed to: {manifest.client.company_name}
+        ) : (
+          /* Signature Form */
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="receiverName">Receiver Name</Label>
+              <Input
+                id="receiverName"
+                value={receiverName}
+                onChange={(e) => setReceiverName(e.target.value)}
+                placeholder="Enter receiver name"
+              />
             </div>
-          )}
-        </div>
+
+            <div className="space-y-2">
+              <Label>Receiver Signature</Label>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                <SignatureCanvas
+                  ref={(ref) => setSigCanvas(ref)}
+                  penColor="black"
+                  canvasProps={{
+                    width: 500,
+                    height: 200,
+                    className: 'signature-canvas w-full h-48 border rounded'
+                  }}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={clearSignature} size="sm">
+                  Clear Signature
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isCompleting}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSubmit}
+                disabled={completeReceiverSignature.isPending || isCompleting}
+                className="min-w-[160px]"
+              >
+                {isCompleting ? (
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 animate-spin" />
+                    Completing...
+                  </div>
+                ) : (
+                  "Complete & Email"
+                )}
+              </Button>
+            </div>
+            
+            {manifest?.client?.company_name && !completionData && (
+              <div className="text-sm text-muted-foreground">
+                Completion notice will be emailed to: {manifest.client.company_name}
+              </div>
+            )}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
