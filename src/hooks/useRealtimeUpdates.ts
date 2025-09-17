@@ -92,6 +92,23 @@ export function useRealtimeUpdates() {
       )
       .subscribe();
 
+    // Set up real-time subscription for manifests
+    const manifestsChannel = supabase
+      .channel('manifests-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'manifests'
+        },
+        () => {
+          // Invalidate manifests queries to trigger refetch
+          queryClient.invalidateQueries({ queryKey: ['manifests'] });
+        }
+      )
+      .subscribe();
+
     // Cleanup subscriptions on unmount
     return () => {
       supabase.removeChannel(clientsChannel);
@@ -99,6 +116,7 @@ export function useRealtimeUpdates() {
       supabase.removeChannel(vehiclesChannel);
       supabase.removeChannel(assignmentsChannel);
       supabase.removeChannel(summariesChannel);
+      supabase.removeChannel(manifestsChannel);
     };
   }, [queryClient]);
 }
