@@ -296,7 +296,8 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
   useEffect(() => {
     form.setValue("gross_weight", calculatedGrossWeight);
     // Convert lbs to tons for manifest storage (1 ton = 2000 lbs)
-    form.setValue("weight_tons", calculatedGrossWeight / 2000);
+    const tonsRounded = Math.round((calculatedGrossWeight / 2000) * 100) / 100; // hundredths
+    form.setValue("weight_tons", tonsRounded);
   }, [calculatedGrossWeight, form]);
 
   const tareWeight = form.watch("tare_weight");
@@ -987,16 +988,20 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                     <div className="text-2xl font-bold text-primary">
                       {(() => {
                         const formValues = form.watch();
-                        // Calculate total PTE (simplified calculation - adjust ratios as needed)
+                        // Calculate total PTE using simplified PTE system
                         const passengerPTE = (formValues.equivalents_off_rim || 0) + (formValues.equivalents_on_rim || 0);
-                        const truckPTE = ((formValues.commercial_17_5_19_5_off || 0) + (formValues.commercial_17_5_19_5_on || 0)) * 3 + 
-                                        ((formValues.commercial_22_5_off || 0) + (formValues.commercial_22_5_on || 0)) * 5;
-                        const oversizedPTE = (formValues.otr_count || 0) * 8 + (formValues.tractor_count || 0) * 8;
+                        const truckPTE = (
+                          (formValues.commercial_17_5_19_5_off || 0) +
+                          (formValues.commercial_17_5_19_5_on || 0) +
+                          (formValues.commercial_22_5_off || 0) +
+                          (formValues.commercial_22_5_on || 0)
+                        ) * 5; // All truck/semi tires = 5 PTE each
+                        const oversizedPTE = (formValues.otr_count || 0) * 15 + (formValues.tractor_count || 0) * 5; // OTR = 15, Tractor = 5
                         return passengerPTE + truckPTE + oversizedPTE;
                       })()}
                     </div>
                     <div className="text-sm text-muted-foreground mt-1">
-                      Total PTE (Passenger Car × 1) + (Truck × 3-5) + (Oversized × 8)
+                      Total PTE (Passenger × 1) + (Truck × 5) + (OTR × 15) + (Tractor × 5)
                     </div>
                   </div>
                 </div>
@@ -1020,7 +1025,7 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
                           <FormControl>
                             <NumericInput
                               min={0}
-                              step={0.1}
+                              step={0.01}
                               allowDecimals={true}
                               value={field.value}
                               onChange={field.onChange}
