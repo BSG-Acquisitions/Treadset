@@ -281,6 +281,8 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
   // Auto-update gross weight when tire counts change
   useEffect(() => {
     form.setValue("gross_weight", calculatedGrossWeight);
+    // Convert lbs to tons for manifest storage (1 ton = 2000 lbs)
+    form.setValue("weight_tons", calculatedGrossWeight / 2000);
   }, [calculatedGrossWeight, form]);
 
   const tareWeight = form.watch("tare_weight");

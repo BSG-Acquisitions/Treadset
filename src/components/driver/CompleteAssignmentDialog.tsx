@@ -251,25 +251,19 @@ export function CompleteAssignmentDialog({
 
             {/* Weight Summary - Bottom of Form */}
             <div className="bg-brand-primary/5 border border-brand-primary/20 rounded-lg p-3">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 mb-1">
                 <span className="font-medium">Calculated Gross Weight:</span>
                 <span className="text-lg font-bold text-brand-primary">{calculatedGrossWeight.toFixed(1)} lbs</span>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="font-medium">Weight in Tons:</span>
+                <span className="text-sm font-semibold text-brand-secondary">{(calculatedGrossWeight / 2000).toFixed(3)} tons</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
                 PTE: {watchedValues.actualPteCount} × 22.47 lbs + OTR: {watchedValues.actualOtrCount} × 337.05 lbs + Tractor: {watchedValues.actualTractorCount} × 112.35 lbs
               </p>
             </div>
 
-            {/* Calculated Gross Weight at Bottom */}
-            <div className="bg-brand-primary/5 border border-brand-primary/20 rounded-lg p-3">
-              <div className="flex items-center gap-2">
-                <span className="font-medium">Calculated Gross Weight:</span>
-                <span className="text-lg font-bold text-brand-primary">{calculatedGrossWeight.toFixed(1)} lbs</span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                PTE: {watchedValues.actualPteCount} × 22.47 lbs + OTR: {watchedValues.actualOtrCount} × 337.05 lbs + Tractor: {watchedValues.actualTractorCount} × 112.35 lbs
-              </p>
-            </div>
 
             <div className="flex justify-end gap-3">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

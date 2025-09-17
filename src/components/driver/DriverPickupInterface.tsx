@@ -129,6 +129,8 @@ export function DriverPickupInterface({ pickup, onComplete }: DriverPickupInterf
   // Auto-update gross weight when tire counts change
   useEffect(() => {
     form.setValue("gross_weight_lbs", calculatedGrossWeight);
+    // Convert lbs to tons for display and storage (1 ton = 2000 lbs)
+    const weightInTons = calculatedGrossWeight / 2000;
   }, [calculatedGrossWeight, form]);
 
   useEffect(() => {
@@ -433,18 +435,18 @@ export function DriverPickupInterface({ pickup, onComplete }: DriverPickupInterf
                       <FormItem>
                         <FormLabel>Gross Weight (lbs) - Calculated</FormLabel>
                          <FormControl>
-                           <div className="flex items-center space-x-2">
-                             <NumericInput
-                               min={0}
-                               step={0.1}
-                               allowDecimals={true}
-                               value={calculatedGrossWeight}
-                               onChange={() => {}} // Read-only
-                               className="bg-secondary/50 cursor-not-allowed"
-                               readOnly
-                             />
-                             <span className="text-sm text-muted-foreground">Auto</span>
-                           </div>
+                            <div className="flex items-center space-x-2">
+                              <NumericInput
+                                min={0}
+                                step={0.1}
+                                allowDecimals={true}
+                                value={calculatedGrossWeight}
+                                onChange={() => {}} // Read-only
+                                className="bg-secondary/50 cursor-not-allowed"
+                                readOnly
+                              />
+                              <span className="text-sm text-muted-foreground">lbs (Auto)</span>
+                            </div>
                          </FormControl>
                         <p className="text-xs text-muted-foreground">Based on tire counts</p>
                       </FormItem>
@@ -582,12 +584,16 @@ export function DriverPickupInterface({ pickup, onComplete }: DriverPickupInterf
                   Weight Summary
                 </h3>
                 <div className="bg-brand-primary/5 border border-brand-primary/20 rounded-lg p-4">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 mb-2">
                     <span className="font-medium">Calculated Gross Weight:</span>
                     <span className="text-2xl font-bold text-brand-primary">{calculatedGrossWeight.toFixed(1)} lbs</span>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Based on tire counts and standard weights
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">Weight in Tons:</span>
+                    <span className="text-lg font-bold text-brand-secondary">{(calculatedGrossWeight / 2000).toFixed(3)} tons</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Based on tire counts and standard weights (89 PTE = 1 ton)
                   </p>
                 </div>
               </div>

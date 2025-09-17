@@ -323,7 +323,7 @@ export default function DriverManifestCreate() {
         commercial_17_5_19_5_off: 0,
         otr_count: data.oversized_count,
         tractor_count: 0,
-        weight_tons: data.gross_weight,
+        weight_tons: data.gross_weight / 2000, // Convert lbs to tons
         volume_yards: 0,
         signed_by_name: data.generator_signature_name,
         signed_by_email: "",
