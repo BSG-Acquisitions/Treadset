@@ -93,6 +93,13 @@ export interface CreateManifestData {
   weight_tons?: number;
   volume_yards?: number;
   payment_method?: 'CARD' | 'INVOICE' | 'CASH' | 'CHECK';
+  status?: 'DRAFT' | 'IN_PROGRESS' | 'AWAITING_SIGNATURE' | 'AWAITING_PAYMENT' | 'AWAITING_RECEIVER_SIGNATURE' | 'COMPLETED';
+  // Optional fields that may be set at creation time
+  signed_by_name?: string;
+  customer_sig_path?: string;
+  driver_sig_path?: string;
+  signed_at?: string;
+  notes?: string;
 }
 
 export interface UpdateManifestData {
@@ -183,7 +190,7 @@ export const useCreateManifest = () => {
         ...data,
         manifest_number: manifestNumber as unknown as string,
         organization_id: orgId as unknown as string,
-        status: 'DRAFT' as const,
+        status: (data.status ?? 'DRAFT'),
       };
 
       const { data: manifest, error } = await supabase

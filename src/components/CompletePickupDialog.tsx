@@ -446,7 +446,7 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
         // Print names
         signed_by_name: data.generator_print_name,
         
-        status: 'AWAITING_RECEIVER_SIGNATURE',
+        status: 'AWAITING_RECEIVER_SIGNATURE' as const,
         signed_at: new Date().toISOString()
       };
 
