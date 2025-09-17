@@ -28,11 +28,11 @@ export const convertManifestToAcroForm = (manifestData: any): Partial<AcroFormMa
     generator_county: manifestData.client?.county || 'Wayne',
     generator_phone: manifestData.client?.phone || '(734) 415-6528',
     generator_volume_weight: (() => {
-      // Calculate total PTE from individual tire types
+      // Calculate total PTE from individual tire types using simplified PTE system
       const passengerPTE = (manifestData.pte_off_rim || 0) + (manifestData.pte_on_rim || 0);
-      const truckPTE = ((manifestData.commercial_17_5_19_5_off || 0) + (manifestData.commercial_17_5_19_5_on || 0)) * 3 + 
-                      ((manifestData.commercial_22_5_off || 0) + (manifestData.commercial_22_5_on || 0)) * 5;
-      const oversizedPTE = (manifestData.otr_count || 0) * 8 + (manifestData.tractor_count || 0) * 8;
+      const truckPTE = ((manifestData.commercial_17_5_19_5_off || 0) + (manifestData.commercial_17_5_19_5_on || 0) + 
+                       (manifestData.commercial_22_5_off || 0) + (manifestData.commercial_22_5_on || 0)) * 5; // Each truck tire = 5 PTE
+      const oversizedPTE = (manifestData.otr_count || 0) * 15 + (manifestData.tractor_count || 0) * 15; // OTR = 15 PTE, Tractor = 15 PTE
       return (passengerPTE + truckPTE + oversizedPTE).toString();
     })(),
     
@@ -63,11 +63,11 @@ export const convertManifestToAcroForm = (manifestData: any): Partial<AcroFormMa
     hauler_tare_weight: (manifestData.tare_weight || '').toString(), 
     hauler_net_weight: (manifestData.net_weight || manifestData.weight_tons || '').toString(),
     hauler_total_pte: (() => {
-      // Same total PTE calculation as generator
+      // Same total PTE calculation as generator using simplified PTE system
       const passengerPTE = (manifestData.pte_off_rim || 0) + (manifestData.pte_on_rim || 0);
-      const truckPTE = ((manifestData.commercial_17_5_19_5_off || 0) + (manifestData.commercial_17_5_19_5_on || 0)) * 3 + 
-                      ((manifestData.commercial_22_5_off || 0) + (manifestData.commercial_22_5_on || 0)) * 5;
-      const oversizedPTE = (manifestData.otr_count || 0) * 8 + (manifestData.tractor_count || 0) * 8;
+      const truckPTE = ((manifestData.commercial_17_5_19_5_off || 0) + (manifestData.commercial_17_5_19_5_on || 0) + 
+                       (manifestData.commercial_22_5_off || 0) + (manifestData.commercial_22_5_on || 0)) * 5; // Each truck tire = 5 PTE
+      const oversizedPTE = (manifestData.otr_count || 0) * 15 + (manifestData.tractor_count || 0) * 15; // OTR = 15 PTE, Tractor = 15 PTE
       return (passengerPTE + truckPTE + oversizedPTE).toString();
     })(),
     hauler_signature: manifestData.driver_sig_path || '',
@@ -85,11 +85,11 @@ export const convertManifestToAcroForm = (manifestData: any): Partial<AcroFormMa
     receiver_time: manifestData.receiver_signed_at ? new Date(manifestData.receiver_signed_at).toLocaleTimeString('en-US', { hour12: false }) : '',
     receiver_gross_weight: '',
     receiver_total_pte: (() => {
-      // Same total PTE calculation as generator and hauler
+      // Same total PTE calculation as generator and hauler using simplified PTE system
       const passengerPTE = (manifestData.pte_off_rim || 0) + (manifestData.pte_on_rim || 0);
-      const truckPTE = ((manifestData.commercial_17_5_19_5_off || 0) + (manifestData.commercial_17_5_19_5_on || 0)) * 3 + 
-                      ((manifestData.commercial_22_5_off || 0) + (manifestData.commercial_22_5_on || 0)) * 5;
-      const oversizedPTE = (manifestData.otr_count || 0) * 8 + (manifestData.tractor_count || 0) * 8;
+      const truckPTE = ((manifestData.commercial_17_5_19_5_off || 0) + (manifestData.commercial_17_5_19_5_on || 0) + 
+                       (manifestData.commercial_22_5_off || 0) + (manifestData.commercial_22_5_on || 0)) * 5; // Each truck tire = 5 PTE
+      const oversizedPTE = (manifestData.otr_count || 0) * 15 + (manifestData.tractor_count || 0) * 15; // OTR = 15 PTE, Tractor = 15 PTE
       return (passengerPTE + truckPTE + oversizedPTE).toString();
     })(),
     receiver_tare_weight: '',
@@ -125,12 +125,11 @@ export const useManifestIntegration = () => {
         outputPath: `manifests/acroform-${manifestId}-${Date.now()}.pdf`
       });
 
-      // 3. Update manifest with AcroForm PDF path
+      // 3. Update manifest with AcroForm PDF path (keep status as AWAITING_RECEIVER_SIGNATURE)
       const { error: updateError } = await supabase
         .from('manifests')
         .update({ 
           acroform_pdf_path: acroFormResult.pdfPath,
-          status: 'COMPLETED',
           updated_at: new Date().toISOString()
         })
         .eq('id', manifestId);
