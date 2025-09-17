@@ -819,6 +819,7 @@ export type Database = {
           pte_off_rim: number | null
           pte_on_rim: number | null
           receipt_url: string | null
+          receiver_sig_path: string | null
           receiver_signed_at: string | null
           receiver_signed_by: string | null
           resolved_unit_prices: Json | null
@@ -869,6 +870,7 @@ export type Database = {
           pte_off_rim?: number | null
           pte_on_rim?: number | null
           receipt_url?: string | null
+          receiver_sig_path?: string | null
           receiver_signed_at?: string | null
           receiver_signed_by?: string | null
           resolved_unit_prices?: Json | null
@@ -919,6 +921,7 @@ export type Database = {
           pte_off_rim?: number | null
           pte_on_rim?: number | null
           receipt_url?: string | null
+          receiver_sig_path?: string | null
           receiver_signed_at?: string | null
           receiver_signed_by?: string | null
           resolved_unit_prices?: Json | null

@@ -10,6 +10,7 @@ import { useSendManifestEmail } from "@/hooks/useSendManifestEmail";
 import { useManifest } from "@/hooks/useManifests";
 import { ManifestPDFControls } from "@/components/ManifestPDFControls";
 import { Mail, CheckCircle2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -30,6 +31,7 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
   const { data: manifest } = useManifest(manifestId);
   const manifestIntegration = useManifestIntegration();
   const sendEmail = useSendManifestEmail();
+  const { toast } = useToast();
 
   // Reset state when dialog opens/closes
   const handleOpenChange = (newOpen: boolean) => {
@@ -45,6 +47,7 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
   const completeReceiverSignature = useMutation({
     mutationFn: async () => {
       if (!sigCanvas || sigCanvas.isEmpty()) {
+        toast({ title: "Signature required", description: "Please provide a receiver signature.", variant: "destructive" });
         throw new Error("Please provide a signature");
       }
 
@@ -121,6 +124,7 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
     },
     onError: (error: any) => {
       console.error("Failed to add receiver signature:", error);
+      toast({ title: "Completion failed", description: error?.message ?? "Unable to complete manifest.", variant: "destructive" });
       setIsCompleting(false);
     }
   });
@@ -166,7 +170,7 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
             <ManifestPDFControls
               manifestId={manifestId}
               acroformPdfPath={completionData.pdfPath}
-              clientEmails={manifest?.client?.company_name ? [manifest.client.company_name] : []}
+              clientEmails={[]}
               className="mt-4"
             />
             
