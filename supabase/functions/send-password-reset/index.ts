@@ -21,12 +21,12 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { email, resetUrl, companyName = "BSG Logistics" }: PasswordResetEmailRequest = await req.json();
+    const { email, resetUrl, companyName = "BSG Tire Recycling" }: PasswordResetEmailRequest = await req.json();
 
     const emailResponse = await resend.emails.send({
-      from: `${companyName} <onboarding@resend.dev>`, // Temporary - using Resend's default domain
+      from: `BSG Tire Recycling <onboarding@resend.dev>`,
       to: [email],
-      subject: `Reset Your ${companyName} Password`,
+      subject: `Reset Your BSG Tire Recycling Password`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -35,24 +35,29 @@ const handler = async (req: Request): Promise<Response> => {
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Reset Your Password</title>
           <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: #3b82f6; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
-            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
-            .button { display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0; }
-            .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 14px; color: #6b7280; }
-            .warning { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; }
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa; }
+            .container { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+            .header { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; padding: 30px; text-align: center; }
+            .header h1 { margin: 0; font-size: 28px; font-weight: bold; }
+            .header p { margin: 5px 0 0 0; opacity: 0.9; }
+            .content { padding: 30px; }
+            .button { display: inline-block; background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; margin: 20px 0; font-weight: bold; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
+            .button:hover { transform: translateY(-1px); }
+            .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 14px; color: #6b7280; text-align: center; }
+            .warning { background: linear-gradient(135deg, #fef3c7, #fde68a); border-left: 4px solid #f59e0b; padding: 20px; margin: 20px 0; border-radius: 0 8px 8px 0; }
           </style>
         </head>
         <body>
-          <div class="header">
-            <h1>${companyName}</h1>
-            <p>Password Reset Request</p>
-          </div>
-          
-          <div class="content">
+          <div class="container">
+            <div class="header">
+              <h1>BSG Tire Recycling</h1>
+              <p>Sustainable Tire Solutions</p>
+            </div>
+            
+            <div class="content">
             <h2>Reset Your Password</h2>
             <p>Hello,</p>
-            <p>We received a request to reset your password for your ${companyName} account associated with <strong>${email}</strong>.</p>
+            <p>We received a request to reset your password for your BSG Tire Recycling account associated with <strong>${email}</strong>.</p>
             
             <p>Click the button below to reset your password:</p>
             
@@ -68,8 +73,10 @@ const handler = async (req: Request): Promise<Response> => {
             <p>If you didn't request this password reset, you can safely ignore this email. Your password will remain unchanged.</p>
             
             <div class="footer">
-              <p>Best regards,<br>The ${companyName} Team</p>
-              <p style="font-size: 12px;">This is an automated message. Please do not reply to this email.</p>
+              <p><strong>BSG Tire Recycling Team</strong><br>
+              Committed to environmental responsibility and sustainable practices.</p>
+              <p style="font-size: 12px; margin-top: 15px;">This is an automated message. Please do not reply to this email.</p>
+            </div>
             </div>
           </div>
         </body>

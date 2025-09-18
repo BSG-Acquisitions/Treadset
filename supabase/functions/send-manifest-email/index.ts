@@ -76,15 +76,79 @@ serve(async (req) => {
         const total = manifest.total ?? 0;
         const signed = manifest.signed_at ? new Date(manifest.signed_at).toLocaleString() : "N/A";
         html = `
-          <h2>Manifest ${number}</h2>
-          <p>Hi ${company},</p>
-          <p>Your manifest is ready. Details:</p>
-          <ul>
-            <li><strong>Manifest #</strong>: ${number}</li>
-            <li><strong>Signed At</strong>: ${signed}</li>
-            <li><strong>Total</strong>: $${Number(total).toFixed(2)}</li>
-          </ul>
-          ${body.attach === false ? '<p><strong>Download:</strong> See secure link below.</p>' : '<p>The PDF is attached to this email.</p>'}
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Manifest ${number}</title>
+            <style>
+              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa; }
+              .container { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+              .header { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; padding: 30px; text-align: center; }
+              .header h1 { margin: 0; font-size: 28px; font-weight: bold; }
+              .header p { margin: 5px 0 0 0; opacity: 0.9; }
+              .content { padding: 30px; }
+              .manifest-details { background: #f8fafc; border-left: 4px solid #2563eb; padding: 20px; margin: 20px 0; border-radius: 0 8px 8px 0; }
+              .manifest-details h3 { margin-top: 0; color: #2563eb; }
+              .detail-row { display: flex; justify-content: space-between; margin: 10px 0; padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
+              .detail-label { font-weight: bold; color: #374151; }
+              .detail-value { color: #6b7280; }
+              .download-section { background: #ecfdf5; border: 1px solid #10b981; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center; }
+              .download-button { display: inline-block; background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; }
+              .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 14px; color: #6b7280; text-align: center; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>BSG Tire Recycling</h1>
+                <p>Sustainable Tire Solutions</p>
+              </div>
+              
+              <div class="content">
+                <h2>Manifest ${number}</h2>
+                <p>Hello ${company},</p>
+                <p>Your tire recycling manifest has been processed and is ready for your records.</p>
+                
+                <div class="manifest-details">
+                  <h3>Manifest Details</h3>
+                  <div class="detail-row">
+                    <span class="detail-label">Manifest Number:</span>
+                    <span class="detail-value">${number}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">Completion Date:</span>
+                    <span class="detail-value">${signed}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">Total Amount:</span>
+                    <span class="detail-value">$${Number(total).toFixed(2)}</span>
+                  </div>
+                </div>
+                
+                ${body.attach === false ? 
+                  `<div class="download-section">
+                    <p><strong>Secure Download Available</strong></p>
+                    <p>Your manifest PDF is available via secure link below (expires in 7 days).</p>
+                  </div>` : 
+                  `<div class="download-section">
+                    <p><strong>PDF Attached</strong></p>
+                    <p>Your manifest PDF is attached to this email for your convenience.</p>
+                  </div>`
+                }
+                
+                <p>Thank you for choosing BSG Tire Recycling for your sustainable tire disposal needs.</p>
+                
+                <div class="footer">
+                  <p><strong>BSG Tire Recycling</strong><br>
+                  Committed to environmental responsibility and sustainable practices.</p>
+                  <p style="font-size: 12px; margin-top: 15px;">This is an automated message. Please contact us if you have any questions.</p>
+                </div>
+              </div>
+            </div>
+          </body>
+          </html>
         `;
       }
     }
@@ -140,7 +204,7 @@ serve(async (req) => {
 
     // Send email via Resend
     const emailPayload: any = {
-      from: "BSG Logistics <onboarding@resend.dev>", // Temporary - using Resend's default domain
+      from: "BSG Tire Recycling <onboarding@resend.dev>",
       to: toList,
       subject,
       html,
