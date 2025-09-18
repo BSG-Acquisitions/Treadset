@@ -129,11 +129,12 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
             <div className="text-xs text-muted-foreground">AcroForm PDF with proper field mapping</div>
           </div>
         </div>
-        <div className="flex gap-1">
+        <div className="flex flex-wrap gap-1">
           <Button
             size="sm"
             variant="outline"
             onClick={() => handleView(acroformPdfPath)}
+            className="text-xs px-2"
           >
             <Eye className="w-3 h-3 mr-1" />
             View
@@ -142,6 +143,7 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
             size="sm"
             variant="outline"
             onClick={() => handleDownload(acroformPdfPath, `manifest-${manifestId}.pdf`)}
+            className="text-xs px-2"
           >
             <Download className="w-3 h-3 mr-1" />
             Download
@@ -150,6 +152,7 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
             size="sm"
             variant="outline"
             onClick={() => handleOpenTab(acroformPdfPath)}
+            className="text-xs px-2"
           >
             Open Tab
           </Button>
@@ -157,6 +160,7 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
             size="sm"
             variant="outline"
             onClick={() => handleCopyLink(acroformPdfPath)}
+            className="text-xs px-2"
           >
             Copy Link
           </Button>
@@ -166,6 +170,7 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
               variant="outline"
               onClick={() => handleEmail(acroformPdfPath, 'Michigan Manifest')}
               disabled={sendEmail.isPending}
+              className="text-xs px-2"
             >
               <Mail className="w-3 h-3 mr-1" />
               Email
