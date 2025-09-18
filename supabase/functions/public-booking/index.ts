@@ -122,12 +122,27 @@ Deno.serve(async (req) => {
     const bookingData: BookingRequest = await req.json();
     console.log('Processing booking request:', bookingData);
 
+    // Get the default BSG organization
+    const { data: organization, error: orgError } = await supabase
+      .from('organizations')
+      .select('id')
+      .eq('slug', 'bsg')
+      .single();
+
+    if (orgError || !organization) {
+      console.error('Error finding organization:', orgError);
+      throw new Error('Organization not found');
+    }
+
+    const organizationId = organization.id;
+
     // Step 1: Find or create client
     let client;
     const { data: existingClients } = await supabase
       .from('clients')
       .select('*')
       .eq('email', bookingData.email)
+      .eq('organization_id', organizationId)
       .limit(1);
 
     if (existingClients && existingClients.length > 0) {
@@ -142,7 +157,8 @@ Deno.serve(async (req) => {
           contact_name: bookingData.name,
           email: bookingData.email,
           phone: bookingData.phone || null,
-          type: 'commercial'
+          type: 'commercial',
+          organization_id: organizationId
         })
         .select()
         .single();
@@ -184,7 +200,8 @@ Deno.serve(async (req) => {
           client_id: client.id,
           address: bookingData.address,
           latitude: coordinates.lat,
-          longitude: coordinates.lng
+          longitude: coordinates.lng,
+          organization_id: organizationId
         })
         .select()
         .single();
@@ -258,7 +275,8 @@ Deno.serve(async (req) => {
         tractor_count: bookingData.tractorCount,
         preferred_window: bookingData.preferredWindow,
         notes: bookingData.notes || null,
-        status: 'scheduled'
+        status: 'scheduled',
+        organization_id: organizationId
       })
       .select()
       .single();
@@ -276,7 +294,8 @@ Deno.serve(async (req) => {
         scheduled_date: bestOption.pickupDate,
         estimated_arrival: bestOption.eta,
         sequence_order: bestOption.insertionIndex || 0,
-        status: 'assigned'
+        status: 'assigned',
+        organization_id: organizationId
       })
       .select()
       .single();
