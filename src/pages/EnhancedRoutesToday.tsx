@@ -494,87 +494,89 @@ export default function EnhancedRoutesToday() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      {pickups.map((pickup) => (
-                        <div
-                          key={pickup.id}
-                          className="flex items-center justify-between p-4 border rounded-lg hover:bg-secondary/10 transition-colors"
-                        >
-                          <div className="flex items-center gap-4">
-                            <Package className="h-5 w-5 text-muted-foreground" />
-                            <div className="space-y-2">
-                              <div className="flex items-center gap-2">
-                                <Building className="h-4 w-4 text-muted-foreground" />
-                                <span className="font-medium text-lg">
-                                  {pickup.client?.company_name || 'Unknown Client'}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <MapPin className="h-4 w-4" />
-                                <span>{pickup.location?.name || pickup.location?.address || 'No address'}</span>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center gap-4">
-                            <div className="text-right">
-                              <div className="text-sm font-medium mb-1">
-                                PTE {pickup.pte_count} | OTR {pickup.otr_count} | Tractor {pickup.tractor_count}
-                              </div>
-                              <div className="text-xs text-muted-foreground mb-2">
-                                Revenue: ${pickup.computed_revenue?.toFixed(2) || '0.00'}
-                              </div>
-                              <Badge variant="outline">
-                                {pickup.status.replace('_', ' ')}
-                              </Badge>
-                              {pickup.status === 'completed' && pickup.manifest_pdf_path && (
-                                <ManifestPDFControls
-                                  manifestId={pickup.manifest_id}
-                                  acroformPdfPath={pickup.manifest_pdf_path}
-                                  clientEmails={[]}
-                                  className="mt-2"
-                                />
-                              )}
-                            </div>
-                            
-                            <div className="flex items-center gap-2">
-                              <CompletePickupDialog
-                                pickup={pickup}
-                                trigger={
-                                  <Button size="sm" disabled={pickup.status === 'completed'}>
-                                    {pickup.status === 'completed' ? 'Completed' : 'Complete'}
-                                  </Button>
-                                }
-                              />
-                              
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="outline" size="sm">
-                                    <MoreVertical className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="bg-background border z-50">
-                                  <DropdownMenuItem 
-                                    onClick={() => {
-                                      setSelectedPickupToMove(pickup);
-                                      setMovePickupOpen(true);
-                                    }}
-                                  >
-                                    <Move className="h-4 w-4 mr-2" />
-                                    Move to Different Date
-                                  </DropdownMenuItem>
-                                  
-                                  {pickup.status === 'scheduled' && (
-                                    <AlertDialog>
-                                      <AlertDialogTrigger asChild>
-                                        <DropdownMenuItem 
-                                          onSelect={(e) => e.preventDefault()}
-                                          className="text-destructive focus:text-destructive"
-                                        >
-                                          <Trash2 className="h-4 w-4 mr-2" />
-                                          Delete Pickup
-                                        </DropdownMenuItem>
-                                      </AlertDialogTrigger>
+                     <div className="space-y-4">
+                       {pickups.map((pickup) => (
+                         <div
+                           key={pickup.id}
+                           className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-secondary/10 transition-colors gap-4"
+                         >
+                           <div className="flex items-center gap-4 min-w-0 flex-1">
+                             <Package className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                             <div className="space-y-2 min-w-0">
+                               <div className="flex items-center gap-2">
+                                 <Building className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                 <span className="font-medium text-base sm:text-lg truncate">
+                                   {pickup.client?.company_name || 'Unknown Client'}
+                                 </span>
+                               </div>
+                               <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                 <MapPin className="h-4 w-4 flex-shrink-0" />
+                                 <span className="truncate">{pickup.location?.name || pickup.location?.address || 'No address'}</span>
+                               </div>
+                               <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+                                 <span>PTE {pickup.pte_count}</span>
+                                 <span>•</span>
+                                 <span>OTR {pickup.otr_count}</span>
+                                 <span>•</span>
+                                 <span>Tractor {pickup.tractor_count}</span>
+                                 <span>•</span>
+                                 <span>Revenue: ${pickup.computed_revenue?.toFixed(2) || '0.00'}</span>
+                               </div>
+                             </div>
+                           </div>
+                           
+                           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-shrink-0">
+                             <Badge variant="outline" className="self-start sm:self-center">
+                               {pickup.status.replace('_', ' ')}
+                             </Badge>
+                             
+                             {pickup.status === 'completed' && pickup.manifest_pdf_path && (
+                               <ManifestPDFControls
+                                 manifestId={pickup.manifest_id}
+                                 acroformPdfPath={pickup.manifest_pdf_path}
+                                 clientEmails={[]}
+                                 className="w-full sm:w-auto"
+                               />
+                             )}
+                             
+                             <div className="flex items-center gap-2 w-full sm:w-auto">
+                               <CompletePickupDialog
+                                 pickup={pickup}
+                                 trigger={
+                                   <Button size="sm" disabled={pickup.status === 'completed'} className="flex-1 sm:flex-none">
+                                     {pickup.status === 'completed' ? 'Completed' : 'Complete'}
+                                   </Button>
+                                 }
+                               />
+                               
+                               <DropdownMenu>
+                                 <DropdownMenuTrigger asChild>
+                                   <Button variant="outline" size="sm" className="flex-shrink-0">
+                                     <MoreVertical className="h-4 w-4" />
+                                   </Button>
+                                 </DropdownMenuTrigger>
+                                 <DropdownMenuContent align="end" className="bg-background border z-50">
+                                   <DropdownMenuItem 
+                                     onClick={() => {
+                                       setSelectedPickupToMove(pickup);
+                                       setMovePickupOpen(true);
+                                     }}
+                                   >
+                                     <Move className="h-4 w-4 mr-2" />
+                                     Move to Different Date
+                                   </DropdownMenuItem>
+                                   
+                                   {pickup.status === 'scheduled' && (
+                                     <AlertDialog>
+                                       <AlertDialogTrigger asChild>
+                                         <DropdownMenuItem 
+                                           onSelect={(e) => e.preventDefault()}
+                                           className="text-destructive focus:text-destructive"
+                                         >
+                                           <Trash2 className="h-4 w-4 mr-2" />
+                                           Delete Pickup
+                                         </DropdownMenuItem>
+                                       </AlertDialogTrigger>
                                       <AlertDialogContent className="bg-card border z-50">
                                         <AlertDialogHeader>
                                           <AlertDialogTitle>Delete Pickup</AlertDialogTitle>
