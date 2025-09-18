@@ -15,6 +15,7 @@ import RoutesPrintToday from "./pages/RoutesPrintToday";
 import Book from "./pages/Book";
 import BookingConfirmation from "./pages/BookingConfirmation";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import Onboarding from "./pages/Onboarding";
 import Employees from "./pages/Employees";
 import ClientAnalytics from "./pages/ClientAnalytics";
@@ -66,6 +67,7 @@ const App = () => (
             {/* Protected Routes */}
             <Route path="/auth" element={<Auth />} />
             <Route path="/auth/sign-in" element={<Auth />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/onboarding" element={
               <ProtectedRoute roles={['admin']}>
                 <Onboarding />

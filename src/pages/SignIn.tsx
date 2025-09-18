@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
 import { BSGLogo } from '@/components/BSGLogo';
+import { PasswordResetDialog } from '@/components/auth/PasswordResetDialog';
 
 export default function SignIn() {
   const [email, setEmail] = useState('');
@@ -89,8 +90,13 @@ export default function SignIn() {
               </Button>
             </form>
 
-            <div className="mt-4 text-center text-sm text-muted-foreground">
-              Need an account? <Link to="/auth" className="text-primary hover:underline">Contact your administrator</Link>
+            <div className="mt-4 space-y-2">
+              <div className="text-center">
+                <PasswordResetDialog />
+              </div>
+              <div className="text-center text-sm text-muted-foreground">
+                Need an account? <Link to="/auth" className="text-primary hover:underline">Contact your administrator</Link>
+              </div>
             </div>
           </CardContent>
         </Card>

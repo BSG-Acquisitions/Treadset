@@ -25,6 +25,8 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error?: any }>;
   signUp: (email: string, password: string, firstName?: string, lastName?: string) => Promise<{ error?: any }>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ error?: any }>;
+  updatePassword: (password: string) => Promise<{ error?: any }>;
   switchOrganization: (orgSlug: string) => void;
   hasRole: (role: AppRole) => boolean;
   hasAnyRole: (roles: AppRole[]) => boolean;
@@ -366,6 +368,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await supabase.auth.signOut();
   };
 
+  const resetPassword = async (email: string) => {
+    if (DISABLE_AUTH) {
+      return {};
+    }
+
+    const redirectUrl = `${window.location.origin}/reset-password`;
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: redirectUrl
+    });
+    return { error };
+  };
+
+  const updatePassword = async (password: string) => {
+    if (DISABLE_AUTH) {
+      return {};
+    }
+
+    const { error } = await supabase.auth.updateUser({ password });
+    return { error };
+  };
+
   const hasRole = (role: AppRole) => {
     if (DISABLE_AUTH) return true;
     return user?.roles.includes(role) ?? false;
@@ -385,6 +408,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signIn,
         signUp,
         signOut,
+        resetPassword,
+        updatePassword,
         switchOrganization,
         hasRole,
         hasAnyRole,
