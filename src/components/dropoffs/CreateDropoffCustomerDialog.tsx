@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { UserPlus } from "lucide-react";
 import { useCreateDropoffCustomer } from "@/hooks/useDropoffCustomers";
 import { usePricingTiers } from "@/hooks/usePricingTiers";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface CreateDropoffCustomerDialogProps {
   open: boolean;
@@ -16,6 +17,7 @@ interface CreateDropoffCustomerDialogProps {
 }
 
 export const CreateDropoffCustomerDialog = ({ open, onOpenChange }: CreateDropoffCustomerDialogProps) => {
+  const { user } = useAuth();
   const [contactName, setContactName] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [email, setEmail] = useState("");
@@ -32,7 +34,7 @@ export const CreateDropoffCustomerDialog = ({ open, onOpenChange }: CreateDropof
   const handleSubmit = async () => {
     try {
       await createCustomer.mutateAsync({
-        organization_id: "00000000-0000-0000-0000-000000000000", // This should come from context
+        organization_id: user?.currentOrganization?.id || "",
         contact_name: contactName,
         company_name: companyName || null,
         email: email || null,

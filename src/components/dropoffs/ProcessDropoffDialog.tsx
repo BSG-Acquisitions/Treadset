@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { useDropoffCustomers } from "@/hooks/useDropoffCustomers";
 import { useCreateDropoff } from "@/hooks/useDropoffs";
 import { usePricingTiers } from "@/hooks/usePricingTiers";
+import { useAuth } from "@/contexts/AuthContext";
 import { Calculator, FileText, CreditCard, DollarSign } from "lucide-react";
 
 interface ProcessDropoffDialogProps {
@@ -21,6 +22,7 @@ interface ProcessDropoffDialogProps {
 }
 
 export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }: ProcessDropoffDialogProps) => {
+  const { user } = useAuth();
   const [customerId, setCustomerId] = useState(selectedCustomerId || "");
   const [customerType, setCustomerType] = useState<"existing" | "new">("existing");
   const [pteCount, setPteCount] = useState("");
@@ -36,7 +38,7 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
   const [newCustomerPhone, setNewCustomerPhone] = useState("");
   const [newCustomerCompany, setNewCustomerCompany] = useState("");
 
-  const { data: customers = [] } = useDropoffCustomers();
+  const { data: customers = [], isLoading: isLoadingCustomers, error: customersError } = useDropoffCustomers();
   const { data: pricingTiers = [] } = usePricingTiers();
   const createDropoff = useCreateDropoff();
 
@@ -69,7 +71,7 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
       }
 
       await createDropoff.mutateAsync({
-        organization_id: "00000000-0000-0000-0000-000000000000", // This should come from context
+        organization_id: user?.currentOrganization?.id || "", 
         dropoff_customer_id: dropoffCustomerId,
         pte_count: Number(pteCount || 0),
         otr_count: Number(otrCount || 0),
@@ -117,28 +119,34 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
           {/* Customer Selection */}
           <div className="space-y-3">
             <Label>Customer</Label>
-            <Select value={customerId} onValueChange={setCustomerId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select customer..." />
-              </SelectTrigger>
-              <SelectContent>
-                {customers.map((customer) => (
-                  <SelectItem key={customer.id} value={customer.id}>
-                    <div className="flex items-center gap-2">
-                      <span>{customer.contact_name}</span>
-                      {customer.company_name && (
-                        <span className="text-muted-foreground">
-                          ({customer.company_name})
-                        </span>
-                      )}
-                      <Badge variant={customer.customer_type === 'regular' ? 'default' : 'secondary'}>
-                        {customer.customer_type}
-                      </Badge>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {customers.length === 0 ? (
+              <div className="text-sm text-muted-foreground p-4 border border-dashed rounded-lg text-center">
+                No customers found. Please create a customer first using the "Add Customer" button on the dropoffs page.
+              </div>
+            ) : (
+              <Select value={customerId} onValueChange={setCustomerId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select customer..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {customers.map((customer) => (
+                    <SelectItem key={customer.id} value={customer.id}>
+                      <div className="flex items-center gap-2">
+                        <span>{customer.contact_name}</span>
+                        {customer.company_name && (
+                          <span className="text-muted-foreground">
+                            ({customer.company_name})
+                          </span>
+                        )}
+                        <Badge variant={customer.customer_type === 'regular' ? 'default' : 'secondary'}>
+                          {customer.customer_type}
+                        </Badge>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           {/* Tire Counts */}
@@ -279,7 +287,7 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
           </Button>
           <Button 
             onClick={handleSubmit} 
-            disabled={!customerId || (!pteCount && !otrCount && !tractorCount) || createDropoff.isPending}
+            disabled={!customerId || (!pteCount && !otrCount && !tractorCount) || createDropoff.isPending || customers.length === 0}
           >
             {createDropoff.isPending ? "Processing..." : "Process Drop-off"}
           </Button>
