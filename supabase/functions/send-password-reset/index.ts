@@ -24,7 +24,7 @@ const handler = async (req: Request): Promise<Response> => {
     const { email, resetUrl, companyName = "BSG Logistics" }: PasswordResetEmailRequest = await req.json();
 
     const emailResponse = await resend.emails.send({
-      from: `${companyName} <admin@bsglogistics.com>`, // Update this to your company domain
+      from: `${companyName} <onboarding@resend.dev>`, // Temporary - using Resend's default domain
       to: [email],
       subject: `Reset Your ${companyName} Password`,
       html: `
