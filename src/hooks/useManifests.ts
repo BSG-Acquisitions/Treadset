@@ -176,11 +176,14 @@ export const useCreateManifest = () => {
         .rpc('generate_manifest_number', { org_id: orgId });
       if (numberError) throw numberError;
 
+      // Normalize status to DB-allowed lowercase values
+      const dbStatus = (data.status ?? 'DRAFT').toString().toLowerCase();
+
       const manifestData = {
         ...data,
         manifest_number: manifestNumber as unknown as string,
         organization_id: orgId as unknown as string,
-        status: (data.status ?? 'DRAFT'),
+        status: dbStatus,
       };
 
       const { data: manifest, error } = await supabase
@@ -218,7 +221,12 @@ export const useUpdateManifest = () => {
       const updates = {
         ...data,
         updated_at: new Date().toISOString()
-      };
+      } as any;
+
+      // Normalize status to DB-allowed lowercase values for updates
+      if (updates.status) {
+        updates.status = String(updates.status).toLowerCase();
+      }
 
       // Set signed_at when completing signatures
       if (data.status === 'AWAITING_PAYMENT' && data.customer_signature_png_path) {
