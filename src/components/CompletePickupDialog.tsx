@@ -511,28 +511,28 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
       <DialogTrigger asChild>
         {trigger}
       </DialogTrigger>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] max-w-none sm:max-w-5xl max-h-[90vh] overflow-y-auto mx-2 sm:mx-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 text-brand-success" />
-            Complete Pickup & Generate Manifest
+          <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <CheckCircle2 className="h-5 w-5 text-brand-success flex-shrink-0" />
+            <span className="truncate">Complete Pickup & Generate Manifest</span>
           </DialogTitle>
         </DialogHeader>
 
         {/* Pickup Information Header */}
-        <div className="bg-secondary/20 rounded-lg p-4 space-y-3">
+        <div className="bg-secondary/20 rounded-lg p-3 sm:p-4 space-y-2 sm:space-y-3">
           <div className="flex items-center gap-2">
-            <Building className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium">{pickup.client?.company_name || 'Unknown Client'}</span>
+            <Building className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <span className="font-medium text-sm sm:text-base truncate">{pickup.client?.company_name || 'Unknown Client'}</span>
           </div>
           <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm">{pickup.location?.name || pickup.location?.address}</span>
+            <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <span className="text-xs sm:text-sm truncate">{pickup.location?.name || pickup.location?.address}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm">{new Date(pickup.pickup_date).toLocaleDateString()}</span>
-            <Badge variant={pickup.status === 'completed' ? 'default' : 'secondary'}>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <span className="text-xs sm:text-sm">{new Date(pickup.pickup_date).toLocaleDateString()}</span>
+            <Badge variant={pickup.status === 'completed' ? 'default' : 'secondary'} className="text-xs">
               {pickup.status}
             </Badge>
           </div>
@@ -565,7 +565,7 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
             </Card>
 
             {/* Generator, Hauler, Receiver Selection */}
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Generator</CardTitle>
@@ -1140,14 +1140,14 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
               </div>
             )}
 
-            <div className="flex justify-end gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4">
+              <Button type="button" variant="outline" onClick={() => setOpen(false)} className="order-2 sm:order-1">
                 Cancel
               </Button>
               <Button 
                 type="submit" 
                 disabled={isSubmitting || completedManifest !== null} 
-                className="bg-brand-success hover:bg-brand-success/90"
+                className="bg-brand-success hover:bg-brand-success/90 order-1 sm:order-2 text-xs sm:text-sm px-3 sm:px-4"
               >
                 {isSubmitting ? "Processing..." : completedManifest ? "Completed" : "Complete Pickup & Generate Manifest"}
               </Button>

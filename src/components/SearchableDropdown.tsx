@@ -62,13 +62,13 @@ export function SearchableDropdown({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn("justify-between", className)}
+          className={cn("justify-between w-full text-left font-normal", className)}
         >
-          {selected ? selected[displayField] : placeholder}
+          <span className="truncate">{selected ? selected[displayField] : placeholder}</span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0">
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 max-w-[90vw]">
         <Command>
           <CommandInput 
             placeholder={`Search ${placeholder.toLowerCase()}...`}
@@ -88,6 +88,7 @@ export function SearchableDropdown({
                     onSelect(item);
                     setOpen(false);
                   }}
+                  className="text-sm"
                 >
                   <Check
                     className={cn(
@@ -95,7 +96,7 @@ export function SearchableDropdown({
                       selected && selected[displayField] === item[displayField] ? "opacity-100" : "opacity-0"
                     )}
                   />
-                  {item[displayField]}
+                  <span className="truncate">{item[displayField]}</span>
                 </CommandItem>
               ))}
             </CommandGroup>

@@ -121,38 +121,38 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
         State Compliant Manifest:
       </div>
       
-      <div className="flex items-center justify-between p-3 bg-primary/5 rounded-lg border border-primary/20">
-        <div className="flex items-center gap-2">
-          <FileText className="w-4 h-4 text-primary" />
-          <div>
-            <div className="font-medium">Michigan Manifest PDF</div>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 bg-primary/5 rounded-lg border border-primary/20 gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <FileText className="w-4 h-4 text-primary flex-shrink-0" />
+          <div className="min-w-0">
+            <div className="font-medium text-sm truncate">Michigan Manifest PDF</div>
             <div className="text-xs text-muted-foreground">AcroForm PDF with proper field mapping</div>
           </div>
         </div>
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap gap-1 justify-end w-full sm:w-auto">
           <Button
             size="sm"
             variant="outline"
             onClick={() => handleView(acroformPdfPath)}
-            className="text-xs px-2"
+            className="text-xs px-2 py-1.5 touch-target"
           >
             <Eye className="w-3 h-3 mr-1" />
-            View
+            <span className="hidden sm:inline">View</span>
           </Button>
           <Button
             size="sm"
             variant="outline"
             onClick={() => handleDownload(acroformPdfPath, `manifest-${manifestId}.pdf`)}
-            className="text-xs px-2"
+            className="text-xs px-2 py-1.5 touch-target"
           >
             <Download className="w-3 h-3 mr-1" />
-            Download
+            <span className="hidden sm:inline">Download</span>
           </Button>
           <Button
             size="sm"
             variant="outline"
             onClick={() => handleOpenTab(acroformPdfPath)}
-            className="text-xs px-2"
+            className="text-xs px-2 py-1.5 touch-target hidden sm:inline-flex"
           >
             Open Tab
           </Button>
@@ -160,7 +160,7 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
             size="sm"
             variant="outline"
             onClick={() => handleCopyLink(acroformPdfPath)}
-            className="text-xs px-2"
+            className="text-xs px-2 py-1.5 touch-target hidden sm:inline-flex"
           >
             Copy Link
           </Button>
@@ -170,10 +170,10 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
               variant="outline"
               onClick={() => handleEmail(acroformPdfPath, 'Michigan Manifest')}
               disabled={sendEmail.isPending}
-              className="text-xs px-2"
+              className="text-xs px-2 py-1.5 touch-target"
             >
               <Mail className="w-3 h-3 mr-1" />
-              Email
+              <span className="hidden sm:inline">Email</span>
             </Button>
           )}
         </div>
@@ -186,11 +186,13 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
       )}
 
       <Dialog open={viewerOpen} onOpenChange={setViewerOpen}>
-        <DialogContent className="max-w-4xl w-[90vw] h-[85vh]">
+        <DialogContent className="w-[95vw] max-w-none sm:max-w-4xl h-[90vh] sm:h-[85vh]">
           <DialogHeader>
-            <DialogTitle>Manifest Preview</DialogTitle>
+            <DialogTitle className="text-base sm:text-lg">Manifest Preview</DialogTitle>
           </DialogHeader>
-          <PdfInlineViewer filePath={acroformPdfPath} />
+          <div className="flex-1 overflow-hidden">
+            <PdfInlineViewer filePath={acroformPdfPath} />
+          </div>
         </DialogContent>
       </Dialog>
     </div>

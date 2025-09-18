@@ -86,27 +86,27 @@ export function DataTable<T extends Record<string, any>>({
   return (
     <div className="space-y-4">
       {/* Search and Actions */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
           {onSearchChange && (
-            <div className="relative">
+            <div className="relative w-full sm:w-auto">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search..."
                 value={search}
                 onChange={(e) => onSearchChange(e.target.value)}
-                className="pl-9 w-64"
+                className="pl-9 w-full sm:w-64"
               />
             </div>
           )}
           
           {/* Filter badges */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {Object.entries(filters).map(([key, value]) => {
               if (!value) return null;
               const column = columns.find(c => c.key === key);
               return (
-                <Badge key={key} variant="secondary" className="gap-1">
+                <Badge key={key} variant="secondary" className="gap-1 text-xs">
                   {column?.title}: {String(value)}
                   <button
                     onClick={() => onFilterChange?.(key, '')}
@@ -120,11 +120,11 @@ export function DataTable<T extends Record<string, any>>({
           </div>
         </div>
         
-        {actions && <div className="flex items-center gap-2">{actions}</div>}
+        {actions && <div className="flex items-center gap-2 w-full sm:w-auto justify-end">{actions}</div>}
       </div>
 
       {/* Table */}
-      <div className="border rounded-lg">
+      <div className="border rounded-lg overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -132,11 +132,11 @@ export function DataTable<T extends Record<string, any>>({
                 <TableHead 
                   key={column.key} 
                   style={{ width: column.width }}
-                  className={column.sortable ? 'cursor-pointer select-none' : ''}
+                  className={`${column.sortable ? 'cursor-pointer select-none' : ''} whitespace-nowrap`}
                   onClick={() => column.sortable && handleSort(column.key)}
                 >
                   <div className="flex items-center gap-2">
-                    <span>{column.title}</span>
+                    <span className="text-xs sm:text-sm">{column.title}</span>
                     {column.sortable && getSortIcon(column.key)}
                   </div>
                 </TableHead>
@@ -160,7 +160,7 @@ export function DataTable<T extends Record<string, any>>({
               data.map((row, index) => (
                 <TableRow key={index}>
                   {columns.map((column) => (
-                    <TableCell key={column.key}>
+                    <TableCell key={column.key} className="text-xs sm:text-sm">
                       {column.render 
                         ? column.render(row[column.key], row)
                         : String(row[column.key] || '')
@@ -175,12 +175,12 @@ export function DataTable<T extends Record<string, any>>({
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="text-sm text-muted-foreground">
           Showing {totalCount > 0 ? startIndex : 0} to {endIndex} of {totalCount} results
         </div>
 
-        <div className="flex items-center gap-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 w-full sm:w-auto">
           <div className="flex items-center gap-2">
             <span className="text-sm">Rows per page:</span>
             <Select value={String(pageSize)} onValueChange={(value) => onPageSizeChange(Number(value))}>
@@ -196,12 +196,13 @@ export function DataTable<T extends Record<string, any>>({
             </Select>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={() => onPageChange(1)}
               disabled={currentPage === 1}
+              className="px-2 sm:px-3"
             >
               <ChevronsLeft className="h-4 w-4" />
             </Button>
@@ -210,11 +211,12 @@ export function DataTable<T extends Record<string, any>>({
               size="sm"
               onClick={() => onPageChange(currentPage - 1)}
               disabled={currentPage === 1}
+              className="px-2 sm:px-3"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
             
-            <span className="text-sm">
+            <span className="text-sm px-2">
               Page {currentPage} of {totalPages}
             </span>
             
@@ -223,6 +225,7 @@ export function DataTable<T extends Record<string, any>>({
               size="sm"
               onClick={() => onPageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
+              className="px-2 sm:px-3"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -231,6 +234,7 @@ export function DataTable<T extends Record<string, any>>({
               size="sm"
               onClick={() => onPageChange(totalPages)}
               disabled={currentPage === totalPages}
+              className="px-2 sm:px-3"
             >
               <ChevronsRight className="h-4 w-4" />
             </Button>

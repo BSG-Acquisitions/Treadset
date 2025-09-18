@@ -120,6 +120,7 @@ All colors MUST be HSL.
     --sidebar-border: 240 4% 16%;
     --sidebar-ring: var(--brand-primary-light);
   }
+  }
 }
 
 @layer base {
@@ -313,7 +314,50 @@ All colors MUST be HSL.
     border-radius: 4px;
   }
   
-  ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground) / 0.5);
+@layer utilities {
+  /* Mobile-first responsive utilities */
+  .mobile-safe-area {
+    @apply min-h-screen pb-safe-bottom;
+  }
+  
+  .touch-target {
+    @apply min-w-[44px] min-h-[44px];
+  }
+  
+  .mobile-container {
+    @apply px-4 sm:px-6 lg:px-8;
+  }
+  
+  .mobile-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4;
+  }
+  
+  .mobile-stack {
+    @apply flex flex-col sm:flex-row gap-3 sm:gap-4;
+  }
+  
+  .mobile-dialog {
+    @apply w-[95vw] max-w-none sm:max-w-2xl lg:max-w-4xl mx-2 sm:mx-auto;
+  }
+  
+  .mobile-text {
+    @apply text-sm sm:text-base;
+  }
+  
+  .mobile-title {
+    @apply text-lg sm:text-xl lg:text-2xl;
+  }
+  
+  .mobile-button {
+    @apply px-3 py-2 sm:px-4 sm:py-2 text-sm touch-target;
+  }
+  
+  /* Better mobile table handling */
+  .mobile-table-wrapper {
+    @apply overflow-x-auto -mx-4 sm:mx-0;
+  }
+  
+  .mobile-table-cell {
+    @apply px-2 sm:px-4 py-2 text-xs sm:text-sm whitespace-nowrap;
   }
 }

@@ -204,7 +204,7 @@ export function LiveSearch() {
         </div>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-[400px] p-0" 
+        className="w-[90vw] max-w-[400px] p-0" 
         align="start"
         side="bottom"
         sideOffset={5}

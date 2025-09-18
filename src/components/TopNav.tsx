@@ -89,7 +89,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
         </div>
 
         {/* Center - Live Search */}
-        <div className="flex-1 max-w-md mx-2 sm:mx-6 min-w-0">
+        <div className="flex-1 max-w-xs sm:max-w-md mx-1 sm:mx-2 lg:mx-6 min-w-0">
           <LiveSearch />
         </div>
 
@@ -235,7 +235,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
       <div className="border-t border-border/20 bg-card/50 overflow-x-auto">
         <div className="px-3 sm:px-6">
           <Tabs value={getCurrentTab()} className="w-full">
-            <TabsList className="grid w-full bg-transparent h-auto p-0 min-w-max" style={{ gridTemplateColumns: `repeat(${navigationTabs.filter(tab => tab.roles.length === 0 || hasAnyRole([...tab.roles])).length}, 1fr)` }}>
+            <TabsList className="grid w-full bg-transparent h-auto p-0 overflow-x-auto" style={{ gridTemplateColumns: `repeat(${navigationTabs.filter(tab => tab.roles.length === 0 || hasAnyRole([...tab.roles])).length}, minmax(0, 1fr))` }}>
               {navigationTabs
                 .filter(tab => tab.roles.length === 0 || hasAnyRole([...tab.roles]))
                 .map((tab) => {
@@ -245,11 +245,11 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                       key={tab.id} 
                       value={tab.id} 
                       asChild
-                      className="data-[state=active]:bg-brand-primary/10 data-[state=active]:text-brand-primary border-b-2 border-transparent data-[state=active]:border-brand-primary rounded-none h-12 px-2 sm:px-4 whitespace-nowrap"
+                      className="data-[state=active]:bg-brand-primary/10 data-[state=active]:text-brand-primary border-b-2 border-transparent data-[state=active]:border-brand-primary rounded-none h-10 sm:h-12 px-1 sm:px-2 lg:px-4 whitespace-nowrap min-w-0"
                     >
-                      <Link to={tab.path} className="flex items-center gap-1 sm:gap-2 w-full">
-                        <Icon className="h-4 w-4 flex-shrink-0" />
-                        <span className="text-xs sm:text-sm">{tab.label}</span>
+                      <Link to={tab.path} className="flex items-center gap-1 sm:gap-2 w-full min-w-0">
+                        <Icon className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                        <span className="text-xs sm:text-sm truncate">{tab.label}</span>
                       </Link>
                     </TabsTrigger>
                   );
