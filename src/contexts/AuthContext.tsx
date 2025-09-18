@@ -68,8 +68,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Flag to prevent duplicate user data loading
+  const [loadingUserData, setLoadingUserData] = useState(false);
+
   const loadUserData = async (authUser: User | null) => {
+    // Prevent duplicate calls
+    if (loadingUserData) {
+      console.log('loadUserData already in progress, skipping');
+      return;
+    }
+
     console.log('loadUserData called with:', authUser?.id);
+    setLoadingUserData(true);
     
     try {
       if (!authUser && !DISABLE_AUTH) {
@@ -84,7 +94,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (DISABLE_AUTH) {
         // Demo mode - create a mock admin user with real organization
         setUser({
-          id: '00000000-0000-0000-0000-000000000000', // Valid UUID for demo
+          id: '00000000-0000-0000-0000-000000000000',
           email: 'admin@bsg.com',
           firstName: 'Demo',
           lastName: 'Admin',
@@ -100,12 +110,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('Fetching user data for auth user:', authUser.id);
       
-      // Add timeout to user data loading
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('User data load timeout')), 10000)
-      );
-
-      const userDataPromise = supabase
+      // Simplified query without timeout race condition
+      const { data: userData, error: userError } = await supabase
         .from('users')
         .select(`
           id,
@@ -113,9 +119,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           first_name,
           last_name,
           phone,
-          user_organization_roles (
+          user_organization_roles!inner (
             role,
-            organization:organizations (
+            organization:organizations!inner (
               id,
               name,
               slug
@@ -123,85 +129,84 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           )
         `)
         .eq('auth_user_id', authUser.id)
-        .single();
+        .maybeSingle();
 
-      try {
-        const { data: userData, error: userError } = await Promise.race([userDataPromise, timeoutPromise]) as any;
+      console.log('User data query result:', { userData: !!userData, userError });
 
-        console.log('User data query result:', { userData: !!userData, userError });
-
-        if (userError) {
-          console.error('Error loading user data:', userError);
-          // Provide fallback roles for authenticated users instead of empty array
-          setUser({
-            id: authUser.id,
-            email: authUser.email || '',
-            firstName: authUser.user_metadata?.first_name || 'User',
-            lastName: authUser.user_metadata?.last_name || '',
-            roles: ['admin'], // Fallback to admin role for authenticated users
-            currentOrganization: {
-              id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
-              name: 'BSG Logistics',
-              slug: 'bsg'
-            }
-          });
-          return;
-        }
-
-        console.log('Processing user data...');
-
-        // Find current organization
-        const currentOrg = userData.user_organization_roles.find(
-          (uor: any) => uor.organization.slug === orgSlug
-        )?.organization;
-
-        // Get all roles for current organization
-        const roles = userData.user_organization_roles
-          .filter((uor: any) => uor.organization.slug === orgSlug)
-          .map((uor: any) => uor.role);
-
-        const finalUser = {
-          id: userData.id,
-          email: userData.email,
-          firstName: userData.first_name,
-          lastName: userData.last_name,
-          phone: userData.phone,
-          roles: roles,
-          currentOrganization: currentOrg || {
-            id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
-            name: 'BSG Logistics',
-            slug: 'bsg'
-          }
-        };
-
-        console.log('Setting final user:', finalUser);
-        setUser(finalUser);
-      } catch (queryError) {
-        console.error('Caught error during user data query:', queryError);
-        // Provide fallback roles for authenticated users instead of empty array
+      if (userError) {
+        console.error('Error loading user data:', userError);
+        // Provide fallback user with admin role
         setUser({
           id: authUser.id,
           email: authUser.email || '',
           firstName: authUser.user_metadata?.first_name || 'User',
           lastName: authUser.user_metadata?.last_name || '',
-          roles: ['admin'], // Fallback to admin role for authenticated users
+          roles: ['admin'],
           currentOrganization: {
             id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
             name: 'BSG Logistics',
             slug: 'bsg'
           }
         });
+        return;
       }
+
+      if (!userData) {
+        console.log('No user data found, providing fallback');
+        setUser({
+          id: authUser.id,
+          email: authUser.email || '',
+          firstName: authUser.user_metadata?.first_name || 'User',
+          lastName: authUser.user_metadata?.last_name || '',
+          roles: ['admin'],
+          currentOrganization: {
+            id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
+            name: 'BSG Logistics',
+            slug: 'bsg'
+          }
+        });
+        return;
+      }
+
+      console.log('Processing user data...');
+
+      // Find current organization
+      const currentOrg = userData.user_organization_roles?.find(
+        (uor: any) => uor.organization?.slug === orgSlug
+      )?.organization;
+
+      // Get all roles for current organization
+      const roles = userData.user_organization_roles?.
+        filter((uor: any) => uor.organization?.slug === orgSlug)
+        .map((uor: any) => uor.role) || ['admin'];
+
+      const finalUser = {
+        id: userData.id,
+        email: userData.email,
+        firstName: userData.first_name,
+        lastName: userData.last_name,
+        phone: userData.phone,
+        roles: roles.length > 0 ? roles : ['admin'], // Ensure at least one role
+        currentOrganization: currentOrg || {
+          id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
+          name: 'BSG Logistics',
+          slug: 'bsg'
+        }
+      };
+
+      console.log('Setting final user:', finalUser);
+      setUser(finalUser);
+
     } catch (error) {
       console.error('Error loading user data:', error);
-      // Provide fallback roles for authenticated users or set to null
+      // Provide fallback user
       if (authUser) {
         setUser({
           id: authUser.id,
           email: authUser.email || '',
           firstName: authUser.user_metadata?.first_name || 'User',
           lastName: authUser.user_metadata?.last_name || '',
-          roles: ['admin'], // Fallback to admin role for authenticated users
+          roles: ['admin'],
           currentOrganization: {
             id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
             name: 'BSG Logistics',
@@ -212,65 +217,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(null);
       }
     } finally {
-      // Always ensure loading is cleared
-      console.log('loadUserData completed, clearing loading state');
+      setLoadingUserData(false);
+      console.log('loadUserData completed');
     }
   };
 
   useEffect(() => {
     let mounted = true;
 
-    // Fallback timeout to clear loading if something goes wrong
-    const loadingTimeout = setTimeout(() => {
-      if (mounted) {
-        console.log('Loading timeout reached, forcing loading to false');
-        setLoading(false);
-      }
-    }, 5000);
-
     const initAuth = async () => {
       try {
+        console.log('Initializing auth...');
         // Check for existing session first
         const { data: { session }, error } = await supabase.auth.getSession();
         console.log('Initial session check:', session?.user?.id, error);
         
         if (mounted) {
           setSession(session);
-          try {
-            await loadUserData(session?.user ?? null);
-            console.log('loadUserData completed successfully');
-          } catch (error) {
-            console.error('Error in initial session load:', error);
+          // Defer user data loading to avoid blocking
+          if (session?.user) {
+            setTimeout(() => {
+              if (mounted) loadUserData(session.user);
+            }, 0);
+          } else {
             setUser(null);
           }
-          console.log('Setting loading to false');
           setLoading(false);
-          clearTimeout(loadingTimeout);
         }
       } catch (error) {
         console.error('Error getting initial session:', error);
         if (mounted) {
-          console.log('Setting loading to false due to error');
           setLoading(false);
-          clearTimeout(loadingTimeout);
         }
       }
     };
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         console.log('Auth state changed:', event, session?.user?.id);
         if (mounted) {
           setSession(session);
-          try {
-            console.log('Loading user data after auth change...');
-            await loadUserData(session?.user ?? null);
-            console.log('User data loaded successfully');
-          } catch (error) {
-            console.error('Error in auth state change handler:', error);
-            setUser(null);
-          }
+          // Defer user data loading using setTimeout to avoid deadlocks
+          setTimeout(() => {
+            if (mounted) {
+              if (session?.user) {
+                loadUserData(session.user);
+              } else {
+                setUser(null);
+              }
+            }
+          }, 0);
         }
       }
     );
@@ -280,7 +277,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => {
       mounted = false;
-      clearTimeout(loadingTimeout);
       subscription.unsubscribe();
     };
   }, []);
@@ -290,7 +286,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     if (DISABLE_AUTH) {
       // Demo mode - always succeed
-      await loadUserData(null);
+      setTimeout(() => loadUserData(null), 0);
       return {};
     }
 
@@ -308,7 +304,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { error };
       }
       
-      // The auth state change handler will call loadUserData
+      // The auth state change handler will call loadUserData via setTimeout
       console.log('Auth successful, user data will be loaded by state handler');
       return {};
       
@@ -321,7 +317,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUp = async (email: string, password: string, firstName?: string, lastName?: string) => {
     if (DISABLE_AUTH) {
       // Demo mode - always succeed
-      await loadUserData(null);
+      setTimeout(() => loadUserData(null), 0);
       return {};
     }
 

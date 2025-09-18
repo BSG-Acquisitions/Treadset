@@ -5,8 +5,17 @@ import { supabase } from '@/integrations/supabase/client';
 export const useSessionValidation = () => {
   const { user, session } = useAuth();
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const validatingRef = useRef(false);
 
   const validateSession = useCallback(async () => {
+    // Prevent concurrent validations
+    if (validatingRef.current) {
+      console.log('Session validation already in progress');
+      return true;
+    }
+    
+    validatingRef.current = true;
+    
     try {
       const { data, error } = await supabase.auth.getSession();
       
@@ -29,6 +38,8 @@ export const useSessionValidation = () => {
     } catch (error) {
       console.error('Session validation error:', error);
       return false;
+    } finally {
+      validatingRef.current = false;
     }
   }, []);
 
@@ -42,11 +53,9 @@ export const useSessionValidation = () => {
       return;
     }
 
-    // Initial validation
-    validateSession();
-
-    // Validate session every 5 minutes with enhanced error handling
-    intervalRef.current = setInterval(validateSession, 5 * 60 * 1000);
+    // Only validate if we have a session and user
+    // Validate session every 10 minutes (less frequent to reduce load)
+    intervalRef.current = setInterval(validateSession, 10 * 60 * 1000);
 
     return () => {
       if (intervalRef.current) {
