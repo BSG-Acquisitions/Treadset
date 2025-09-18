@@ -46,22 +46,27 @@ export function PlacesAutocomplete({ value, onChange, placeholder, className }: 
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
     
     if (!apiKey) {
-      console.warn('Google Maps API key not configured');
+      console.log('Google Maps API key not configured, using regular input');
       return;
     }
     
     // Load Google Maps Places API with API key
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async`;
     script.async = true;
     script.defer = true;
     
     script.onload = () => {
-      setIsGoogleLoaded(true);
+      // Verify that the API loaded successfully
+      if (window.google?.maps?.places) {
+        setIsGoogleLoaded(true);
+      } else {
+        console.warn('Google Maps API loaded but Places library not available');
+      }
     };
 
     script.onerror = () => {
-      console.warn('Failed to load Google Maps API, falling back to regular input');
+      console.warn('Failed to load Google Maps API, using regular input');
     };
 
     document.head.appendChild(script);
@@ -79,6 +84,12 @@ export function PlacesAutocomplete({ value, onChange, placeholder, className }: 
     }
 
     try {
+      // Additional check to ensure Google Maps is actually working
+      if (!window.google?.maps?.places?.Autocomplete) {
+        console.warn('Google Places Autocomplete not available');
+        return;
+      }
+
       autocompleteRef.current = new window.google.maps.places.Autocomplete(inputRef.current, {
         types: ['address'],
         componentRestrictions: { country: 'us' }, // Restrict to US addresses
@@ -95,8 +106,12 @@ export function PlacesAutocomplete({ value, onChange, placeholder, className }: 
     }
 
     return () => {
-      if (autocompleteRef.current) {
-        window.google.maps.event.clearInstanceListeners(autocompleteRef.current);
+      if (autocompleteRef.current && window.google?.maps?.event) {
+        try {
+          window.google.maps.event.clearInstanceListeners(autocompleteRef.current);
+        } catch (error) {
+          console.warn('Error clearing Google Maps listeners:', error);
+        }
         autocompleteRef.current = null;
       }
     };
