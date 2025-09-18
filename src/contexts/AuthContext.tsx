@@ -373,7 +373,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return {};
     }
 
-    const redirectUrl = `${window.location.origin}/reset-password`;
+    // Get the current domain/URL for the redirect
+    const currentUrl = window.location.origin;
+    const redirectUrl = `${currentUrl}/reset-password`;
+    
+    console.log('Password reset redirect URL:', redirectUrl);
+    
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: redirectUrl
     });

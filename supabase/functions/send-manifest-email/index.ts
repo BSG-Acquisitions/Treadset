@@ -140,7 +140,7 @@ serve(async (req) => {
 
     // Send email via Resend
     const emailPayload: any = {
-      from: "BSG Logistics <onboarding@resend.dev>",
+      from: "BSG Logistics <admin@bsglogistics.com>", // Updated to use company domain
       to: toList,
       subject,
       html,
