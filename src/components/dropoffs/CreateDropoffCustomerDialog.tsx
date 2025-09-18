@@ -65,7 +65,7 @@ export const CreateDropoffCustomerDialog = ({ open, onOpenChange }: CreateDropof
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
@@ -76,7 +76,7 @@ export const CreateDropoffCustomerDialog = ({ open, onOpenChange }: CreateDropof
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 max-h-[calc(85vh-180px)] overflow-y-auto pr-2">{/* Content wrapper for scrolling */}
           {/* Basic Information */}
           <div className="space-y-4">
             <div className="space-y-2">
