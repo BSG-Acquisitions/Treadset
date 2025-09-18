@@ -231,8 +231,8 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
         </div>
       </div>
       
-      {/* Navigation Tabs */}
-      <div className="border-t border-border/20 bg-card/50 overflow-x-auto">
+      {/* Navigation Tabs - Hidden on mobile/tablet when sidebar is used */}
+      <div className="hidden xl:block border-t border-border/20 bg-card/50 overflow-x-auto">
         <div className="px-3 sm:px-6">
           <Tabs value={getCurrentTab()} className="w-full">
             <TabsList className="grid w-full bg-transparent h-auto p-0 overflow-x-auto" style={{ gridTemplateColumns: `repeat(${navigationTabs.filter(tab => tab.roles.length === 0 || hasAnyRole([...tab.roles])).length}, minmax(0, 1fr))` }}>

@@ -1,0 +1,173 @@
+import { useState } from "react";
+import { 
+  Home, 
+  Users, 
+  MapPin, 
+  UserCheck, 
+  BarChart3, 
+  FileText, 
+  PackageOpen, 
+  DollarSign,
+  Settings,
+  CreditCard,
+  PenTool,
+  Truck,
+  Building,
+  LogOut
+} from "lucide-react";
+import { NavLink, useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarHeader,
+  SidebarFooter,
+  useSidebar,
+} from "@/components/ui/sidebar";
+import { BSGLogoActual } from "@/components/BSGLogoActual";
+import { Button } from "@/components/ui/button";
+
+export function AppSidebar() {
+  const { state } = useSidebar();
+  const location = useLocation();
+  const { user, signOut, hasAnyRole } = useAuth();
+  const currentPath = location.pathname;
+  const isCollapsed = state === "collapsed";
+
+  const isActive = (path: string) => {
+    if (path === '/') return currentPath === '/';
+    return currentPath.startsWith(path);
+  };
+
+  const getNavClass = (path: string) => 
+    isActive(path) 
+      ? "bg-brand-primary/10 text-brand-primary font-medium border-r-2 border-brand-primary" 
+      : "hover:bg-muted/50 text-muted-foreground hover:text-foreground";
+
+  const navigationItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/', roles: [] as const },
+    { id: 'clients', label: 'Clients', icon: Users, path: '/clients', roles: ['admin', 'ops_manager', 'sales'] as const },
+    { id: 'routes', label: 'Routes', icon: MapPin, path: '/routes/today', roles: ['admin', 'ops_manager', 'dispatcher', 'driver'] as const },
+    { id: 'driver', label: 'Driver Hub', icon: UserCheck, path: '/driver/dashboard', roles: ['driver'] as const },
+    { id: 'employees', label: 'Employees', icon: UserCheck, path: '/employees', roles: ['admin'] as const },
+    { id: 'dropoffs', label: 'Drop-offs', icon: PackageOpen, path: '/dropoffs', roles: ['admin', 'ops_manager', 'sales'] as const },
+    { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics', roles: ['admin', 'ops_manager'] as const },
+    { id: 'reports', label: 'Reports', icon: FileText, path: '/reports', roles: ['admin', 'ops_manager'] as const },
+    { id: 'pricing', label: 'Pricing', icon: DollarSign, path: '/pricing', roles: ['admin', 'ops_manager'] as const },
+  ];
+
+  const adminItems = [
+    { id: 'settings', label: 'Settings', icon: Settings, path: '/settings', roles: [] as const },
+    { id: 'integrations', label: 'Integrations', icon: CreditCard, path: '/integrations', roles: ['admin'] as const },
+    { id: 'signatures', label: 'Signatures', icon: PenTool, path: '/receiver-signatures', roles: ['admin', 'ops_manager'] as const },
+    { id: 'haulers', label: 'Haulers', icon: Truck, path: '/haulers', roles: ['admin', 'ops_manager'] as const },
+    { id: 'receivers', label: 'Receivers', icon: Building, path: '/receivers', roles: ['admin', 'ops_manager'] as const },
+  ];
+
+  const filteredNavItems = navigationItems.filter(item => 
+    item.roles.length === 0 || hasAnyRole([...item.roles])
+  );
+
+  const filteredAdminItems = adminItems.filter(item => 
+    item.roles.length === 0 || hasAnyRole([...item.roles])
+  );
+
+  return (
+    <Sidebar 
+      className={`${isCollapsed ? "w-16" : "w-64"} transition-all duration-300 border-r border-border/40 bg-card`} 
+      collapsible="icon"
+    >
+      <SidebarHeader className="border-b border-border/20 p-4">
+        <div className="flex items-center gap-3">
+          <BSGLogoActual size="sm" />
+          {!isCollapsed && (
+            <div className="text-sm">
+              <p className="font-semibold text-foreground truncate">
+                {user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : 'User'}
+              </p>
+              <p className="text-xs text-muted-foreground truncate">
+                {user?.email}
+              </p>
+            </div>
+          )}
+        </div>
+      </SidebarHeader>
+
+      <SidebarContent className="py-4">
+        <SidebarGroup>
+          <SidebarGroupLabel className={isCollapsed ? "sr-only" : ""}>
+            Navigation
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="space-y-1">
+              {filteredNavItems.map((item) => (
+                <SidebarMenuItem key={item.id}>
+                  <SidebarMenuButton asChild className="h-12">
+                    <NavLink 
+                      to={item.path} 
+                      className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${getNavClass(item.path)}`}
+                    >
+                      <item.icon className={`h-5 w-5 flex-shrink-0 ${isCollapsed ? 'mx-auto' : ''}`} />
+                      {!isCollapsed && (
+                        <span className="text-sm font-medium truncate">
+                          {item.label}
+                        </span>
+                      )}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {filteredAdminItems.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel className={isCollapsed ? "sr-only" : ""}>
+              Administration
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="space-y-1">
+                {filteredAdminItems.map((item) => (
+                  <SidebarMenuItem key={item.id}>
+                    <SidebarMenuButton asChild className="h-12">
+                      <NavLink 
+                        to={item.path} 
+                        className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${getNavClass(item.path)}`}
+                      >
+                        <item.icon className={`h-5 w-5 flex-shrink-0 ${isCollapsed ? 'mx-auto' : ''}`} />
+                        {!isCollapsed && (
+                          <span className="text-sm font-medium truncate">
+                            {item.label}
+                          </span>
+                        )}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+      </SidebarContent>
+
+      <SidebarFooter className="border-t border-border/20 p-4">
+        <Button
+          variant="ghost"
+          onClick={signOut}
+          className={`${isCollapsed ? 'px-0 justify-center' : 'justify-start'} w-full text-destructive hover:text-destructive hover:bg-destructive/10`}
+        >
+          <LogOut className={`h-5 w-5 ${isCollapsed ? '' : 'mr-3'} flex-shrink-0`} />
+          {!isCollapsed && <span className="text-sm">Sign out</span>}
+        </Button>
+      </SidebarFooter>
+    </Sidebar>
+  );
+}

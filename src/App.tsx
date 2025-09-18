@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { AppLayout } from "@/components/AppLayout";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import ClientDetail from "./pages/ClientDetail";
@@ -64,128 +65,176 @@ const App = () => (
             </div>
           } />
             
-            {/* Protected Routes */}
+            {/* Protected Routes with Layout */}
             <Route path="/auth" element={<Auth />} />
             <Route path="/auth/sign-in" element={<Auth />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/onboarding" element={
               <ProtectedRoute roles={['admin']}>
-                <Onboarding />
+                <AppLayout>
+                  <Onboarding />
+                </AppLayout>
               </ProtectedRoute>
             } />
             <Route path="/" element={
               <ProtectedRoute>
-                <Index />
+                <AppLayout>
+                  <Index />
+                </AppLayout>
               </ProtectedRoute>
             } />
             <Route path="/clients" element={
               <ProtectedRoute roles={['admin', 'ops_manager', 'sales']}>
-                <Clients />
+                <AppLayout>
+                  <Clients />
+                </AppLayout>
               </ProtectedRoute>
             } />
             <Route path="/clients/:id" element={
               <ProtectedRoute roles={['admin', 'ops_manager', 'sales']}>
-                <ClientDetail />
+                <AppLayout>
+                  <ClientDetail />
+                </AppLayout>
               </ProtectedRoute>
             } />
             <Route path="/routes/today" element={
               <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher', 'driver']}>
-                <EnhancedRoutesToday />
+                <AppLayout>
+                  <EnhancedRoutesToday />
+                </AppLayout>
               </ProtectedRoute>
             } />
             <Route path="/routes/legacy" element={
               <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher', 'driver']}>
-                <RoutesToday />
+                <AppLayout>
+                  <RoutesToday />
+                </AppLayout>
               </ProtectedRoute>
             } />
             <Route path="/routes/print/today" element={
               <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
-                <RoutesPrintToday />
+                <AppLayout>
+                  <RoutesPrintToday />
+                </AppLayout>
               </ProtectedRoute>
             } />
             <Route path="/book" element={
               <ProtectedRoute roles={['admin', 'ops_manager', 'sales']}>
-                <Book />
+                <AppLayout>
+                  <Book />
+                </AppLayout>
               </ProtectedRoute>
             } />
             <Route path="/employees" element={
               <ProtectedRoute roles={['admin']}>
-                <Employees />
+                <AppLayout>
+                  <Employees />
+                </AppLayout>
               </ProtectedRoute>
             } />
             <Route path="/analytics" element={
               <ProtectedRoute roles={['admin', 'ops_manager']}>
-                <ClientAnalytics />
+                <AppLayout>
+                  <ClientAnalytics />
+                </AppLayout>
               </ProtectedRoute>
             } />
             <Route path="/settings" element={
               <ProtectedRoute>
-                <Settings />
+                <AppLayout>
+                  <Settings />
+                </AppLayout>
               </ProtectedRoute>
             } />
             <Route path="/pricing" element={
               <ProtectedRoute roles={['admin', 'ops_manager']}>
-                <PricingAdmin />
+                <AppLayout>
+                  <PricingAdmin />
+                </AppLayout>
               </ProtectedRoute>
             } />
             <Route path="/booking-confirmation" element={
               <ProtectedRoute>
-                <BookingConfirmation />
+                <AppLayout>
+                  <BookingConfirmation />
+                </AppLayout>
               </ProtectedRoute>
             } />
             <Route path="/integrations" element={
               <ProtectedRoute roles={['admin']}>
-                <Integrations />
+                <AppLayout>
+                  <Integrations />
+                </AppLayout>
               </ProtectedRoute>
             } />
             <Route path="/driver/manifests" element={
               <ProtectedRoute roles={['driver', 'admin']}>
-                <DriverManifests />
+                <AppLayout>
+                  <DriverManifests />
+                </AppLayout>
               </ProtectedRoute>
             } />
             <Route path="/driver/manifest/new" element={
               <ProtectedRoute roles={['driver', 'admin']}>
-                <DriverManifestCreate />
+                <AppLayout>
+                  <DriverManifestCreate />
+                </AppLayout>
               </ProtectedRoute>
             } />
             <Route path="/driver/manifest/:id" element={
               <ProtectedRoute roles={['driver', 'admin']}>
-                <ManifestViewer />
+                <AppLayout>
+                  <ManifestViewer />
+                </AppLayout>
               </ProtectedRoute>
             } />
             <Route path="/routes/driver" element={
               <ProtectedRoute roles={['driver', 'admin']}>
-                <DriverRoutes />
+                <AppLayout>
+                  <DriverRoutes />
+                </AppLayout>
               </ProtectedRoute>
             } />
             <Route path="/driver/dashboard" element={
               <ProtectedRoute roles={['driver', 'admin']}>
-                <DriverDashboard />
+                <AppLayout>
+                  <DriverDashboard />
+                </AppLayout>
               </ProtectedRoute>
             } />
             <Route path="/receiver-signatures" element={
               <ProtectedRoute roles={['admin', 'ops_manager']}>
-                <ReceiverSignatures />
+                <AppLayout>
+                  <ReceiverSignatures />
+                </AppLayout>
               </ProtectedRoute>
             } />
             <Route path="/haulers" element={
               <ProtectedRoute roles={['admin', 'ops_manager']}>
-                <HaulerManagement />
+                <AppLayout>
+                  <HaulerManagement />
+                </AppLayout>
               </ProtectedRoute>
             } />
             <Route path="/receivers" element={
               <ProtectedRoute roles={['admin', 'ops_manager']}>
-                <ReceiverManagement />
+                <AppLayout>
+                  <ReceiverManagement />
+                </AppLayout>
               </ProtectedRoute>
             } />
             <Route path="/reports" element={
               <ProtectedRoute roles={['admin', 'ops_manager']}>
-                <Reports />
+                <AppLayout>
+                  <Reports />
+                </AppLayout>
               </ProtectedRoute>
             } />
             <Route path="/dropoffs" element={
               <ProtectedRoute roles={['admin', 'ops_manager', 'sales']}>
-                <Dropoffs />
+                <AppLayout>
+                  <Dropoffs />
+                </AppLayout>
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
