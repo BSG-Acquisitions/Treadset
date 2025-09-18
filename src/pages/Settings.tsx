@@ -19,6 +19,13 @@ export default function Settings() {
   const { user } = useAuth();
   const { toast } = useToast();
   
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+  
   // Fetch user preferences
   const { data: preferences, isLoading: preferencesLoading, error: preferencesError } = useUserPreferences();
   const updatePreferences = useUpdateUserPreferences();
@@ -216,23 +223,43 @@ if (preferencesLoading) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Button variant="ghost" className="w-full justify-start">
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start"
+                  onClick={() => scrollToSection('profile-section')}
+                >
                   <User className="h-4 w-4 mr-2" />
                   Profile
                 </Button>
-                <Button variant="ghost" className="w-full justify-start">
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start"
+                  onClick={() => scrollToSection('notifications-section')}
+                >
                   <Bell className="h-4 w-4 mr-2" />
                   Notifications
                 </Button>
-                <Button variant="ghost" className="w-full justify-start">
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start"
+                  onClick={() => scrollToSection('appearance-section')}
+                >
                   <Palette className="h-4 w-4 mr-2" />
                   Appearance
                 </Button>
-                <Button variant="ghost" className="w-full justify-start">
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start"
+                  onClick={() => scrollToSection('security-section')}
+                >
                   <Shield className="h-4 w-4 mr-2" />
                   Security
                 </Button>
-                <Button variant="ghost" className="w-full justify-start">
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start"
+                  onClick={() => scrollToSection('data-privacy-section')}
+                >
                   <Database className="h-4 w-4 mr-2" />
                   Data & Privacy
                 </Button>
@@ -243,7 +270,7 @@ if (preferencesLoading) {
           {/* Settings Content */}
           <SlideUp delay={0.2} className="lg:col-span-2 space-y-6">
             {/* Profile Settings */}
-            <Card>
+            <Card id="profile-section">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <User className="h-5 w-5" />
@@ -336,7 +363,7 @@ if (preferencesLoading) {
             </Card>
 
             {/* Notification Settings */}
-            <Card>
+            <Card id="notifications-section">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Bell className="h-5 w-5" />
@@ -406,7 +433,7 @@ if (preferencesLoading) {
             </Card>
 
             {/* Appearance Settings */}
-            <Card>
+            <Card id="appearance-section">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Palette className="h-5 w-5" />
@@ -462,7 +489,7 @@ if (preferencesLoading) {
             </Card>
 
             {/* Security Settings */}
-            <Card>
+            <Card id="security-section">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Shield className="h-5 w-5" />
@@ -526,7 +553,7 @@ if (preferencesLoading) {
             </Card>
 
             {/* State Manifest Template */}
-            <Card>
+            <Card id="data-privacy-section">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Database className="h-5 w-5" />
