@@ -42,9 +42,17 @@ export function PlacesAutocomplete({ value, onChange, placeholder, className }: 
       return;
     }
 
-    // Load Google Maps Places API - fallback to basic input if no key
+    // Get the Google Maps API key from environment
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    
+    if (!apiKey) {
+      console.warn('Google Maps API key not configured');
+      return;
+    }
+    
+    // Load Google Maps Places API with API key
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?libraries=places`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
     script.async = true;
     script.defer = true;
     
