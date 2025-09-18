@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
+import { PasswordResetDialog } from '@/components/auth/PasswordResetDialog';
 
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
@@ -161,6 +162,10 @@ export default function Auth() {
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Sign In
                   </Button>
+                  
+                  <div className="text-center mt-4">
+                    <PasswordResetDialog />
+                  </div>
                 </form>
               </TabsContent>
 
