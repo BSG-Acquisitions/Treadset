@@ -36,6 +36,7 @@ import ReceiverSignatures from './pages/ReceiverSignatures';
 import HaulerManagement from './pages/HaulerManagement';
 import ReceiverManagement from './pages/ReceiverManagement';
 import Reports from './pages/Reports';
+import Dropoffs from './pages/Dropoffs';
 
 const queryClient = new QueryClient();
 
@@ -178,6 +179,11 @@ const App = () => (
             <Route path="/reports" element={
               <ProtectedRoute roles={['admin', 'ops_manager']}>
                 <Reports />
+              </ProtectedRoute>
+            } />
+            <Route path="/dropoffs" element={
+              <ProtectedRoute roles={['admin', 'ops_manager', 'sales']}>
+                <Dropoffs />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

@@ -455,6 +455,201 @@ export type Database = {
           },
         ]
       }
+      dropoff_customers: {
+        Row: {
+          company_name: string | null
+          contact_name: string
+          created_at: string
+          customer_type: string | null
+          email: string | null
+          id: string
+          is_active: boolean | null
+          last_dropoff_at: string | null
+          lifetime_revenue: number | null
+          notes: string | null
+          organization_id: string
+          phone: string | null
+          pricing_tier_id: string | null
+          requires_invoicing: boolean | null
+          requires_manifest: boolean | null
+          tags: string[] | null
+          total_dropoffs: number | null
+          updated_at: string
+        }
+        Insert: {
+          company_name?: string | null
+          contact_name: string
+          created_at?: string
+          customer_type?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_dropoff_at?: string | null
+          lifetime_revenue?: number | null
+          notes?: string | null
+          organization_id: string
+          phone?: string | null
+          pricing_tier_id?: string | null
+          requires_invoicing?: boolean | null
+          requires_manifest?: boolean | null
+          tags?: string[] | null
+          total_dropoffs?: number | null
+          updated_at?: string
+        }
+        Update: {
+          company_name?: string | null
+          contact_name?: string
+          created_at?: string
+          customer_type?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_dropoff_at?: string | null
+          lifetime_revenue?: number | null
+          notes?: string | null
+          organization_id?: string
+          phone?: string | null
+          pricing_tier_id?: string | null
+          requires_invoicing?: boolean | null
+          requires_manifest?: boolean | null
+          tags?: string[] | null
+          total_dropoffs?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_dropoff_customers_organization"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_dropoff_customers_pricing_tier"
+            columns: ["pricing_tier_id"]
+            isOneToOne: false
+            referencedRelation: "pricing_tiers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dropoffs: {
+        Row: {
+          computed_revenue: number | null
+          created_at: string
+          dropoff_customer_id: string
+          dropoff_date: string
+          dropoff_time: string | null
+          id: string
+          manifest_id: string | null
+          manifest_pdf_path: string | null
+          notes: string | null
+          organization_id: string
+          otr_count: number | null
+          payment_method: string | null
+          payment_status: string | null
+          pricing_tier_id: string | null
+          processed_by: string | null
+          pte_count: number | null
+          requires_manifest: boolean | null
+          status: string | null
+          surcharges_applied_json: Json | null
+          tractor_count: number | null
+          unit_price_otr: number | null
+          unit_price_pte: number | null
+          unit_price_tractor: number | null
+          updated_at: string
+        }
+        Insert: {
+          computed_revenue?: number | null
+          created_at?: string
+          dropoff_customer_id: string
+          dropoff_date?: string
+          dropoff_time?: string | null
+          id?: string
+          manifest_id?: string | null
+          manifest_pdf_path?: string | null
+          notes?: string | null
+          organization_id: string
+          otr_count?: number | null
+          payment_method?: string | null
+          payment_status?: string | null
+          pricing_tier_id?: string | null
+          processed_by?: string | null
+          pte_count?: number | null
+          requires_manifest?: boolean | null
+          status?: string | null
+          surcharges_applied_json?: Json | null
+          tractor_count?: number | null
+          unit_price_otr?: number | null
+          unit_price_pte?: number | null
+          unit_price_tractor?: number | null
+          updated_at?: string
+        }
+        Update: {
+          computed_revenue?: number | null
+          created_at?: string
+          dropoff_customer_id?: string
+          dropoff_date?: string
+          dropoff_time?: string | null
+          id?: string
+          manifest_id?: string | null
+          manifest_pdf_path?: string | null
+          notes?: string | null
+          organization_id?: string
+          otr_count?: number | null
+          payment_method?: string | null
+          payment_status?: string | null
+          pricing_tier_id?: string | null
+          processed_by?: string | null
+          pte_count?: number | null
+          requires_manifest?: boolean | null
+          status?: string | null
+          surcharges_applied_json?: Json | null
+          tractor_count?: number | null
+          unit_price_otr?: number | null
+          unit_price_pte?: number | null
+          unit_price_tractor?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_dropoffs_dropoff_customer"
+            columns: ["dropoff_customer_id"]
+            isOneToOne: false
+            referencedRelation: "dropoff_customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_dropoffs_manifest"
+            columns: ["manifest_id"]
+            isOneToOne: false
+            referencedRelation: "manifests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_dropoffs_organization"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_dropoffs_pricing_tier"
+            columns: ["pricing_tier_id"]
+            isOneToOne: false
+            referencedRelation: "pricing_tiers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_dropoffs_processed_by"
+            columns: ["processed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       generators: {
         Row: {
           created_at: string | null
@@ -802,6 +997,7 @@ export type Database = {
           driver_id: string | null
           driver_sig_path: string | null
           driver_signature_png_path: string | null
+          dropoff_id: string | null
           emailed_to: string[] | null
           finalized_by: string | null
           id: string
@@ -853,6 +1049,7 @@ export type Database = {
           driver_id?: string | null
           driver_sig_path?: string | null
           driver_signature_png_path?: string | null
+          dropoff_id?: string | null
           emailed_to?: string[] | null
           finalized_by?: string | null
           id?: string
@@ -904,6 +1101,7 @@ export type Database = {
           driver_id?: string | null
           driver_sig_path?: string | null
           driver_signature_png_path?: string | null
+          dropoff_id?: string | null
           emailed_to?: string[] | null
           finalized_by?: string | null
           id?: string
@@ -943,6 +1141,13 @@ export type Database = {
           weight_tons?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_manifests_dropoff"
+            columns: ["dropoff_id"]
+            isOneToOne: false
+            referencedRelation: "dropoffs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "manifests_finalized_by_fkey"
             columns: ["finalized_by"]
