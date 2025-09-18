@@ -167,7 +167,7 @@ export const useCreateManifest = () => {
   return useMutation({
     mutationFn: async (data: CreateManifestData) => {
       // Resolve organization once
-      const { data: orgId, error: orgErr } = await supabase.rpc('get_current_user_organization');
+      const { data: orgId, error: orgErr } = await supabase.rpc('get_current_user_organization', { org_slug: 'bsg' });
       if (orgErr) throw orgErr;
       if (!orgId) throw new Error('No organization configured for current user');
 
