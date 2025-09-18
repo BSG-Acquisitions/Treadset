@@ -35,13 +35,17 @@ export const usePickups = (date?: string) => {
   return useQuery({
     queryKey: ['pickups', date],
     queryFn: async () => {
+      // Get the current organization ID first
+      const { data: orgData } = await supabase.rpc('get_current_user_organization', { org_slug: 'bsg' });
+      
       let query = supabase
         .from('pickups')
         .select(`
           *,
           client:client_id(company_name),
           location:location_id(name, address)
-        `);
+        `)
+        .eq('organization_id', orgData); // Explicitly filter by organization
 
       if (date) {
         query = query.eq('pickup_date', date);
