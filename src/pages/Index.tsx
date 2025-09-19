@@ -30,11 +30,11 @@ export default function Index() {
     document.title = "BSG Tire Recycling Dashboard";
   }, []);
   
-  // Redirect drivers to their dashboard (only once when user loads)
+  // Redirect drivers to their routes (only once when user loads)
   useEffect(() => {
     if (user && user.roles?.includes('driver')) {
-      console.log('Redirecting driver to dashboard');
-      navigate('/driver/dashboard', { replace: true });
+      console.log('Redirecting driver to routes');
+      navigate('/routes/driver', { replace: true });
     }
   }, [user?.id, navigate]); // Only trigger when user ID changes
   
@@ -43,7 +43,7 @@ export default function Index() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="text-lg">Redirecting to driver dashboard...</div>
+          <div className="text-lg">Loading your assigned routes...</div>
         </div>
       </div>
     );
