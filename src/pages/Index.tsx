@@ -32,6 +32,7 @@ export default function Index() {
   // Redirect drivers to their dashboard (only once when user loads)
   useEffect(() => {
     if (user && user.roles?.includes('driver')) {
+      console.log('Redirecting driver to dashboard');
       navigate('/driver/dashboard', { replace: true });
     }
   }, [user?.id, navigate]); // Only trigger when user ID changes
