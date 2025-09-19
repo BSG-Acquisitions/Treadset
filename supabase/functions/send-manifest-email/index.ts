@@ -49,7 +49,7 @@ serve(async (req) => {
       const { data: manifest, error } = await supabase
         .from("manifests")
         .select(
-          `id, manifest_number, pdf_path, total, signed_at, client_id, organization_id`
+          `id, manifest_number, pdf_path, acroform_pdf_path, total, signed_at, client_id, organization_id`
         )
         .eq("id", body.manifest_id)
         .maybeSingle();
@@ -73,8 +73,9 @@ serve(async (req) => {
         subject = body.subject ?? `Manifest ${manifest.manifest_number}`;
       }
 
-      // Prefer saved pdf_path
-      if (manifest.pdf_path) pdfPath = manifest.pdf_path;
+      // Prefer saved pdf_path or latest acroform path
+      if (manifest.acroform_pdf_path) pdfPath = manifest.acroform_pdf_path;
+      else if (manifest.pdf_path) pdfPath = manifest.pdf_path;
 
       // Simple default HTML if none provided (link-only or attachment)
       if (!body.messageHtml) {
@@ -172,11 +173,13 @@ serve(async (req) => {
     // If we have a PDF path
     let signedUrl: string | undefined
     if (pdfPath) {
+      // Normalize path to be relative to the bucket (manifests)
+      const normalizedPath = pdfPath.replace(/^manifests\//, "");
       if (body.attach === false) {
         // link-only: create signed URL
         const { data: signed, error: urlErr } = await supabase.storage
           .from("manifests")
-          .createSignedUrl(pdfPath, 60 * 60 * 24 * 7);
+          .createSignedUrl(normalizedPath, 60 * 60 * 24 * 7);
         if (urlErr) {
           console.error("Failed to create signed URL:", urlErr);
         } else {
@@ -188,17 +191,24 @@ serve(async (req) => {
         }
       } else {
         // default: attach the file
-        console.log("Downloading PDF from storage:", pdfPath);
+        console.log("Downloading PDF from storage:", normalizedPath);
         const { data: pdfData, error: dlErr } = await supabase.storage
           .from("manifests")
-          .download(pdfPath);
+          .download(normalizedPath);
 
         if (dlErr) {
-          console.error("Failed to download PDF:", dlErr);
+          console.error("Failed to download PDF for attachment, falling back to link:", dlErr);
+          const { data: signed, error: urlErr } = await supabase.storage
+            .from("manifests")
+            .createSignedUrl(normalizedPath, 60 * 60 * 24 * 7);
+          if (!urlErr) {
+            signedUrl = signed?.signedUrl;
+            html += signedUrl ? `<p><a href="${signedUrl}">Download PDF (expires in 7 days)</a></p>` : ''
+          }
         } else {
           const buf = new Uint8Array(await pdfData.arrayBuffer());
           // Attempt to derive filename from path
-          const parts = pdfPath.split("/");
+          const parts = normalizedPath.split("/");
           const filename = parts[parts.length - 1] || "manifest.pdf";
           attachment = {
             filename,

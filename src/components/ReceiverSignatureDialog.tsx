@@ -108,6 +108,7 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
         try {
           await sendEmail.mutateAsync({
             manifestId,
+            pdfPath: result.pdfPath,
             subject: `Completed Manifest ${manifestNumber}`,
             messageHtml: `
               <h2>Manifest Completion Notice</h2>
