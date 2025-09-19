@@ -13,7 +13,7 @@ import { Building, MapPin, Calendar, CheckCircle2, Clock, AlertCircle, Package, 
 import { format, addDays, subDays, startOfWeek, addWeeks, subWeeks } from "date-fns";
 
 export default function RoutesToday() {
-  const [currentWeek, setCurrentWeek] = useState(startOfWeek(new Date()));
+  const [currentWeek, setCurrentWeek] = useState(startOfWeek(new Date(), { weekStartsOn: 0 }));
   // Initialize with local date string to avoid timezone issues
   const today = new Date();
   const todayYear = today.getFullYear();
@@ -176,11 +176,11 @@ export default function RoutesToday() {
                         {format(activeDateObj, 'EEEE, MMM d, yyyy')}
                       </h3>
                       <div className="text-xs sm:text-sm text-muted-foreground">
-                        {dayData?.pickups.length || 0} pickups scheduled
+                        {pickups.length} pickups scheduled
                       </div>
                     </div>
 
-                    {!dayData?.pickups.length ? (
+                    {!pickups.length ? (
                       <Card>
                         <CardContent className="p-8 text-center">
                           <Calendar className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
@@ -200,7 +200,7 @@ export default function RoutesToday() {
                         </CardHeader>
                         <CardContent>
                           <div className="space-y-4">
-                            {dayData.pickups.map((pickup) => {
+                            {pickups.map((pickup) => {
                               const StatusIcon = getStatusIcon(pickup.status);
                               return (
                                 <div

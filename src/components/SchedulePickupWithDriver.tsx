@@ -23,6 +23,7 @@ import { useEmployees } from "@/hooks/useEmployees";
 import { useSchedulePickupWithDriver } from "@/hooks/useSchedulePickupWithDriver";
 import { Calendar, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatLocalDateString } from "@/lib/formatters";
 
 const scheduleSchema = z.object({
   clientId: z.string().min(1, "Client is required"),
@@ -66,7 +67,7 @@ export function SchedulePickupWithDriver({ children, onSuccess }: SchedulePickup
       otrCount: 0, 
       tractorCount: 0,
       preferredWindow: "Any",
-      pickupDate: new Date().toISOString().split('T')[0], // Today's date
+      pickupDate: formatLocalDateString(new Date()), // Today's date
     },
   });
 
@@ -273,7 +274,7 @@ export function SchedulePickupWithDriver({ children, onSuccess }: SchedulePickup
                   <FormItem>
                     <FormLabel>Pickup Date *</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} min={new Date().toISOString().split('T')[0]} />
+                      <Input type="date" {...field} min={formatLocalDateString(new Date())} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

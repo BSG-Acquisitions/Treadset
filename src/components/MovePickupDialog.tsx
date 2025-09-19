@@ -8,6 +8,7 @@ import { useMovePickup } from "@/hooks/useMovePickup";
 import { CalendarIcon, Clock, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { formatLocalDateString } from "@/lib/formatters";
 
 interface MovePickupDialogProps {
   open: boolean;
@@ -28,7 +29,7 @@ export function MovePickupDialog({ open, onOpenChange, pickup }: MovePickupDialo
     e.preventDefault();
     if (!newDate) return;
 
-    const dateString = newDate.toISOString().split('T')[0];
+    const dateString = formatLocalDateString(newDate);
     movePickup.mutate(
       { pickupId: pickup.id, newDate: dateString },
       {
