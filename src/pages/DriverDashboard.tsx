@@ -128,7 +128,7 @@ export default function DriverDashboard() {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Button asChild className="h-20 flex-col gap-2">
-                <Link to="/routes/today">
+                <Link to="/routes/driver">
                   <Navigation className="h-6 w-6" />
                   <span>View Routes</span>
                 </Link>
@@ -216,9 +216,9 @@ export default function DriverDashboard() {
                     </div>
                   ))}
                   {todayAssignments.length > 5 && (
-                    <div className="text-center pt-3">
+                     <div className="text-center pt-3">
                       <Button variant="ghost" asChild>
-                        <Link to="/routes/today">
+                        <Link to="/routes/driver">
                           View all {todayAssignments.length} assignments
                         </Link>
                       </Button>
@@ -307,7 +307,7 @@ export default function DriverDashboard() {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <Button variant="ghost" asChild className="justify-start">
-                <Link to="/routes/today">
+                <Link to="/routes/driver">
                   <Navigation className="h-4 w-4 mr-2" />
                   Today's Routes
                 </Link>
