@@ -29,6 +29,7 @@ import DriverManifestCreate from "./pages/DriverManifestCreate";
 import DriverManifestView from "./pages/DriverManifestView";
 import DriverRoutes from "./pages/DriverRoutes";
 import DriverDashboard from "./pages/DriverDashboard";
+import DriverAssignmentHelper from "./pages/DriverAssignmentHelper";
 import DriverAssignmentView from "./pages/DriverAssignmentView";
 import PublicBook from "./pages/PublicBook";
 import PublicBookingConfirmation from "./pages/PublicBookingConfirmation";
@@ -193,6 +194,13 @@ const App = () => (
               <ProtectedRoute roles={['driver', 'admin']}>
                 <AppLayout>
                   <DriverRoutes />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/driver-assignment-helper" element={
+              <ProtectedRoute roles={['admin']}>
+                <AppLayout>
+                  <DriverAssignmentHelper />
                 </AppLayout>
               </ProtectedRoute>
             } />

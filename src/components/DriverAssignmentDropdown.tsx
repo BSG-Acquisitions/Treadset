@@ -37,15 +37,18 @@ export const DriverAssignmentDropdown: React.FC<DriverAssignmentDropdownProps> =
   const assignDriverMutation = useMutation({
     mutationFn: async (driverId: string | null) => {
       // Update assignments to assign driver
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('assignments')
         .update({ 
           driver_id: driverId 
         })
         .eq('vehicle_id', vehicleId)
-        .eq('scheduled_date', routeDate);
+        .eq('scheduled_date', routeDate)
+        .select();
 
       if (error) throw error;
+      
+      console.log('Driver assignment updated:', { vehicleId, routeDate, driverId, updatedAssignments: data });
       return driverId;
     },
     onSuccess: (driverId) => {

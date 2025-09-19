@@ -22,6 +22,7 @@ interface DriverAssignmentInterfaceProps {
     id: string;
     status: string;
     driver_id?: string;
+    organization_id?: string;
     estimated_arrival?: string;
     actual_arrival?: string;
     pickup: {
@@ -87,7 +88,7 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
         .insert({
           pickup_id: assignment.pickup.id,
           client_id: assignment.pickup.client_id,
-          organization_id: assignment.pickup.client?.id, // Use client id for now, needs proper org mapping
+          organization_id: assignment.organization_id,
           driver_id: assignment.driver_id,
           status: 'DRAFT',
           manifest_number: `MAN-${Date.now()}`,

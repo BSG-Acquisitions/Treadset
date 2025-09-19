@@ -27,6 +27,18 @@ export default function Index() {
 
   const { user, hasAnyRole } = useAuth();
   
+  // Redirect drivers to their specific dashboard
+  useEffect(() => {
+    if (user && user.roles?.includes('driver')) {
+      window.location.href = '/driver/dashboard';
+    }
+  }, [user]);
+  
+  // Don't render admin dashboard for drivers
+  if (user && user.roles?.includes('driver')) {
+    return <div>Redirecting to driver dashboard...</div>;
+  }
+  
   // Enable real-time updates for auto-refreshing tiles
   useRealtimeUpdates();
   
