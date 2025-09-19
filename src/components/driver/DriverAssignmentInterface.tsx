@@ -12,7 +12,7 @@ import {
   Play,
   Navigation
 } from "lucide-react";
-import { ManifestWizard } from "./ManifestWizard";
+import { CompletePickupDialog } from "../CompletePickupDialog";
 import { useUpdateAssignmentStatus } from "@/hooks/useDriverWorkflow";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -60,8 +60,6 @@ interface DriverAssignmentInterfaceProps {
 }
 
 export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssignmentInterfaceProps) {
-  const [showManifestWizard, setShowManifestWizard] = useState(false);
-  const [manifestId, setManifestId] = useState<string | null>(assignment.pickup?.manifest_id ?? null);
   const [pickup, setPickup] = useState<DriverAssignmentInterfaceProps['assignment']['pickup'] | null>(assignment.pickup ?? null);
   const updateAssignmentStatus = useUpdateAssignmentStatus();
   const { toast } = useToast();
@@ -73,7 +71,7 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
         const { data, error } = await supabase
           .from('pickups')
           .select(`
-            id, client_id, pickup_date, preferred_window, pte_count, otr_count, tractor_count, notes, manifest_id,
+            id, client_id, pickup_date, preferred_window, pte_count, otr_count, tractor_count, notes, manifest_id, status,
             client:clients(id, company_name, email),
             location:locations(id, address, name, latitude, longitude)
           `)
@@ -100,80 +98,21 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
     }
   };
 
-  const handleCreateManifest = async () => {
-    try {
-      // Ensure we have pickup details
-      let p = pickup as any;
-      if (!p && assignment.pickup_id) {
-        const { data, error } = await supabase
-          .from('pickups')
-          .select('id, client_id')
-          .eq('id', assignment.pickup_id)
-          .maybeSingle();
-        if (error || !data) {
-          toast({
-            title: 'Pickup unavailable',
-            description: 'Pickup details could not be loaded. Please try again.',
-            variant: 'destructive'
-          });
-          return;
-        }
-        p = data;
-        setPickup(data as any);
-      }
-
-      const { data: newManifest, error: manifestError } = await supabase
-        .from('manifests')
-        .insert({
-          pickup_id: p.id,
-          client_id: p.client_id,
-          organization_id: assignment.organization_id,
-          driver_id: assignment.driver_id,
-          status: 'DRAFT',
-          manifest_number: `MAN-${Date.now()}`,
-        })
-        .select()
-        .single();
-
-      if (manifestError) throw manifestError;
-
-      // Update pickup with manifest_id
-      await supabase
-        .from('pickups')
-        .update({ manifest_id: newManifest.id })
-        .eq('id', p.id);
-
-      setManifestId(newManifest.id);
-      setShowManifestWizard(true);
-    } catch (error) {
-      console.error('Failed to create manifest:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to create manifest. Please try again.',
-        variant: 'destructive'
-      });
-    }
-  };
-
-  const handleManifestComplete = () => {
-    setShowManifestWizard(false);
+  const handlePickupComplete = () => {
+    // Refresh data after completion
+    setPickup(null); // Force reload
     onComplete?.();
   };
 
-  if (showManifestWizard && manifestId) {
+  // Show loading state while pickup is being fetched
+  if (!pickup) {
     return (
-      <div className="max-w-4xl mx-auto p-4">
-        <Button 
-          variant="outline" 
-          onClick={() => setShowManifestWizard(false)}
-          className="mb-4"
-        >
-          ← Back to Assignment
-        </Button>
-        <ManifestWizard 
-          manifestId={manifestId}
-          onComplete={handleManifestComplete}
-        />
+      <div className="max-w-2xl mx-auto p-4 space-y-6">
+        <Card>
+          <CardContent className="p-8 text-center">
+            <div className="text-muted-foreground">Loading pickup details...</div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -274,35 +213,39 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
               </Button>
             )}
 
-            {(assignment.status === 'in_progress' || assignment.status === 'assigned') && (
+            {(assignment.status === 'in_progress' || assignment.status === 'assigned') && pickup && (
               <>
                 <Separator />
                 <div className="space-y-2">
-                  <h4 className="font-medium">Create Manifest</h4>
+                  <h4 className="font-medium">Complete Pickup</h4>
                   <p className="text-sm text-muted-foreground">
-                    Complete the pickup with signatures and generate the official manifest.
+                    Use the same workflow as admin interface to complete pickup and generate manifest.
                   </p>
-                  <Button 
-                    onClick={handleCreateManifest}
-                    variant="outline" 
-                    className="w-full h-12"
-                  >
-                    <FileText className="h-5 w-5 mr-2" />
-                    {manifestId ? 'Continue Manifest' : 'Create New Manifest'}
-                  </Button>
+                  <CompletePickupDialog
+                    pickup={{
+                      id: pickup.id,
+                      client: pickup.client,
+                      location: pickup.location,
+                      pickup_date: pickup.pickup_date,
+                      pte_count: pickup.pte_count ?? 0,
+                      otr_count: pickup.otr_count ?? 0,
+                      tractor_count: pickup.tractor_count ?? 0,
+                      notes: pickup.notes,
+                      status: assignment.status
+                    }}
+                    trigger={
+                      <Button 
+                        variant="outline" 
+                        className="w-full h-12"
+                        disabled={assignment.status === 'completed'}
+                      >
+                        <FileText className="h-5 w-5 mr-2" />
+                        Complete Pickup & Generate Manifest
+                      </Button>
+                    }
+                  />
                 </div>
               </>
-            )}
-
-            {manifestId && (
-              <Button 
-                onClick={() => setShowManifestWizard(true)}
-                variant="outline" 
-                className="w-full"
-              >
-                <FileText className="h-5 w-5 mr-2" />
-                Open Manifest Wizard
-              </Button>
             )}
 
             {assignment.status === 'completed' && (
