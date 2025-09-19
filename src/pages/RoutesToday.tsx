@@ -169,13 +169,14 @@ export default function RoutesToday() {
               const dayOfMonth = String(day.getDate()).padStart(2, '0');
               const dateStr = `${year}-${month}-${dayOfMonth}`;
               const dayData = weekPickups.find(d => d.date === dateStr);
+              const dayLocal = new Date(year, parseInt(month, 10) - 1, parseInt(dayOfMonth, 10));
               
               return (
                 <TabsContent key={dateStr} value={dateStr} className="mt-6">
                   <div className="space-y-4">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
                       <h3 className="text-base sm:text-lg font-medium">
-                        {format(day, 'EEEE, MMM d, yyyy')}
+                        {format(dayLocal, 'EEEE, MMM d, yyyy')}
                       </h3>
                       <div className="text-xs sm:text-sm text-muted-foreground">
                         {dayData?.pickups.length || 0} pickups scheduled
