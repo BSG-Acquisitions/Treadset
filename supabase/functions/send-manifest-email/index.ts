@@ -49,8 +49,7 @@ serve(async (req) => {
       const { data: manifest, error } = await supabase
         .from("manifests")
         .select(
-          `id, manifest_number, pdf_path, total, signed_at, client_id, organization_id,
-           clients:client_id(email, company_name)`
+          `id, manifest_number, pdf_path, total, signed_at, client_id, organization_id`
         )
         .eq("id", body.manifest_id)
         .maybeSingle();
@@ -58,8 +57,16 @@ serve(async (req) => {
       if (error) throw error;
       if (!manifest) throw new Error("Manifest not found");
 
+      // Fetch client details separately to avoid reliance on embedded relationships
+      const { data: client, error: clientErr } = await supabase
+        .from("clients")
+        .select("email, company_name")
+        .eq("id", manifest.client_id)
+        .maybeSingle();
+      if (clientErr) throw clientErr;
+
       // Determine recipient
-      if (manifest.clients?.email) toList.push(manifest.clients.email);
+      if (client?.email) toList.push(client.email);
 
       // Prefer manifest_number in subject if available
       if (manifest.manifest_number) {
@@ -71,7 +78,7 @@ serve(async (req) => {
 
       // Simple default HTML if none provided (link-only or attachment)
       if (!body.messageHtml) {
-        const company = manifest.clients?.company_name ?? "Customer";
+        const company = client?.company_name ?? "Customer";
         const number = manifest.manifest_number ?? manifest.id;
         const total = manifest.total ?? 0;
         const signed = manifest.signed_at ? new Date(manifest.signed_at).toLocaleString() : "N/A";
