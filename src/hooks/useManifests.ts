@@ -64,6 +64,7 @@ export interface Manifest {
   client?: {
     id: string;
     company_name: string;
+    email: string;
   };
   location?: {
     id: string;
@@ -149,7 +150,12 @@ export const useManifest = (id: string) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('manifests')
-        .select('*')
+        .select(`
+          *,
+          client:clients(id, company_name, email),
+          location:locations(id, name, address),
+          pickup:pickups(id, pickup_date)
+        `)
         .eq('id', id)
         .maybeSingle();
 

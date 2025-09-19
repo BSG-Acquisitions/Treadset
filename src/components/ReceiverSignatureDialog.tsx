@@ -104,21 +104,30 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
       setIsCompleting(false);
       
       // Auto-send email if client has email
-      if (manifest?.client?.company_name && result.pdfPath) {
+      if (manifest?.client?.email && result.pdfPath) {
         try {
           await sendEmail.mutateAsync({
             manifestId,
             subject: `Completed Manifest ${manifestNumber}`,
             messageHtml: `
               <h2>Manifest Completion Notice</h2>
-              <p>Dear ${manifest.client.company_name},</p>
+              <p>Dear ${manifest.client.company_name || 'Customer'},</p>
               <p>Your tire collection manifest <strong>${manifestNumber}</strong> has been completed with all required signatures.</p>
               <p>Please find the completed manifest attached.</p>
               <p>Best regards,<br>BSG Logistics</p>
             `
           });
+          toast({ 
+            title: "Email sent", 
+            description: `Manifest sent to ${manifest.client.email}` 
+          });
         } catch (emailError) {
           console.error('Failed to send completion email:', emailError);
+          toast({ 
+            title: "Email failed", 
+            description: "Manifest completed but email could not be sent",
+            variant: "destructive"
+          });
         }
       }
     },
