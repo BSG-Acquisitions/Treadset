@@ -163,7 +163,11 @@ export default function RoutesToday() {
             </TabsList>
             
             {weekDays.map((day) => {
-              const dateStr = day.toISOString().split('T')[0];
+              // Use local date string to avoid timezone issues
+              const year = day.getFullYear();
+              const month = String(day.getMonth() + 1).padStart(2, '0');
+              const dayOfMonth = String(day.getDate()).padStart(2, '0');
+              const dateStr = `${year}-${month}-${dayOfMonth}`;
               const dayData = weekPickups.find(d => d.date === dateStr);
               
               return (
