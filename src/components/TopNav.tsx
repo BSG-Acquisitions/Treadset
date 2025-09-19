@@ -17,7 +17,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { Link, useLocation } from 'react-router-dom';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 import { BSGLogoActual } from '@/components/BSGLogoActual';
 import { OrganizationSwitcher } from '@/components/auth/OrganizationSwitcher';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -35,31 +35,6 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
   const { notifications, unreadCount, markAsRead, markAllAsRead, isMarkingAllAsRead } = useNotifications();
 
 
-  const getCurrentTab = () => {
-    if (location.pathname === '/') return 'dashboard';
-    if (location.pathname.startsWith('/clients')) return 'clients';
-    if (location.pathname.startsWith('/routes')) return 'routes';
-    if (location.pathname.startsWith('/driver')) return 'driver';
-    
-    if (location.pathname === '/employees') return 'employees';
-    if (location.pathname === '/analytics') return 'analytics';
-    if (location.pathname === '/pricing') return 'pricing';
-    if (location.pathname === '/reports') return 'reports';
-    if (location.pathname === '/dropoffs') return 'dropoffs';
-    return 'dashboard';
-  };
-
-  const navigationTabs = [
-    { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/', roles: [] as const },
-    { id: 'clients', label: 'Clients', icon: Users, path: '/clients', roles: ['admin', 'ops_manager', 'sales'] as const },
-    { id: 'routes', label: 'Routes', icon: MapPin, path: '/routes/today', roles: ['admin', 'ops_manager', 'dispatcher', 'driver'] as const },
-    { id: 'driver', label: 'Driver Hub', icon: UserCheck, path: '/driver/dashboard', roles: ['driver'] as const },
-    { id: 'employees', label: 'Employees', icon: UserCheck, path: '/employees', roles: ['admin'] as const },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics', roles: ['admin', 'ops_manager'] as const },
-    { id: 'reports', label: 'Reports', icon: FileText, path: '/reports', roles: ['admin', 'ops_manager'] as const },
-    { id: 'dropoffs', label: 'Drop-offs', icon: PackageOpen, path: '/dropoffs', roles: ['admin', 'ops_manager', 'sales'] as const },
-    { id: 'pricing', label: 'Pricing', icon: DollarSign, path: '/pricing', roles: ['admin', 'ops_manager'] as const },
-  ];
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60 shadow-elevation-md">
@@ -228,34 +203,6 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        </div>
-      </div>
-      
-      {/* Navigation Tabs - Hidden on mobile/tablet when sidebar is used */}
-      <div className="hidden xl:block border-t border-border/20 bg-card/50 overflow-x-auto">
-        <div className="px-3 sm:px-6">
-          <Tabs value={getCurrentTab()} className="w-full">
-            <TabsList className="grid w-full bg-transparent h-auto p-0 overflow-x-auto" style={{ gridTemplateColumns: `repeat(${navigationTabs.filter(tab => tab.roles.length === 0 || hasAnyRole([...tab.roles])).length}, minmax(0, 1fr))` }}>
-              {navigationTabs
-                .filter(tab => tab.roles.length === 0 || hasAnyRole([...tab.roles]))
-                .map((tab) => {
-                  const Icon = tab.icon;
-                  return (
-                    <TabsTrigger 
-                      key={tab.id} 
-                      value={tab.id} 
-                      asChild
-                      className="data-[state=active]:bg-brand-primary/10 data-[state=active]:text-brand-primary border-b-2 border-transparent data-[state=active]:border-brand-primary rounded-none h-10 sm:h-12 px-1 sm:px-2 lg:px-4 whitespace-nowrap min-w-0"
-                    >
-                      <Link to={tab.path} className="flex items-center gap-1 sm:gap-2 w-full min-w-0">
-                        <Icon className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                        <span className="text-xs sm:text-sm truncate">{tab.label}</span>
-                      </Link>
-                    </TabsTrigger>
-                  );
-                })}
-            </TabsList>
-          </Tabs>
         </div>
       </div>
     </header>
