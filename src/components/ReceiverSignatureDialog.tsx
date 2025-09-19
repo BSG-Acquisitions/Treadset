@@ -103,7 +103,7 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
       setCompletionData({ pdfPath: result.pdfPath });
       setIsCompleting(false);
       
-      // Auto-send email after PDF generation (backend resolves client email)
+      // Always attempt to send email after PDF generation (backend will resolve client email)
       if (result.pdfPath) {
         try {
           await sendEmail.mutateAsync({
@@ -111,7 +111,7 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
             subject: `Completed Manifest ${manifestNumber}`,
             messageHtml: `
               <h2>Manifest Completion Notice</h2>
-              <p>Dear ${manifest?.client?.company_name || 'Customer'},</p>
+              <p>Dear Customer,</p>
               <p>Your tire collection manifest <strong>${manifestNumber}</strong> has been completed with all required signatures.</p>
               <p>Please find the completed manifest attached.</p>
               <p>Best regards,<br>BSG Logistics</p>
@@ -119,7 +119,7 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
           });
           toast({ 
             title: "Email sent", 
-            description: `Manifest email has been sent.` 
+            description: `Manifest email has been sent successfully.` 
           });
         } catch (emailError) {
           console.error('Failed to send completion email:', emailError);
