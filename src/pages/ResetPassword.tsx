@@ -24,20 +24,14 @@ export default function ResetPassword() {
   useEffect(() => {
     document.title = 'Reset Password – BSG Logistics';
     
-    // Check if user is properly authenticated with a valid session
-    if (!session) {
-      setError('Invalid or expired reset link. Please request a new password reset.');
-    }
+    // For password reset flow, we need to be more lenient about session validation
+    // Supabase provides a temporary session when users click the reset link
+    console.log('Reset password page loaded, session status:', !!session);
   }, [session]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!session) {
-      setError('You must be signed in to reset your password.');
-      return;
-    }
-
     if (password !== confirmPassword) {
       setError('Passwords do not match.');
       return;
@@ -50,20 +44,30 @@ export default function ResetPassword() {
 
     setLoading(true);
     setError('');
-
-    const { error } = await updatePassword(password);
     
-    if (error) {
-      setError(error.message);
-      setLoading(false);
-    } else {
-      setSuccess(true);
-      setLoading(false);
+    console.log('Attempting to update password...');
+
+    try {
+      const { error } = await updatePassword(password);
       
-      // Redirect to home after successful password reset
-      setTimeout(() => {
-        navigate('/', { replace: true });
-      }, 2000);
+      if (error) {
+        console.error('Password update error:', error);
+        setError(error.message || 'Failed to update password. Please try again.');
+        setLoading(false);
+      } else {
+        console.log('Password updated successfully');
+        setSuccess(true);
+        setLoading(false);
+        
+        // Redirect to sign in page after successful password reset
+        setTimeout(() => {
+          navigate('/auth', { replace: true });
+        }, 2000);
+      }
+    } catch (err) {
+      console.error('Unexpected error during password update:', err);
+      setError('An unexpected error occurred. Please try again.');
+      setLoading(false);
     }
   };
 
