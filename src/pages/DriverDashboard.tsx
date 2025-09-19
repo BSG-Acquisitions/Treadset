@@ -19,7 +19,7 @@ import {
   Package
 } from 'lucide-react';
 import { useManifests } from '@/hooks/useManifests';
-import { usePickups } from '@/hooks/usePickups';
+import { useDriverAssignments } from '@/hooks/useDriverAssignments';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 
@@ -27,21 +27,22 @@ export default function DriverDashboard() {
   const { user } = useAuth();
   
   const { data: manifests = [], isLoading: manifestsLoading } = useManifests(undefined, user?.id);
-  const { data: pickups = [], isLoading: pickupsLoading } = usePickups();
-
+  
   // Get today's date for filtering
   const today = new Date();
   const todayStr = format(today, 'yyyy-MM-dd');
 
-  // Filter today's assignments
-  const todayAssignments = pickups.filter(pickup => 
-    pickup.pickup_date === todayStr && 
-    (pickup.status === 'scheduled' || pickup.status === 'in_progress')
+  // Get driver-specific assignments for today
+  const { data: assignments = [], isLoading: assignmentsLoading } = useDriverAssignments(todayStr);
+
+  // Filter today's assignments by status
+  const todayAssignments = assignments.filter(assignment => 
+    assignment.status === 'assigned' || assignment.status === 'in_progress'
   );
 
   // Filter completed assignments for today
-  const completedToday = pickups.filter(pickup => 
-    pickup.pickup_date === todayStr && pickup.status === 'completed'
+  const completedToday = assignments.filter(assignment => 
+    assignment.status === 'completed'
   );
 
   // Recent manifests (last 5)
@@ -170,7 +171,7 @@ export default function DriverDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {pickupsLoading ? (
+              {assignmentsLoading ? (
                 <div className="space-y-3">
                   {[...Array(3)].map((_, i) => (
                     <div key={i} className="animate-pulse bg-muted h-16 rounded" />
@@ -184,31 +185,31 @@ export default function DriverDashboard() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {todayAssignments.slice(0, 5).map((pickup) => (
-                    <div key={pickup.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                  {todayAssignments.slice(0, 5).map((assignment) => (
+                    <div key={assignment.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <h4 className="font-medium truncate">
-                            {pickup.client?.company_name || 'Unknown Client'}
+                            {assignment.pickup?.client?.company_name || 'Unknown Client'}
                           </h4>
                           <Badge 
-                            variant={pickup.status === 'scheduled' ? 'secondary' : 'default'}
+                            variant={assignment.status === 'assigned' ? 'secondary' : 'default'}
                             className="text-xs"
                           >
-                            {pickup.status}
+                            {assignment.status}
                           </Badge>
                         </div>
                         <p className="text-sm text-muted-foreground truncate">
-                          {pickup.location?.address || 'No address'}
+                          {assignment.pickup?.location?.address || 'No address'}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {pickup.preferred_window || 'Time TBD'}
+                          {assignment.pickup?.preferred_window || 'Time TBD'} • {assignment.vehicle?.name}
                         </p>
                       </div>
                       <div className="flex gap-2">
                         <Button size="sm" variant="outline" asChild>
-                          <Link to={`/driver/manifest/new?pickup=${pickup.id}&client=${pickup.client_id}&location=${pickup.location_id}`}>
-                            Create Manifest
+                          <Link to={`/driver/assignment/${assignment.id}`}>
+                            Start Route
                           </Link>
                         </Button>
                       </div>

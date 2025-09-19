@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { usePickups } from "@/hooks/usePickups";
-import { DriverPickupInterface } from "@/components/driver/DriverPickupInterface";
+import { useDriverAssignments } from "@/hooks/useDriverAssignments";
+import { DriverAssignmentInterface } from "@/components/driver/DriverAssignmentInterface";
 import { MovePickupDialog } from "@/components/MovePickupDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,10 +13,10 @@ import { format } from "date-fns";
 
 export default function DriverRoutes() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [selectedPickup, setSelectedPickup] = useState<string | null>(null);
+  const [selectedAssignment, setSelectedAssignment] = useState<string | null>(null);
   const [movePickupOpen, setMovePickupOpen] = useState(false);
   const [selectedPickupToMove, setSelectedPickupToMove] = useState<any>(null);
-  const { data: pickups = [], isLoading } = usePickups(selectedDate);
+  const { data: assignments = [], isLoading } = useDriverAssignments(selectedDate);
 
   useEffect(() => {
     document.title = "Driver Routes – BSG";
@@ -40,24 +40,24 @@ export default function DriverRoutes() {
     }
   };
 
-  if (selectedPickup) {
-    const pickup = pickups.find(p => p.id === selectedPickup);
-    if (pickup) {
+  if (selectedAssignment) {
+    const assignment = assignments.find(a => a.id === selectedAssignment);
+    if (assignment) {
       return (
         <div className="min-h-screen bg-background">
           <main className="container py-8">
             <div className="mb-4">
               <Button 
                 variant="outline" 
-                onClick={() => setSelectedPickup(null)}
+                onClick={() => setSelectedAssignment(null)}
                 className="mb-4"
               >
                 ← Back to Route List
               </Button>
             </div>
-            <DriverPickupInterface 
-              pickup={pickup} 
-              onComplete={() => setSelectedPickup(null)}
+            <DriverAssignmentInterface 
+              assignment={assignment} 
+              onComplete={() => setSelectedAssignment(null)}
             />
           </main>
         </div>
@@ -83,10 +83,10 @@ export default function DriverRoutes() {
           <div>
             <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
               <Truck className="h-8 w-8 text-brand-primary" />
-              Driver Routes
+              My Assignments
             </h1>
             <p className="text-muted-foreground">
-              {format(new Date(selectedDate), 'EEEE, MMMM d, yyyy')} • {pickups.length} stops scheduled
+              {format(new Date(selectedDate), 'EEEE, MMMM d, yyyy')} • {assignments.length} stops scheduled
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -100,15 +100,15 @@ export default function DriverRoutes() {
           </div>
         </div>
 
-        {pickups.length === 0 ? (
+        {assignments.length === 0 ? (
           <Card>
             <CardContent className="p-12 text-center">
               <Truck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-medium mb-2">No routes scheduled</h3>
               <p className="text-muted-foreground">
                 {selectedDate === new Date().toISOString().split('T')[0] 
-                  ? "No routes scheduled for today"
-                  : "No routes scheduled for this date"
+                  ? "No routes assigned to you for today"
+                  : "No routes assigned to you for this date"
                 }
               </p>
             </CardContent>
@@ -119,16 +119,16 @@ export default function DriverRoutes() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Package className="h-5 w-5" />
-                  Today's Pickup Route
+                  Today's Assigned Routes
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {pickups.map((pickup, index) => {
-                    const StatusIcon = getStatusIcon(pickup.status);
+                  {assignments.map((assignment, index) => {
+                    const StatusIcon = getStatusIcon(assignment.status);
                     return (
                       <div
-                        key={pickup.id}
+                        key={assignment.id}
                         className="flex items-center justify-between p-4 border rounded-lg hover:bg-secondary/10 transition-colors"
                       >
                         <div className="flex items-center gap-4">
@@ -137,51 +137,60 @@ export default function DriverRoutes() {
                               {index + 1}
                             </div>
                             <StatusIcon className={`h-5 w-5 ${
-                              pickup.status === 'completed' ? 'text-brand-success' :
-                              pickup.status === 'overdue' ? 'text-destructive' :
-                              'text-muted-foreground'
+                              assignment.status === 'completed' ? 'text-brand-success' :
+                              assignment.status === 'in_progress' ? 'text-brand-warning' : 'text-muted-foreground'
                             }`} />
                           </div>
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <Building className="h-4 w-4 text-muted-foreground" />
-                              <span className="font-medium text-lg">
-                                {pickup.client?.company_name || 'Unknown Client'}
-                              </span>
+                          
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-3">
+                              <div>
+                                <h3 className="font-semibold text-foreground">
+                                  {assignment.pickup?.client?.company_name || 'Unknown Client'}
+                                </h3>
+                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                  <MapPin className="h-3 w-3" />
+                                  <span className="truncate">
+                                    {assignment.pickup?.location?.name || assignment.pickup?.location?.address || 'No location'}
+                                  </span>
+                                </div>
+                                {assignment.pickup?.notes && (
+                                  <p className="text-sm text-muted-foreground italic">
+                                    Notes: {assignment.pickup.notes}
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <MapPin className="h-4 w-4" />
-                              <span>{pickup.location?.name || pickup.location?.address || 'No address'}</span>
-                            </div>
-                            {pickup.notes && (
-                              <p className="text-sm text-muted-foreground italic">
-                                Notes: {pickup.notes}
-                              </p>
-                            )}
                           </div>
                         </div>
                         
-                        <div className="flex items-center gap-4">
-                          <div className="text-right">
-                            <div className="text-sm font-medium mb-1">
-                              Expected: PTE {pickup.pte_count} | OTR {pickup.otr_count} | Tractor {pickup.tractor_count}
+                        <div className="text-right">
+                          <div className="space-y-1">
+                            <div className="text-sm font-medium">
+                              {assignment.pickup?.preferred_window || 'No time preference'}
                             </div>
-                            <div className="text-xs text-muted-foreground mb-2">
-                              Est. Revenue: ${pickup.computed_revenue?.toFixed(2) || '0.00'}
+                            <div className="text-xs text-muted-foreground">
+                              Vehicle: {assignment.vehicle?.name || 'TBD'}
                             </div>
-                            <Badge variant={getStatusColor(pickup.status)}>
-                              {pickup.status.replace('_', ' ')}
+                            <div className="text-xs text-muted-foreground">
+                              Expected: PTE {assignment.pickup?.pte_count || 0} | OTR {assignment.pickup?.otr_count || 0} | Tractor {assignment.pickup?.tractor_count || 0}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Est. Revenue: ${assignment.pickup?.computed_revenue?.toFixed(2) || '0.00'}
+                            </div>
+                            <Badge variant={getStatusColor(assignment.status)}>
+                              {assignment.status.replace('_', ' ')}
                             </Badge>
                           </div>
                           
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 mt-2">
                             <Button 
                               size="sm" 
-                              disabled={pickup.status === 'completed'}
-                              onClick={() => setSelectedPickup(pickup.id)}
+                              disabled={assignment.status === 'completed'}
+                              onClick={() => setSelectedAssignment(assignment.id)}
                               className="bg-brand-primary hover:bg-brand-primary/90"
                             >
-                              {pickup.status === 'completed' ? '✅ Completed' : '📝 Start Pickup'}
+                              {assignment.status === 'completed' ? '✅ Completed' : '📝 Start Pickup'}
                             </Button>
                             
                             <DropdownMenu>
@@ -193,7 +202,7 @@ export default function DriverRoutes() {
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem 
                                   onClick={() => {
-                                    setSelectedPickupToMove(pickup);
+                                    setSelectedPickupToMove(assignment.pickup);
                                     setMovePickupOpen(true);
                                   }}
                                 >
@@ -216,24 +225,24 @@ export default function DriverRoutes() {
               <CardContent className="p-6">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                   <div>
-                    <div className="text-2xl font-bold text-brand-primary">{pickups.length}</div>
+                    <div className="text-2xl font-bold text-brand-primary">{assignments.length}</div>
                     <div className="text-sm text-muted-foreground">Total Stops</div>
                   </div>
                   <div>
                     <div className="text-2xl font-bold text-brand-success">
-                      {pickups.filter(p => p.status === 'completed').length}
+                      {assignments.filter(a => a.status === 'completed').length}
                     </div>
                     <div className="text-sm text-muted-foreground">Completed</div>
                   </div>
                   <div>
                     <div className="text-2xl font-bold text-brand-warning">
-                      {pickups.filter(p => p.status !== 'completed').length}
+                      {assignments.filter(a => a.status !== 'completed').length}
                     </div>
                     <div className="text-sm text-muted-foreground">Remaining</div>
                   </div>
                   <div>
                     <div className="text-2xl font-bold text-foreground">
-                      ${pickups.reduce((sum, p) => sum + (p.computed_revenue || 0), 0).toFixed(2)}
+                      ${assignments.reduce((sum, a) => sum + (a.pickup?.computed_revenue || 0), 0).toFixed(2)}
                     </div>
                     <div className="text-sm text-muted-foreground">Total Value</div>
                   </div>
@@ -246,7 +255,12 @@ export default function DriverRoutes() {
         {selectedPickupToMove && (
           <MovePickupDialog
             open={movePickupOpen}
-            onOpenChange={setMovePickupOpen}
+            onOpenChange={(open) => {
+              setMovePickupOpen(open);
+              if (!open) {
+                setSelectedPickupToMove(null);
+              }
+            }}
             pickup={selectedPickupToMove}
           />
         )}
