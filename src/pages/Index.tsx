@@ -14,29 +14,37 @@ import { RowCarousel } from "@/components/RowCarousel";
 import { StatsCard } from "@/components/enhanced/StatsCard";
 import { format } from "date-fns";
 import { useEffect } from "react";
-import { useRealtimeUpdates } from "@/hooks/useRealtimeUpdates";
+import { useNavigate } from "react-router-dom";
 import { StaggerList } from "@/components/motion/StaggerList";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { SlideUp } from "@/components/motion/SlideUp";
 import { FollowupWorkflows } from "@/components/workflows/FollowupWorkflows";
+import { useRealtimeUpdates } from "@/hooks/useRealtimeUpdates";
 
 export default function Index() {
+  const navigate = useNavigate();
+  const { user, hasAnyRole } = useAuth();
+
   useEffect(() => {
     document.title = "BSG Tire Recycling Dashboard";
   }, []);
-
-  const { user, hasAnyRole } = useAuth();
   
-  // Redirect drivers to their specific dashboard
+  // Redirect drivers to their dashboard (only once when user loads)
   useEffect(() => {
     if (user && user.roles?.includes('driver')) {
-      window.location.href = '/driver/dashboard';
+      navigate('/driver/dashboard', { replace: true });
     }
-  }, [user]);
+  }, [user?.id, navigate]); // Only trigger when user ID changes
   
-  // Don't render admin dashboard for drivers
+  // Don't render admin content for drivers while redirecting
   if (user && user.roles?.includes('driver')) {
-    return <div>Redirecting to driver dashboard...</div>;
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-lg">Redirecting to driver dashboard...</div>
+        </div>
+      </div>
+    );
   }
   
   // Enable real-time updates for auto-refreshing tiles
