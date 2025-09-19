@@ -79,13 +79,16 @@ interface OptimizedRoute {
 
 export default function EnhancedRoutesToday() {
   // Initialize activeDay with current local date string to avoid timezone issues
-  const [currentWeek, setCurrentWeek] = useState(startOfWeek(new Date()));
+  const [currentWeek, setCurrentWeek] = useState(startOfWeek(new Date(), { weekStartsOn: 0 }));
   const today = new Date();
   const todayYear = today.getFullYear();
   const todayMonth = String(today.getMonth() + 1).padStart(2, '0');
   const todayDay = String(today.getDate()).padStart(2, '0');
   const [activeDay, setActiveDay] = useState(`${todayYear}-${todayMonth}-${todayDay}`);
   const [selectedVehicle, setSelectedVehicle] = useState<string>('all');
+  // Local date object for header/labels to avoid UTC shift
+  const [ay, am, ad] = activeDay.split('-').map(Number);
+  const activeDateLocal = new Date((ay || todayYear), ((am || parseInt(todayMonth, 10)) - 1), (ad || parseInt(todayDay, 10)));
   const [optimizedRoutes, setOptimizedRoutes] = useState<OptimizedRoute[]>([]);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [completingAssignment, setCompletingAssignment] = useState<any>(null);
@@ -111,7 +114,7 @@ export default function EnhancedRoutesToday() {
   const goToNextWeek = () => setCurrentWeek(prev => addWeeks(prev, 1));
   const goToToday = () => {
     const today = new Date();
-    setCurrentWeek(startOfWeek(today));
+    setCurrentWeek(startOfWeek(today, { weekStartsOn: 0 }));
     // Use local date string to avoid timezone issues
     const year = today.getFullYear();
     const month = String(today.getMonth() + 1).padStart(2, '0');
@@ -251,7 +254,7 @@ export default function EnhancedRoutesToday() {
         <div class="header">
           <h1>BSG Tire Recycling - Route Sheet</h1>
           <h2>${route.vehicleName}</h2>
-          <p>Date: ${format(new Date(activeDay), 'EEEE, MMMM d, yyyy')}</p>
+          <p>Date: ${format(activeDateLocal, 'EEEE, MMMM d, yyyy')}</p>
         </div>
         
         <div class="route-info">
@@ -497,7 +500,7 @@ export default function EnhancedRoutesToday() {
             <Card>
               <CardContent className="py-12 text-center">
                 <Route className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground text-lg">No pickups or routes scheduled for {format(new Date(activeDay), 'EEEE, MMMM d')}</p>
+                <p className="text-muted-foreground text-lg">No pickups or routes scheduled for {format(activeDateLocal, 'EEEE, MMMM d')}</p>
                 <p className="text-sm text-muted-foreground mt-2">Pickups and routes will appear here once scheduled</p>
               </CardContent>
             </Card>
@@ -509,7 +512,7 @@ export default function EnhancedRoutesToday() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Package className="h-5 w-5" />
-                      Scheduled Pickups - {format(new Date(activeDay), 'EEEE, MMMM d')}
+                      Scheduled Pickups - {format(activeDateLocal, 'EEEE, MMMM d')}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
