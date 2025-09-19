@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { encode as b64encode } from "https://deno.land/std@0.190.0/encoding/base64.ts";
 import { Resend } from "npm:resend@2.0.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -171,50 +172,64 @@ serve(async (req) => {
     }
 
     // If we have a PDF path
-    let signedUrl: string | undefined
+    let signedUrl: string | undefined;
     if (pdfPath) {
-      // Normalize path to be relative to the bucket (manifests)
-      const normalizedPath = pdfPath.replace(/^manifests\//, "");
+      const asIs = pdfPath;
+      const toggled = pdfPath.startsWith("manifests/") ? pdfPath.replace(/^manifests\//, "") : `manifests/${pdfPath}`;
+
       if (body.attach === false) {
-        // link-only: create signed URL
-        const { data: signed, error: urlErr } = await supabase.storage
+        // link-only: create signed URL (try as-is first, then toggled)
+        let urlErr;
+        let signed;
+        ({ data: signed, error: urlErr } = await supabase.storage
           .from("manifests")
-          .createSignedUrl(normalizedPath, 60 * 60 * 24 * 7);
+          .createSignedUrl(asIs, 60 * 60 * 24 * 7));
         if (urlErr) {
-          console.error("Failed to create signed URL:", urlErr);
-        } else {
+          console.warn("Signed URL failed with asIs path, retrying with toggled:", urlErr?.message);
+          ({ data: signed, error: urlErr } = await supabase.storage
+            .from("manifests")
+            .createSignedUrl(toggled, 60 * 60 * 24 * 7));
+        }
+        if (!urlErr) {
           signedUrl = signed?.signedUrl;
-          // If HTML not provided, append link
-          if (!body.messageHtml) {
-            html += signedUrl ? `<p><a href="${signedUrl}">Download PDF (expires in 7 days)</a></p>` : ''
+          if (!body.messageHtml && signedUrl) {
+            html += `<p><a href="${signedUrl}">Download PDF (expires in 7 days)</a></p>`;
           }
+        } else {
+          console.error("Failed to create signed URL for both paths:", urlErr);
         }
       } else {
-        // default: attach the file
-        console.log("Downloading PDF from storage:", normalizedPath);
-        const { data: pdfData, error: dlErr } = await supabase.storage
-          .from("manifests")
-          .download(normalizedPath);
+        // default: try to attach the file (try as-is, then toggled)
+        console.log("Downloading PDF from storage (asIs):", asIs);
+        let pdfDataResp = await supabase.storage.from("manifests").download(asIs);
+        if (pdfDataResp.error) {
+          console.warn("Download failed with asIs path, retrying with toggled:", pdfDataResp.error?.message);
+          pdfDataResp = await supabase.storage.from("manifests").download(toggled);
+        }
 
-        if (dlErr) {
-          console.error("Failed to download PDF for attachment, falling back to link:", dlErr);
-          const { data: signed, error: urlErr } = await supabase.storage
-            .from("manifests")
-            .createSignedUrl(normalizedPath, 60 * 60 * 24 * 7);
-          if (!urlErr) {
-            signedUrl = signed?.signedUrl;
-            html += signedUrl ? `<p><a href="${signedUrl}">Download PDF (expires in 7 days)</a></p>` : ''
+        if (pdfDataResp.error || !pdfDataResp.data) {
+          console.error("Failed to download PDF for attachment, falling back to link:", pdfDataResp.error);
+          // Fallback to signed URL
+          const signedTry = await supabase.storage.from("manifests").createSignedUrl(asIs, 60 * 60 * 24 * 7);
+          if (signedTry.error) {
+            const signedTry2 = await supabase.storage.from("manifests").createSignedUrl(toggled, 60 * 60 * 24 * 7);
+            if (!signedTry2.error) signedUrl = signedTry2.data?.signedUrl;
+          } else signedUrl = signedTry.data?.signedUrl;
+          if (!body.messageHtml && signedUrl) {
+            html += `<p><a href="${signedUrl}">Download PDF (expires in 7 days)</a></p>`;
           }
         } else {
-          const buf = new Uint8Array(await pdfData.arrayBuffer());
+          const arrBuf = await pdfDataResp.data.arrayBuffer();
+          const buf = new Uint8Array(arrBuf);
+          const base64 = b64encode(buf);
           // Attempt to derive filename from path
-          const parts = normalizedPath.split("/");
+          const parts = (pdfPath.includes('/') ? pdfPath : toggled).split("/");
           const filename = parts[parts.length - 1] || "manifest.pdf";
           attachment = {
             filename,
-            content: buf,
+            content: base64,
             contentType: "application/pdf",
-          };
+          } as any;
         }
       }
     }
