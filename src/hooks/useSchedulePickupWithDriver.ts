@@ -54,8 +54,10 @@ export const useSchedulePickupWithDriver = () => {
         .insert({
           pickup_id: pickup.id,
           vehicle_id: data.vehicleId,
+          driver_id: data.driverId,  // THIS WAS MISSING!
           organization_id: orgData,
           scheduled_date: data.pickupDate,
+          status: 'assigned',
           // Note: We're not setting estimated_arrival here since we don't have route planning
           // This could be added later with route optimization
         })

@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Truck, User, Calendar, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
+import { SchedulePickupWithDriverDialog } from "@/components/SchedulePickupWithDriverDialog";
 
 export default function DriverAssignmentHelper() {
   const [loading, setLoading] = useState(false);
@@ -83,13 +84,28 @@ export default function DriverAssignmentHelper() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="bg-blue-50 border border-blue-200 rounded p-4">
+            <div className="space-y-3">
               <h3 className="font-medium text-blue-800">Test Driver Info</h3>
               <p className="text-sm text-blue-600">
                 Email: oaklandreds20@gmail.com<br/>
                 User ID: {testDriverId}<br/>
                 Vehicle: Truck 002- Test Driver
               </p>
+              
+              <div className="bg-green-50 border border-green-200 rounded p-3">
+                <h4 className="font-medium text-green-800 mb-2">✅ Quick Fix - Schedule New Pickup with Driver</h4>
+                <p className="text-sm text-green-600 mb-3">
+                  Use this to schedule a pickup and assign it directly to Test Driver:
+                </p>
+                <SchedulePickupWithDriverDialog 
+                  trigger={
+                    <Button className="bg-green-600 hover:bg-green-700">
+                      <User className="h-4 w-4 mr-2" />
+                      Schedule Pickup for Test Driver
+                    </Button>
+                  }
+                />
+              </div>
             </div>
 
             <Button onClick={loadAssignments} disabled={loading}>

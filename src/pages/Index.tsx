@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Clock, MapPin, Users, TrendingUp, Package, Truck, Recycle, BarChart3, CheckCircle2 } from "lucide-react";
+import { CalendarDays, Clock, MapPin, Users, TrendingUp, Package, Truck, Recycle, BarChart3, CheckCircle2, User } from "lucide-react";
 import { usePickups } from "@/hooks/usePickups";
 import { useClients } from "@/hooks/useClients";
 import { useVehicles } from "@/hooks/useVehicles";
@@ -20,6 +20,7 @@ import { FadeIn } from "@/components/motion/FadeIn";
 import { SlideUp } from "@/components/motion/SlideUp";
 import { FollowupWorkflows } from "@/components/workflows/FollowupWorkflows";
 import { useRealtimeUpdates } from "@/hooks/useRealtimeUpdates";
+import { SchedulePickupWithDriverDialog } from "@/components/SchedulePickupWithDriverDialog";
 
 export default function Index() {
   const navigate = useNavigate();

@@ -7,6 +7,7 @@ import { useClients } from "@/hooks/useClients";
 import { useLocations } from "@/hooks/useLocations";
 import { useVehicles } from "@/hooks/useVehicles";
 import { useHaulers } from "@/hooks/useHaulers";
+import { SchedulePickupWithDriverDialog } from "./SchedulePickupWithDriverDialog";
 import {
   Dialog,
   DialogContent,
@@ -40,7 +41,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Calendar, CalendarIcon, Check, ChevronsUpDown, Truck, Building } from "lucide-react";
+import { Calendar, CalendarIcon, Check, ChevronsUpDown, Truck, Building, User } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
