@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { CapacityGauge } from "@/components/CapacityGauge";
 import { RowCarousel } from "@/components/RowCarousel";
-import { TopNav } from "@/components/TopNav";
+
 import { StatsCard } from "@/components/enhanced/StatsCard";
 import { format } from "date-fns";
 import { useEffect } from "react";
@@ -78,7 +78,7 @@ export default function Index() {
 
   return (
     <div className="min-h-screen bg-background">
-      <TopNav />
+      
       
       <main className="container mx-auto px-6 pb-8 pt-8">
         {/* Welcome Section */}

@@ -27,7 +27,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { TopNav } from "@/components/TopNav";
+
 import { HaulerForm } from "@/components/forms/HaulerForm";
 import {
   useHaulers,
@@ -74,7 +74,7 @@ export default function HaulerManagement() {
 
   return (
     <div className="min-h-screen bg-background">
-      <TopNav />
+      
       
       <div className="container mx-auto px-6 py-8">
         <div className="flex justify-between items-center mb-6">

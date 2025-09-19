@@ -40,7 +40,7 @@ import {
   Building,
   Trash2
 } from "lucide-react";
-import { TopNav } from "@/components/TopNav";
+
 import { 
   AlertDialog, 
   AlertDialogAction, 
@@ -317,7 +317,6 @@ export default function EnhancedRoutesToday() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <TopNav />
         <main className="container py-6">
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="flex flex-col items-center gap-4">
@@ -332,7 +331,7 @@ export default function EnhancedRoutesToday() {
 
   return (
     <div className="min-h-screen bg-background">
-      <TopNav />
+      
       <main>
         {/* Enhanced Header */}
         <div className="bg-gradient-to-br from-background to-secondary/20 border-b border-border/20">

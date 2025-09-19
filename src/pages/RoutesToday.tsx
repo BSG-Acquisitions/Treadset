@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { TopNav } from "@/components/TopNav";
+
 import { Building, MapPin, Calendar, CheckCircle2, Clock, AlertCircle, Package, MoreVertical, Move, ChevronLeft, ChevronRight } from "lucide-react";
 import { format, addDays, subDays, startOfWeek, addWeeks, subWeeks } from "date-fns";
 
@@ -67,7 +67,6 @@ export default function RoutesToday() {
   if (isAnyDayLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <TopNav />
         <main className="container py-10">
           <p className="text-muted-foreground">Loading route data...</p>
         </main>
@@ -77,7 +76,7 @@ export default function RoutesToday() {
 
   return (
     <div className="min-h-screen bg-background">
-      <TopNav />
+      
       <main className="container py-4 sm:py-8 px-4 sm:px-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 sm:mb-6">
           <div>

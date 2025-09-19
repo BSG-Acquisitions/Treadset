@@ -3,7 +3,7 @@ import { useAssignments } from "@/hooks/usePickups";
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
 import { formatTime, formatDate } from "@/lib/formatters";
-import { TopNav } from "@/components/TopNav";
+
 
 export default function RoutesPrintToday() {
   useEffect(() => {
@@ -40,7 +40,6 @@ export default function RoutesPrintToday() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <TopNav />
         <div className="p-8 text-center">
           <div className="animate-pulse space-y-4">
             <div className="h-8 bg-muted rounded w-48 mx-auto"></div>
@@ -54,7 +53,7 @@ export default function RoutesPrintToday() {
 
   return (
     <div className="min-h-screen bg-background">
-      <TopNav />
+      
       <div className="min-h-screen">
       {/* Screen-only controls */}
       <div className="print-hidden bg-background border-b border-border p-6">

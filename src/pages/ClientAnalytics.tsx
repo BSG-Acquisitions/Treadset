@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { ClientAnalyticsDashboard } from "@/components/analytics/ClientAnalyticsDashboard";
-import { TopNav } from "@/components/TopNav";
+
 import { BSGLogo } from "@/components/BSGLogo";
 
 export default function ClientAnalytics() {
@@ -10,7 +10,7 @@ export default function ClientAnalytics() {
 
   return (
     <div className="min-h-screen bg-background">
-      <TopNav />
+      
       
       {/* Header with subtle background */}
       <div className="relative overflow-hidden bg-gradient-to-br from-background to-secondary/20 border-b border-border/20">

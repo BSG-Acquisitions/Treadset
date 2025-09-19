@@ -1,5 +1,5 @@
 import { ManifestReceiversView } from "@/components/ManifestReceiversView";
-import { TopNav } from "@/components/TopNav";
+
 import { useRealtimeUpdates } from "@/hooks/useRealtimeUpdates";
 
 export default function ReceiverSignatures() {
@@ -7,7 +7,7 @@ export default function ReceiverSignatures() {
   
   return (
     <div className="min-h-screen bg-background">
-      <TopNav />
+      
       <ManifestReceiversView />
     </div>
   );

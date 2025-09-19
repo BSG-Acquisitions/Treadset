@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { TopNav } from "@/components/TopNav";
+
 import { Building, MapPin, Calendar, CheckCircle2, Clock, AlertCircle, Package, Truck, MoreVertical, Move } from "lucide-react";
 import { format } from "date-fns";
 
@@ -45,7 +45,6 @@ export default function DriverRoutes() {
     if (pickup) {
       return (
         <div className="min-h-screen bg-background">
-          <TopNav />
           <main className="container py-8">
             <div className="mb-4">
               <Button 
@@ -69,7 +68,6 @@ export default function DriverRoutes() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <TopNav />
         <main className="container py-10">
           <p className="text-muted-foreground">Loading today's routes...</p>
         </main>
@@ -79,7 +77,7 @@ export default function DriverRoutes() {
 
   return (
     <div className="min-h-screen bg-background">
-      <TopNav />
+      
       <main className="container py-8">
         <div className="flex items-center justify-between mb-8">
           <div>

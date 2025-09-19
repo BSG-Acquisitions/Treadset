@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Upload, Download, Edit } from "lucide-react";
 import { SchedulePickupDialog } from "@/components/SchedulePickupDialog";
 import { SchedulePickupWithDriver } from "@/components/SchedulePickupWithDriver";
-import { TopNav } from "@/components/TopNav";
+
 
 import type { Database } from "@/integrations/supabase/types";
 
@@ -188,7 +188,7 @@ export default function Clients() {
 
   return (
     <div className="min-h-screen bg-background">
-      <TopNav />
+      
       
       <main className="container py-6">
         <header className="mb-6">

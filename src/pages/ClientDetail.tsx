@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DollarSign, FileText, Calendar, CreditCard, MapPin, Plus, CheckCircle2 } from "lucide-react";
-import { TopNav } from "@/components/TopNav";
+
 
 export default function ClientDetail() {
   const { id } = useParams();
@@ -30,7 +30,6 @@ export default function ClientDetail() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <TopNav />
         <main className="container py-10">
           <p className="text-muted-foreground">Loading...</p>
         </main>
@@ -41,7 +40,6 @@ export default function ClientDetail() {
   if (!client) {
     return (
       <div className="min-h-screen bg-background">
-        <TopNav />
         <main className="container py-10">
           <p className="text-muted-foreground">Client not found.</p>
         </main>
@@ -51,7 +49,7 @@ export default function ClientDetail() {
 
   return (
     <div className="min-h-screen bg-background">
-      <TopNav />
+      
       <main>
       <header className="container py-6 flex items-center justify-between">
         <div>

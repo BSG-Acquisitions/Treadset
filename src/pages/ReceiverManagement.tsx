@@ -27,7 +27,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { TopNav } from "@/components/TopNav";
+
 import { ReceiverForm } from "@/components/forms/ReceiverForm";
 import {
   useReceivers,
@@ -74,7 +74,7 @@ export default function ReceiverManagement() {
 
   return (
     <div className="min-h-screen bg-background">
-      <TopNav />
+      
       
       <div className="container mx-auto px-6 py-8">
         <div className="flex justify-between items-center mb-6">

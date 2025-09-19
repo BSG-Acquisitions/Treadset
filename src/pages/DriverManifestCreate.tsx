@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { TopNav } from "@/components/TopNav";
+
 import { ArrowLeft, Save, Building, MapPin, Calendar, Truck, Upload, FileText } from "lucide-react";
 import { PDFDocument, PDFForm, PDFTextField } from "pdf-lib";
 
@@ -375,7 +375,6 @@ export default function DriverManifestCreate() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <TopNav />
         <div className="container mx-auto p-6">
           <div className="text-center py-8">Loading...</div>
         </div>
@@ -385,7 +384,7 @@ export default function DriverManifestCreate() {
 
   return (
     <div className="min-h-screen bg-background">
-      <TopNav />
+      
       <div className="container mx-auto p-6 space-y-6">
         
         {/* Header */}

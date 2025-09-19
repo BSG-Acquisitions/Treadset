@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { TopNav } from "@/components/TopNav";
+
 import { 
   ArrowLeft, 
   Mail, 
@@ -143,7 +143,6 @@ export default function DriverManifestView() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <TopNav />
         <div className="container mx-auto p-6">
           <div className="text-center py-8">Loading manifest...</div>
         </div>
@@ -154,7 +153,6 @@ export default function DriverManifestView() {
   if (!manifest) {
     return (
       <div className="min-h-screen bg-background">
-        <TopNav />
         <div className="container mx-auto p-6">
           <div className="text-center py-8">
             <h1 className="text-2xl font-bold mb-4">Manifest Not Found</h1>
@@ -182,7 +180,7 @@ export default function DriverManifestView() {
 
   return (
     <div className="min-h-screen bg-background">
-      <TopNav />
+      
       <div className="container mx-auto p-6 space-y-6">
         
         {/* Header */}

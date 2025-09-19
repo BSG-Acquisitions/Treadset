@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { TopNav } from '@/components/TopNav';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -57,7 +57,6 @@ export default function DriverManifests() {
   if (manifestsLoading || assignmentsLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <TopNav />
         <div className="container mx-auto p-6">
           <div className="text-center py-8">Loading...</div>
         </div>
@@ -67,7 +66,7 @@ export default function DriverManifests() {
 
   return (
     <div className="min-h-screen bg-background">
-      <TopNav />
+      
       
       <div className="container mx-auto p-6 space-y-6">
         <div className="flex items-center justify-between">

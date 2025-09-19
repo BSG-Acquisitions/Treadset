@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { TopNav } from '@/components/TopNav';
+
 import { BrandHeader } from '@/components/BrandHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -55,7 +55,7 @@ export default function DriverDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
-      <TopNav />
+      
       
       <main className="container mx-auto px-4 py-6 space-y-6">
         <BrandHeader 

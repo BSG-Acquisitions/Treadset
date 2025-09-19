@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { TopNav } from "@/components/TopNav";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -166,7 +166,6 @@ const handleGenerateTestOverlay = async () => {
 if (preferencesLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <TopNav />
         <main className="container mx-auto px-6 pb-8 pt-8">
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="flex flex-col items-center gap-4">
@@ -182,7 +181,6 @@ if (preferencesLoading) {
   if (preferencesError) {
     return (
       <div className="min-h-screen bg-background">
-        <TopNav />
         <main className="container mx-auto px-6 pb-8 pt-8">
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="flex flex-col items-center gap-4 text-center">
@@ -200,7 +198,7 @@ if (preferencesLoading) {
 
   return (
     <div className="min-h-screen bg-background">
-      <TopNav />
+      
       
       <main className="container mx-auto px-6 pb-8 pt-8">
         <FadeIn>

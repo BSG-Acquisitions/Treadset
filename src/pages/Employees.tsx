@@ -15,7 +15,7 @@ import {
 import { Users, UserCheck, UserX, Mail, Phone, Truck, Shield, HeadphonesIcon, DollarSign } from 'lucide-react';
 import { formatDate, formatPhoneNumber } from '@/lib/formatters';
 import { SkeletonTable, EmptyState } from '@/components/ui/loading-states';
-import { TopNav } from '@/components/TopNav';
+
 import { StatsCard } from '@/components/enhanced/StatsCard';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -76,7 +76,7 @@ export default function EmployeesPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <TopNav />
+      
       
       <div className="space-y-8 p-4 sm:p-6 max-w-7xl mx-auto pt-8 overflow-hidden">
         {/* Action Bar */}

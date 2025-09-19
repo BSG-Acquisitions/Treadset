@@ -13,7 +13,7 @@ import { PlacesAutocomplete } from "@/components/PlacesAutocomplete";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar, MapPin, Phone, Mail, Building } from "lucide-react";
-import { TopNav } from "@/components/TopNav";
+
 
 const publicBookingSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -103,7 +103,7 @@ export default function Book() {
 
   return (
     <div className="min-h-screen bg-background">
-      <TopNav />
+      
       
       <main>
         <header className="container py-12 text-center">
