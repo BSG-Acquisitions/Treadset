@@ -35,11 +35,16 @@ import { BSGLogoActual } from "@/components/BSGLogoActual";
 import { Button } from "@/components/ui/button";
 
 export function AppSidebar() {
-  const { state } = useSidebar();
+  const { state, setOpenMobile } = useSidebar();
   const location = useLocation();
   const { user, signOut, hasAnyRole } = useAuth();
   const currentPath = location.pathname;
   const isCollapsed = state === "collapsed";
+
+  const handleNavClick = () => {
+    // Close sidebar on mobile when navigation item is clicked
+    setOpenMobile(false);
+  };
 
   const isActive = (path: string) => {
     if (path === '/') return currentPath === '/';
@@ -112,6 +117,7 @@ export function AppSidebar() {
                   <SidebarMenuButton asChild className="h-12">
                     <NavLink 
                       to={item.path} 
+                      onClick={handleNavClick}
                       className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${getNavClass(item.path)}`}
                     >
                       <item.icon className={`h-5 w-5 flex-shrink-0 ${isCollapsed ? 'mx-auto' : ''}`} />
@@ -140,6 +146,7 @@ export function AppSidebar() {
                     <SidebarMenuButton asChild className="h-12">
                       <NavLink 
                         to={item.path} 
+                        onClick={handleNavClick}
                         className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${getNavClass(item.path)}`}
                       >
                         <item.icon className={`h-5 w-5 flex-shrink-0 ${isCollapsed ? 'mx-auto' : ''}`} />
