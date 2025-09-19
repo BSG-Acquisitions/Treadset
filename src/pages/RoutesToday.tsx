@@ -14,7 +14,12 @@ import { format, addDays, subDays, startOfWeek, addWeeks, subWeeks } from "date-
 
 export default function RoutesToday() {
   const [currentWeek, setCurrentWeek] = useState(startOfWeek(new Date()));
-  const [activeDay, setActiveDay] = useState(new Date().toISOString().split('T')[0]);
+  // Initialize with local date string to avoid timezone issues
+  const today = new Date();
+  const todayYear = today.getFullYear();
+  const todayMonth = String(today.getMonth() + 1).padStart(2, '0');
+  const todayDay = String(today.getDate()).padStart(2, '0');
+  const [activeDay, setActiveDay] = useState(`${todayYear}-${todayMonth}-${todayDay}`);
   const [movePickupOpen, setMovePickupOpen] = useState(false);
   const [selectedPickupToMove, setSelectedPickupToMove] = useState<any>(null);
   
@@ -23,7 +28,11 @@ export default function RoutesToday() {
   
   // Fetch pickups for all days in the week
   const weekPickups = weekDays.map(day => {
-    const dateStr = day.toISOString().split('T')[0];
+    // Use local date string to avoid timezone issues
+    const year = day.getFullYear();
+    const month = String(day.getMonth() + 1).padStart(2, '0');
+    const dayOfMonth = String(day.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${dayOfMonth}`;
     // eslint-disable-next-line react-hooks/rules-of-hooks
     const { data: pickups = [], isLoading } = usePickups(dateStr);
     return { date: dateStr, pickups, isLoading, day };
@@ -41,7 +50,11 @@ export default function RoutesToday() {
   const goToToday = () => {
     const today = new Date();
     setCurrentWeek(startOfWeek(today));
-    setActiveDay(today.toISOString().split('T')[0]);
+    // Use local date string to avoid timezone issues
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    setActiveDay(`${year}-${month}-${day}`);
   };
 
   const getStatusColor = (status: string) => {
@@ -112,9 +125,20 @@ export default function RoutesToday() {
           <Tabs value={activeDay} onValueChange={setActiveDay}>
             <TabsList className="grid w-full grid-cols-7 h-auto">
               {weekDays.map((day) => {
-                const dateStr = day.toISOString().split('T')[0];
+                // Use local date string to avoid timezone issues
+                const year = day.getFullYear();
+                const month = String(day.getMonth() + 1).padStart(2, '0');
+                const dayOfMonth = String(day.getDate()).padStart(2, '0');
+                const dateStr = `${year}-${month}-${dayOfMonth}`;
                 const dayData = weekPickups.find(d => d.date === dateStr);
-                const isToday = dateStr === new Date().toISOString().split('T')[0];
+                
+                // Compare using local date string
+                const today = new Date();
+                const todayYear = today.getFullYear();
+                const todayMonth = String(today.getMonth() + 1).padStart(2, '0');
+                const todayDay = String(today.getDate()).padStart(2, '0');
+                const todayStr = `${todayYear}-${todayMonth}-${todayDay}`;
+                const isToday = dateStr === todayStr;
                 
                 return (
                   <TabsTrigger 

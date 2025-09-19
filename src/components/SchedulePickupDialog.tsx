@@ -393,6 +393,7 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
                             return date < today;
                           }}
                           initialFocus
+                          className={cn("p-3 pointer-events-auto")}
                         />
                       </PopoverContent>
                     </Popover>

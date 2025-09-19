@@ -53,6 +53,24 @@ export const formatPercentage = (
 };
 
 /**
+ * Formats a Date object to a local date string (YYYY-MM-DD) without timezone conversion
+ * This avoids issues where toISOString() converts to UTC and can shift dates by one day
+ */
+export const formatLocalDateString = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+/**
+ * Gets today's date as a local date string (YYYY-MM-DD)
+ */
+export const getTodayLocalDateString = (): string => {
+  return formatLocalDateString(new Date());
+};
+
+/**
  * Format dates with consistent locale support
  */
 export const formatDate = (

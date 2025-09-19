@@ -78,8 +78,13 @@ interface OptimizedRoute {
 }
 
 export default function EnhancedRoutesToday() {
+  // Initialize activeDay with current local date string to avoid timezone issues
   const [currentWeek, setCurrentWeek] = useState(startOfWeek(new Date()));
-  const [activeDay, setActiveDay] = useState(new Date().toISOString().split('T')[0]);
+  const today = new Date();
+  const todayYear = today.getFullYear();
+  const todayMonth = String(today.getMonth() + 1).padStart(2, '0');
+  const todayDay = String(today.getDate()).padStart(2, '0');
+  const [activeDay, setActiveDay] = useState(`${todayYear}-${todayMonth}-${todayDay}`);
   const [selectedVehicle, setSelectedVehicle] = useState<string>('all');
   const [optimizedRoutes, setOptimizedRoutes] = useState<OptimizedRoute[]>([]);
   const [isOptimizing, setIsOptimizing] = useState(false);
@@ -107,7 +112,11 @@ export default function EnhancedRoutesToday() {
   const goToToday = () => {
     const today = new Date();
     setCurrentWeek(startOfWeek(today));
-    setActiveDay(today.toISOString().split('T')[0]);
+    // Use local date string to avoid timezone issues
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    setActiveDay(`${year}-${month}-${day}`);
   };
 
   const optimizeRoutes = useCallback(async () => {
@@ -400,8 +409,19 @@ export default function EnhancedRoutesToday() {
             <Tabs value={activeDay} onValueChange={setActiveDay}>
               <TabsList className="grid w-full grid-cols-7">
                 {weekDays.map((day) => {
-                  const dateStr = day.toISOString().split('T')[0];
-                  const isToday = dateStr === new Date().toISOString().split('T')[0];
+                  // Use local date string to avoid timezone issues
+                  const year = day.getFullYear();
+                  const month = String(day.getMonth() + 1).padStart(2, '0');
+                  const dayOfMonth = String(day.getDate()).padStart(2, '0');
+                  const dateStr = `${year}-${month}-${dayOfMonth}`;
+                  
+                  // Compare using local date string
+                  const today = new Date();
+                  const todayYear = today.getFullYear();
+                  const todayMonth = String(today.getMonth() + 1).padStart(2, '0');
+                  const todayDay = String(today.getDate()).padStart(2, '0');
+                  const todayStr = `${todayYear}-${todayMonth}-${todayDay}`;
+                  const isToday = dateStr === todayStr;
                   
                   return (
                     <TabsTrigger 
