@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +25,8 @@ interface DriverAssignmentInterfaceProps {
     organization_id?: string;
     estimated_arrival?: string;
     actual_arrival?: string;
-    pickup: {
+    pickup_id: string;
+    pickup?: {
       id: string;
       client_id: string;
       pickup_date: string;
@@ -47,7 +48,7 @@ interface DriverAssignmentInterfaceProps {
         latitude?: number;
         longitude?: number;
       };
-    };
+    } | null;
     vehicle?: {
       id: string;
       name: string;
@@ -60,10 +61,29 @@ interface DriverAssignmentInterfaceProps {
 
 export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssignmentInterfaceProps) {
   const [showManifestWizard, setShowManifestWizard] = useState(false);
-  const [manifestId, setManifestId] = useState<string | null>(assignment.pickup.manifest_id || null);
+  const [manifestId, setManifestId] = useState<string | null>(assignment.pickup?.manifest_id ?? null);
+  const [pickup, setPickup] = useState<DriverAssignmentInterfaceProps['assignment']['pickup'] | null>(assignment.pickup ?? null);
   const updateAssignmentStatus = useUpdateAssignmentStatus();
   const { toast } = useToast();
 
+  // Ensure pickup details are loaded when missing
+  useEffect(() => {
+    const loadPickup = async () => {
+      if (!pickup && assignment.pickup_id) {
+        const { data, error } = await supabase
+          .from('pickups')
+          .select(`
+            id, client_id, pickup_date, preferred_window, pte_count, otr_count, tractor_count, notes, manifest_id,
+            client:clients(id, company_name, email),
+            location:locations(id, address, name, latitude, longitude)
+          `)
+          .eq('id', assignment.pickup_id)
+          .maybeSingle();
+        if (!error && data) setPickup(data as any);
+      }
+    };
+    loadPickup();
+  }, [assignment.pickup_id, pickup]);
   const handleStartRoute = async () => {
     try {
       await updateAssignmentStatus.mutateAsync({
@@ -82,12 +102,31 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
 
   const handleCreateManifest = async () => {
     try {
-      // Create a new manifest for this pickup
-      const { data: newManifest, error } = await supabase
+      // Ensure we have pickup details
+      let p = pickup as any;
+      if (!p && assignment.pickup_id) {
+        const { data, error } = await supabase
+          .from('pickups')
+          .select('id, client_id')
+          .eq('id', assignment.pickup_id)
+          .maybeSingle();
+        if (error || !data) {
+          toast({
+            title: 'Pickup unavailable',
+            description: 'Pickup details could not be loaded. Please try again.',
+            variant: 'destructive'
+          });
+          return;
+        }
+        p = data;
+        setPickup(data as any);
+      }
+
+      const { data: newManifest, error: manifestError } = await supabase
         .from('manifests')
         .insert({
-          pickup_id: assignment.pickup.id,
-          client_id: assignment.pickup.client_id,
+          pickup_id: p.id,
+          client_id: p.client_id,
           organization_id: assignment.organization_id,
           driver_id: assignment.driver_id,
           status: 'DRAFT',
@@ -96,22 +135,22 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
         .select()
         .single();
 
-      if (error) throw error;
+      if (manifestError) throw manifestError;
 
       // Update pickup with manifest_id
       await supabase
         .from('pickups')
         .update({ manifest_id: newManifest.id })
-        .eq('id', assignment.pickup.id);
+        .eq('id', p.id);
 
       setManifestId(newManifest.id);
       setShowManifestWizard(true);
     } catch (error) {
       console.error('Failed to create manifest:', error);
       toast({
-        title: "Error",
-        description: "Failed to create manifest. Please try again.",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Failed to create manifest. Please try again.',
+        variant: 'destructive'
       });
     }
   };
@@ -153,15 +192,15 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
           <div className="space-y-4">
             {/* Client Info */}
             <div className="bg-secondary/20 rounded-lg p-4">
-              <div className="font-medium text-lg">{assignment.pickup.client?.company_name}</div>
+              <div className="font-medium text-lg">{pickup?.client?.company_name || 'Unknown Client'}</div>
               <div className="text-sm text-muted-foreground flex items-center gap-2">
                 <MapPin className="h-4 w-4" />
-                {assignment.pickup.location?.address}
+                {pickup?.location?.address || 'No address available'}
               </div>
-              {assignment.pickup.preferred_window && (
+              {pickup?.preferred_window && (
                 <div className="text-sm text-muted-foreground flex items-center gap-2">
                   <Clock className="h-4 w-4" />
-                  Preferred: {assignment.pickup.preferred_window}
+                  Preferred: {pickup.preferred_window}
                 </div>
               )}
               <div className="mt-2">
@@ -191,23 +230,23 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
             {/* Expected Counts */}
             <div className="grid grid-cols-3 gap-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-brand-primary">{assignment.pickup.pte_count}</div>
+                <div className="text-2xl font-bold text-brand-primary">{pickup?.pte_count ?? 0}</div>
                 <div className="text-xs text-muted-foreground">PTE Tires</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-brand-primary">{assignment.pickup.otr_count}</div>
+                <div className="text-2xl font-bold text-brand-primary">{pickup?.otr_count ?? 0}</div>
                 <div className="text-xs text-muted-foreground">OTR Tires</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-brand-primary">{assignment.pickup.tractor_count}</div>
+                <div className="text-2xl font-bold text-brand-primary">{pickup?.tractor_count ?? 0}</div>
                 <div className="text-xs text-muted-foreground">Tractor Tires</div>
               </div>
             </div>
 
-            {assignment.pickup.notes && (
+            {pickup?.notes && (
               <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
                 <div className="text-sm font-medium text-yellow-800">Notes:</div>
-                <div className="text-sm text-yellow-700">{assignment.pickup.notes}</div>
+                <div className="text-sm text-yellow-700">{pickup?.notes}</div>
               </div>
             )}
           </div>
