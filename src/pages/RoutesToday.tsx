@@ -162,21 +162,18 @@ export default function RoutesToday() {
               })}
             </TabsList>
             
-            {weekDays.map((day) => {
-              // Use local date string to avoid timezone issues
-              const year = day.getFullYear();
-              const month = String(day.getMonth() + 1).padStart(2, '0');
-              const dayOfMonth = String(day.getDate()).padStart(2, '0');
-              const dateStr = `${year}-${month}-${dayOfMonth}`;
-              const dayData = weekPickups.find(d => d.date === dateStr);
-              const dayLocal = new Date(year, parseInt(month, 10) - 1, parseInt(dayOfMonth, 10));
-              
-              return (
-                <TabsContent key={dateStr} value={dateStr} className="mt-6">
+            {/* Render only the active day's content to avoid any date mismatches */}
+            <TabsContent value={activeDay} className="mt-6">
+              {(() => {
+                const [y, m, d] = activeDay.split('-').map(Number);
+                const activeDateObj = new Date(y, (m || 1) - 1, d || 1);
+                const dayData = activeDayData;
+                
+                return (
                   <div className="space-y-4">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
                       <h3 className="text-base sm:text-lg font-medium">
-                        {format(dayLocal, 'EEEE, MMM d, yyyy')}
+                        {format(activeDateObj, 'EEEE, MMM d, yyyy')}
                       </h3>
                       <div className="text-xs sm:text-sm text-muted-foreground">
                         {dayData?.pickups.length || 0} pickups scheduled
@@ -257,7 +254,7 @@ export default function RoutesToday() {
                                          </div>
                                        )}
                                      </div>
-                                     
+                                    
                                      <div className="flex items-center gap-2 w-full sm:w-auto">
                                       <CompletePickupDialog
                                         pickup={pickup}
@@ -296,9 +293,9 @@ export default function RoutesToday() {
                       </Card>
                     )}
                   </div>
-                </TabsContent>
-              );
-            })}
+                );
+              })()}
+            </TabsContent>
           </Tabs>
         </div>
         
