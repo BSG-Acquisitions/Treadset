@@ -90,7 +90,7 @@ export default function DriverRoutes() {
               My Assignments
             </h1>
             <p className="text-muted-foreground">
-              {format(new Date(selectedDate), 'EEEE, MMMM d, yyyy')} • {assignments.length} stops scheduled
+              {format(new Date(selectedDate + 'T00:00:00'), 'EEEE, MMMM d, yyyy')} • {assignments.length} stops scheduled
             </p>
           </div>
           <div className="flex items-center gap-2">
