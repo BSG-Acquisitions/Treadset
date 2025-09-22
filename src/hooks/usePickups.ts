@@ -181,7 +181,7 @@ export const useSchedulePickup = () => {
         }
 
         // Set driver_id if provided
-        if (data.driverId) {
+        if (data.driverId && data.driverId !== '') {
           assignmentData.driver_id = data.driverId;
         }
 

@@ -372,13 +372,10 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a driver" />
+                          <SelectValue placeholder="Select a driver (optional)" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">
-                          <span className="text-muted-foreground">No driver assigned</span>
-                        </SelectItem>
                         {employees?.filter(emp => emp.isActive).map((employee) => (
                           <SelectItem key={employee.id} value={employee.id}>
                             <div className="flex items-center gap-2">
