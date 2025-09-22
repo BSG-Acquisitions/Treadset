@@ -63,8 +63,27 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
   const updateAssignmentStatus = useUpdateAssignmentStatus();
   const { toast } = useToast();
 
-  // Use pickup data from assignment - it should already be loaded by useDriverAssignments
-  const pickup = assignment.pickup;
+  // Use pickup data with fallback fetch if missing
+  const [pickup, setPickup] = useState<DriverAssignmentInterfaceProps['assignment']['pickup']>(assignment.pickup ?? null);
+
+  // Fallback: fetch pickup if nested relation came back null (RLS timing, etc.)
+  useEffect(() => {
+    const loadPickup = async () => {
+      if (!pickup && assignment.pickup_id) {
+        const { data, error } = await supabase
+          .from('pickups')
+          .select(`
+            id, client_id, pickup_date, preferred_window, pte_count, otr_count, tractor_count, notes, manifest_id, status,
+            client:clients(id, company_name, email),
+            location:locations(id, address, name, latitude, longitude)
+          `)
+          .eq('id', assignment.pickup_id)
+          .maybeSingle();
+        if (!error && data) setPickup(data as any);
+      }
+    };
+    loadPickup();
+  }, [assignment.pickup_id, pickup]);
   
   // Debug logging
   console.log('DriverAssignmentInterface - Assignment:', assignment);
