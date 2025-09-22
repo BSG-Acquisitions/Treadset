@@ -43,10 +43,6 @@ export function ClientForm({ initialData, onSubmit, onCancel, isLoading }: Clien
       state: initialData?.state || "",
       zip: initialData?.zip || "",
       county: initialData?.county || "",
-      physical_address: initialData?.physical_address || "",
-      physical_city: initialData?.physical_city || "",
-      physical_state: initialData?.physical_state || "",
-      physical_zip: initialData?.physical_zip || "",
     },
   });
 
@@ -180,7 +176,7 @@ export function ClientForm({ initialData, onSubmit, onCancel, isLoading }: Clien
 
         {/* Mailing Address Section */}
         <div className="space-y-4">
-          <h3 className="text-lg font-medium">Mailing Address</h3>
+          <h3 className="text-lg font-medium">Address Information</h3>
           <div className="grid md:grid-cols-2 gap-4">
             <FormField
               control={form.control}
@@ -246,68 +242,6 @@ export function ClientForm({ initialData, onSubmit, onCancel, isLoading }: Clien
                   <FormLabel>County</FormLabel>
                   <FormControl>
                     <Input placeholder="Wayne" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        </div>
-
-        {/* Physical Address Section (if different) */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium">Physical Address (if different from mailing)</h3>
-          <div className="grid md:grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="physical_address"
-              render={({ field }) => (
-                <FormItem className="md:col-span-2">
-                  <FormLabel>Street Address</FormLabel>
-                  <FormControl>
-                    <Input placeholder="123 Business Blvd" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="physical_city"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>City</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Detroit" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="physical_state"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>State</FormLabel>
-                  <FormControl>
-                    <Input placeholder="MI" maxLength={2} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="physical_zip"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>ZIP Code</FormLabel>
-                  <FormControl>
-                    <Input placeholder="48207" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

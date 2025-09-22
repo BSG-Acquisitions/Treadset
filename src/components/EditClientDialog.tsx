@@ -31,7 +31,7 @@ export function EditClientDialog({ client, trigger }: EditClientDialogProps) {
 
   const handleSubmit = async (data: ClientFormData & { address?: string; access_notes?: string }) => {
     try {
-      // Update client
+      // Update client with ALL form data including address fields
       await updateClient.mutateAsync({
         id: client.id,
         updates: {
@@ -44,6 +44,12 @@ export function EditClientDialog({ client, trigger }: EditClientDialogProps) {
           tags: data.tags || null,
           sla_weeks: data.sla_weeks || null,
           pricing_tier_id: data.pricing_tier_id || null,
+          // CRITICAL FIX: Save all address fields that were missing
+          mailing_address: data.mailing_address || null,
+          city: data.city || null,
+          state: data.state || null,
+          zip: data.zip || null,
+          county: data.county || null,
         }
       });
 
