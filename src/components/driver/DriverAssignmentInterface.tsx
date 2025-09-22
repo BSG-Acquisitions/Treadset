@@ -221,28 +221,27 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
                   <p className="text-sm text-muted-foreground">
                     Use the same workflow as admin interface to complete pickup and generate manifest.
                   </p>
-                  <CompletePickupDialog
-                    pickup={{
-                      id: pickup.id,
-                      client: pickup.client,
-                      location: pickup.location,
-                      pickup_date: pickup.pickup_date,
-                      pte_count: pickup.pte_count ?? 0,
-                      otr_count: pickup.otr_count ?? 0,
-                      tractor_count: pickup.tractor_count ?? 0,
-                      notes: pickup.notes,
-                      status: assignment.status
-                    }}
-                    trigger={
-                      <Button 
-                        variant="outline" 
-                        className="w-full h-12"
-                        disabled={assignment.status === 'completed'}
-                      >
-                        <FileText className="h-5 w-5 mr-2" />
-                        Complete Pickup & Generate Manifest
-                      </Button>
-                    }
+                    <CompletePickupDialog
+                      pickup={{
+                        id: pickup.id,
+                        client: pickup.client,
+                        location: pickup.location,
+                        pickup_date: pickup.pickup_date,
+                        pte_count: pickup.pte_count ?? 0,
+                        otr_count: pickup.otr_count ?? 0,
+                        tractor_count: pickup.tractor_count ?? 0,
+                        notes: pickup.notes,
+                        status: assignment.status
+                      }}
+                      trigger={
+                        <Button 
+                          variant="outline" 
+                          className="w-full h-12"
+                        >
+                          <FileText className="h-5 w-5 mr-2" />
+                          Complete Pickup & Generate Manifest
+                        </Button>
+                      }
                   />
                 </div>
               </>
