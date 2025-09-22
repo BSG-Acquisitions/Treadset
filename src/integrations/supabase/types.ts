@@ -1000,6 +1000,7 @@ export type Database = {
           dropoff_id: string | null
           emailed_to: string[] | null
           finalized_by: string | null
+          hauler_id: string | null
           id: string
           location_id: string | null
           manifest_number: string
@@ -1052,6 +1053,7 @@ export type Database = {
           dropoff_id?: string | null
           emailed_to?: string[] | null
           finalized_by?: string | null
+          hauler_id?: string | null
           id?: string
           location_id?: string | null
           manifest_number: string
@@ -1104,6 +1106,7 @@ export type Database = {
           dropoff_id?: string | null
           emailed_to?: string[] | null
           finalized_by?: string | null
+          hauler_id?: string | null
           id?: string
           location_id?: string | null
           manifest_number?: string
@@ -1174,6 +1177,20 @@ export type Database = {
             columns: ["finalized_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manifests_hauler_id_fkey"
+            columns: ["hauler_id"]
+            isOneToOne: false
+            referencedRelation: "hauler_overlay_view"
+            referencedColumns: ["hauler_id"]
+          },
+          {
+            foreignKeyName: "manifests_hauler_id_fkey"
+            columns: ["hauler_id"]
+            isOneToOne: false
+            referencedRelation: "haulers"
             referencedColumns: ["id"]
           },
           {

@@ -417,6 +417,7 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
         client_id: pickupRef?.client_id || pickup.client?.id || null,
         location_id: pickupRef?.location_id || pickup.location?.id || null,
         driver_id: user?.id || undefined,
+        hauler_id: selectedHauler?.id || null,
         
         // Tire counts
         pte_off_rim: data.equivalents_off_rim,
