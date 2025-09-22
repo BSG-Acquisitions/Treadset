@@ -10,6 +10,7 @@ import { useCreateManifest } from "@/hooks/useManifests";
 import { useManifestIntegration } from "@/hooks/useManifestIntegration";
 import { ManifestPDFControls } from "./ManifestPDFControls";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSendManifestEmail } from "@/hooks/useSendManifestEmail";
 import {
   Dialog,
   DialogContent,
@@ -126,9 +127,10 @@ interface CompletePickupDialogProps {
     status: string;
   };
   trigger: React.ReactNode;
+  onSuccess?: (manifestId: string, pdfPath?: string) => void;
 }
 
-export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogProps) {
+export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePickupDialogProps) {
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedGenerator, setSelectedGenerator] = useState<Generator | null>(null);
@@ -144,6 +146,7 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
   
   const createManifest = useCreateManifest();
   const manifestIntegration = useManifestIntegration();
+  const sendManifestEmail = useSendManifestEmail();
 
   // Auto-populate generator with client data when dialog opens
   useEffect(() => {
@@ -398,21 +401,6 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
       // Calculate tire equivalents
       const equivalents = calculateEquivalents(data);
 
-      // Update pickup status
-      const { error: pickupError } = await supabase
-        .from('pickups')
-        .update({
-          pte_count: equivalents.totalEquivalents,
-          otr_count: data.otr_count,
-          tractor_count: data.tractor_count,
-          notes: data.notes,
-          status: 'completed',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', pickup.id);
-
-      if (pickupError) throw pickupError;
-
       // Ensure we have client_id and location_id from DB
       const { data: pickupRef, error: pickupRefErr } = await supabase
         .from('pickups')
@@ -500,9 +488,22 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
         acroform_pdf_path: genResult.pdfPath 
       });
 
+      // Send manifest email to client (if available)
+      try {
+        if (pickup.client?.email) {
+          await sendManifestEmail.mutateAsync({ manifestId: manifest.id, to: [pickup.client.email] });
+        }
+      } catch (e) {
+        console.error('Email send failed:', e);
+      }
+
+      // Close dialog and notify parent to update assignment status
+      setOpen(false);
+      if (typeof (onSuccess) === 'function') {
+        onSuccess(manifest.id, genResult.pdfPath);
+      }
+
       queryClient.invalidateQueries({ queryKey: ['pickups'] });
-      
-    } catch (error: any) {
       console.error("Failed to complete pickup:", error);
     } finally {
       setIsSubmitting(false);
