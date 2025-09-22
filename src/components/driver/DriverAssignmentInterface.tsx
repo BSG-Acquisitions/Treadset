@@ -60,28 +60,11 @@ interface DriverAssignmentInterfaceProps {
 }
 
 export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssignmentInterfaceProps) {
-  const [pickup, setPickup] = useState<DriverAssignmentInterfaceProps['assignment']['pickup'] | null>(assignment.pickup ?? null);
   const updateAssignmentStatus = useUpdateAssignmentStatus();
   const { toast } = useToast();
 
-  // Ensure pickup details are loaded when missing
-  useEffect(() => {
-    const loadPickup = async () => {
-      if (!pickup && assignment.pickup_id) {
-        const { data, error } = await supabase
-          .from('pickups')
-          .select(`
-            id, client_id, pickup_date, preferred_window, pte_count, otr_count, tractor_count, notes, manifest_id, status,
-            client:clients(id, company_name, email),
-            location:locations(id, address, name, latitude, longitude)
-          `)
-          .eq('id', assignment.pickup_id)
-          .maybeSingle();
-        if (!error && data) setPickup(data as any);
-      }
-    };
-    loadPickup();
-  }, [assignment.pickup_id, pickup]);
+  // Use pickup data from assignment - it should already be loaded by useDriverAssignments
+  const pickup = assignment.pickup;
   const handleStartRoute = async () => {
     try {
       await updateAssignmentStatus.mutateAsync({
@@ -100,7 +83,6 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
 
   const handlePickupComplete = () => {
     // Refresh data after completion
-    setPickup(null); // Force reload
     onComplete?.();
   };
 
