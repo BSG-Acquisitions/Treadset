@@ -17,6 +17,10 @@ export default function DriverRoutes() {
   const [movePickupOpen, setMovePickupOpen] = useState(false);
   const [selectedPickupToMove, setSelectedPickupToMove] = useState<any>(null);
   const { data: assignments = [], isLoading } = useDriverAssignments(selectedDate);
+  
+  // Debug logging
+  console.log('DriverRoutes - assignments:', assignments);
+  console.log('DriverRoutes - selectedAssignment:', selectedAssignment);
 
   useEffect(() => {
     document.title = "Driver Routes – BSG";

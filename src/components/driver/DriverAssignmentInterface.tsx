@@ -65,6 +65,10 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
 
   // Use pickup data from assignment - it should already be loaded by useDriverAssignments
   const pickup = assignment.pickup;
+  
+  // Debug logging
+  console.log('DriverAssignmentInterface - Assignment:', assignment);
+  console.log('DriverAssignmentInterface - Pickup:', pickup);
   const handleStartRoute = async () => {
     try {
       await updateAssignmentStatus.mutateAsync({
@@ -86,13 +90,25 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
     onComplete?.();
   };
 
-  // Show loading state while pickup is being fetched
+  // Show error state if pickup data is missing
   if (!pickup) {
     return (
       <div className="max-w-2xl mx-auto p-4 space-y-6">
         <Card>
           <CardContent className="p-8 text-center">
-            <div className="text-muted-foreground">Loading pickup details...</div>
+            <div className="text-destructive font-medium">Missing Pickup Data</div>
+            <div className="text-muted-foreground text-sm mt-2">
+              Assignment ID: {assignment.id}<br/>
+              Pickup ID: {assignment.pickup_id}<br/>
+              This assignment may not have proper pickup data associated with it.
+            </div>
+            <Button 
+              onClick={() => window.location.reload()} 
+              variant="outline" 
+              className="mt-4"
+            >
+              Refresh Page
+            </Button>
           </CardContent>
         </Card>
       </div>
