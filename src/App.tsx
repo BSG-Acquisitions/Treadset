@@ -100,14 +100,14 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/routes/today" element={
-              <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher', 'driver']}>
+              <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
                 <AppLayout>
                   <EnhancedRoutesToday />
                 </AppLayout>
               </ProtectedRoute>
             } />
             <Route path="/routes/legacy" element={
-              <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher', 'driver']}>
+              <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
                 <AppLayout>
                   <RoutesToday />
                 </AppLayout>
@@ -121,7 +121,7 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/book" element={
-              <ProtectedRoute roles={['admin', 'ops_manager', 'sales']}>
+              <ProtectedRoute roles={['admin', 'ops_manager', 'sales', 'driver']}>
                 <AppLayout>
                   <Book />
                 </AppLayout>
@@ -142,7 +142,7 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/settings" element={
-              <ProtectedRoute>
+              <ProtectedRoute roles={['admin', 'ops_manager']}>
                 <AppLayout>
                   <Settings />
                 </AppLayout>

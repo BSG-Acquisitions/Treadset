@@ -98,7 +98,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
         {/* Right side - Actions and user menu */}
         <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
           {/* Organization Switcher */}
-          <OrganizationSwitcher />
+          {hasAnyRole(['admin','ops_manager','dispatcher','sales']) && <OrganizationSwitcher />}
           
           {/* Enhanced notifications */}
           <Popover>
@@ -185,18 +185,22 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                 </p>
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link to="/settings" className="flex items-center gap-2">
-                  <Settings className="h-4 w-4" />
-                  Settings
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/integrations" className="flex items-center gap-2">
-                  <CreditCard className="h-4 w-4" />
-                  Integrations
-                </Link>
-              </DropdownMenuItem>
+              {hasAnyRole(['admin','ops_manager']) && (
+                <DropdownMenuItem asChild>
+                  <Link to="/settings" className="flex items-center gap-2">
+                    <Settings className="h-4 w-4" />
+                    Settings
+                  </Link>
+                </DropdownMenuItem>
+              )}
+              {hasAnyRole(['admin']) && (
+                <DropdownMenuItem asChild>
+                  <Link to="/integrations" className="flex items-center gap-2">
+                    <CreditCard className="h-4 w-4" />
+                    Integrations
+                  </Link>
+                </DropdownMenuItem>
+              )}
               {hasAnyRole(['admin', 'ops_manager']) && (
                 <DropdownMenuItem asChild>
                   <Link to="/receiver-signatures" className="flex items-center gap-2">
