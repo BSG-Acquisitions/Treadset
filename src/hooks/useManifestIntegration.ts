@@ -18,13 +18,69 @@ export const convertManifestToAcroForm = (manifestData: any, receiverData?: any)
     // Generator (Client) information - use actual client data
     generator_name: manifestData.client?.company_name || 'Unknown Generator',
     generator_mail_address: manifestData.client?.address || manifestData.location?.address || 'Address not available',
-    generator_city: manifestData.location?.address?.split(',')[1]?.trim() || 'Unknown City',
-    generator_state: manifestData.location?.address?.includes('MI') ? 'MI' : 'Unknown State',
-    generator_zip: manifestData.location?.address?.match(/\d{5}/)?.[0] || 'Unknown Zip',
+    generator_city: (() => {
+      const address = manifestData.location?.address || '';
+      // Try different parsing strategies
+      const parts = address.split(',').map(p => p.trim());
+      if (parts.length >= 2) {
+        return parts[1]; // Second part is usually city
+      }
+      // Try parsing "City State Zip" format
+      const words = address.split(' ');
+      if (words.length >= 3) {
+        // Find state abbreviation (2 letters) and return everything before it
+        const stateIndex = words.findIndex(w => w.length === 2 && w.match(/^[A-Z]{2}$/));
+        if (stateIndex > 0) {
+          return words.slice(0, stateIndex).join(' ');
+        }
+      }
+      return 'Detroit'; // Default fallback
+    })(),
+    generator_state: (() => {
+      const address = manifestData.location?.address || '';
+      // Look for MI, Michigan, or other state patterns
+      if (address.includes('MI') || address.toLowerCase().includes('michigan')) {
+        return 'MI';
+      }
+      // Try to find 2-letter state code
+      const stateMatch = address.match(/\b[A-Z]{2}\b/);
+      return stateMatch ? stateMatch[0] : 'MI'; // Default to MI
+    })(),
+    generator_zip: (() => {
+      const address = manifestData.location?.address || '';
+      // Try different zip code patterns
+      const zipMatch = address.match(/\b\d{5}(-\d{4})?\b/);
+      return zipMatch ? zipMatch[0] : '48207'; // Default Detroit zip
+    })(),
     generator_physical_address: manifestData.location?.address || 'Physical address not available',
-    generator_physical_city: manifestData.location?.address?.split(',')[1]?.trim() || 'Unknown City',
-    generator_physical_state: manifestData.location?.address?.includes('MI') ? 'MI' : 'Unknown State',
-    generator_physical_zip: manifestData.location?.address?.match(/\d{5}/)?.[0] || 'Unknown Zip',
+    generator_physical_city: (() => {
+      const address = manifestData.location?.address || '';
+      const parts = address.split(',').map(p => p.trim());
+      if (parts.length >= 2) {
+        return parts[1];
+      }
+      const words = address.split(' ');
+      if (words.length >= 3) {
+        const stateIndex = words.findIndex(w => w.length === 2 && w.match(/^[A-Z]{2}$/));
+        if (stateIndex > 0) {
+          return words.slice(0, stateIndex).join(' ');
+        }
+      }
+      return 'Detroit';
+    })(),
+    generator_physical_state: (() => {
+      const address = manifestData.location?.address || '';
+      if (address.includes('MI') || address.toLowerCase().includes('michigan')) {
+        return 'MI';
+      }
+      const stateMatch = address.match(/\b[A-Z]{2}\b/);
+      return stateMatch ? stateMatch[0] : 'MI';
+    })(),
+    generator_physical_zip: (() => {
+      const address = manifestData.location?.address || '';
+      const zipMatch = address.match(/\b\d{5}(-\d{4})?\b/);
+      return zipMatch ? zipMatch[0] : '48207';
+    })(),
     generator_county: 'Wayne', // Default for Detroit area
     generator_phone: manifestData.client?.phone || 'Phone not available',
     generator_volume_weight: (() => {
