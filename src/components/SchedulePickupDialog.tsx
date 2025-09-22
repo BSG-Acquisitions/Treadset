@@ -7,6 +7,7 @@ import { useClients } from "@/hooks/useClients";
 import { useLocations } from "@/hooks/useLocations";
 import { useVehicles } from "@/hooks/useVehicles";
 import { useHaulers } from "@/hooks/useHaulers";
+import { useEmployees } from "@/hooks/useEmployees";
 import { SchedulePickupWithDriverDialog } from "./SchedulePickupWithDriverDialog";
 import {
   Dialog,
@@ -60,6 +61,7 @@ const scheduleSchema = z.object({
   assignmentType: z.enum(["vehicle", "hauler"]).default("vehicle"),
   vehicleId: z.string().optional(),
   haulerId: z.string().optional(),
+  driverId: z.string().optional(),
   notes: z.string().optional(),
 }).refine((data) => {
   if (data.assignmentType === "vehicle") {
@@ -90,6 +92,7 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
   const { data: locations } = useLocations(selectedClientId);
   const { data: vehicles } = useVehicles();
   const { data: haulers } = useHaulers();
+  const { data: employees } = useEmployees();
   const schedulePickup = useSchedulePickup();
 
   const form = useForm<ScheduleFormData>({
@@ -104,6 +107,7 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
       assignmentType: "vehicle",
       vehicleId: "",
       haulerId: "",
+      driverId: "",
       notes: "",
     },
   });
@@ -121,6 +125,7 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
         assignmentType: data.assignmentType,
         vehicleId: data.vehicleId,
         haulerId: data.haulerId,
+        driverId: data.driverId,
         notes: data.notes,
       });
       setOpen(false);
@@ -356,6 +361,43 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
                   )}
                 />
               )}
+
+              {/* Driver Assignment Field */}
+              <FormField
+                control={form.control}
+                name="driverId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Assign Driver (Optional)</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a driver" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="">
+                          <span className="text-muted-foreground">No driver assigned</span>
+                        </SelectItem>
+                        {employees?.filter(emp => emp.isActive).map((employee) => (
+                          <SelectItem key={employee.id} value={employee.id}>
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4" />
+                              <span>
+                                {employee.firstName} {employee.lastName}
+                                {employee.email && (
+                                  <span className="text-muted-foreground ml-1">({employee.email})</span>
+                                )}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -19,6 +19,7 @@ export interface SchedulePickupData {
   assignmentType?: 'vehicle' | 'hauler' | 'auto';
   vehicleId?: string;
   haulerId?: string;
+  driverId?: string;
   notes?: string;
 }
 
@@ -179,6 +180,11 @@ export const useSchedulePickup = () => {
           throw new Error('Invalid assignment: must specify either vehicle or hauler');
         }
 
+        // Set driver_id if provided
+        if (data.driverId) {
+          assignmentData.driver_id = data.driverId;
+        }
+
         const { data: manualAssignment, error: assignmentError } = await supabase
           .from('assignments')
           .insert(assignmentData)
@@ -198,6 +204,7 @@ export const useSchedulePickup = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pickups'] });
       queryClient.invalidateQueries({ queryKey: ['assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['driver-assignments'] });
       toast({
         title: "Success",
         description: "Pickup scheduled successfully",
