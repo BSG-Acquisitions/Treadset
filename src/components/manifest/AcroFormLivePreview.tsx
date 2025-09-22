@@ -42,13 +42,22 @@ export const AcroFormLivePreview: React.FC<AcroFormLivePreviewProps> = ({ manife
         // 1) Fetch manifest + minimal joins used by integration
         const { data: manifest, error: fetchError } = await supabase
           .from('manifests')
-          .select(`*, client:clients(company_name, contact_name, phone)`) 
+          .select(`*, client:clients(company_name, contact_name, phone), location:locations(*), hauler:haulers(*)`) 
           .eq('id', manifestId)
           .single();
         if (fetchError) throw fetchError;
 
+        // Fetch receiver information (get the first active receiver as default)
+        const { data: receivers, error: receiverError } = await supabase
+          .from('receivers')
+          .select('*')
+          .eq('is_active', true)
+          .limit(1);
+
+        if (receiverError) throw receiverError;
+
         // 2) Build AcroForm data, apply overrides and computed values
-        const baseData = convertManifestToAcroForm(manifest);
+        const baseData = convertManifestToAcroForm(manifest, receivers?.[0]);
         const withOverrides = {
           ...baseData,
           // apply incoming overrides to acroform data if relevant
