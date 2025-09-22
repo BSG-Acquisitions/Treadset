@@ -17,27 +17,14 @@ type Client = Database["public"]["Tables"]["clients"]["Row"];
 
 interface ClientFormProps {
   initialData?: Partial<Client>;
-  onSubmit: (data: ClientFormData & { address?: string; access_notes?: string }) => void;
+  onSubmit: (data: ClientFormData) => void;
   onCancel: () => void;
   isLoading?: boolean;
 }
 
 export function ClientForm({ initialData, onSubmit, onCancel, isLoading }: ClientFormProps) {
   const { data: pricingTiers = [] } = usePricingTiers();
-  const { data: locations = [] } = useLocations(initialData?.id);
   const [tagInput, setTagInput] = useState("");
-  const [address, setAddress] = useState("");
-  const [accessNotes, setAccessNotes] = useState("");
-
-  // Get the primary location (first one) for this client
-  const primaryLocation = locations[0];
-
-  useEffect(() => {
-    if (primaryLocation) {
-      setAddress(primaryLocation.address || "");
-      setAccessNotes(primaryLocation.access_notes || "");
-    }
-  }, [primaryLocation]);
 
   const form = useForm<ClientFormData>({
     resolver: zodResolver(clientSchema),
@@ -51,6 +38,15 @@ export function ClientForm({ initialData, onSubmit, onCancel, isLoading }: Clien
       tags: initialData?.tags || [],
       sla_weeks: initialData?.sla_weeks || undefined,
       pricing_tier_id: initialData?.pricing_tier_id || undefined,
+      mailing_address: initialData?.mailing_address || "",
+      city: initialData?.city || "",
+      state: initialData?.state || "",
+      zip: initialData?.zip || "",
+      county: initialData?.county || "",
+      physical_address: initialData?.physical_address || "",
+      physical_city: initialData?.physical_city || "",
+      physical_state: initialData?.physical_state || "",
+      physical_zip: initialData?.physical_zip || "",
     },
   });
 
@@ -69,11 +65,7 @@ export function ClientForm({ initialData, onSubmit, onCancel, isLoading }: Clien
   };
 
   const handleFormSubmit = (data: ClientFormData) => {
-    onSubmit({
-      ...data,
-      address,
-      access_notes: accessNotes
-    });
+    onSubmit(data);
   };
 
   const handleTagInputKeyDown = (e: React.KeyboardEvent) => {
@@ -186,23 +178,140 @@ export function ClientForm({ initialData, onSubmit, onCancel, isLoading }: Clien
           />
         </div>
 
-        {/* Address Section */}
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="md:col-span-2">
-            <label className="text-sm font-medium">Primary Address</label>
-            <Input
-              placeholder="Enter full address"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
+        {/* Mailing Address Section */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium">Mailing Address</h3>
+          <div className="grid md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="mailing_address"
+              render={({ field }) => (
+                <FormItem className="md:col-span-2">
+                  <FormLabel>Street Address</FormLabel>
+                  <FormControl>
+                    <Input placeholder="123 Main Street" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="city"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>City</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Detroit" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="state"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>State</FormLabel>
+                  <FormControl>
+                    <Input placeholder="MI" maxLength={2} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="zip"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>ZIP Code</FormLabel>
+                  <FormControl>
+                    <Input placeholder="48207" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="county"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>County</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Wayne" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
           </div>
-          
-          <div className="md:col-span-2">
-            <label className="text-sm font-medium">Access Notes</label>
-            <Input
-              placeholder="Gate codes, special instructions, etc."
-              value={accessNotes}
-              onChange={(e) => setAccessNotes(e.target.value)}
+        </div>
+
+        {/* Physical Address Section (if different) */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium">Physical Address (if different from mailing)</h3>
+          <div className="grid md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="physical_address"
+              render={({ field }) => (
+                <FormItem className="md:col-span-2">
+                  <FormLabel>Street Address</FormLabel>
+                  <FormControl>
+                    <Input placeholder="123 Business Blvd" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="physical_city"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>City</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Detroit" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="physical_state"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>State</FormLabel>
+                  <FormControl>
+                    <Input placeholder="MI" maxLength={2} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="physical_zip"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>ZIP Code</FormLabel>
+                  <FormControl>
+                    <Input placeholder="48207" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
           </div>
         </div>
