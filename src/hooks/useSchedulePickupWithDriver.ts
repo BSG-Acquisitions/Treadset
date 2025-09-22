@@ -71,6 +71,7 @@ export const useSchedulePickupWithDriver = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pickups'] });
       queryClient.invalidateQueries({ queryKey: ['assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['driver-assignments'] });
       toast({
         title: "Success",
         description: "Pickup scheduled and assigned to driver successfully",
