@@ -5,6 +5,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useCreateManifest } from "@/hooks/useManifests";
+import { useManifestIntegration } from "@/hooks/useManifestIntegration";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -102,16 +104,20 @@ export default function DriverManifestCreate() {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   
-  const [pickup, setPickup] = useState<PickupData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [uploadedFilePath, setUploadedFilePath] = useState<string>("");
-  const [originalPdfBytes, setOriginalPdfBytes] = useState<Uint8Array | null>(null);
-
   const pickupId = searchParams.get('pickup');
   const clientId = searchParams.get('client');
   const locationId = searchParams.get('location');
+  
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [pickup, setPickup] = useState<PickupData | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploadedFilePath, setUploadedFilePath] = useState<string>("");
+  const [originalPdfBytes, setOriginalPdfBytes] = useState<Uint8Array | null>(null);
+  
+  // Use the same hooks as the other manifest creation flows
+  const createManifest = useCreateManifest();
+  const manifestIntegration = useManifestIntegration();
 
   const form = useForm<ManifestFormData>({
     resolver: zodResolver(manifestSchema),
@@ -258,100 +264,93 @@ export default function DriverManifestCreate() {
 
     setSaving(true);
     try {
-      // Fill out the original PDF with the form data
-      const pdfDoc = await PDFDocument.load(originalPdfBytes);
-      const form = pdfDoc.getForm();
-      
-      // Fill PDF form fields - these field names would need to match your actual PDF
-      // You would need to inspect your PDF to get the exact field names
-      try {
-        // Generator section
-        const generatorNameField = form.getTextField('generator_name');
-        generatorNameField.setText(data.generator_name);
-        
-        const generatorAddressField = form.getTextField('generator_mailing_address');
-        generatorAddressField.setText(data.generator_mailing_address);
-        
-        // Add more fields as needed based on your PDF's actual field names
-        // You'll need to inspect the PDF to get the correct field names
-        
-      } catch (fieldError) {
-        console.log('Some PDF fields may not exist or have different names:', fieldError);
-      }
-      
-      // Generate the filled PDF
-      const filledPdfBytes = await pdfDoc.save();
-      
-      // Convert to File for upload
-      const filledPdfBlob = new Blob([filledPdfBytes], { type: 'application/pdf' });
-      const filledPdfFile = new File([filledPdfBlob], `filled-manifest-${Date.now()}.pdf`, { type: 'application/pdf' });
-      
-      // Upload the filled PDF
-      const fileExt = 'pdf';
-      const fileName = `manifest-${Date.now()}.${fileExt}`;
-      const filePath = `${new Date().toISOString().split('T')[0]}/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('manifests')
-        .upload(filePath, filledPdfFile);
-
-      if (uploadError) {
-        throw new Error(`File upload failed: ${uploadError.message}`);
-      }
-
-      // Calculate total tires from the new format
-      const totalTires = data.passenger_car_count + data.truck_count + data.oversized_count;
-      const estimatedTotal = totalTires * 25; // $25 per tire base price
-
-      // Generate manifest number (in production, use the DB function)
-      const manifestNumber = `${new Date().toISOString().split('T')[0].replace(/-/g, '')}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
-
+      // 1. Create manifest record using the same hooks as other flows
       const manifestData = {
-        client_id: pickup?.client_id || clientId,
-        location_id: pickup?.location_id || locationId,
-        pickup_id: pickupId,
-        organization_id: '00000000-0000-0000-0000-000000000000', // TODO: Get from context
-        manifest_number: manifestNumber,
-        pdf_path: filePath,
+        client_id: pickup?.client_id || clientId!,
+        location_id: pickup?.location_id || locationId!,
+        pickup_id: pickupId || undefined,
         
-        // Map EGLE form data to our manifest fields
+        // Map EGLE form data to our manifest fields (use the detailed tire counts)
         pte_on_rim: 0,
         pte_off_rim: data.passenger_car_count,
         commercial_22_5_on: 0,
-        commercial_22_5_off: data.truck_count,
+        commercial_22_5_off: Math.floor(data.truck_count / 2), // Distribute truck tires
         commercial_17_5_19_5_on: 0,
-        commercial_17_5_19_5_off: 0,
-        otr_count: data.oversized_count,
-        tractor_count: 0,
-        weight_tons: data.gross_weight / 2000, // Convert lbs to tons
+        commercial_17_5_19_5_off: Math.ceil(data.truck_count / 2), // Distribute truck tires
+        otr_count: Math.floor(data.oversized_count / 2),
+        tractor_count: Math.ceil(data.oversized_count / 2),
+        weight_tons: data.gross_weight ? data.gross_weight / 2000 : 0, // Convert lbs to tons
         volume_yards: 0,
+        
+        // Signature information
         signed_by_name: data.generator_signature_name,
         signed_by_email: "",
-        
-        // Status and completion
-        status: 'COMPLETED',
         signed_at: new Date().toISOString(),
         
-        // Totals
-        subtotal: estimatedTotal,
-        total: estimatedTotal,
+        status: 'AWAITING_RECEIVER_SIGNATURE' as const,
         
         // Payment status
-        payment_status: 'PENDING',
-        payment_method: 'INVOICE',
+        payment_status: 'PENDING' as const,
+        payment_method: 'INVOICE' as const,
       };
 
-      const { data: manifest, error } = await supabase
-        .from('manifests')
-        .insert(manifestData)
-        .select()
-        .single();
+      // Create manifest using the centralized hook
+      const manifest = await createManifest.mutateAsync(manifestData);
 
-      if (error) throw error;
+      // 2. Generate AcroForm PDF with form data using the same integration
+      const today = new Date().toISOString().split('T')[0];
+      const overrides = {
+        // Generator information from form
+        generator_name: data.generator_name,
+        generator_mail_address: data.generator_mailing_address,
+        generator_city: data.generator_city,
+        generator_state: data.generator_state,
+        generator_zip: data.generator_zip,
+        generator_physical_address: data.generator_physical_address,
+        generator_physical_city: data.generator_physical_city,
+        generator_physical_state: data.generator_physical_state,
+        generator_physical_zip: data.generator_physical_zip,
+        generator_county: data.generator_county,
+        generator_phone: data.generator_phone,
+        generator_print_name: data.generator_signature_name,
+        generator_date: data.generator_signature_date,
+        
+        // Hauler information from form
+        hauler_mi_reg: data.hauler_reg_number,
+        hauler_name: data.hauler_name,
+        hauler_mail_address: data.hauler_mailing_address,
+        hauler_city: data.hauler_city,
+        hauler_state: data.hauler_state_address,
+        hauler_zip: data.hauler_zip,
+        hauler_phone: data.hauler_phone,
+        hauler_print_name: data.hauler_signature_name,
+        hauler_date: data.hauler_signature_date,
+        hauler_gross_weight: data.hauler_gross_weight?.toString() || '',
+        hauler_tare_weight: data.hauler_tare_weight?.toString() || '',
+        hauler_total_pte: data.total_passenger_tire_equivalents.toString(),
+        
+        // Receiver information from form
+        receiver_name: data.receiving_name,
+        receiver_physical_address: data.receiving_physical_address,
+        receiver_city: data.receiving_city,
+        receiver_state: data.receiving_state,
+        receiver_zip: data.receiving_zip,
+        receiver_phone: data.receiving_phone,
+        receiver_print_name: data.receiving_signature_name,
+        receiver_date: data.receiving_signature_date,
+        
+        // Tire counts for manifest
+        passenger_car_count: data.passenger_car_count.toString(),
+        truck_count: data.truck_count.toString(),
+        oversized_count: data.oversized_count.toString(),
+      };
+
+      // Generate AcroForm PDF using the centralized integration
+      await manifestIntegration.mutateAsync({ manifestId: manifest.id, overrides });
 
       toast({
         title: "Manifest Created",
-        description: "Your original PDF has been filled out and saved",
+        description: "State-compliant manifest has been generated successfully",
       });
 
       navigate(`/driver/manifest/${manifest.id}`);
