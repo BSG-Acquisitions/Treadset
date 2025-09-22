@@ -112,7 +112,7 @@ export const useManifestIntegration = () => {
           client:clients(*),
           location:locations(*),
           hauler:haulers(*),
-          pickup:pickups(*)
+          pickup:pickups!manifests_pickup_id_fkey(*)
         `)
         .eq('id', manifestId)
         .single();
