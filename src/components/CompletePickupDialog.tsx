@@ -10,7 +10,6 @@ import { useCreateManifest } from "@/hooks/useManifests";
 import { useManifestIntegration } from "@/hooks/useManifestIntegration";
 import { ManifestPDFControls } from "./ManifestPDFControls";
 import { useAuth } from "@/contexts/AuthContext";
-import { useSendManifestEmail } from "@/hooks/useSendManifestEmail";
 import {
   Dialog,
   DialogContent,
@@ -147,7 +146,6 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
   
   const createManifest = useCreateManifest();
   const manifestIntegration = useManifestIntegration();
-  const sendManifestEmail = useSendManifestEmail();
 
   // Auto-populate generator with client data when dialog opens
   useEffect(() => {
@@ -491,15 +489,6 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
         id: manifest.id, 
         acroform_pdf_path: genResult.pdfPath 
       });
-
-      // Send manifest email to client (if available)
-      try {
-        if (pickup.client?.email) {
-          await sendManifestEmail.mutateAsync({ manifestId: manifest.id, to: [pickup.client.email] });
-        }
-      } catch (e) {
-        console.error('Email send failed:', e);
-      }
 
       // Close dialog and notify parent to update assignment status
       setOpen(false);

@@ -1,7 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useSendManifestEmail } from "./useSendManifestEmail";
 
 interface UpdateAssignmentStatusData {
   assignmentId: string;
@@ -21,7 +20,6 @@ interface UpdateAssignmentStatusData {
 export const useUpdateAssignmentStatus = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const sendManifestEmail = useSendManifestEmail();
 
   return useMutation({
     mutationFn: async (data: UpdateAssignmentStatusData) => {

@@ -2,14 +2,10 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useSendManifestEmail } from "@/hooks/useSendManifestEmail";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 
 import { 
   ArrowLeft, 
@@ -63,11 +59,9 @@ export default function DriverManifestView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const sendEmail = useSendManifestEmail();
   
   const [manifest, setManifest] = useState<ManifestData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [emailMessage, setEmailMessage] = useState("");
 
   useEffect(() => {
     if (id) {
@@ -99,19 +93,6 @@ export default function DriverManifestView() {
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleSendEmail = async () => {
-    if (!manifest) return;
-    
-    try {
-      await sendEmail.mutateAsync({
-        manifestId: manifest.id,
-        messageHtml: emailMessage ? `<p>${emailMessage}</p>` : undefined
-      });
-    } catch (error) {
-      // Error handling is done in the hook
     }
   };
 
@@ -212,44 +193,6 @@ export default function DriverManifestView() {
                 Download PDF
               </Button>
             )}
-            
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button>
-                  <Mail className="h-4 w-4 mr-2" />
-                  Send Email
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Send Manifest Email</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      Sending to: {manifest.clients?.email || 'No email on file'}
-                    </p>
-                  </div>
-                  <div>
-                    <Label htmlFor="message">Custom Message (Optional)</Label>
-                    <Textarea
-                      id="message"
-                      placeholder="Add a custom message to include with the manifest..."
-                      value={emailMessage}
-                      onChange={(e) => setEmailMessage(e.target.value)}
-                    />
-                  </div>
-                  <div className="flex justify-end gap-3">
-                    <Button 
-                      onClick={handleSendEmail}
-                      disabled={sendEmail.isPending || !manifest.clients?.email}
-                    >
-                      {sendEmail.isPending ? "Sending..." : "Send Email"}
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
           </div>
         </div>
 
