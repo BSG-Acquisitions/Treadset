@@ -72,24 +72,11 @@ export const useUpdateAssignmentStatus = () => {
 
         if (pickupError) throw pickupError;
 
-        // Get pickup and client info for automation
+        // Get pickup and client info for workflow automation
         const pickup = assignment.pickups;
         const client = pickup?.clients;
 
         if (pickup && client) {
-          // Auto-send manifest email if client has email and manifest exists
-          if (client.email && pickup.manifest_id) {
-            try {
-              await sendManifestEmail.mutateAsync({ 
-                manifestId: pickup.manifest_id 
-              });
-              console.log('Manifest email sent automatically');
-            } catch (emailError) {
-              console.error('Failed to send manifest email:', emailError);
-              // Don't fail the entire completion if email fails
-            }
-          }
-
           // Create or update client workflow for followup
           try {
             const followupDate = new Date();
@@ -132,7 +119,7 @@ export const useUpdateAssignmentStatus = () => {
       let description = `Pickup ${statusText} successfully`;
       
       if (variables.status === 'completed') {
-        description += '. Manifest email sent and followup scheduled automatically.';
+        description += '. Manifest created and ready for admin review.';
       }
       
       toast({ 
