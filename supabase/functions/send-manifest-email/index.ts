@@ -68,6 +68,8 @@ serve(async (req) => {
 
       // Determine recipient
       if (client?.email) toList.push(client.email);
+      console.log("Client email found:", client?.email);
+      console.log("Recipient list:", toList);
 
       // Prefer manifest_number in subject if available
       if (manifest.manifest_number) {
