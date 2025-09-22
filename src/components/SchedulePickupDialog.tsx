@@ -181,7 +181,7 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
                         </FormControl>
                       </PopoverTrigger>
                       <PopoverContent className="w-full p-0" align="start">
-                        <Command>
+                        <Command shouldFilter={false}>
                           <CommandInput 
                             placeholder="Search clients..." 
                             value={clientSearch}
@@ -193,7 +193,7 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
                               {clients?.data.map((client) => (
                                 <CommandItem
                                   key={client.id}
-                                  value={client.company_name}
+                                  value={client.id}
                                   onSelect={() => {
                                     handleClientChange(client.id);
                                     setClientComboOpen(false);
