@@ -259,7 +259,22 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
                           Complete Pickup & Generate Manifest
                         </Button>
                       }
-                  />
+                      onSuccess={async (_manifestId, pdfPath) => {
+                        try {
+                          await updateAssignmentStatus.mutateAsync({
+                            assignmentId: assignment.id,
+                            status: 'completed',
+                            completionData: {
+                              manifestUrl: pdfPath ?? null,
+                              notes: pickup?.notes ?? null,
+                            }
+                          });
+                          handlePickupComplete();
+                        } catch (e) {
+                          console.error('Failed to update assignment after completion:', e);
+                        }
+                      }}
+                    />
                 </div>
               </>
             )}
