@@ -15,73 +15,17 @@ export const convertManifestToAcroForm = (manifestData: any, receiverData?: any)
     manifest_number: manifestData.manifest_number || `M-${Date.now()}`,
     vehicle_trailer: `V-${manifestData.vehicle_id || '123'}`,
     
-    // Generator (Client) information - use actual client data
+    // Generator (Client) information - use actual client data from database
     generator_name: manifestData.client?.company_name || 'Unknown Generator',
-    generator_mail_address: manifestData.client?.address || manifestData.location?.address || 'Address not available',
-    generator_city: (() => {
-      const address = manifestData.location?.address || '';
-      // Try different parsing strategies
-      const parts = address.split(',').map(p => p.trim());
-      if (parts.length >= 2) {
-        return parts[1]; // Second part is usually city
-      }
-      // Try parsing "City State Zip" format
-      const words = address.split(' ');
-      if (words.length >= 3) {
-        // Find state abbreviation (2 letters) and return everything before it
-        const stateIndex = words.findIndex(w => w.length === 2 && w.match(/^[A-Z]{2}$/));
-        if (stateIndex > 0) {
-          return words.slice(0, stateIndex).join(' ');
-        }
-      }
-      return 'Detroit'; // Default fallback
-    })(),
-    generator_state: (() => {
-      const address = manifestData.location?.address || '';
-      // Look for MI, Michigan, or other state patterns
-      if (address.includes('MI') || address.toLowerCase().includes('michigan')) {
-        return 'MI';
-      }
-      // Try to find 2-letter state code
-      const stateMatch = address.match(/\b[A-Z]{2}\b/);
-      return stateMatch ? stateMatch[0] : 'MI'; // Default to MI
-    })(),
-    generator_zip: (() => {
-      const address = manifestData.location?.address || '';
-      // Try different zip code patterns
-      const zipMatch = address.match(/\b\d{5}(-\d{4})?\b/);
-      return zipMatch ? zipMatch[0] : '48207'; // Default Detroit zip
-    })(),
-    generator_physical_address: manifestData.location?.address || 'Physical address not available',
-    generator_physical_city: (() => {
-      const address = manifestData.location?.address || '';
-      const parts = address.split(',').map(p => p.trim());
-      if (parts.length >= 2) {
-        return parts[1];
-      }
-      const words = address.split(' ');
-      if (words.length >= 3) {
-        const stateIndex = words.findIndex(w => w.length === 2 && w.match(/^[A-Z]{2}$/));
-        if (stateIndex > 0) {
-          return words.slice(0, stateIndex).join(' ');
-        }
-      }
-      return 'Detroit';
-    })(),
-    generator_physical_state: (() => {
-      const address = manifestData.location?.address || '';
-      if (address.includes('MI') || address.toLowerCase().includes('michigan')) {
-        return 'MI';
-      }
-      const stateMatch = address.match(/\b[A-Z]{2}\b/);
-      return stateMatch ? stateMatch[0] : 'MI';
-    })(),
-    generator_physical_zip: (() => {
-      const address = manifestData.location?.address || '';
-      const zipMatch = address.match(/\b\d{5}(-\d{4})?\b/);
-      return zipMatch ? zipMatch[0] : '48207';
-    })(),
-    generator_county: 'Wayne', // Default for Detroit area
+    generator_mail_address: manifestData.client?.mailing_address || manifestData.location?.address || 'Address not available',
+    generator_city: manifestData.client?.city || 'City not available',
+    generator_state: manifestData.client?.state || 'State not available',
+    generator_zip: manifestData.client?.zip || 'Zip not available',
+    generator_physical_address: manifestData.client?.physical_address || manifestData.client?.mailing_address || manifestData.location?.address || 'Physical address not available',
+    generator_physical_city: manifestData.client?.physical_city || manifestData.client?.city || 'City not available',
+    generator_physical_state: manifestData.client?.physical_state || manifestData.client?.state || 'State not available',
+    generator_physical_zip: manifestData.client?.physical_zip || manifestData.client?.zip || 'Zip not available',
+    generator_county: manifestData.client?.county || 'County not available',
     generator_phone: manifestData.client?.phone || 'Phone not available',
     generator_volume_weight: (() => {
       // Calculate total PTE from individual tire types using simplified PTE system
@@ -103,15 +47,15 @@ export const convertManifestToAcroForm = (manifestData: any, receiverData?: any)
     generator_time: manifestData.signed_at ? new Date(manifestData.signed_at).toLocaleTimeString('en-US', { hour12: false }) : new Date().toLocaleTimeString('en-US', { hour12: false }),
     generator_signature: manifestData.customer_sig_path || '',
 
-    // Hauler information - use actual hauler data from the manifest
+    // Hauler information - use actual hauler data from database
     hauler_mi_reg: manifestData.hauler?.hauler_mi_reg || 'Registration not available',
     hauler_other_id: '',
-    hauler_name: manifestData.hauler?.hauler_name || 'BSG Logistics', // Default fallback
-    hauler_mail_address: manifestData.hauler?.hauler_mailing_address || '100 Industrial Blvd',
-    hauler_city: manifestData.hauler?.hauler_city || 'Detroit',
-    hauler_state: manifestData.hauler?.hauler_state || 'MI',
-    hauler_zip: manifestData.hauler?.hauler_zip || '48210',
-    hauler_phone: manifestData.hauler?.hauler_phone || '(734) 415-6528',
+    hauler_name: manifestData.hauler?.hauler_name || 'Hauler name not available',
+    hauler_mail_address: manifestData.hauler?.hauler_mailing_address || 'Hauler address not available',
+    hauler_city: manifestData.hauler?.hauler_city || 'Hauler city not available',
+    hauler_state: manifestData.hauler?.hauler_state || 'Hauler state not available',
+    hauler_zip: manifestData.hauler?.hauler_zip || 'Hauler zip not available',
+    hauler_phone: manifestData.hauler?.hauler_phone || 'Hauler phone not available',
     hauler_print_name: manifestData.signed_by_name || 'Hauler Representative',
     hauler_date: manifestData.signed_at ? new Date(manifestData.signed_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
     hauler_time: manifestData.signed_at ? new Date(manifestData.signed_at).toLocaleTimeString('en-US', { hour12: false }) : new Date().toLocaleTimeString('en-US', { hour12: false }),
@@ -129,13 +73,13 @@ export const convertManifestToAcroForm = (manifestData: any, receiverData?: any)
     hauler_signature: manifestData.driver_sig_path || '',
 
     // Receiver information - use actual receiver data from database
-    receiver_mi_reg: receiverData?.receiver_mi_reg || 'R-67890', // Default fallback
-    receiver_name: receiverData?.receiver_name || 'BSG Tire Recycling Center',
-    receiver_physical_address: receiverData?.receiver_mailing_address || '2971 Bellevue Street',
-    receiver_city: receiverData?.receiver_city || 'Detroit',
-    receiver_state: receiverData?.receiver_state || 'MI',
-    receiver_zip: receiverData?.receiver_zip || '48207',
-    receiver_phone: receiverData?.receiver_phone || '(734) 415-6528',
+    receiver_mi_reg: receiverData?.receiver_mi_reg || 'Receiver registration not available',
+    receiver_name: receiverData?.receiver_name || 'Receiver name not available',
+    receiver_physical_address: receiverData?.receiver_mailing_address || 'Receiver address not available',
+    receiver_city: receiverData?.receiver_city || 'Receiver city not available',
+    receiver_state: receiverData?.receiver_state || 'Receiver state not available',
+    receiver_zip: receiverData?.receiver_zip || 'Receiver zip not available',
+    receiver_phone: receiverData?.receiver_phone || 'Receiver phone not available',
     receiver_print_name: manifestData.receiver_signed_by || 'Processor Representative',
     receiver_date: manifestData.receiver_signed_at ? new Date(manifestData.receiver_signed_at).toISOString().split('T')[0] : '',
     receiver_time: manifestData.receiver_signed_at ? new Date(manifestData.receiver_signed_at).toLocaleTimeString('en-US', { hour12: false }) : '',

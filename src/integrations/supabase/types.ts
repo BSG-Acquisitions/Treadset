@@ -370,8 +370,10 @@ export type Database = {
       }
       clients: {
         Row: {
+          city: string | null
           company_name: string
           contact_name: string | null
+          county: string | null
           created_at: string
           depot_lat: number | null
           depot_lng: number | null
@@ -382,19 +384,28 @@ export type Database = {
           last_payment_at: string | null
           last_pickup_at: string | null
           lifetime_revenue: number | null
+          mailing_address: string | null
           notes: string | null
           open_balance: number | null
           organization_id: string
           phone: string | null
+          physical_address: string | null
+          physical_city: string | null
+          physical_state: string | null
+          physical_zip: string | null
           pricing_tier_id: string | null
           sla_weeks: number | null
+          state: string | null
           tags: string[] | null
           type: Database["public"]["Enums"]["client_type"] | null
           updated_at: string
+          zip: string | null
         }
         Insert: {
+          city?: string | null
           company_name: string
           contact_name?: string | null
+          county?: string | null
           created_at?: string
           depot_lat?: number | null
           depot_lng?: number | null
@@ -405,19 +416,28 @@ export type Database = {
           last_payment_at?: string | null
           last_pickup_at?: string | null
           lifetime_revenue?: number | null
+          mailing_address?: string | null
           notes?: string | null
           open_balance?: number | null
           organization_id: string
           phone?: string | null
+          physical_address?: string | null
+          physical_city?: string | null
+          physical_state?: string | null
+          physical_zip?: string | null
           pricing_tier_id?: string | null
           sla_weeks?: number | null
+          state?: string | null
           tags?: string[] | null
           type?: Database["public"]["Enums"]["client_type"] | null
           updated_at?: string
+          zip?: string | null
         }
         Update: {
+          city?: string | null
           company_name?: string
           contact_name?: string | null
+          county?: string | null
           created_at?: string
           depot_lat?: number | null
           depot_lng?: number | null
@@ -428,15 +448,22 @@ export type Database = {
           last_payment_at?: string | null
           last_pickup_at?: string | null
           lifetime_revenue?: number | null
+          mailing_address?: string | null
           notes?: string | null
           open_balance?: number | null
           organization_id?: string
           phone?: string | null
+          physical_address?: string | null
+          physical_city?: string | null
+          physical_state?: string | null
+          physical_zip?: string | null
           pricing_tier_id?: string | null
           sla_weeks?: number | null
+          state?: string | null
           tags?: string[] | null
           type?: Database["public"]["Enums"]["client_type"] | null
           updated_at?: string
+          zip?: string | null
         }
         Relationships: [
           {
