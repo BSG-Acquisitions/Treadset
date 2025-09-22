@@ -47,17 +47,8 @@ export const AcroFormLivePreview: React.FC<AcroFormLivePreviewProps> = ({ manife
           .single();
         if (fetchError) throw fetchError;
 
-        // Fetch receiver information (get the first active receiver as default)
-        const { data: receivers, error: receiverError } = await supabase
-          .from('receivers')
-          .select('*')
-          .eq('is_active', true)
-          .limit(1);
-
-        if (receiverError) throw receiverError;
-
         // 2) Build AcroForm data, apply overrides and computed values
-        const baseData = convertManifestToAcroForm(manifest, receivers?.[0]);
+        const baseData = convertManifestToAcroForm(manifest);
         const withOverrides = {
           ...baseData,
           // apply incoming overrides to acroform data if relevant

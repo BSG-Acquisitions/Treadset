@@ -16,17 +16,17 @@ export const convertManifestToAcroForm = (manifestData: any, receiverData?: any)
     vehicle_trailer: `V-${manifestData.vehicle_id || '123'}`,
     
     // Generator (Client) information - use actual client data from database
-    generator_name: manifestData.client?.company_name || 'Unknown Generator',
-    generator_mail_address: manifestData.client?.mailing_address || manifestData.location?.address || 'Address not available',
-    generator_city: manifestData.client?.city || 'City not available',
-    generator_state: manifestData.client?.state || 'State not available',
-    generator_zip: manifestData.client?.zip || 'Zip not available',
-    generator_physical_address: manifestData.client?.physical_address || manifestData.client?.mailing_address || manifestData.location?.address || 'Physical address not available',
-    generator_physical_city: manifestData.client?.physical_city || manifestData.client?.city || 'City not available',
-    generator_physical_state: manifestData.client?.physical_state || manifestData.client?.state || 'State not available',
-    generator_physical_zip: manifestData.client?.physical_zip || manifestData.client?.zip || 'Zip not available',
-    generator_county: manifestData.client?.county || 'County not available',
-    generator_phone: manifestData.client?.phone || 'Phone not available',
+    generator_name: manifestData.client?.company_name || '',
+    generator_mail_address: manifestData.client?.mailing_address || manifestData.location?.address || '',
+    generator_city: manifestData.client?.city || '',
+    generator_state: manifestData.client?.state || '',
+    generator_zip: manifestData.client?.zip || '',
+    generator_physical_address: manifestData.client?.physical_address || manifestData.client?.mailing_address || manifestData.location?.address || '',
+    generator_physical_city: manifestData.client?.physical_city || manifestData.client?.city || '',
+    generator_physical_state: manifestData.client?.physical_state || manifestData.client?.state || '',
+    generator_physical_zip: manifestData.client?.physical_zip || manifestData.client?.zip || '',
+    generator_county: manifestData.client?.county || '',
+    generator_phone: manifestData.client?.phone || '',
     generator_volume_weight: (() => {
       // Calculate total PTE from individual tire types using simplified PTE system
       const passengerPTE = (manifestData.pte_off_rim || 0) + (manifestData.pte_on_rim || 0);
@@ -48,14 +48,14 @@ export const convertManifestToAcroForm = (manifestData: any, receiverData?: any)
     generator_signature: manifestData.customer_sig_path || '',
 
     // Hauler information - use actual hauler data from database
-    hauler_mi_reg: manifestData.hauler?.hauler_mi_reg || 'Registration not available',
+    hauler_mi_reg: manifestData.hauler?.hauler_mi_reg || '',
     hauler_other_id: '',
-    hauler_name: manifestData.hauler?.hauler_name || 'Hauler name not available',
-    hauler_mail_address: manifestData.hauler?.hauler_mailing_address || 'Hauler address not available',
-    hauler_city: manifestData.hauler?.hauler_city || 'Hauler city not available',
-    hauler_state: manifestData.hauler?.hauler_state || 'Hauler state not available',
-    hauler_zip: manifestData.hauler?.hauler_zip || 'Hauler zip not available',
-    hauler_phone: manifestData.hauler?.hauler_phone || 'Hauler phone not available',
+    hauler_name: manifestData.hauler?.hauler_name || '',
+    hauler_mail_address: manifestData.hauler?.hauler_mailing_address || '',
+    hauler_city: manifestData.hauler?.hauler_city || '',
+    hauler_state: manifestData.hauler?.hauler_state || '',
+    hauler_zip: manifestData.hauler?.hauler_zip || '',
+    hauler_phone: manifestData.hauler?.hauler_phone || '',
     hauler_print_name: manifestData.signed_by_name || 'Hauler Representative',
     hauler_date: manifestData.signed_at ? new Date(manifestData.signed_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
     hauler_time: manifestData.signed_at ? new Date(manifestData.signed_at).toLocaleTimeString('en-US', { hour12: false }) : new Date().toLocaleTimeString('en-US', { hour12: false }),
@@ -72,14 +72,14 @@ export const convertManifestToAcroForm = (manifestData: any, receiverData?: any)
     })(),
     hauler_signature: manifestData.driver_sig_path || '',
 
-    // Receiver information - use actual receiver data from database
-    receiver_mi_reg: receiverData?.receiver_mi_reg || 'Receiver registration not available',
-    receiver_name: receiverData?.receiver_name || 'Receiver name not available',
-    receiver_physical_address: receiverData?.receiver_mailing_address || 'Receiver address not available',
-    receiver_city: receiverData?.receiver_city || 'Receiver city not available',
-    receiver_state: receiverData?.receiver_state || 'Receiver state not available',
-    receiver_zip: receiverData?.receiver_zip || 'Receiver zip not available',
-    receiver_phone: receiverData?.receiver_phone || 'Receiver phone not available',
+    // Receiver information - prefer overrides; leave blank if not provided
+    receiver_mi_reg: receiverData?.receiver_mi_reg || '',
+    receiver_name: receiverData?.receiver_name || '',
+    receiver_physical_address: receiverData?.receiver_mailing_address || '',
+    receiver_city: receiverData?.receiver_city || '',
+    receiver_state: receiverData?.receiver_state || '',
+    receiver_zip: receiverData?.receiver_zip || '',
+    receiver_phone: receiverData?.receiver_phone || '',
     receiver_print_name: manifestData.receiver_signed_by || 'Processor Representative',
     receiver_date: manifestData.receiver_signed_at ? new Date(manifestData.receiver_signed_at).toISOString().split('T')[0] : '',
     receiver_time: manifestData.receiver_signed_at ? new Date(manifestData.receiver_signed_at).toLocaleTimeString('en-US', { hour12: false }) : '',
@@ -119,17 +119,8 @@ export const useManifestIntegration = () => {
 
       if (fetchError) throw fetchError;
 
-      // 2. Fetch receiver information (get the first active receiver as default)
-      const { data: receivers, error: receiverError } = await supabase
-        .from('receivers')
-        .select('*')
-        .eq('is_active', true)
-        .limit(1);
-
-      if (receiverError) throw receiverError;
-
-      // 2. Generate AcroForm PDF with actual data from database
-      const acroFormData = convertManifestToAcroForm(manifestData, receivers?.[0]);
+      // Build AcroForm data strictly from DB record; receiver will come from overrides if provided
+      const acroFormData = convertManifestToAcroForm(manifestData);
       const mergedData = { ...acroFormData, ...(overrides || {}) };
       const acroFormFields = convertToAcroFormFields(mergedData);
       

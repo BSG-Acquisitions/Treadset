@@ -63,9 +63,10 @@ export const convertToAcroFormFields = (data: Partial<AcroFormManifestData>): Re
   if (data.generator_state) fields['Generator_State'] = data.generator_state;
   if (data.generator_zip) fields['Generator_Zip'] = data.generator_zip;
   if (data.generator_physical_address) fields['PHYSICAL_ADDRESS_WHERE_TIRES_WERE_REMOVED'] = data.generator_physical_address;
-  if (data.generator_physical_city) fields['Generator_City'] = data.generator_physical_city; // May be same as mailing city
-  if (data.generator_physical_state) fields['Generator_State'] = data.generator_physical_state; // May be same as mailing state  
-  if (data.generator_physical_zip) fields['Generator_Zip'] = data.generator_physical_zip; // May be same as mailing zip
+  // If the template supports separate physical city/state/zip fields, fill them; otherwise leave mailing values intact
+  if (data.generator_physical_city) fields['PHYSICAL_City'] = data.generator_physical_city;
+  if (data.generator_physical_state) fields['PHYSICAL_State'] = data.generator_physical_state;
+  if (data.generator_physical_zip) fields['PHYSICAL_Zip'] = data.generator_physical_zip;
   if (data.generator_county) fields['Generator_County'] = data.generator_county;
   if (data.generator_phone) fields['Generator_Phone'] = data.generator_phone;
   // Individual tire type fields for Michigan Manifest

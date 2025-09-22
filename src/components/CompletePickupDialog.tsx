@@ -49,6 +49,12 @@ interface Generator {
   generator_city?: string;
   generator_state?: string;
   generator_zip?: string;
+  generator_physical_address?: string;
+  generator_city_2?: string;
+  generator_state_2?: string;
+  generator_zip_2?: string;
+  generator_county?: string;
+  generator_phone?: string;
 }
 
 interface Hauler {
@@ -181,7 +187,13 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
       generator_mailing_address: item.generator_mailing_address,
       generator_city: item.generator_city,
       generator_state: item.generator_state,
-      generator_zip: item.generator_zip
+      generator_zip: item.generator_zip,
+      generator_physical_address: item.generator_physical_address,
+      generator_city_2: item.generator_city_2,
+      generator_state_2: item.generator_state_2,
+      generator_zip_2: item.generator_zip_2,
+      generator_county: item.generator_county,
+      generator_phone: item.generator_phone,
     }));
   };
 
@@ -454,7 +466,12 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
         generator_city: selectedGenerator?.generator_city,
         generator_state: selectedGenerator?.generator_state,
         generator_zip: selectedGenerator?.generator_zip,
-        generator_physical_address: pickup.location?.address || selectedGenerator?.generator_mailing_address,
+        generator_physical_address: selectedGenerator?.generator_physical_address || pickup.location?.address || selectedGenerator?.generator_mailing_address,
+        generator_physical_city: selectedGenerator?.generator_city_2 || selectedGenerator?.generator_city,
+        generator_physical_state: selectedGenerator?.generator_state_2 || selectedGenerator?.generator_state,
+        generator_physical_zip: selectedGenerator?.generator_zip_2 || selectedGenerator?.generator_zip,
+        generator_county: selectedGenerator?.generator_county,
+        generator_phone: selectedGenerator?.generator_phone || pickup.client?.phone,
         generator_print_name: data.generator_print_name,
         generator_date: today,
         // Hauler
