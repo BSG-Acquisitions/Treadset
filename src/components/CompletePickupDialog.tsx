@@ -9,6 +9,7 @@ import { SearchableDropdown } from "./SearchableDropdown";
 import { useCreateManifest } from "@/hooks/useManifests";
 import { useManifestIntegration } from "@/hooks/useManifestIntegration";
 import { ManifestPDFControls } from "./ManifestPDFControls";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Dialog,
   DialogContent,
@@ -134,6 +135,7 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
   const [selectedHauler, setSelectedHauler] = useState<Hauler | null>(null);
   const [selectedReceiver, setSelectedReceiver] = useState<Receiver | null>(null);
   const [completedManifest, setCompletedManifest] = useState<{ id: string; acroform_pdf_path?: string } | null>(null);
+  const { user } = useAuth();
   
   const generatorSigRef = useRef<SignaturePad>(null);
   const haulerSigRef = useRef<SignaturePad>(null);
@@ -424,6 +426,7 @@ export function CompletePickupDialog({ pickup, trigger }: CompletePickupDialogPr
         pickup_id: pickup.id,
         client_id: pickupRef?.client_id || pickup.client?.id || null,
         location_id: pickupRef?.location_id || pickup.location?.id || null,
+        driver_id: user?.id || undefined,
         
         // Tire counts
         pte_off_rim: data.equivalents_off_rim,
