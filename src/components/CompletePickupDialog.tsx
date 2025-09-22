@@ -504,6 +504,8 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
       }
 
       queryClient.invalidateQueries({ queryKey: ['pickups'] });
+      
+    } catch (error: any) {
       console.error("Failed to complete pickup:", error);
     } finally {
       setIsSubmitting(false);
