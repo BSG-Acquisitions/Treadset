@@ -26,6 +26,7 @@ interface ReceiverSignatureDialogProps {
 export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manifestNumber }: ReceiverSignatureDialogProps) => {
   const [sigCanvas, setSigCanvas] = useState<SignatureCanvas | null>(null);
   const [receiverName, setReceiverName] = useState("");
+  const [printName, setPrintName] = useState("");
   const [isCompleting, setIsCompleting] = useState(false);
   const [completionData, setCompletionData] = useState<{ pdfPath: string } | null>(null);
   
@@ -37,12 +38,24 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
   const { data: receivers } = useReceivers();
   const [selectedReceiverId, setSelectedReceiverId] = useState<string>("");
 
+  // Common print names for receiver signatures
+  const printNameOptions = [
+    "BSG Processor",
+    "Facility Manager", 
+    "Operations Manager",
+    "Receiving Supervisor",
+    "Plant Supervisor",
+    "Quality Control",
+    "Warehouse Manager"
+  ];
+
   // Reset state when dialog opens/closes
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
       setCompletionData(null);
       setSigCanvas(null);
       setReceiverName("");
+      setPrintName("");
       setSelectedReceiverId("");
       setIsCompleting(false);
     }
@@ -54,6 +67,16 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
       if (!sigCanvas || sigCanvas.isEmpty()) {
         toast({ title: "Signature required", description: "Please provide a receiver signature.", variant: "destructive" });
         throw new Error("Please provide a signature");
+      }
+
+      if (!selectedReceiverId) {
+        toast({ title: "Receiver required", description: "Please select a receiver.", variant: "destructive" });
+        throw new Error("Please select a receiver");
+      }
+
+      if (!printName) {
+        toast({ title: "Print name required", description: "Please enter or select a print name.", variant: "destructive" });
+        throw new Error("Please provide a print name");
       }
 
       setIsCompleting(true);
@@ -72,13 +95,16 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
 
       if (uploadError) throw uploadError;
 
+      // Get selected receiver data for manifest
+      const selectedReceiver = receivers?.find(r => r.id === selectedReceiverId);
+
       // Update manifest with receiver signature info
       const { error: updateError } = await supabase
         .from('manifests')
         .update({
           receiver_sig_path: `signatures/${fileName}`,
           receiver_signed_at: timestamp,
-          receiver_signed_by: receiverName,
+          receiver_signed_by: printName,
           status: 'COMPLETED',
           updated_at: timestamp
         })
@@ -86,12 +112,19 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
 
       if (updateError) throw updateError;
 
-      // Regenerate AcroForm PDF with receiver signature
+      // Regenerate AcroForm PDF with receiver signature and data
       const overrides = {
         receiver_signature: `signatures/${fileName}`,
-        receiver_print_name: receiverName,
+        receiver_print_name: printName,
         receiver_date: new Date(timestamp).toISOString().split('T')[0],
-        receiver_time: new Date(timestamp).toLocaleTimeString('en-US', { hour12: false })
+        receiver_time: new Date(timestamp).toLocaleTimeString('en-US', { hour12: false }),
+        // Include selected receiver data
+        receiver_name: selectedReceiver?.receiver_name || '',
+        receiver_physical_address: selectedReceiver?.receiver_mailing_address || '',
+        receiver_city: selectedReceiver?.receiver_city || '',
+        receiver_state: selectedReceiver?.receiver_state || '',
+        receiver_zip: selectedReceiver?.receiver_zip || '',
+        receiver_phone: selectedReceiver?.receiver_phone || ''
       };
 
       const pdfResult = await manifestIntegration.mutateAsync({ 
@@ -199,14 +232,63 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
           /* Signature Form */
           <div className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="receiverName">Receiver Name</Label>
+              <Label htmlFor="receiverSelect">Select Receiver</Label>
+              <Select value={selectedReceiverId} onValueChange={(value) => {
+                setSelectedReceiverId(value);
+                const selected = receivers?.find(r => r.id === value);
+                setReceiverName(selected?.receiver_name || "");
+              }}>
+                <SelectTrigger className="bg-background z-50">
+                  <SelectValue placeholder="Choose a receiver..." />
+                </SelectTrigger>
+                <SelectContent className="bg-background border shadow-lg z-50">
+                  {receivers?.map((receiver) => (
+                    <SelectItem key={receiver.id} value={receiver.id}>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{receiver.receiver_name}</span>
+                        <span className="text-sm text-muted-foreground">
+                          {receiver.receiver_city}, {receiver.receiver_state}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="printNameSelect">Print Name for Signature</Label>
+              <Select value={printName} onValueChange={setPrintName}>
+                <SelectTrigger className="bg-background z-50">
+                  <SelectValue placeholder="Choose or enter print name..." />
+                </SelectTrigger>
+                <SelectContent className="bg-background border shadow-lg z-50">
+                  {printNameOptions.map((name) => (
+                    <SelectItem key={name} value={name}>
+                      {name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Input
-                id="receiverName"
-                value={receiverName}
-                onChange={(e) => setReceiverName(e.target.value)}
-                placeholder="Enter receiver name"
+                placeholder="Or enter custom print name"
+                value={printName}
+                onChange={(e) => setPrintName(e.target.value)}
+                className="mt-2"
               />
             </div>
+
+            {selectedReceiverId && (
+              <div className="bg-muted/50 p-3 rounded-lg text-sm">
+                <h4 className="font-medium mb-2">Receiver Information:</h4>
+                <div className="space-y-1 text-muted-foreground">
+                  <p><strong>Name:</strong> {receivers?.find(r => r.id === selectedReceiverId)?.receiver_name}</p>
+                  <p><strong>Address:</strong> {receivers?.find(r => r.id === selectedReceiverId)?.receiver_mailing_address}</p>
+                  <p><strong>City:</strong> {receivers?.find(r => r.id === selectedReceiverId)?.receiver_city}, {receivers?.find(r => r.id === selectedReceiverId)?.receiver_state} {receivers?.find(r => r.id === selectedReceiverId)?.receiver_zip}</p>
+                  <p><strong>Phone:</strong> {receivers?.find(r => r.id === selectedReceiverId)?.receiver_phone}</p>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>Receiver Signature</Label>
@@ -245,7 +327,7 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
               </Button>
               <Button 
                 onClick={handleSubmit}
-                disabled={completeReceiverSignature.isPending || isCompleting}
+                disabled={completeReceiverSignature.isPending || isCompleting || !selectedReceiverId || !printName}
                 className="min-w-[160px]"
               >
                 {isCompleting ? (
