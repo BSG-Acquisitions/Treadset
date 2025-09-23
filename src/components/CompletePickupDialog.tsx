@@ -99,13 +99,11 @@ const completePickupSchema = z.object({
   // Manifest data
   generator_id: z.string().min(1, "Generator is required"),
   hauler_id: z.string().min(1, "Hauler is required"),
-  receiver_id: z.string().min(1, "Receiver is required"),
   generator_print_name: z.string().min(1, "Generator print name is required"),
   hauler_print_name: z.string().min(1, "Hauler print name is required"),
-  receiver_print_name: z.string().min(1, "Receiver print name is required"),
   gross_weight: z.number().min(0, "Gross weight must be 0 or greater"),
   tare_weight: z.number().min(0, "Tare weight must be 0 or greater"),
-  
+  // Receiver fields removed; handled on receiver side
   notes: z.string().optional(),
 });
 
@@ -239,10 +237,8 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
       volume_yards: 0,
       generator_id: '',
       hauler_id: '',
-      receiver_id: '',
       generator_print_name: pickup.client?.contact_name || '',
       hauler_print_name: '',
-      receiver_print_name: '',
       gross_weight: 0,
       tare_weight: 0,
       notes: pickup.notes || "",
@@ -380,6 +376,7 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
           description: `Please provide: ${missingText}`,
           variant: "destructive"
         });
+        setIsSubmitting(false);
         return;
       }
 
