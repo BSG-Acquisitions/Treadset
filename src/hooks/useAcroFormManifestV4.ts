@@ -17,34 +17,61 @@ export const useGenerateAcroFormManifestV4 = () => {
   return useMutation({
     mutationFn: async (params: GenerateAcroFormV4Params) => {
       const config = getCurrentTemplateConfig();
-      
-      // Convert AcroFormManifestData to exact template field names using template mapping
-      const templateFields: Record<string, string> = {};
-      const templateKeys = params.templateKeys || [];
+      const corrId = `v4-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+
+      // Build a canonical set of template field names from config mapping
+      const templateKeysSet = new Set<string>(Object.values(config.fieldMapping));
+      const missingTemplateKeys = new Set<string>();
 
       // Ensure we have data to work with
       if (!params.manifestData || typeof params.manifestData !== 'object') {
+        console.error(`[PDF_TEMPLATE_V${config.version}] [${corrId}] No manifest data provided for PDF generation`);
         throw new Error('No manifest data provided for PDF generation');
       }
 
-      // Convert using template field mapping - each field gets mapped to exact template name
-      Object.entries(config.fieldMapping).forEach(([domainKey, templateField]) => {
-        const value = (params.manifestData as any)[domainKey];
-        if (value !== null && value !== undefined && String(value).trim() !== '') {
-          // Only write if field exists in template (if templateKeys provided) or always write
-          if (templateKeys.length === 0 || templateKeys.includes(templateField)) {
-            templateFields[templateField] = String(value);
-          } else if (templateKeys.length > 0) {
-            console.warn(`[PDF_TEMPLATE_V${config.version}] Field "${templateField}" not found in template for key "${domainKey}"`);
-          }
+      // Convert to exact template field names
+      // Accept either: (a) already template-keyed payload, or (b) domain-keyed payload that needs mapping
+      const templateFields: Record<string, string> = {};
+
+      Object.entries(params.manifestData).forEach(([key, value]) => {
+        if (value === null || value === undefined) return; // allow ''
+
+        // Case (a): Already a template field
+        if (templateKeysSet.has(key)) {
+          templateFields[key] = String(value);
+          return;
         }
+
+        // Case (b): Domain key → map via config
+        const mapped = (config.fieldMapping as Record<string, string>)[key];
+        if (mapped) {
+          templateFields[mapped] = String(value);
+          return;
+        }
+
+        // Unknown key
+        missingTemplateKeys.add(key);
       });
 
-      console.log(`[PDF_TEMPLATE_V${config.version}] Mapped ${Object.keys(templateFields).length} fields for template`, {
-        totalInputFields: Object.keys(params.manifestData).length,
-        nonEmptyInputFields: Object.entries(params.manifestData).filter(([k,v]) => v && String(v).trim() !== '').length,
-        mappedOutputFields: Object.keys(templateFields).length,
-        templateFieldsAvailable: config.fieldMapping
+      const populatedFieldCount = Object.keys(templateFields).length;
+      if (templateKeysSet.size === 0) {
+        console.error(`[PDF_TEMPLATE_V${config.version}] [${corrId}] templateKeysSet is empty; aborting to avoid empty payload`);
+        throw new Error('Template keys not loaded for v4 template');
+      }
+      if (populatedFieldCount === 0) {
+        console.error(`[PDF_TEMPLATE_V${config.version}] [${corrId}] manifest.v4.empty_payload`, {
+          populatedFieldCount,
+          inputKeys: Object.keys(params.manifestData).length,
+          missingTemplateKeys: Array.from(missingTemplateKeys),
+          templateVersion: config.version,
+        });
+        throw new Error('Aborting send: empty v4 manifest payload');
+      }
+
+      console.log(`[PDF_TEMPLATE_V${config.version}] [${corrId}] Prepared v4 payload`, {
+        populatedFieldCount,
+        missingTemplateKeys: Array.from(missingTemplateKeys),
+        templateVersion: config.version,
       });
 
       const { data, error } = await supabase.functions.invoke(
