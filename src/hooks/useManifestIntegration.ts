@@ -124,6 +124,31 @@ export const useManifestIntegration = () => {
       const acroFormData = convertManifestToAcroForm(manifestData);
       const mergedData = { ...acroFormData, ...(overrides || {}) };
       
+      // Debug logging to see what data we have
+      console.log('[MANIFEST_INTEGRATION] Raw manifest data:', {
+        manifestId: manifestId,
+        hasClient: !!manifestData.client,
+        hasLocation: !!manifestData.location, 
+        hasHauler: !!manifestData.hauler,
+        clientCompany: manifestData.client?.company_name,
+        manifestNumber: manifestData.manifest_number,
+        tireCounts: {
+          pte_off_rim: manifestData.pte_off_rim,
+          pte_on_rim: manifestData.pte_on_rim,
+          otr_count: manifestData.otr_count,
+          tractor_count: manifestData.tractor_count
+        }
+      });
+      
+      console.log('[MANIFEST_INTEGRATION] Converted AcroForm data sample:', {
+        generator_name: acroFormData.generator_name,
+        manifest_number: acroFormData.manifest_number,
+        passenger_car_count: acroFormData.passenger_car_count,
+        generator_volume_weight: acroFormData.generator_volume_weight,
+        totalFields: Object.keys(mergedData).length,
+        nonEmptyFields: Object.entries(mergedData).filter(([k,v]) => v && String(v).trim() !== '').length
+      });
+      
       // Generate the PDF using v4 template system  
       const acroFormResult = await generateAcroForm.mutateAsync({
         manifestData: mergedData as AcroFormManifestData,

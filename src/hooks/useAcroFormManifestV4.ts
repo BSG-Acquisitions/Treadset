@@ -18,18 +18,34 @@ export const useGenerateAcroFormManifestV4 = () => {
     mutationFn: async (params: GenerateAcroFormV4Params) => {
       const config = getCurrentTemplateConfig();
       
-      // Convert AcroFormManifestData to exact template field names
+      // Convert AcroFormManifestData to exact template field names using template mapping
       const templateFields: Record<string, string> = {};
       const templateKeys = params.templateKeys || [];
 
-      // Use writeIfExists to only write fields that exist in the template
-      Object.entries(params.manifestData).forEach(([key, value]) => {
+      // Ensure we have data to work with
+      if (!params.manifestData || typeof params.manifestData !== 'object') {
+        throw new Error('No manifest data provided for PDF generation');
+      }
+
+      // Convert using template field mapping - each field gets mapped to exact template name
+      Object.entries(config.fieldMapping).forEach(([domainKey, templateField]) => {
+        const value = (params.manifestData as any)[domainKey];
         if (value !== null && value !== undefined && String(value).trim() !== '') {
-          writeIfExists(templateKeys, key, String(value), templateFields);
+          // Only write if field exists in template (if templateKeys provided) or always write
+          if (templateKeys.length === 0 || templateKeys.includes(templateField)) {
+            templateFields[templateField] = String(value);
+          } else if (templateKeys.length > 0) {
+            console.warn(`[PDF_TEMPLATE_V${config.version}] Field "${templateField}" not found in template for key "${domainKey}"`);
+          }
         }
       });
 
-      console.log(`[PDF_TEMPLATE_V${config.version}] Mapped ${Object.keys(templateFields).length} fields for template`);
+      console.log(`[PDF_TEMPLATE_V${config.version}] Mapped ${Object.keys(templateFields).length} fields for template`, {
+        totalInputFields: Object.keys(params.manifestData).length,
+        nonEmptyInputFields: Object.entries(params.manifestData).filter(([k,v]) => v && String(v).trim() !== '').length,
+        mappedOutputFields: Object.keys(templateFields).length,
+        templateFieldsAvailable: config.fieldMapping
+      });
 
       const { data, error } = await supabase.functions.invoke(
         "generate-acroform-manifest",
