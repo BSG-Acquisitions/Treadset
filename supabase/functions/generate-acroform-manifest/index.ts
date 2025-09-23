@@ -15,6 +15,11 @@ interface AcroFormFillRequest {
   };
   manifestId?: string;
   outputPath?: string; // Optional custom output path
+  meta?: {
+    generator_time?: string;
+    hauler_time?: string;
+    receiver_time?: string;
+  };
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -74,12 +79,27 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     // Fill the form fields and handle signatures
-    const signatureFields = ['Generator_Signature', 'Hauler_Signature', 'Receiver_Signature'];
+    const isSignatureField = (name: string) => {
+      const n = name.toLowerCase();
+      return n.includes('signature') || n.includes('_es_:signer:signature');
+    };
+    const getSignatureRole = (name: string): 'generator' | 'hauler' | 'receiver' => {
+      const n = name.toLowerCase();
+      if (n.includes('processor') || n.includes('receiver')) return 'receiver';
+      if (n.includes('hauler')) return 'hauler';
+      return 'generator';
+    };
+    const getTimeFor = (name: string): string | undefined => {
+      const role = getSignatureRole(name);
+      if (role === 'generator') return body.meta?.generator_time || body.manifestData['Generator_Time'] || (body.manifestData as any)['generator_time'];
+      if (role === 'hauler') return body.meta?.hauler_time || body.manifestData['Hauler_Time'] || (body.manifestData as any)['hauler_time'];
+      return body.meta?.receiver_time || body.manifestData['Processor_Time'] || body.manifestData['Receiver_Time'] || (body.manifestData as any)['receiver_time'];
+    };
     
     for (const [fieldName, value] of Object.entries(body.manifestData)) {
       try {
         // Special handling for signature fields
-        if (signatureFields.includes(fieldName) && value) {
+        if (isSignatureField(fieldName) && value) {
           console.log(`Processing signature field: ${fieldName} with path: ${value}`);
           
           try {
@@ -214,6 +234,21 @@ const handler = async (req: Request): Promise<Response> => {
                     width: Math.min(Number(width ?? signatureSize.width), signatureSize.width),
                     height: Math.min(Number(height ?? signatureSize.height), signatureSize.height),
                   });
+                  // Optional timestamp annotation next to signature
+                  try {
+                    const ts = getTimeFor(fieldName);
+                    if (ts) {
+                      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+                      targetPage.drawText(ts, {
+                        x: Number(x ?? 440),
+                        y: Number(y ?? 300) - 12,
+                        size: 8,
+                        font,
+                      });
+                    }
+                  } catch (e) {
+                    console.warn('Failed to draw timestamp text:', (e as any)?.message);
+                  }
                   console.log(`Embedded signature image for ${fieldName} at field widget position (${x}, ${y})`);
                   signaturePlaced = true;
                 }
@@ -241,6 +276,21 @@ const handler = async (req: Request): Promise<Response> => {
                   width: signatureSize.width,
                   height: signatureSize.height,
                 });
+                // Optional timestamp annotation next to signature
+                try {
+                  const ts = getTimeFor(fieldName);
+                  if (ts) {
+                    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+                    firstPage.drawText(ts, {
+                      x: 440,
+                      y: yPosition - 12,
+                      size: 8,
+                      font,
+                    });
+                  }
+                } catch (e) {
+                  console.warn('Failed to draw timestamp text (fallback):', (e as any)?.message);
+                }
                 console.log(`Embedded signature image for ${fieldName} at fallback position (440, ${yPosition})`);
               }
             }

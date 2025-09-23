@@ -12,20 +12,45 @@ export interface ManifestIntegrationParams {
 
 // Convert manifest database data to AcroForm structure  
 export const convertManifestToAcroForm = (manifestData: any, receiverData?: any): Record<string, string> => {
+  // Fallback parser for "City ST [ZIP]" at end of an address line
+  const parseCityStateZip = (addr: string | undefined | null) => {
+    const res = { city: '', state: '', zip: '' };
+    if (!addr) return res;
+    const m = String(addr).match(/([^,\n]*)[,\s]+([A-Za-z .'-]+)\s+([A-Z]{2})(?:\s+(\d{5}(?:-\d{4})?))?$/);
+    if (m) {
+      res.city = (m[2] || '').trim();
+      res.state = (m[3] || '').trim();
+      res.zip = (m[4] || '').trim();
+    } else {
+      // Try simpler "... City ST" without comma/zip
+      const m2 = String(addr).match(/([A-Za-z .'-]+)\s+([A-Z]{2})$/);
+      if (m2) {
+        res.city = (m2[1] || '').trim();
+        res.state = (m2[2] || '').trim();
+      }
+    }
+    return res;
+  };
+
+  const mailingAddress = manifestData.client?.mailing_address || manifestData.location?.address || '';
+  const mailParsed = parseCityStateZip(mailingAddress);
+  const physicalAddress = manifestData.client?.physical_address || manifestData.location?.address || mailingAddress;
+  const physParsed = parseCityStateZip(physicalAddress);
+
   const result = {
     manifest_number: manifestData.manifest_number || `M-${Date.now()}`,
     vehicle_trailer: `V-${manifestData.vehicle_id || '123'}`,
     
-    // Generator (Client) information - use actual client data from database
+    // Generator (Client) information - prefer structured client fields, fallback to parsed address tail
     generator_name: manifestData.client?.company_name || '',
-    generator_mail_address: manifestData.client?.mailing_address || manifestData.location?.address || '',
-    generator_city: manifestData.client?.city || '',
-    generator_state: manifestData.client?.state || '',
-    generator_zip: manifestData.client?.zip || '',
-    generator_physical_address: manifestData.client?.mailing_address || manifestData.location?.address || '',
-    generator_physical_city: manifestData.client?.city || '',
-    generator_physical_state: manifestData.client?.state || '',
-    generator_physical_zip: manifestData.client?.zip || '',
+    generator_mail_address: mailingAddress,
+    generator_city: manifestData.client?.city || mailParsed.city || '',
+    generator_state: manifestData.client?.state || mailParsed.state || '',
+    generator_zip: manifestData.client?.zip || mailParsed.zip || '',
+    generator_physical_address: physicalAddress,
+    generator_physical_city: manifestData.client?.physical_city || physParsed.city || manifestData.client?.city || mailParsed.city || '',
+    generator_physical_state: manifestData.client?.physical_state || physParsed.state || manifestData.client?.state || mailParsed.state || '',
+    generator_physical_zip: manifestData.client?.physical_zip || physParsed.zip || manifestData.client?.zip || mailParsed.zip || '',
     generator_county: manifestData.client?.county || '',
     generator_phone: manifestData.client?.phone || '',
     generator_volume_weight: (() => {
@@ -186,7 +211,8 @@ export const useManifestIntegration = () => {
       
       // Generate the PDF using v4 template system  
       const acroFormResult = await generateAcroForm.mutateAsync({
-        manifestData: templateFields as unknown as AcroFormManifestData,
+        // Pass domain-keyed data; the generator will map to template fields and also pick up meta (times)
+        manifestData: mergedData as unknown as AcroFormManifestData,
         manifestId: manifestId,
         outputPath: `manifests/integrated-v4-${manifestId}-${Date.now()}.pdf`
       });

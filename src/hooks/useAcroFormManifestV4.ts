@@ -82,6 +82,12 @@ export const useGenerateAcroFormManifestV4 = () => {
             manifestData: templateFields,
             manifestId: params.manifestId,
             outputPath: params.outputPath,
+            // Pass-through meta for non-template annotations (e.g., times)
+            meta: {
+              generator_time: (params.manifestData as any)?.generator_time,
+              hauler_time: (params.manifestData as any)?.hauler_time,
+              receiver_time: (params.manifestData as any)?.receiver_time,
+            }
           },
         }
       );
