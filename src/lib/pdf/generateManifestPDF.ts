@@ -27,7 +27,11 @@ export interface PDFGenerationResult {
 // Runtime configuration
 const PDF_ENGINE = (typeof window !== 'undefined' 
   ? (window as any).__PDF_ENGINE__ 
-  : process.env.PDF_ENGINE) || 'overlay'; // Default: current behavior
+  : process.env.PDF_ENGINE) || 'acroform'; // Default: AcroForm (overlay removed)
+
+const PILOT_MODE = (typeof window !== 'undefined' 
+  ? (window as any).__PILOT_MODE__ 
+  : process.env.PILOT_MODE) === 'true';
 
 const USE_REAL_DATA = (typeof window !== 'undefined' 
   ? (window as any).__USE_REAL_DATA__ 
@@ -51,11 +55,17 @@ function logPDFEvent(event: string, data: any, error?: Error) {
     timestamp: new Date().toISOString(),
     engine: PDF_ENGINE,
     useRealData: USE_REAL_DATA,
+    pilotMode: PILOT_MODE,
     ...data,
     ...(error && { error: error.message, stack: error.stack?.slice(0, 500) })
   };
   
-  console.log('[PDF_ADAPTER]', JSON.stringify(logEntry, null, 2));
+  if (PILOT_MODE) {
+    // Enhanced logging for pilot
+    console.log('[PDF_ADAPTER][PILOT]', JSON.stringify(logEntry, null, 2));
+  } else {
+    console.log('[PDF_ADAPTER]', JSON.stringify(logEntry, null, 2));
+  }
 }
 
 /**
@@ -145,28 +155,16 @@ async function generateAcroFormPDF(request: PDFGenerationRequest): Promise<PDFGe
 }
 
 /**
- * Generate PDF using overlay engine (current/legacy)
+ * Generate PDF using overlay engine (DEPRECATED - removed)
  */
 async function generateOverlayPDF(request: PDFGenerationRequest): Promise<PDFGenerationResult> {
-  const { data, error } = await supabase.functions.invoke('generate-manifest-pdf', {
-    body: {
-      templateName: 'michigan_manifest',
-      version: 'v1',
-      overlayData: request.manifestData,
-      manifestId: request.manifestId
-    }
+  // Overlay system has been removed - this is a no-op fallback
+  logPDFEvent('overlay_deprecated', {
+    manifestId: request.manifestId,
+    message: 'Overlay engine called but has been removed - check PDF_ENGINE configuration'
   });
 
-  if (error) throw error;
-  if (!data?.publicUrl) throw new Error('Overlay engine returned no PDF URL');
-
-  return {
-    success: true,
-    pdfUrl: data.publicUrl,
-    pdfPath: data.pdfPath,
-    engine: 'overlay',
-    metadata: { elapsedMs: 0, payloadHash: '' } // Will be filled by caller
-  };
+  throw new Error('Overlay PDF engine has been removed. Please use PDF_ENGINE=acroform instead.');
 }
 
 /**
