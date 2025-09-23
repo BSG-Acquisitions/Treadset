@@ -10,9 +10,9 @@ export interface ManifestIntegrationParams {
   overrides?: Partial<AcroFormManifestData>;
 }
 
-// Convert manifest database data to AcroForm structure
-export const convertManifestToAcroForm = (manifestData: any, receiverData?: any): Partial<AcroFormManifestData> => {
-  return {
+// Convert manifest database data to AcroForm structure  
+export const convertManifestToAcroForm = (manifestData: any, receiverData?: any): Record<string, string> => {
+  const result = {
     manifest_number: manifestData.manifest_number || `M-${Date.now()}`,
     vehicle_trailer: `V-${manifestData.vehicle_id || '123'}`,
     
@@ -97,6 +97,14 @@ export const convertManifestToAcroForm = (manifestData: any, receiverData?: any)
     receiver_net_weight: '',
     receiver_signature: manifestData.receiver_sig_path || ''
   };
+
+  // Convert all values to strings, ensuring no undefined/null values
+  const cleanResult: Record<string, string> = {};
+  Object.entries(result).forEach(([key, value]) => {
+    cleanResult[key] = value !== null && value !== undefined ? String(value) : '';
+  });
+
+  return cleanResult;
 };
 
 export const useManifestIntegration = () => {
@@ -120,104 +128,29 @@ export const useManifestIntegration = () => {
 
       if (fetchError) throw fetchError;
 
-      // Build exact v4 template field map from DB record and apply overrides via template mapping
+      // Build AcroForm data from DB record using the original working converter
+      const acroFormData = convertManifestToAcroForm(manifestData);
+      const mergedData = { ...acroFormData, ...(overrides || {}) };
+
+      // Map domain field names to v4 template field names
       const config = getCurrentTemplateConfig();
-      const templateKeysSet = new Set<string>(Object.values(config.fieldMapping));
-      const missingTemplateKeys = new Set<string>();
-      const out: Record<string, string> = {};
-      const put = (key: string, val: unknown) => {
-        if (val === null || val === undefined) return; // allow '' and 0
-        const s = typeof val === 'string' ? val : String(val);
-        if (!templateKeysSet.has(key)) { missingTemplateKeys.add(key); return; }
-        out[key] = s;
-      };
-
-      // Header
-      put('Manifest_Number', manifestData.manifest_number || `M-${Date.now()}`);
-      put('Vehicle_Trailer', `V-${manifestData.vehicle_id || '123'}`);
-
-      // Generator (Client) mailing and physical (copy mailing → physical if physical unknown)
-      const mailingAddress = manifestData.client?.mailing_address || manifestData.location?.address || '';
-      const genCity = manifestData.client?.city || '';
-      const genState = manifestData.client?.state || '';
-      const genZip = manifestData.client?.zip || '';
-
-      put('Generator_Name', manifestData.client?.company_name || '');
-      put('Generator_Mailing_Address', mailingAddress);
-      put('Generator_City', genCity);
-      put('Generator_State', genState);
-      put('Generator_Zip', genZip);
-      put('Generator_County', manifestData.client?.county || '');
-      put('Generator_Phone', manifestData.client?.phone || '');
-
-      put('Physical_Mailing_Address', mailingAddress);
-      put('Physical_City', genCity);
-      put('Physical_State', genState);
-      put('Physical_Zip', genZip);
-
-      // Tire counts (state compliance)
-      const passenger = (manifestData.pte_off_rim || 0) + (manifestData.pte_on_rim || 0);
-      const trucks = ((manifestData.commercial_17_5_19_5_off || 0) + (manifestData.commercial_17_5_19_5_on || 0) +
-                      (manifestData.commercial_22_5_off || 0) + (manifestData.commercial_22_5_on || 0));
-      const oversized = (manifestData.otr_count || 0) + (manifestData.tractor_count || 0);
-      const totalPTE = passenger + (trucks * 5) + (oversized * 15);
-      put('Passenger_Car', passenger);
-      put('Truck', trucks);
-      put('Oversized', oversized);
-      put('Passenger_Tire_Equivalents', totalPTE);
-
-      // Generator signatures/dates
-      const genDate = manifestData.signed_at ? new Date(manifestData.signed_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
-      put('Generator_Print_Name', manifestData.signed_by_name || manifestData.client?.contact_name || 'Generator Representative');
-      put('Generator_Date', genDate);
-      put('Generator_Signature _es_:signer:signature', manifestData.customer_sig_path || '');
-
-      // Hauler
-      put('MI_SCRAP_TIRE_HAULER_REG_', manifestData.hauler?.hauler_mi_reg || '');
-      put('Collection_Site_Reg_#', '');
-      put('Hauler_Name', manifestData.hauler?.hauler_name || '');
-      put('Hauler_Address', manifestData.hauler?.hauler_mailing_address || '');
-      put('Hauler_City', manifestData.hauler?.hauler_city || '');
-      put('Hauler_State', manifestData.hauler?.hauler_state || '');
-      put('Hauler_Zip', manifestData.hauler?.hauler_zip || '');
-      put('Hauler_Phone', manifestData.hauler?.hauler_phone || '');
-      put('Hauler_Print_Name', manifestData.signed_by_name || 'Hauler Representative');
-      const haulerDate = genDate;
-      put('Hauler_Date', haulerDate);
-      put('Hauler_Signature _es_:signer:signature', manifestData.driver_sig_path || '');
-      put('Gross', '');
-      put('Tare', '');
-      put('Net_Weight', '');
-
-      // Receiver
-      put('Receiver_Name', manifestData.receiver_signed_by || 'Processor Representative');
-      put('Receiver_Address', '');
-      put('Receiver_City', '');
-      put('Receiver_State', '');
-      put('Receiver_Zip', '');
-      put('Receiver_Phone', '');
-      const recvDate = manifestData.receiver_signed_at ? new Date(manifestData.receiver_signed_at).toISOString().split('T')[0] : '';
-      put('Processor_Print_Name', manifestData.receiver_signed_by || '');
-      put('Processor_Date', recvDate);
-      put('Processor_Signature _es_:signer:signature', manifestData.receiver_sig_path || '');
-
-      // Apply overrides by mapping domain keys → template keys using config
-      if (overrides) {
-        Object.entries(overrides).forEach(([k, v]) => {
-          if (v === null || v === undefined) return;
-          const tf = (config.fieldMapping as Record<string, string>)[k];
-          if (tf) put(tf, v);
-        });
-      }
+      const templateFields: Record<string, string> = {};
+      
+      Object.entries(mergedData).forEach(([key, value]) => {
+        const templateField = config.fieldMapping[key];
+        if (templateField && value !== null && value !== undefined) {
+          templateFields[templateField] = String(value);
+        }
+      });
 
       // Observability
-      const populatedFieldCount = Object.keys(out).length;
-      console.log('[MANIFEST_INTEGRATION][v4] Prepared field map', {
+      const populatedFieldCount = Object.keys(templateFields).length;
+      console.log('[MANIFEST_INTEGRATION][v4] Restored working converter', {
         manifestId,
         populatedFieldCount,
-        missingTemplateKeys: Array.from(missingTemplateKeys),
         templateVersion: config.version,
       });
+      
       if (populatedFieldCount === 0) {
         console.error('[MANIFEST_INTEGRATION][v4] manifest.v4.empty_payload', { manifestId });
         throw new Error('Aborting send: empty v4 manifest payload');
@@ -245,7 +178,7 @@ export const useManifestIntegration = () => {
       
       // Generate the PDF using v4 template system  
       const acroFormResult = await generateAcroForm.mutateAsync({
-        manifestData: out as unknown as AcroFormManifestData,
+        manifestData: templateFields as unknown as AcroFormManifestData,
         manifestId: manifestId,
         outputPath: `manifests/integrated-v4-${manifestId}-${Date.now()}.pdf`
       });
