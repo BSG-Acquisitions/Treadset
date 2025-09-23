@@ -141,7 +141,6 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedGenerator, setSelectedGenerator] = useState<Generator | null>(null);
   const [selectedHauler, setSelectedHauler] = useState<Hauler | null>(null);
-  const [selectedReceiver, setSelectedReceiver] = useState<Receiver | null>(null);
   const [completedManifest, setCompletedManifest] = useState<{ id: string; acroform_pdf_path?: string } | null>(null);
   const { user } = useAuth();
   
@@ -221,28 +220,7 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
     }));
   };
 
-  const fetchReceivers = async (search: string): Promise<Receiver[]> => {
-    const { data, error } = await supabase
-      .from('receivers' as any)
-      .select('*')
-      .ilike('receiver_name', `%${search}%`)
-      .eq('is_active', true)
-      .limit(10);
-    
-    if (error) {
-      console.error('Error fetching receivers:', error);
-      return [];
-    }
-    
-    return (data || []).map((item: any) => ({
-      id: item.id,
-      receiver_name: item.receiver_name,
-      receiver_mailing_address: item.receiver_mailing_address,
-      receiver_city: item.receiver_city,
-      receiver_state: item.receiver_state,
-      receiver_zip: item.receiver_zip
-    }));
-  };
+  // Remove receiver fetching functions since they're handled on receiver side
 
   const form = useForm<CompletePickupFormData>({
     resolver: zodResolver(completePickupSchema),
@@ -333,11 +311,7 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
     }
   }, [selectedHauler, form]);
 
-  useEffect(() => {
-    if (selectedReceiver) {
-      form.setValue("receiver_id", selectedReceiver.id);
-    }
-  }, [selectedReceiver, form]);
+  // Removed receiver selection logic - handled on receiver side
 
   // Utility function to calculate tire equivalents based on simplified PTE system
   const calculateEquivalents = (data: CompletePickupFormData) => {
@@ -388,7 +362,6 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
       const missingFields = [];
       if (!selectedGenerator) missingFields.push("Generator");
       if (!selectedHauler) missingFields.push("Hauler");
-      if (!selectedReceiver) missingFields.push("Receiver");
       
       // Check for signatures
       const generatorSig = generatorSigRef.current?.isEmpty();
@@ -450,6 +423,7 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
         // Print names
         signed_by_name: data.generator_print_name,
         
+        // Status set to AWAITING_RECEIVER_SIGNATURE so receiver can complete it
         status: 'AWAITING_RECEIVER_SIGNATURE' as const,
         signed_at: new Date().toISOString()
       };
@@ -487,13 +461,7 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
         hauler_tare_weight: String(data.tare_weight || ''),
         hauler_net_weight: String(net || ''),
         hauler_total_pte: String(equivalents.totalEquivalents),
-        // Receiver
-        receiver_name: selectedReceiver?.receiver_name,
-        receiver_physical_address: selectedReceiver?.receiver_mailing_address,
-        receiver_city: selectedReceiver?.receiver_city,
-        receiver_state: selectedReceiver?.receiver_state,
-        receiver_zip: selectedReceiver?.receiver_zip,
-        receiver_print_name: data.receiver_print_name,
+        // Receiver info removed - handled on receiver side
         // Signatures
         generator_signature: generatorSigPath,
         hauler_signature: haulerSigPath,
@@ -580,8 +548,8 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
               </CardContent>
             </Card>
 
-            {/* Generator, Hauler, Receiver Selection */}
-            <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
+            {/* Generator and Hauler Selection Only */}
+            <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Generator</CardTitle>
@@ -666,48 +634,7 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
                   />
                 </CardContent>
               </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Receiver</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <SearchableDropdown
-                    placeholder="Search receivers..."
-                    searchFunction={fetchReceivers}
-                    onSelect={setSelectedReceiver}
-                    displayField="receiver_name"
-                    selected={selectedReceiver}
-                    className="w-full"
-                  />
-                  {selectedReceiver && (
-                    <div className="mt-3 p-3 bg-muted rounded-lg text-sm space-y-1">
-                      <div><strong>Name:</strong> {selectedReceiver.receiver_name}</div>
-                      {selectedReceiver.receiver_mailing_address && (
-                        <div><strong>Address:</strong> {selectedReceiver.receiver_mailing_address}</div>
-                      )}
-                       {selectedReceiver.receiver_city && (
-                         <div><strong>Location:</strong> {selectedReceiver.receiver_city}, {selectedReceiver.receiver_state} {selectedReceiver.receiver_zip}</div>
-                       )}
-                     </div>
-                   )}
-                   
-                    <FormField
-                      control={form.control}
-                      name="receiver_print_name"
-                      render={({ field }) => (
-                        <FormItem className="mt-3">
-                          <FormLabel>Print Name *</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="Name to print on manifest" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                 </CardContent>
-               </Card>
-             </div>
+            </div>
 
              {/* Weight Summary - Bottom of Form */}
              <div className="space-y-4">
