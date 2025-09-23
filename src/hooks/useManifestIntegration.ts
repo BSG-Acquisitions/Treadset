@@ -128,8 +128,16 @@ export const useManifestIntegration = () => {
 
       if (fetchError) throw fetchError;
 
-      // Build AcroForm data from DB record using the original working converter
-      const acroFormData = convertManifestToAcroForm(manifestData);
+      // 2. Fetch default receiver data (since manifests don't have receiver_id FK)
+      const { data: defaultReceiver } = await supabase
+        .from('receivers')
+        .select('*')
+        .eq('is_active', true)
+        .limit(1)
+        .single();
+
+      // 3. Build AcroForm data from DB record using the original working converter
+      const acroFormData = convertManifestToAcroForm(manifestData, defaultReceiver);
       const mergedData = { ...acroFormData, ...(overrides || {}) };
 
       // Map domain field names to v4 template field names
