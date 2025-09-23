@@ -10,6 +10,7 @@ import { useCreateManifest } from "@/hooks/useManifests";
 import { useManifestIntegration } from "@/hooks/useManifestIntegration";
 import { ManifestPDFControls } from "./ManifestPDFControls";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
   DialogContent,
@@ -148,6 +149,7 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
   const haulerSigRef = useRef<SignaturePad>(null);
   
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   
   const createManifest = useCreateManifest();
   const manifestIntegration = useManifestIntegration();
@@ -371,7 +373,13 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
       if (haulerSig !== false) missingFields.push("Hauler Signature");
       
       if (missingFields.length > 0) {
-        console.error("Missing Information:", missingFields.join(", "));
+        const missingText = missingFields.join(", ");
+        console.error("Missing Information:", missingText);
+        toast({
+          title: "Missing Required Information",
+          description: `Please provide: ${missingText}`,
+          variant: "destructive"
+        });
         return;
       }
 
@@ -380,7 +388,14 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
       const haulerSigPath = await saveSignature('hauler', haulerSigRef);
 
       if (!generatorSigPath || !haulerSigPath) {
-        throw new Error('Could not save one or more signature images (generator/hauler). Please re-sign and try again.');
+        const errorMsg = 'Could not save one or more signature images (generator/hauler). Please re-sign and try again.';
+        console.error(errorMsg);
+        toast({
+          title: "Signature Save Failed",
+          description: errorMsg,
+          variant: "destructive"
+        });
+        throw new Error(errorMsg);
       }
 
       // Calculate tire equivalents
