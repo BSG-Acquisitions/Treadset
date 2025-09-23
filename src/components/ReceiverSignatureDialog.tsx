@@ -25,10 +25,10 @@ interface ReceiverSignatureDialogProps {
 
 export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manifestNumber }: ReceiverSignatureDialogProps) => {
   const [sigCanvas, setSigCanvas] = useState<SignatureCanvas | null>(null);
-  const [receiverName, setReceiverName] = useState("");
   const [printName, setPrintName] = useState("");
   const [isCompleting, setIsCompleting] = useState(false);
   const [completionData, setCompletionData] = useState<{ pdfPath: string } | null>(null);
+  const [selectedReceiverId, setSelectedReceiverId] = useState<string>("");
   
   const queryClient = useQueryClient();
   const { data: manifest } = useManifest(manifestId);
@@ -36,7 +36,9 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
   const sendEmail = useSendManifestEmail();
   const { toast } = useToast();
   const { data: receivers } = useReceivers();
-  const [selectedReceiverId, setSelectedReceiverId] = useState<string>("");
+
+  // Get selected receiver data
+  const selectedReceiver = receivers?.find(r => r.id === selectedReceiverId);
 
   // Common print names for receiver signatures
   const printNameOptions = [
@@ -54,7 +56,6 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
     if (!newOpen) {
       setCompletionData(null);
       setSigCanvas(null);
-      setReceiverName("");
       setPrintName("");
       setSelectedReceiverId("");
       setIsCompleting(false);
@@ -96,7 +97,9 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
       if (uploadError) throw uploadError;
 
       // Get selected receiver data for manifest
-      const selectedReceiver = receivers?.find(r => r.id === selectedReceiverId);
+      if (!selectedReceiver) {
+        throw new Error("Selected receiver not found");
+      }
 
       // Update manifest with receiver signature info
       const { error: updateError } = await supabase
@@ -119,12 +122,12 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
         receiver_date: new Date(timestamp).toISOString().split('T')[0],
         receiver_time: new Date(timestamp).toLocaleTimeString('en-US', { hour12: false }),
         // Include selected receiver data
-        receiver_name: selectedReceiver?.receiver_name || '',
-        receiver_physical_address: selectedReceiver?.receiver_mailing_address || '',
-        receiver_city: selectedReceiver?.receiver_city || '',
-        receiver_state: selectedReceiver?.receiver_state || '',
-        receiver_zip: selectedReceiver?.receiver_zip || '',
-        receiver_phone: selectedReceiver?.receiver_phone || ''
+        receiver_name: selectedReceiver.receiver_name || '',
+        receiver_physical_address: selectedReceiver.receiver_mailing_address || '',
+        receiver_city: selectedReceiver.receiver_city || '',
+        receiver_state: selectedReceiver.receiver_state || '',
+        receiver_zip: selectedReceiver.receiver_zip || '',
+        receiver_phone: selectedReceiver.receiver_phone || ''
       };
 
       const pdfResult = await manifestIntegration.mutateAsync({ 
@@ -230,123 +233,137 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
           </div>
         ) : (
           /* Signature Form */
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="receiverSelect">Select Receiver</Label>
-              <Select value={selectedReceiverId} onValueChange={(value) => {
-                setSelectedReceiverId(value);
-                const selected = receivers?.find(r => r.id === value);
-                setReceiverName(selected?.receiver_name || "");
-              }}>
-                <SelectTrigger className="bg-background z-50">
-                  <SelectValue placeholder="Choose a receiver..." />
-                </SelectTrigger>
-                <SelectContent className="bg-background border shadow-lg z-50">
-                  {receivers?.map((receiver) => (
-                    <SelectItem key={receiver.id} value={receiver.id}>
-                      <div className="flex flex-col">
-                        <span className="font-medium">{receiver.receiver_name}</span>
-                        <span className="text-sm text-muted-foreground">
-                          {receiver.receiver_city}, {receiver.receiver_state}
-                        </span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="printNameSelect">Print Name for Signature</Label>
-              <Select value={printName} onValueChange={setPrintName}>
-                <SelectTrigger className="bg-background z-50">
-                  <SelectValue placeholder="Choose or enter print name..." />
-                </SelectTrigger>
-                <SelectContent className="bg-background border shadow-lg z-50">
-                  {printNameOptions.map((name) => (
-                    <SelectItem key={name} value={name}>
-                      {name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Input
-                placeholder="Or enter custom print name"
-                value={printName}
-                onChange={(e) => setPrintName(e.target.value)}
-                className="mt-2"
-              />
-            </div>
-
-            {selectedReceiverId && (
-              <div className="bg-muted/50 p-3 rounded-lg text-sm">
-                <h4 className="font-medium mb-2">Receiver Information:</h4>
-                <div className="space-y-1 text-muted-foreground">
-                  <p><strong>Name:</strong> {receivers?.find(r => r.id === selectedReceiverId)?.receiver_name}</p>
-                  <p><strong>Address:</strong> {receivers?.find(r => r.id === selectedReceiverId)?.receiver_mailing_address}</p>
-                  <p><strong>City:</strong> {receivers?.find(r => r.id === selectedReceiverId)?.receiver_city}, {receivers?.find(r => r.id === selectedReceiverId)?.receiver_state} {receivers?.find(r => r.id === selectedReceiverId)?.receiver_zip}</p>
-                  <p><strong>Phone:</strong> {receivers?.find(r => r.id === selectedReceiverId)?.receiver_phone}</p>
-                </div>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="receiverSelect">Select Receiver</Label>
+                <Select 
+                  value={selectedReceiverId} 
+                  onValueChange={setSelectedReceiverId}
+                >
+                  <SelectTrigger className="bg-background border border-input">
+                    <SelectValue placeholder="Choose a receiver..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border border-input shadow-lg z-[100]">
+                    {receivers?.map((receiver) => (
+                      <SelectItem key={receiver.id} value={receiver.id}>
+                        <div className="flex flex-col py-1">
+                          <span className="font-medium">{receiver.receiver_name}</span>
+                          <span className="text-sm text-muted-foreground">
+                            {receiver.receiver_city}, {receiver.receiver_state}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            )}
 
-            <div className="space-y-2">
-              <Label>Receiver Signature</Label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
-                <SignatureCanvas
-                  ref={(ref) => setSigCanvas(ref)}
-                  penColor="black"
-                  canvasProps={{
-                    width: 500,
-                    height: 200,
-                    className: 'signature-canvas w-full h-48 border rounded'
-                  }}
+              <div className="space-y-2">
+                <Label htmlFor="printNameSelect">Print Name for Signature</Label>
+                <Select value={printName} onValueChange={setPrintName}>
+                  <SelectTrigger className="bg-background border border-input">
+                    <SelectValue placeholder="Choose or enter print name..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border border-input shadow-lg z-[100]">
+                    {printNameOptions.map((name) => (
+                      <SelectItem key={name} value={name}>
+                        {name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  placeholder="Or enter custom print name"
+                  value={printName}
+                  onChange={(e) => setPrintName(e.target.value)}
+                  className="bg-background"
                 />
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={clearSignature} size="sm">
+
+              {selectedReceiver && (
+                <div className="bg-muted/30 border border-border rounded-lg p-4">
+                  <h4 className="font-medium mb-3 text-sm">Receiver Information:</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="font-medium text-muted-foreground">Name:</span>
+                      <p className="mt-1">{selectedReceiver.receiver_name}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-muted-foreground">Phone:</span>
+                      <p className="mt-1">{selectedReceiver.receiver_phone || 'Not provided'}</p>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <span className="font-medium text-muted-foreground">Address:</span>
+                      <p className="mt-1">
+                        {selectedReceiver.receiver_mailing_address}<br />
+                        {selectedReceiver.receiver_city}, {selectedReceiver.receiver_state} {selectedReceiver.receiver_zip}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <Label>Receiver Signature</Label>
+                <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-4 bg-muted/10">
+                  <SignatureCanvas
+                    ref={(ref) => setSigCanvas(ref)}
+                    penColor="black"
+                    canvasProps={{
+                      width: 500,
+                      height: 200,
+                      className: 'signature-canvas w-full h-48 border border-border rounded bg-background'
+                    }}
+                  />
+                </div>
+                <Button variant="outline" onClick={clearSignature} size="sm" className="w-fit">
                   Clear Signature
                 </Button>
               </div>
-            </div>
 
-            {/* If a PDF already exists (e.g., from a previous attempt), show controls here too */}
-            {manifest?.acroform_pdf_path && (
-              <div className="pt-2">
-                <ManifestPDFControls
-                  manifestId={manifestId}
-                  acroformPdfPath={manifest.acroform_pdf_path}
-                  clientEmails={[]}
-                />
-              </div>
-            )}
+              {/* Existing PDF Preview */}
+              {manifest?.acroform_pdf_path && (
+                <div className="pt-4 border-t border-border">
+                  <h4 className="font-medium mb-3 text-sm">Current Manifest</h4>
+                  <ManifestPDFControls
+                    manifestId={manifestId}
+                    acroformPdfPath={manifest.acroform_pdf_path}
+                    clientEmails={[]}
+                  />
+                </div>
+              )}
 
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isCompleting}>
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleSubmit}
-                disabled={completeReceiverSignature.isPending || isCompleting || !selectedReceiverId || !printName}
-                className="min-w-[160px]"
-              >
-                {isCompleting ? (
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 animate-spin" />
-                    Completing...
-                  </div>
-                ) : (
-                  "Complete & Email"
-                )}
-              </Button>
-            </div>
-            
-            {manifest?.client?.company_name && !completionData && (
-              <div className="text-sm text-muted-foreground">
-                Completion notice will be emailed to: {manifest.client.company_name}
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => handleOpenChange(false)} 
+                  disabled={isCompleting}
+                  className="w-full sm:w-auto"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleSubmit}
+                  disabled={completeReceiverSignature.isPending || isCompleting || !selectedReceiverId || !printName}
+                  className="min-w-[160px] w-full sm:w-auto"
+                >
+                  {isCompleting ? (
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 animate-spin" />
+                      Completing...
+                    </div>
+                  ) : (
+                    "Complete & Email"
+                  )}
+                </Button>
               </div>
-            )}
-          </div>
+              
+              {manifest?.client?.company_name && !completionData && (
+                <div className="text-sm text-muted-foreground text-center pt-2">
+                  📧 Completion notice will be emailed to: {manifest.client.company_name}
+                </div>
+              )}
+            </div>
         )}
       </DialogContent>
     </Dialog>
