@@ -238,11 +238,11 @@ export async function withErrorBoundary<T>(
 }
 
 /**
- * Timeout wrapper for operations
+ * Timeout wrapper for operations - accepts both Promise and PromiseLike
  */
-export function withTimeout<T>(promise: Promise<T>, timeoutMs: number = 30000): Promise<T> {
+export function withTimeout<T>(promise: Promise<T> | PromiseLike<T>, timeoutMs: number = 30000): Promise<T> {
   return Promise.race([
-    promise,
+    Promise.resolve(promise), // Convert PromiseLike to Promise
     new Promise<never>((_, reject) => 
       setTimeout(() => reject(new Error(`Operation timed out after ${timeoutMs}ms`)), timeoutMs)
     )

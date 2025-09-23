@@ -54,13 +54,16 @@ export async function createManifestSafely(
     };
 
     // Insert manifest with timeout
-    const manifestQuery = supabase
-      .from('manifests')
-      .insert(finalManifestData)
-      .select()
-      .single();
+    const result = await withTimeout(
+      supabase
+        .from('manifests')
+        .insert(finalManifestData)
+        .select()
+        .single(),
+      15000
+    );
     
-    const { data: manifest, error } = await withTimeout(manifestQuery, 15000);
+    const { data: manifest, error } = result;
 
     if (error) throw error;
     return manifest;
@@ -241,14 +244,18 @@ export async function updateManifestSafely(
       updated_at: new Date().toISOString()
     };
 
-    const updateQuery = supabase
-      .from('manifests')
-      .update(finalUpdates)
-      .eq('id', manifestId)
-      .select()
-      .single();
-      
-    const { data: manifest, error } = await withTimeout(updateQuery, 10000);
+    // Update manifest with timeout
+    const result = await withTimeout(
+      supabase
+        .from('manifests')
+        .update(finalUpdates)
+        .eq('id', manifestId)
+        .select()
+        .single(),
+      10000
+    );
+    
+    const { data: manifest, error } = result;
 
     if (error) throw error;
     return manifest;
