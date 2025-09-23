@@ -13,6 +13,8 @@ import { Mail, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useReceivers } from "@/hooks/useReceivers";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface ReceiverSignatureDialogProps {
   open: boolean;
@@ -23,7 +25,7 @@ interface ReceiverSignatureDialogProps {
 
 export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manifestNumber }: ReceiverSignatureDialogProps) => {
   const [sigCanvas, setSigCanvas] = useState<SignatureCanvas | null>(null);
-  const [receiverName, setReceiverName] = useState("BSG Processor");
+  const [receiverName, setReceiverName] = useState("");
   const [isCompleting, setIsCompleting] = useState(false);
   const [completionData, setCompletionData] = useState<{ pdfPath: string } | null>(null);
   
@@ -32,13 +34,16 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
   const manifestIntegration = useManifestIntegration();
   const sendEmail = useSendManifestEmail();
   const { toast } = useToast();
+  const { data: receivers } = useReceivers();
+  const [selectedReceiverId, setSelectedReceiverId] = useState<string>("");
 
   // Reset state when dialog opens/closes
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
       setCompletionData(null);
       setSigCanvas(null);
-      setReceiverName("BSG Processor");
+      setReceiverName("");
+      setSelectedReceiverId("");
       setIsCompleting(false);
     }
     onOpenChange(newOpen);

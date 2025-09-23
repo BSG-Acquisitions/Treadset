@@ -71,7 +71,7 @@ export const convertManifestToAcroForm = (manifestData: any, receiverData?: any)
     generator_print_name: manifestData.signed_by_name || manifestData.client?.contact_name || 'Generator Representative',
     generator_date: manifestData.signed_at ? new Date(manifestData.signed_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
     generator_time: manifestData.signed_at ? new Date(manifestData.signed_at).toLocaleTimeString('en-US', { hour12: false }) : new Date().toLocaleTimeString('en-US', { hour12: false }),
-    generator_signature: manifestData.customer_sig_path || '',
+    generator_signature: manifestData.customer_sig_path || manifestData.customer_signature_png_path || '',
 
     // Hauler information - use actual hauler data from database
     hauler_mi_reg: manifestData.hauler?.hauler_mi_reg || '',
@@ -96,7 +96,7 @@ export const convertManifestToAcroForm = (manifestData: any, receiverData?: any)
       const oversizedPTE = (manifestData.otr_count || 0) * 15 + (manifestData.tractor_count || 0) * 15; // OTR = 15 PTE, Tractor = 15 PTE
       return (passengerPTE + truckPTE + oversizedPTE).toString();
     })(),
-    hauler_signature: manifestData.driver_sig_path || '',
+    hauler_signature: manifestData.driver_sig_path || manifestData.driver_signature_png_path || '',
 
     // Receiver information - prefer overrides; leave blank if not provided
     receiver_mi_reg: receiverData?.receiver_mi_reg || '',
@@ -153,16 +153,9 @@ export const useManifestIntegration = () => {
 
       if (fetchError) throw fetchError;
 
-      // 2. Fetch default receiver data (since manifests don't have receiver_id FK)
-      const { data: defaultReceiver } = await supabase
-        .from('receivers')
-        .select('*')
-        .eq('is_active', true)
-        .limit(1)
-        .single();
-
-      // 3. Build AcroForm data from DB record using the original working converter
-      const acroFormData = convertManifestToAcroForm(manifestData, defaultReceiver);
+      // 2. Do not auto-select any receiver; receiver info must come from explicit overrides on receiver side
+      // 3. Build AcroForm data from DB record
+      const acroFormData = convertManifestToAcroForm(manifestData, undefined);
       const mergedData = { ...acroFormData, ...(overrides || {}) };
 
       // Map domain field names to v4 template field names
