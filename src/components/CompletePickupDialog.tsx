@@ -328,11 +328,12 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
   };
 
   const saveSignature = async (type: string, sigRef: React.RefObject<SignaturePad>) => {
-    if (!sigRef.current || sigRef.current.isEmpty()) return null;
+    if (!sigRef.current || sigRef.current.isEmpty()) return { path: null, timestamp: null };
 
     try {
       const signatureDataUrl = sigRef.current.toDataURL();
       const signatureBlob = await fetch(signatureDataUrl).then(r => r.blob());
+      const timestamp = new Date().toISOString();
       
       const fileName = `${type}_signature_${Date.now()}.png`;
       const { data, error } = await supabase.storage
@@ -346,10 +347,10 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
       const rawPath = (data as any)?.path || (data as any)?.fullPath || (data as any)?.Key || '';
       const normalized = String(rawPath).replace(/^manifests\//, '').replace(/^\/+/, '');
       if (!normalized) throw new Error(`Upload returned empty path for ${type} signature`);
-      return normalized;
+      return { path: normalized, timestamp };
     } catch (error) {
       console.error(`Error saving ${type} signature:`, error);
-      return null;
+      return { path: null, timestamp: null };
     }
   };
 
@@ -380,11 +381,11 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
         return;
       }
 
-      // Save signatures to storage
-      const generatorSigPath = await saveSignature('generator', generatorSigRef);
-      const haulerSigPath = await saveSignature('hauler', haulerSigRef);
+      // Save signatures to storage with timestamps
+      const generatorSigResult = await saveSignature('generator', generatorSigRef);
+      const haulerSigResult = await saveSignature('hauler', haulerSigRef);
 
-      if (!generatorSigPath || !haulerSigPath) {
+      if (!generatorSigResult.path || !haulerSigResult.path) {
         const errorMsg = 'Could not save one or more signature images (generator/hauler). Please re-sign and try again.';
         console.error(errorMsg);
         toast({
@@ -428,9 +429,11 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
         weight_tons: data.weight_tons,
         volume_yards: data.volume_yards,
         
-        // Signatures
-        customer_sig_path: generatorSigPath,
-        driver_sig_path: haulerSigPath,
+        // Signatures with timestamps
+        customer_sig_path: generatorSigResult.path,
+        driver_sig_path: haulerSigResult.path,
+        generator_signed_at: generatorSigResult.timestamp,
+        hauler_signed_at: haulerSigResult.timestamp,
         
         // Print names
         signed_by_name: data.generator_print_name,
@@ -474,9 +477,11 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
         hauler_net_weight: String(net || ''),
         hauler_total_pte: String(equivalents.totalEquivalents),
         // Receiver info removed - handled on receiver side
-        // Signatures
-        generator_signature: generatorSigPath,
-        hauler_signature: haulerSigPath,
+        // Signatures with timestamps
+        generator_signature: generatorSigResult.path,
+        hauler_signature: haulerSigResult.path,
+        generator_time: generatorSigResult.timestamp ? new Date(generatorSigResult.timestamp).toLocaleTimeString('en-US', { hour12: false }) : '',
+        hauler_time: haulerSigResult.timestamp ? new Date(haulerSigResult.timestamp).toLocaleTimeString('en-US', { hour12: false }) : '',
       } as any;
       
       // Generate AcroForm PDF with overrides
