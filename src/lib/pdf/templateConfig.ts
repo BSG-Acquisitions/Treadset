@@ -10,10 +10,10 @@ export interface PDFTemplateConfig {
   description: string;
 }
 
-// Runtime configuration
+// Runtime configuration - temporarily defaulting to v3 until v4 template is uploaded
 export const PDF_TEMPLATE_VERSION = (typeof window !== 'undefined' 
   ? (window as any).__PDF_TEMPLATE_VERSION__ 
-  : process.env.PDF_TEMPLATE_VERSION) || '4'; // Default to v4
+  : process.env.PDF_TEMPLATE_VERSION) || '3'; // Temporary: Default to v3 until v4 uploaded
 
 // Template configurations
 export const TEMPLATE_CONFIGS: Record<string, PDFTemplateConfig> = {
