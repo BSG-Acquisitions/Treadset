@@ -4,6 +4,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentTemplateConfig } from "@/lib/pdf/templateConfig";
 
 export interface PDFGenerationRequest {
   manifestId: string;
@@ -130,15 +131,23 @@ export async function generateManifestPDF(request: PDFGenerationRequest): Promis
 }
 
 /**
- * Generate PDF using AcroForm engine
+ * Generate PDF using AcroForm engine with template versioning
  */
 async function generateAcroFormPDF(request: PDFGenerationRequest): Promise<PDFGenerationResult> {
+  const config = getCurrentTemplateConfig();
+  
+  logPDFEvent('template_config', {
+    manifestId: request.manifestId,
+    templateVersion: config.version,
+    templatePath: config.templatePath
+  });
+
   const { data, error } = await supabase.functions.invoke('generate-acroform-manifest', {
     body: {
-      templatePath: 'Michigan_Manifest_AcroForm.pdf',
+      templatePath: config.templatePath,
       manifestData: request.manifestData,  
       manifestId: request.manifestId,
-      outputPath: request.outputPath || `manifests/acroform-${request.manifestId}-${Date.now()}.pdf`
+      outputPath: request.outputPath || `manifests/acroform-v${config.version}-${request.manifestId}-${Date.now()}.pdf`
     }
   });
 

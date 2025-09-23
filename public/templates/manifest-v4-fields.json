@@ -1,0 +1,132 @@
+{
+  "templateVersion": 4,
+  "templatePath": "Michigan_Manifest_AcroForm_V4.pdf",
+  "description": "AcroForm field names for v4 template with corrected spelling and formatting",
+  "extractedAt": "2025-01-23T17:00:00.000Z",
+  "fieldsBySection": {
+    "header": [
+      "Manifest_Number",
+      "Vehicle_Trailer"
+    ],
+    "generator": [
+      "Generator_Name",
+      "Generator_Mailing_Address", 
+      "Generator_City",
+      "Generator_State",
+      "Generator_Zip",
+      "Generator_County",
+      "Generator_Phone",
+      "Physical_Mailing_Address",
+      "Physical_City", 
+      "Physical_State",
+      "Physical_Zip"
+    ],
+    "hauler": [
+      "Hauler_Name",
+      "Hauler_Address",
+      "Hauler_City", 
+      "Hauler_State",
+      "Hauler_Zip",
+      "Hauler_Phone",
+      "MI_SCRAP_TIRE_HAULER_REG_",
+      "Collection_Site_Reg_#"
+    ],
+    "receiver": [
+      "Receiver_Name",
+      "Receiver_Address",
+      "Receiver_City",
+      "Receiver_State",
+      "Receiver_Zip", 
+      "Receiver_Phone"
+    ],
+    "weights": [
+      "Gross",
+      "Tare", 
+      "Net_Weight",
+      "Passenger_Car",
+      "Truck",
+      "Oversized",
+      "Passenger_Tire_Equivalents"
+    ],
+    "signatures": [
+      "Generator_Signature _es_:signer:signature",
+      "Generator_Print_Name",
+      "Generator_Date",
+      "Hauler_Signature _es_:signer:signature", 
+      "Hauler_Print_Name",
+      "Hauler_Date",
+      "Processor_Signature _es_:signer:signature",
+      "Processor_Print_Name",
+      "Processor_Date"
+    ]
+  },
+  "allFieldNames": [
+    "Collection_Site_Reg_#",
+    "Generator_City",
+    "Generator_County", 
+    "Generator_Date",
+    "Generator_Mailing_Address",
+    "Generator_Name",
+    "Generator_Phone",
+    "Generator_Print_Name",
+    "Generator_Signature _es_:signer:signature",
+    "Generator_State",
+    "Generator_Zip",
+    "Gross",
+    "Hauler_Address",
+    "Hauler_City",
+    "Hauler_Date",
+    "Hauler_Name", 
+    "Hauler_Phone",
+    "Hauler_Print_Name",
+    "Hauler_Signature _es_:signer:signature",
+    "Hauler_State",
+    "Hauler_Zip",
+    "MI_SCRAP_TIRE_HAULER_REG_",
+    "Manifest_Number",
+    "Net_Weight",
+    "Oversized",
+    "Passenger_Car",
+    "Passenger_Tire_Equivalents",
+    "Physical_City",
+    "Physical_Mailing_Address",
+    "Physical_State",
+    "Physical_Zip",
+    "Processor_Date",
+    "Processor_Print_Name",
+    "Processor_Signature _es_:signer:signature",
+    "Receiver_Address",
+    "Receiver_City",
+    "Receiver_Name",
+    "Receiver_Phone",
+    "Receiver_State",
+    "Receiver_Zip",
+    "Tare",
+    "Truck",
+    "Vehicle_Trailer"
+  ],
+  "totalFields": 43,
+  "keyChangesFromV3": {
+    "correctedSpelling": [
+      "Receiver_State (was Reciever_State)",
+      "Receiver_Phone (was Reciever_Phone)"
+    ],
+    "correctedFieldNames": [
+      "MI_SCRAP_TIRE_HAULER_REG_ (was MI_SCRAP_TIR _HAULER_REG_#)",
+      "Passenger_Tire_Equivalents (was 'Passenger tire equivalents')",
+      "Manifest_Number (was MANIFEST_#)",
+      "Vehicle_Trailer (was VEHICLETRAILER)"
+    ],
+    "newSignatureFormat": [
+      "Generator_Signature _es_:signer:signature",
+      "Hauler_Signature _es_:signer:signature", 
+      "Processor_Signature _es_:signer:signature"
+    ],
+    "separatePhysicalFields": [
+      "Physical_Mailing_Address",
+      "Physical_City",
+      "Physical_State", 
+      "Physical_Zip"
+    ]
+  }
+}

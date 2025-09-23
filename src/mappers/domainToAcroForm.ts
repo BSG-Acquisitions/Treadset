@@ -1,33 +1,44 @@
 /**
- * Domain to AcroForm Mapper
- * Converts unified ManifestDomain to AcroForm field structure
+ * Domain to AcroForm Mapper v4
+ * Converts unified ManifestDomain to exact v4 AcroForm field names
+ * Supports auto-copy from Generator Mailing → Physical if Physical is blank
  */
 
 import { ManifestDomain } from "@/types/ManifestDomain";
 import { AcroFormManifestData } from "@/types/acroform-manifest";
+import { getCurrentTemplateConfig, writeIfExists } from "@/lib/pdf/templateConfig";
 
 /**
- * Map ManifestDomain to AcroForm structure
- * This is the single source of truth for AcroForm field mapping
+ * Map ManifestDomain to AcroForm structure with v4 exact field names
+ * Auto-copies Generator Mailing → Physical if Physical is blank
  */
 export function mapDomainToAcroForm(domain: ManifestDomain): AcroFormManifestData {
+  // Optional auto-copy rule: Mailing → Physical if Physical is blank
+  const shouldCopyPhysical = !domain.generator.physical_address || domain.generator.physical_address.trim() === '';
+  
+  const physicalAddress = shouldCopyPhysical ? domain.generator.mailing_address : domain.generator.physical_address;
+  const physicalCity = shouldCopyPhysical ? domain.generator.city : (domain.generator.physical_city || domain.generator.city);
+  const physicalState = shouldCopyPhysical ? domain.generator.state : (domain.generator.physical_state || domain.generator.state);
+  const physicalZip = shouldCopyPhysical ? domain.generator.zip : (domain.generator.physical_zip || domain.generator.zip);
   return {
     // Header fields
     manifest_number: domain.manifest_number,
     vehicle_trailer: domain.vehicle_trailer || '',
     
-    // Part 1: Generator Information
+    // Part 1: Generator Information - Mailing Address
     generator_name: domain.generator.name,
     generator_mail_address: domain.generator.mailing_address,
     generator_city: domain.generator.city,
     generator_state: domain.generator.state,
     generator_zip: domain.generator.zip,
-    generator_physical_address: domain.generator.physical_address || domain.generator.mailing_address,
-    generator_physical_city: domain.generator.physical_city || domain.generator.city,
-    generator_physical_state: domain.generator.physical_state || domain.generator.state,
-    generator_physical_zip: domain.generator.physical_zip || domain.generator.zip,
     generator_county: domain.generator.county || '',
     generator_phone: domain.generator.phone || '',
+    
+    // Part 1: Generator Information - Physical Address (auto-copied from mailing if blank)
+    generator_physical_address: physicalAddress,
+    generator_physical_city: physicalCity,
+    generator_physical_state: physicalState,
+    generator_physical_zip: physicalZip,
     generator_volume_weight: domain.calculated.total_pte.toString(),
     
     // Tire counts for state compliance

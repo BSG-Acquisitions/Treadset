@@ -1,7 +1,8 @@
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useGenerateAcroFormManifest, convertToAcroFormFields } from "@/hooks/useAcroFormManifest";
+import { useGenerateAcroFormManifestV4 } from "@/hooks/useAcroFormManifestV4";
+import { convertToAcroFormFields } from "@/hooks/useAcroFormManifest";
 import { AcroFormManifestData } from "@/types/acroform-manifest";
 
 export interface ManifestIntegrationParams {
@@ -100,7 +101,7 @@ export const convertManifestToAcroForm = (manifestData: any, receiverData?: any)
 
 export const useManifestIntegration = () => {
   const { toast } = useToast();
-  const generateAcroForm = useGenerateAcroFormManifest();
+  const generateAcroForm = useGenerateAcroFormManifestV4();
 
   return useMutation({
     mutationFn: async ({ manifestId, overrides }: ManifestIntegrationParams) => {
@@ -119,16 +120,15 @@ export const useManifestIntegration = () => {
 
       if (fetchError) throw fetchError;
 
-      // Build AcroForm data strictly from DB record; receiver will come from overrides if provided
+      // Build AcroForm data from DB record and apply overrides
       const acroFormData = convertManifestToAcroForm(manifestData);
       const mergedData = { ...acroFormData, ...(overrides || {}) };
-      const acroFormFields = convertToAcroFormFields(mergedData);
       
+      // Generate the PDF using v4 template system  
       const acroFormResult = await generateAcroForm.mutateAsync({
-        templatePath: 'Michigan_Manifest_AcroForm.pdf', // Correct filename with uppercase 'F'
-        manifestData: acroFormFields,
+        manifestData: mergedData as AcroFormManifestData,
         manifestId: manifestId,
-        outputPath: `manifests/acroform-${manifestId}-${Date.now()}.pdf`
+        outputPath: `manifests/integrated-v4-${manifestId}-${Date.now()}.pdf`
       });
 
       // 3. Update manifest with AcroForm PDF path (keep status as AWAITING_RECEIVER_SIGNATURE)
@@ -145,13 +145,14 @@ export const useManifestIntegration = () => {
       return {
         success: true,
         pdfUrl: acroFormResult.pdfUrl,
-        pdfPath: acroFormResult.pdfPath
+        pdfPath: acroFormResult.pdfPath,
+        templateVersion: 4
       };
     },
     onSuccess: (data) => {
       toast({
         title: "Manifest Generated",
-        description: "State compliant manifest PDF created successfully."
+        description: "v4 AcroForm manifest PDF created successfully with corrected field names."
       });
     },
     onError: (error: any) => {
