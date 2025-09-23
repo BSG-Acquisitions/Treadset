@@ -1027,7 +1027,9 @@ export type Database = {
           dropoff_id: string | null
           emailed_to: string[] | null
           finalized_by: string | null
+          generator_signed_at: string | null
           hauler_id: string | null
+          hauler_signed_at: string | null
           id: string
           location_id: string | null
           manifest_number: string
@@ -1080,7 +1082,9 @@ export type Database = {
           dropoff_id?: string | null
           emailed_to?: string[] | null
           finalized_by?: string | null
+          generator_signed_at?: string | null
           hauler_id?: string | null
+          hauler_signed_at?: string | null
           id?: string
           location_id?: string | null
           manifest_number: string
@@ -1133,7 +1137,9 @@ export type Database = {
           dropoff_id?: string | null
           emailed_to?: string[] | null
           finalized_by?: string | null
+          generator_signed_at?: string | null
           hauler_id?: string | null
+          hauler_signed_at?: string | null
           id?: string
           location_id?: string | null
           manifest_number?: string
