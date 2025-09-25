@@ -15,7 +15,6 @@ export const clientSchema = z.object({
   email: z.string().email("Invalid email format").optional().or(z.literal("")),
   phone: z.string().regex(phoneRegex, "Phone must be in E.164 format (+1234567890)").optional().or(z.literal("")),
   notes: z.string().max(2000, "Notes must be less than 2000 characters").optional(),
-  type: z.enum(["commercial", "residential", "industrial"]).optional(),
   tags: z.array(z.string()).optional(),
   sla_weeks: z.number().int().min(1, "SLA weeks must be at least 1").optional(),
   pricing_tier_id: z.string().uuid().optional(),

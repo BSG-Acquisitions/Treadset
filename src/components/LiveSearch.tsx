@@ -56,7 +56,7 @@ export function LiveSearch() {
       // Search clients
       const { data: clients } = await supabase
         .from('clients')
-        .select('id, company_name, contact_name, email, type')
+        .select('id, company_name, contact_name, email')
         .eq('organization_id', userOrg.organization_id)
         .eq('is_active', true)
         .or(`company_name.ilike.%${query}%,contact_name.ilike.%${query}%,email.ilike.%${query}%`)
@@ -69,7 +69,7 @@ export function LiveSearch() {
             type: 'client',
             title: client.company_name,
             subtitle: client.contact_name || client.email || '',
-            badge: client.type || 'Client',
+            badge: 'Client',
             path: `/clients/${client.id}`
           });
         });

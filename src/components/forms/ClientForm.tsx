@@ -34,7 +34,6 @@ export function ClientForm({ initialData, onSubmit, onCancel, isLoading }: Clien
       email: initialData?.email || "",
       phone: initialData?.phone || "",
       notes: initialData?.notes || "",
-      type: initialData?.type || undefined,
       tags: initialData?.tags || [],
       sla_weeks: initialData?.sla_weeks || undefined,
       pricing_tier_id: initialData?.pricing_tier_id || undefined,
@@ -126,29 +125,6 @@ export function ClientForm({ initialData, onSubmit, onCancel, isLoading }: Clien
                 <FormControl>
                   <Input placeholder="+1234567890" {...field} />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="type"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Type</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select client type" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="commercial">Commercial</SelectItem>
-                    <SelectItem value="residential">Residential</SelectItem>
-                    <SelectItem value="industrial">Industrial</SelectItem>
-                  </SelectContent>
-                </Select>
                 <FormMessage />
               </FormItem>
             )}

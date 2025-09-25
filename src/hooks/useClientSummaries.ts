@@ -23,7 +23,6 @@ interface ClientSummary {
   updated_at: string;
   client?: {
     company_name: string;
-    type: string;
   };
 }
 
@@ -43,7 +42,7 @@ export const useClientSummaries = (params: ClientSummaryParams = {}) => {
         .from('client_summaries')
         .select(`
           *,
-          client:client_id(company_name, type)
+          client:client_id(company_name)
         `)
         .eq('year', year)
         .order('total_revenue', { ascending: false });

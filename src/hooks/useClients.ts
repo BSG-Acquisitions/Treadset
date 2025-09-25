@@ -44,10 +44,7 @@ export const useClients = (params: ClientsQueryParams = {}) => {
         query = query.or(`company_name.ilike.%${search}%,contact_name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`);
       }
 
-      // Type filter
-      if (type && (type === 'commercial' || type === 'residential' || type === 'industrial')) {
-        query = query.eq('type', type);
-      }
+      // Remove type filter since type column no longer exists
 
       // Tags filter
       if (tags.length > 0) {

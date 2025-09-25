@@ -19,7 +19,6 @@ import type { Database } from "@/integrations/supabase/types";
 type Client = {
   id: string;
   company_name: string;
-  type: string | null;
   contact_name: string | null;
   email: string | null;
   phone: string | null;
@@ -61,24 +60,14 @@ export default function Clients() {
       )
     },
     {
-      key: 'type',
-      title: 'Type',
-      sortable: true,
-      render: (value) => value ? (
-        <Badge variant="outline" className="capitalize">
-          {value}
-        </Badge>
-      ) : null
-    },
-    {
       key: 'contact_name',
       title: 'Contact',
       sortable: true,
       render: (value, row) => (
-        <div>
-          <div className="font-medium">{value || '—'}</div>
+        <div className="min-w-0">
+          <div className="font-medium truncate">{value || '—'}</div>
           {row.email && (
-            <div className="text-sm text-muted-foreground">{row.email}</div>
+            <div className="text-xs text-muted-foreground truncate">{row.email}</div>
           )}
         </div>
       )
@@ -90,11 +79,8 @@ export default function Clients() {
       render: (value, row) => {
         const location = row.locations?.[0];
         return location?.address ? (
-          <div className="text-sm">
-            <div className="font-medium">{location.address}</div>
-            {location.access_notes && (
-              <div className="text-xs text-muted-foreground">{location.access_notes}</div>
-            )}
+          <div className="text-sm min-w-0">
+            <div className="font-medium truncate">{location.address}</div>
           </div>
         ) : (
           <span className="text-muted-foreground text-sm">No address</span>
@@ -106,8 +92,8 @@ export default function Clients() {
       title: 'Revenue',
       sortable: true,
       render: (value) => (
-        <span className="font-medium">
-          ${(value || 0).toFixed(2)}
+        <span className="font-medium text-sm">
+          ${(value || 0).toFixed(0)}
         </span>
       )
     },
@@ -116,36 +102,36 @@ export default function Clients() {
       title: 'Balance',
       sortable: true,
       render: (value) => (
-        <span className={`font-medium ${(value || 0) > 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
-          ${(value || 0).toFixed(2)}
+        <span className={`font-medium text-sm ${(value || 0) > 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+          ${(value || 0).toFixed(0)}
         </span>
       )
     },
-      {
-        key: 'is_active',
-        title: 'Status',
-        sortable: true,
-        render: (value) => (
-          <Badge variant={value ? 'default' : 'secondary'}>
-            {value ? 'Active' : 'Inactive'}
-          </Badge>
-        )
-      },
-      {
-        key: 'actions',
-        title: 'Actions',
-        sortable: false,
-        render: (_, row) => (
-          <EditClientDialog
-            client={row}
-            trigger={
-              <Button variant="ghost" size="sm">
-                <Edit className="h-4 w-4" />
-              </Button>
-            }
-          />
-        )
-      }
+    {
+      key: 'is_active',
+      title: 'Status',
+      sortable: true,
+      render: (value) => (
+        <Badge variant={value ? 'default' : 'secondary'} className="text-xs">
+          {value ? 'Active' : 'Inactive'}
+        </Badge>
+      )
+    },
+    {
+      key: 'actions',
+      title: 'Actions',
+      sortable: false,
+      render: (_, row) => (
+        <EditClientDialog
+          client={row}
+          trigger={
+            <Button variant="ghost" size="sm">
+              <Edit className="h-4 w-4" />
+            </Button>
+          }
+        />
+      )
+    }
   ];
 
   const actions = (

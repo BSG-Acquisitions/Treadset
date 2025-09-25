@@ -78,7 +78,6 @@ export default function Index() {
     company_name: client.company_name,
     is_active: client.is_active,
     lifetime_revenue: client.lifetime_revenue || 0,
-    type: client.type || 'commercial',
     last_pickup_at: client.last_pickup_at,
     pickups_count: client.pickups?.[0]?.count || 0
   }));
@@ -356,9 +355,8 @@ export default function Index() {
                   revenue: pickup.computed_revenue || Math.floor(Math.random() * 15000) + 5000,
                   pickupsThisMonth: Math.floor(Math.random() * 8) + 3,
                   status: pickup.status === 'completed' ? 'active' : 
-                          pickup.status === 'overdue' ? 'overdue' : 'scheduled',
-                  address: pickup.location?.address || 'Detroit Metro Area',
-                  type: 'commercial' as const
+                   pickup.status === 'overdue' ? 'overdue' : 'scheduled',
+                  address: pickup.location?.address || 'Detroit Metro Area'
                 }))}
               />
             </CardContent>

@@ -40,7 +40,7 @@ export function EditClientDialog({ client, trigger }: EditClientDialogProps) {
           email: data.email || null,
           phone: data.phone || null,
           notes: data.notes || null,
-          type: data.type || null,
+          // Remove type field since it no longer exists
           tags: data.tags || null,
           sla_weeks: data.sla_weeks || null,
           pricing_tier_id: data.pricing_tier_id || null,

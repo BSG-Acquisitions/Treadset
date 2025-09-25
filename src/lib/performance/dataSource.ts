@@ -13,7 +13,6 @@ export interface ClientSummary {
   last_pickup_date?: string;
   pickup_count: number;
   outstanding_manifests: number;
-  type: string;
 }
 
 export interface PickupWithClient {
@@ -57,7 +56,6 @@ export async function getDashboardData(organizationId: string): Promise<{
         is_active,
         lifetime_revenue,
         last_pickup_at,
-        type,
         pickups:pickups(count),
         manifests:manifests!client_id(
           count,
@@ -99,7 +97,7 @@ export async function getDashboardData(organizationId: string): Promise<{
       outstanding_manifests: Array.isArray(client.manifests) 
         ? client.manifests.filter((m: any) => m.status !== 'COMPLETED').length 
         : 0,
-      type: client.type || 'commercial'
+      // Remove type field since it no longer exists
     }));
 
     // Calculate aggregated stats

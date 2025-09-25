@@ -11,7 +11,6 @@ interface ClientCardProps {
   capacity: number;
   lastPickup: string;
   address?: string;
-  type?: 'commercial' | 'residential';
   revenue?: number;
   pickupsThisMonth?: number;
   status?: 'active' | 'overdue' | 'scheduled';
@@ -23,7 +22,6 @@ export function ClientCard({
   capacity, 
   lastPickup, 
   address, 
-  type = 'commercial',
   revenue = 0,
   pickupsThisMonth = 0,
   status = 'active'
@@ -105,17 +103,7 @@ export function ClientCard({
                 {name}
               </h3>
               <div className="flex items-center gap-2 mt-1">
-                {type && (
-                  <span className={`
-                    inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full
-                    ${type === 'commercial' 
-                      ? 'bg-brand-secondary/10 text-brand-secondary border border-brand-secondary/20' 
-                      : 'bg-brand-accent/10 text-brand-accent border border-brand-accent/20'
-                    }
-                  `}>
-                    {type === 'commercial' ? 'Commercial' : 'Residential'}
-                  </span>
-                )}
+                {/* Remove type badge entirely */}
                 <span className={`
                   inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full
                   ${statusConfig.bg} ${statusConfig.color}

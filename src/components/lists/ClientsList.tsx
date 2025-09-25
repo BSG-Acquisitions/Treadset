@@ -224,11 +224,7 @@ export function ClientsList({ onCreateClick, onEditClick }: ClientsListProps) {
                     <span className="font-medium">{formatDate(client.last_pickup_at)}</span>
                   </div>
 
-                  {client.type && (
-                    <Badge variant="outline" className="capitalize">
-                      {client.type}
-                    </Badge>
-                  )}
+                {/* Remove client type display */}
 
                   {client.pricing_tier && (
                     <Badge variant="secondary">

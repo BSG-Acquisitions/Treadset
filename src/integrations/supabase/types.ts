@@ -289,13 +289,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "client_summaries_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "pickup_analytics"
-            referencedColumns: ["client_id"]
-          },
-          {
             foreignKeyName: "client_summaries_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -353,13 +346,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "fk_client_workflows_client"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "pickup_analytics"
-            referencedColumns: ["client_id"]
-          },
-          {
             foreignKeyName: "fk_client_workflows_organization"
             columns: ["organization_id"]
             isOneToOne: false
@@ -397,7 +383,6 @@ export type Database = {
           sla_weeks: number | null
           state: string | null
           tags: string[] | null
-          type: Database["public"]["Enums"]["client_type"] | null
           updated_at: string
           zip: string | null
         }
@@ -429,7 +414,6 @@ export type Database = {
           sla_weeks?: number | null
           state?: string | null
           tags?: string[] | null
-          type?: Database["public"]["Enums"]["client_type"] | null
           updated_at?: string
           zip?: string | null
         }
@@ -461,7 +445,6 @@ export type Database = {
           sla_weeks?: number | null
           state?: string | null
           tags?: string[] | null
-          type?: Database["public"]["Enums"]["client_type"] | null
           updated_at?: string
           zip?: string | null
         }
@@ -870,13 +853,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "invoices_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "pickup_analytics"
-            referencedColumns: ["client_id"]
-          },
-          {
             foreignKeyName: "invoices_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -986,13 +962,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "locations_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "pickup_analytics"
-            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "locations_organization_id_fkey"
@@ -1190,13 +1159,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "manifests_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "pickup_analytics"
-            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "manifests_driver_id_fkey"
@@ -1437,13 +1399,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "payments_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "pickup_analytics"
-            referencedColumns: ["client_id"]
-          },
-          {
             foreignKeyName: "payments_invoice_id_fkey"
             columns: ["invoice_id"]
             isOneToOne: false
@@ -1625,13 +1580,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "pickups_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "pickup_analytics"
-            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "pickups_location_id_fkey"
@@ -2240,33 +2188,6 @@ export type Database = {
         }
         Relationships: []
       }
-      pickup_analytics: {
-        Row: {
-          avg_pickup_size: number | null
-          client_id: string | null
-          client_type: Database["public"]["Enums"]["client_type"] | null
-          company_name: string | null
-          first_pickup: string | null
-          last_pickup: string | null
-          month: number | null
-          organization_id: string | null
-          pickup_count: number | null
-          total_otr: number | null
-          total_ptes: number | null
-          total_revenue: number | null
-          total_tractor: number | null
-          year: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "clients_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       receiver_overlay_view: {
         Row: {
           receiver_city: string | null
@@ -2386,7 +2307,6 @@ export type Database = {
         | "driver"
         | "sales"
         | "client"
-      client_type: "commercial" | "residential" | "industrial"
       price_source:
         | "org_default"
         | "admin_manual"
@@ -2538,7 +2458,6 @@ export const Constants = {
         "sales",
         "client",
       ],
-      client_type: ["commercial", "residential", "industrial"],
       price_source: [
         "org_default",
         "admin_manual",

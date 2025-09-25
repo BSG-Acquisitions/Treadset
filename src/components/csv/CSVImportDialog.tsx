@@ -114,7 +114,7 @@ export function CSVImportDialog({ trigger, onSuccess }: CSVImportDialogProps) {
   };
 
   const requiredColumns = [
-    'clientName', 'type', 'contactName', 'email', 'phone', 
+    'clientName', 'contactName', 'email', 'phone', 
     'locationName', 'address', 'notes', 'tags', 'pricingTierName'
   ];
 
@@ -211,11 +211,10 @@ export function CSVImportDialog({ trigger, onSuccess }: CSVImportDialogProps) {
                 </div>
                 <div className="mt-4 space-y-2 text-xs text-muted-foreground">
                   <p><strong>Notes:</strong></p>
-                  <ul className="list-disc list-inside space-y-1">
-                    <li>clientName is required</li>
-                    <li>type: commercial, residential, or industrial</li>
-                    <li>phone: E.164 format (+1234567890)</li>
-                    <li>tags: semicolon-separated (tag1;tag2;tag3)</li>
+                   <ul className="list-disc list-inside space-y-1">
+                     <li>clientName is required</li>
+                     <li>phone: E.164 format (+1234567890)</li>
+                     <li>tags: semicolon-separated (tag1;tag2;tag3)</li>
                     <li>Available pricing tiers: {availablePricingTiers}</li>
                   </ul>
                 </div>
