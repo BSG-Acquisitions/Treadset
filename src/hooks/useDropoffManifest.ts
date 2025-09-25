@@ -39,12 +39,42 @@ export const useGenerateDropoffManifest = () => {
         .rpc('generate_manifest_number', { org_id: orgId });
       if (numberError) throw numberError;
 
+      // First, get or create a default dropoff client to satisfy the client_id requirement
+      let clientId: string;
+      
+      // Check if we have a default "Dropoff Customers" client
+      const { data: existingClient, error: clientError } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('organization_id', orgId)
+        .eq('company_name', 'Dropoff Customers')
+        .maybeSingle();
+
+      if (existingClient) {
+        clientId = existingClient.id;
+      } else {
+        // Create a default client for dropoffs
+        const { data: newClient, error: createClientError } = await supabase
+          .from('clients')
+          .insert({
+            organization_id: orgId,
+            company_name: 'Dropoff Customers',
+            contact_name: 'Various Customers',
+            email: 'dropoffs@bsgtires.com',
+            notes: 'Default client for dropoff manifests'
+          })
+          .select('id')
+          .single();
+
+        if (createClientError) throw createClientError;
+        clientId = newClient.id;
+      }
+
       // Create manifest data from dropoff
       const manifestData = {
         manifest_number: manifestNumber as string,
         organization_id: orgId as string,
-        // Use dropoff customer as client - we'll need to create a temporary client entry or use a default one
-        client_id: null, // We'll handle this differently since dropoffs don't have traditional clients
+        client_id: clientId, // Use the default dropoff client
         location_id: null,
         pickup_id: null,
         dropoff_id: dropoff.id, // Link to the dropoff
@@ -65,11 +95,8 @@ export const useGenerateDropoffManifest = () => {
         surcharges: 0,
         total: Number(dropoff.computed_revenue || 0),
         status: 'AWAITING_SIGNATURE' as const,
-        // Add dropoff customer info as generator info
+        // Add dropoff customer info 
         signed_by_name: dropoff.dropoff_customers?.contact_name || 'Dropoff Customer',
-        generator_company_name: dropoff.dropoff_customers?.company_name || dropoff.dropoff_customers?.contact_name,
-        generator_email: dropoff.dropoff_customers?.email,
-        generator_phone: dropoff.dropoff_customers?.phone,
         // Set signed timestamp
         signed_at: new Date().toISOString(),
         generator_signed_at: new Date().toISOString(),
@@ -108,6 +135,10 @@ export const useGenerateDropoffManifest = () => {
           generator_city: '',
           generator_state: '',
           generator_zip: '',
+          generator_physical_address: '',
+          generator_physical_city: '',
+          generator_physical_state: '',
+          generator_physical_zip: '',
           // Set tire counts based on dropoff data
           passenger_car_count: (dropoff.pte_count || 0).toString(),
           truck_count: '0',
@@ -116,6 +147,12 @@ export const useGenerateDropoffManifest = () => {
           hauler_name: 'BSG Tire Recycling',
           hauler_print_name: 'BSG Representative',
           hauler_date: new Date().toISOString().split('T')[0],
+          hauler_mail_address: '2971 Bellevue Street',
+          hauler_city: 'Detroit',
+          hauler_state: 'MI',
+          hauler_zip: '48207',
+          hauler_phone: '313-731-0817',
+          hauler_mi_reg: 'H-82220004',
           // Leave receiver blank for now
           receiver_name: '',
           receiver_print_name: '',
