@@ -13,7 +13,8 @@ import {
   CreditCard,
   MoreHorizontal,
   Edit,
-  Receipt
+  Receipt,
+  Loader2
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -23,6 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import type { Database } from "@/integrations/supabase/types";
+import { useGenerateDropoffManifest } from "@/hooks/useDropoffManifest";
 
 type Dropoff = Database["public"]["Tables"]["dropoffs"]["Row"] & {
   dropoff_customers?: {
@@ -48,12 +50,17 @@ interface DropopffsListProps {
 }
 
 export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListProps) => {
+  const generateManifest = useGenerateDropoffManifest();
   
   const filteredDropoffs = dropoffs.filter(dropoff => 
     dropoff.dropoff_customers?.contact_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     dropoff.dropoff_customers?.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     dropoff.notes?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleGenerateManifest = (dropoff: Dropoff) => {
+    generateManifest.mutate(dropoff);
+  };
 
   const getPaymentStatusColor = (status: string) => {
     switch (status) {
@@ -225,11 +232,27 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
 
                 {/* Actions */}
                 <div className="flex items-center gap-2">
-                  {dropoff.requires_manifest && (
-                    <Button size="sm" variant="outline">
-                      <FileText className="h-4 w-4 mr-1" />
+                  {dropoff.requires_manifest && !dropoff.manifest_id && (
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => handleGenerateManifest(dropoff)}
+                      disabled={generateManifest.isPending}
+                    >
+                      {generateManifest.isPending ? (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <FileText className="h-4 w-4 mr-1" />
+                      )}
                       Generate Manifest
                     </Button>
+                  )}
+                  
+                  {dropoff.manifest_id && (
+                    <Badge variant="default">
+                      <FileText className="h-3 w-3 mr-1" />
+                      Manifest Generated
+                    </Badge>
                   )}
                   
                   <DropdownMenu>
