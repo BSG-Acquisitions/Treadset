@@ -10,6 +10,7 @@ import SignatureCanvas from 'react-signature-canvas';
 import { supabase } from '@/integrations/supabase/client';
 
 import { useManifestIntegration } from '@/hooks/useManifestIntegration';
+import { useSendManifestEmail } from '@/hooks/useSendManifestEmail';
 import { AcroFormLivePreview } from '@/components/manifest/AcroFormLivePreview';
 
 interface ManifestWizardProps {
@@ -22,8 +23,11 @@ type WizardStep = 'arrive' | 'counts' | 'photos' | 'signatures' | 'review';
 export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onComplete }) => {
   const [step, setStep] = useState<WizardStep>('arrive');
   const [loading, setLoading] = useState(false);
+  const [manifestCompleted, setManifestCompleted] = useState(false);
+  const [clientEmails, setClientEmails] = useState<string[]>([]);
   
   const manifestIntegration = useManifestIntegration();
+  const sendEmail = useSendManifestEmail();
   const customerSigRef = useRef<SignatureCanvas>(null);
   const driverSigRef = useRef<SignatureCanvas>(null);
   
@@ -103,7 +107,12 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
     try {
       setLoading(true);
 
-      // Update manifest with collected data
+      // Get current timestamp for signatures
+      const timestamp = new Date().toISOString();
+      const currentDate = timestamp.split('T')[0];
+      const currentTime = new Date(timestamp).toLocaleTimeString('en-US', { hour12: false });
+
+      // Update manifest with collected data and timestamps
       const { error: updateError } = await supabase
         .from('manifests')
         .update({
@@ -115,18 +124,49 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
           commercial_22_5_on: data.c225On,
           customer_signature_png_path: data.customerSigPath,
           driver_signature_png_path: data.driverSigPath,
+          generator_signed_at: timestamp,
+          hauler_signed_at: timestamp,
           status: 'AWAITING_FINALIZATION'
         })
         .eq('id', manifestId);
 
       if (updateError) throw updateError;
 
+      // Get client email for sending after update
+      const { data: manifest, error: selectError } = await supabase
+        .from('manifests')
+        .select(`
+          *,
+          clients:client_id(company_name, email)
+        `)
+        .eq('id', manifestId)
+        .single();
+
+      if (selectError) {
+        console.error('Failed to fetch manifest details:', selectError);
+      } else if (manifest?.clients?.email) {
+        setClientEmails([manifest.clients.email]);
+      }
+
+      // Store client emails for sending
+      if (manifest?.clients?.email) {
+        setClientEmails([manifest.clients.email]);
+      }
+
       const payload = { manifest_id: manifestId };
       const queueKey = 'manifestFinalizeQueue';
 
       const execute = async () => {
-        // Use the new integration hook that generates both PDFs
-        const result = await manifestIntegration.mutateAsync({ manifestId });
+        // Use the new integration hook that generates both PDFs with timestamp overrides
+        const result = await manifestIntegration.mutateAsync({ 
+          manifestId,
+          overrides: {
+            generator_date: currentDate,
+            generator_time: currentTime,
+            hauler_date: currentDate,
+            hauler_time: currentTime,
+          }
+        });
         return result;
       };
 
@@ -135,17 +175,37 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
         queued.push(payload);
         localStorage.setItem(queueKey, JSON.stringify(queued));
         console.log("Manifest will be finalized when online");
-        onComplete();
+        setManifestCompleted(true);
         return;
       }
 
       await execute();
-      console.log("Manifest finalized and sent to client");
-      onComplete();
+      console.log("Manifest finalized - ready to send");
+      setManifestCompleted(true);
     } catch (error: any) {
       console.error("Error:", error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSendManifest = async () => {
+    if (clientEmails.length === 0) {
+      console.error("No client email available");
+      return;
+    }
+
+    try {
+      await sendEmail.mutateAsync({
+        manifestId,
+        to: clientEmails,
+        subject: "Manifest Complete - Tire Collection Service",
+        messageHtml: "<p>Your tire collection service has been completed. Please find the attached manifest.</p>"
+      });
+      
+      onComplete();
+    } catch (error) {
+      console.error("Failed to send manifest:", error);
     }
   };
 
@@ -363,53 +423,91 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
       case 'review':
         return (
           <div className="space-y-4">
-            <h3 className="text-lg font-medium">Review & Finalize</h3>
-            
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>PTE Off Rim: {data.pteOff}</div>
-              <div>PTE On Rim: {data.pteOn}</div>
-              <div>17.5-19.5 Off: {data.c175Off}</div>
-              <div>17.5-19.5 On: {data.c175On}</div>
-              <div>22.5 Off: {data.c225Off}</div>
-              <div>22.5 On: {data.c225On}</div>
-            </div>
-            
-            {data.notes && (
-              <div>
-                <Label>Notes:</Label>
-                <p className="text-sm text-muted-foreground">{data.notes}</p>
-              </div>
-            )}
-            
-            <div className="text-sm">
-              Photos: {data.photos.length}
-            </div>
-            
-            <div className="text-sm">
-              Signatures: Customer ✓, Driver ✓
-            </div>
+            {!manifestCompleted ? (
+              <>
+                <h3 className="text-lg font-medium">Review & Finalize</h3>
+                
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>PTE Off Rim: {data.pteOff}</div>
+                  <div>PTE On Rim: {data.pteOn}</div>
+                  <div>17.5-19.5 Off: {data.c175Off}</div>
+                  <div>17.5-19.5 On: {data.c175On}</div>
+                  <div>22.5 Off: {data.c225Off}</div>
+                  <div>22.5 On: {data.c225On}</div>
+                </div>
+                
+                {data.notes && (
+                  <div>
+                    <Label>Notes:</Label>
+                    <p className="text-sm text-muted-foreground">{data.notes}</p>
+                  </div>
+                )}
+                
+                <div className="text-sm">
+                  Photos: {data.photos.length}
+                </div>
+                
+                <div className="text-sm">
+                  Signatures: Customer ✓, Driver ✓
+                </div>
 
-            <AcroFormLivePreview
-              manifestId={manifestId}
-              overrides={{
-                pte_off_rim: data.pteOff,
-                pte_on_rim: data.pteOn,
-                commercial_17_5_19_5_off: data.c175Off,
-                commercial_17_5_19_5_on: data.c175On,
-                commercial_22_5_off: data.c225Off,
-                commercial_22_5_on: data.c225On,
-                generator_date: new Date().toISOString().split('T')[0],
-                hauler_date: new Date().toISOString().split('T')[0],
-              }}
-            />
-            
-            <Button 
-              onClick={handleFinalize} 
-              disabled={loading || manifestIntegration.isPending || !data.customerSigned || !data.driverSigned}
-              className="w-full bg-green-600 hover:bg-green-700"
-            >
-              {(loading || manifestIntegration.isPending) ? 'Generating PDFs...' : 'Finalize Manifest'}
-            </Button>
+                <AcroFormLivePreview
+                  manifestId={manifestId}
+                  overrides={{
+                    pte_off_rim: data.pteOff,
+                    pte_on_rim: data.pteOn,
+                    commercial_17_5_19_5_off: data.c175Off,
+                    commercial_17_5_19_5_on: data.c175On,
+                    commercial_22_5_off: data.c225Off,
+                    commercial_22_5_on: data.c225On,
+                    generator_date: new Date().toISOString().split('T')[0],
+                    hauler_date: new Date().toISOString().split('T')[0],
+                  }}
+                />
+                
+                <Button 
+                  onClick={handleFinalize} 
+                  disabled={loading || manifestIntegration.isPending || !data.customerSigned || !data.driverSigned}
+                  className="w-full bg-green-600 hover:bg-green-700"
+                >
+                  {(loading || manifestIntegration.isPending) ? 'Generating PDFs...' : 'Finalize Manifest'}
+                </Button>
+              </>
+            ) : (
+              <>
+                <div className="text-center space-y-4">
+                  <CheckCircle className="h-12 w-12 text-green-500 mx-auto" />
+                  <h3 className="text-lg font-medium text-green-700">Manifest Complete!</h3>
+                  <p className="text-sm text-muted-foreground">
+                    PDF has been generated with timestamps and signatures
+                  </p>
+                </div>
+                
+                <div className="space-y-3">
+                  <Button 
+                    onClick={handleSendManifest}
+                    disabled={sendEmail.isPending || clientEmails.length === 0}
+                    className="w-full bg-blue-600 hover:bg-blue-700"
+                  >
+                    {sendEmail.isPending ? 'Sending...' : 'Send Manifest to Client'}
+                  </Button>
+                  
+                  <Button 
+                    onClick={onComplete}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    Finish Without Sending
+                  </Button>
+                </div>
+                
+                {clientEmails.length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    No client email available for sending
+                  </p>
+                )}
+              </>
+            )}
           </div>
         );
     }

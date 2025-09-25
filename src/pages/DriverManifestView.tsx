@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useSendManifestEmail } from "@/hooks/useSendManifestEmail";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +18,8 @@ import {
   Building, 
   DollarSign,
   FileText,
-  Truck
+  Truck,
+  Send
 } from "lucide-react";
 
 interface ManifestData {
@@ -59,6 +61,7 @@ export default function DriverManifestView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const sendEmail = useSendManifestEmail();
   
   const [manifest, setManifest] = useState<ManifestData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -118,6 +121,33 @@ export default function DriverManifestView() {
         description: "Failed to download PDF",
         variant: "destructive"
       });
+    }
+  };
+
+  const handleSendManifest = async () => {
+    if (!manifest?.clients?.email) {
+      toast({
+        title: "Email not available",
+        description: "No client email address found for this manifest",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      await sendEmail.mutateAsync({
+        manifestId: manifest.id,
+        to: [manifest.clients.email],
+        subject: `Manifest ${manifest.manifest_number} - Tire Collection Complete`,
+        messageHtml: `
+          <p>Your tire collection service has been completed.</p>
+          <p><strong>Manifest Number:</strong> ${manifest.manifest_number}</p>
+          <p><strong>Total Amount:</strong> $${Number(manifest.total).toFixed(2)}</p>
+          <p>Please find the attached manifest with all signatures and timestamps.</p>
+        `
+      });
+    } catch (error) {
+      console.error("Failed to send manifest:", error);
     }
   };
 
@@ -188,10 +218,20 @@ export default function DriverManifestView() {
           
           <div className="flex gap-3">
             {manifest.pdf_path && (
-              <Button variant="outline" onClick={handleDownloadPDF}>
-                <Download className="h-4 w-4 mr-2" />
-                Download PDF
-              </Button>
+              <>
+                <Button variant="outline" onClick={handleDownloadPDF}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Download PDF
+                </Button>
+                <Button 
+                  onClick={handleSendManifest}
+                  disabled={sendEmail.isPending || !manifest.clients?.email}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  {sendEmail.isPending ? 'Sending...' : 'Send to Client'}
+                </Button>
+              </>
             )}
           </div>
         </div>
