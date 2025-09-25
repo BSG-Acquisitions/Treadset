@@ -170,43 +170,43 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
                         </Button>
                       </FormControl>
                     </PopoverTrigger>
-                    <PopoverContent className="w-full p-0">
-                      <Command>
-                        <CommandInput
-                          placeholder="Search clients..."
-                          value={clientSearch}
-                          onValueChange={setClientSearch}
-                        />
-                        <CommandList>
-                          <CommandEmpty>No clients found.</CommandEmpty>
-                          <CommandGroup>
-                            {clients?.data?.map((client) => (
-                              <CommandItem
-                                key={client.id}
-                                value={client.id}
-                                onSelect={() => {
-                                  handleClientChange(client.id);
-                                  setClientComboOpen(false);
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    client.id === field.value ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                                <div>
-                                  <div className="font-medium">{client.company_name}</div>
-                                  {client.contact_name && (
-                                    <div className="text-sm text-muted-foreground">{client.contact_name}</div>
-                                  )}
-                                </div>
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
+                       <PopoverContent className="w-full p-0 z-50 bg-popover" align="start">
+                         <Command>
+                           <CommandInput
+                             placeholder="Search clients..."
+                             value={clientSearch}
+                             onValueChange={setClientSearch}
+                           />
+                           <CommandList>
+                             <CommandEmpty>No clients found.</CommandEmpty>
+                             <CommandGroup>
+                               {clients?.data?.map((client) => (
+                                 <CommandItem
+                                   key={client.id}
+                                   value={client.id}
+                                   onSelect={() => {
+                                     handleClientChange(client.id);
+                                     setClientComboOpen(false);
+                                   }}
+                                 >
+                                   <Check
+                                     className={cn(
+                                       "mr-2 h-4 w-4",
+                                       client.id === field.value ? "opacity-100" : "opacity-0"
+                                     )}
+                                   />
+                                   <div>
+                                     <div className="font-medium">{client.company_name}</div>
+                                     {client.contact_name && (
+                                       <div className="text-sm text-muted-foreground">{client.contact_name}</div>
+                                     )}
+                                   </div>
+                                 </CommandItem>
+                               ))}
+                             </CommandGroup>
+                           </CommandList>
+                         </Command>
+                       </PopoverContent>
                   </Popover>
                   <FormMessage />
                 </FormItem>
@@ -227,18 +227,18 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
                           <SelectValue placeholder="Select location (optional)" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
-                        {locations?.map((location) => (
-                          <SelectItem key={location.id} value={location.id}>
-                            <div>
-                              <div className="font-medium">{location.name || location.address}</div>
-                              {location.name && (
-                                <div className="text-sm text-muted-foreground">{location.address}</div>
-                              )}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
+                       <SelectContent className="z-50 bg-popover">
+                         {locations?.map((location) => (
+                           <SelectItem key={location.id} value={location.id}>
+                             <div>
+                               <div className="font-medium">{location.name || location.address}</div>
+                               {location.name && (
+                                 <div className="text-sm text-muted-foreground">{location.address}</div>
+                               )}
+                             </div>
+                           </SelectItem>
+                         ))}
+                       </SelectContent>
                     </Select>
                     <FormMessage />
                   </FormItem>
@@ -265,21 +265,21 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
                           </SelectValue>
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
-                        {vehicles?.map((vehicle) => (
-                          <SelectItem key={vehicle.id} value={vehicle.id}>
-                            <div className="flex items-center gap-2">
-                              <Truck className="h-4 w-4" />
-                              <div>
-                                <div className="font-medium">{vehicle.name}</div>
-                                {vehicle.license_plate && (
-                                  <div className="text-sm text-muted-foreground">{vehicle.license_plate}</div>
-                                )}
-                              </div>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
+                       <SelectContent className="z-50 bg-popover">
+                         {vehicles?.map((vehicle) => (
+                           <SelectItem key={vehicle.id} value={vehicle.id}>
+                             <div className="flex items-center gap-2">
+                               <Truck className="h-4 w-4" />
+                               <div>
+                                 <div className="font-medium">{vehicle.name}</div>
+                                 {vehicle.license_plate && (
+                                   <div className="text-sm text-muted-foreground">{vehicle.license_plate}</div>
+                                 )}
+                               </div>
+                             </div>
+                           </SelectItem>
+                         ))}
+                       </SelectContent>
                     </Select>
                     <FormMessage />
                   </FormItem>
@@ -303,21 +303,21 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
                           </SelectValue>
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
-                        {drivers.map((driver) => (
-                          <SelectItem key={driver.id} value={driver.id}>
-                            <div className="flex items-center gap-2">
-                              <User className="h-4 w-4" />
-                              <div>
-                                <div className="font-medium">
-                                  {driver.firstName} {driver.lastName}
-                                </div>
-                                <div className="text-sm text-muted-foreground">{driver.email}</div>
-                              </div>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
+                       <SelectContent className="z-50 bg-popover">
+                         {drivers.map((driver) => (
+                           <SelectItem key={driver.id} value={driver.id}>
+                             <div className="flex items-center gap-2">
+                               <User className="h-4 w-4" />
+                               <div>
+                                 <div className="font-medium">
+                                   {driver.firstName} {driver.lastName}
+                                 </div>
+                                 <div className="text-sm text-muted-foreground">{driver.email}</div>
+                               </div>
+                             </div>
+                           </SelectItem>
+                         ))}
+                       </SelectContent>
                     </Select>
                     <FormMessage />
                   </FormItem>
@@ -352,17 +352,18 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
                         </FormControl>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
-                        <CalendarComponent
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) => {
-                            const today = new Date();
-                            today.setHours(0, 0, 0, 0);
-                            return date < today;
-                          }}
-                          initialFocus
-                        />
+                         <CalendarComponent
+                           mode="single"
+                           selected={field.value}
+                           onSelect={field.onChange}
+                           disabled={(date) => {
+                             const today = new Date();
+                             today.setHours(0, 0, 0, 0);
+                             return date < today;
+                           }}
+                           initialFocus
+                           className={cn("p-3 pointer-events-auto")}
+                         />
                       </PopoverContent>
                     </Popover>
                     <FormMessage />
@@ -382,11 +383,11 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
-                        <SelectItem value="AM">Morning (AM)</SelectItem>
-                        <SelectItem value="PM">Afternoon (PM)</SelectItem>
-                        <SelectItem value="Any">Any Time</SelectItem>
-                      </SelectContent>
+                       <SelectContent className="z-50 bg-popover">
+                         <SelectItem value="AM">Morning (AM)</SelectItem>
+                         <SelectItem value="PM">Afternoon (PM)</SelectItem>
+                         <SelectItem value="Any">Any Time</SelectItem>
+                       </SelectContent>
                     </Select>
                     <FormMessage />
                   </FormItem>

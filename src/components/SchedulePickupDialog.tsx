@@ -180,8 +180,8 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-full p-0" align="start">
-                        <Command shouldFilter={false}>
+                       <PopoverContent className="w-full p-0 z-50 bg-popover" align="start">
+                         <Command shouldFilter={false}>
                           <CommandInput 
                             placeholder="Search clients..." 
                             value={clientSearch}
@@ -218,37 +218,37 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
                             </CommandGroup>
                           </CommandList>
                         </Command>
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                       </PopoverContent>
+                     </Popover>
+                     <FormMessage />
+                   </FormItem>
+                 )}
+               />
 
-              <FormField
-                control={form.control}
-                name="locationId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Location</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      value={field.value}
-                      disabled={!selectedClientId}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a location" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {locations?.map((location) => (
-                          <SelectItem key={location.id} value={location.id}>
-                            {location.name || location.address}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+               <FormField
+                 control={form.control}
+                 name="locationId"
+                 render={({ field }) => (
+                   <FormItem>
+                     <FormLabel>Location</FormLabel>
+                     <Select 
+                       onValueChange={field.onChange} 
+                       value={field.value}
+                       disabled={!selectedClientId}
+                     >
+                       <FormControl>
+                         <SelectTrigger>
+                           <SelectValue placeholder="Select a location" />
+                         </SelectTrigger>
+                       </FormControl>
+                       <SelectContent className="z-50 bg-popover">
+                         {locations?.map((location) => (
+                           <SelectItem key={location.id} value={location.id}>
+                             {location.name || location.address}
+                           </SelectItem>
+                         ))}
+                       </SelectContent>
+                     </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -271,25 +271,25 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
                         form.setValue("vehicleId", "");
                       }
                     }} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="vehicle">
-                          <div className="flex items-center gap-2">
-                            <Truck className="h-4 w-4" />
-                            Internal Vehicle
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="hauler">
-                          <div className="flex items-center gap-2">
-                            <Building className="h-4 w-4" />
-                            External Hauler
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
+                       <FormControl>
+                         <SelectTrigger>
+                           <SelectValue />
+                         </SelectTrigger>
+                       </FormControl>
+                       <SelectContent className="z-50 bg-popover">
+                         <SelectItem value="vehicle">
+                           <div className="flex items-center gap-2">
+                             <Truck className="h-4 w-4" />
+                             Internal Vehicle
+                           </div>
+                         </SelectItem>
+                         <SelectItem value="hauler">
+                           <div className="flex items-center gap-2">
+                             <Building className="h-4 w-4" />
+                             External Hauler
+                           </div>
+                         </SelectItem>
+                       </SelectContent>
                     </Select>
                     <FormMessage />
                   </FormItem>
@@ -309,18 +309,18 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
                             <SelectValue placeholder="Select a vehicle" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
-                          {vehicles?.map((vehicle) => (
-                            <SelectItem key={vehicle.id} value={vehicle.id}>
-                              <div className="flex flex-col items-start">
-                                <span className="font-medium">{vehicle.name}</span>
-                                <span className="text-muted-foreground text-sm">
-                                  {vehicle.license_plate} • Capacity: {vehicle.capacity} tires
-                                </span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
+                         <SelectContent className="z-50 bg-popover">
+                           {vehicles?.map((vehicle) => (
+                             <SelectItem key={vehicle.id} value={vehicle.id}>
+                               <div className="flex flex-col items-start">
+                                 <span className="font-medium">{vehicle.name}</span>
+                                 <span className="text-muted-foreground text-sm">
+                                   {vehicle.license_plate} • Capacity: {vehicle.capacity} tires
+                                 </span>
+                               </div>
+                             </SelectItem>
+                           ))}
+                         </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
@@ -339,22 +339,22 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
                             <SelectValue placeholder="Select a hauler" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
-                          {haulers?.map((hauler) => (
-                            <SelectItem key={hauler.id} value={hauler.id}>
-                              <div className="flex flex-col items-start">
-                                <span className="font-medium">{hauler.hauler_name}</span>
-                                {(hauler.hauler_mi_reg || hauler.hauler_phone) && (
-                                  <span className="text-muted-foreground text-sm">
-                                    {hauler.hauler_mi_reg && `Reg: ${hauler.hauler_mi_reg}`}
-                                    {hauler.hauler_mi_reg && hauler.hauler_phone && " • "}
-                                    {hauler.hauler_phone && `Phone: ${hauler.hauler_phone}`}
-                                  </span>
-                                )}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
+                         <SelectContent className="z-50 bg-popover">
+                           {haulers?.map((hauler) => (
+                             <SelectItem key={hauler.id} value={hauler.id}>
+                               <div className="flex flex-col items-start">
+                                 <span className="font-medium">{hauler.hauler_name}</span>
+                                 {(hauler.hauler_mi_reg || hauler.hauler_phone) && (
+                                   <span className="text-muted-foreground text-sm">
+                                     {hauler.hauler_mi_reg && `Reg: ${hauler.hauler_mi_reg}`}
+                                     {hauler.hauler_mi_reg && hauler.hauler_phone && " • "}
+                                     {hauler.hauler_phone && `Phone: ${hauler.hauler_phone}`}
+                                   </span>
+                                 )}
+                               </div>
+                             </SelectItem>
+                           ))}
+                         </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
@@ -375,21 +375,21 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
                           <SelectValue placeholder="Select a driver (optional)" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
-                        {employees?.filter(emp => emp.isActive).map((employee) => (
-                          <SelectItem key={employee.id} value={employee.id}>
-                            <div className="flex items-center gap-2">
-                              <User className="h-4 w-4" />
-                              <span>
-                                {employee.firstName} {employee.lastName}
-                                {employee.email && (
-                                  <span className="text-muted-foreground ml-1">({employee.email})</span>
-                                )}
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
+                       <SelectContent className="z-50 bg-popover">
+                         {employees?.filter(emp => emp.isActive).map((employee) => (
+                           <SelectItem key={employee.id} value={employee.id}>
+                             <div className="flex items-center gap-2">
+                               <User className="h-4 w-4" />
+                               <span>
+                                 {employee.firstName} {employee.lastName}
+                                 {employee.email && (
+                                   <span className="text-muted-foreground ml-1">({employee.email})</span>
+                                 )}
+                               </span>
+                             </div>
+                           </SelectItem>
+                         ))}
+                       </SelectContent>
                     </Select>
                     <FormMessage />
                   </FormItem>
@@ -454,11 +454,11 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
-                        <SelectItem value="AM">Morning (AM)</SelectItem>
-                        <SelectItem value="PM">Afternoon (PM)</SelectItem>
-                        <SelectItem value="Any">Any Time</SelectItem>
-                      </SelectContent>
+                       <SelectContent className="z-50 bg-popover">
+                         <SelectItem value="AM">Morning (AM)</SelectItem>
+                         <SelectItem value="PM">Afternoon (PM)</SelectItem>
+                         <SelectItem value="Any">Any Time</SelectItem>
+                       </SelectContent>
                     </Select>
                     <FormMessage />
                   </FormItem>

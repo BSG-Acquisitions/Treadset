@@ -12,7 +12,6 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Upload, Download, Edit } from "lucide-react";
 import { SchedulePickupDialog } from "@/components/SchedulePickupDialog";
-import { SchedulePickupWithDriver } from "@/components/SchedulePickupWithDriver";
 
 
 import type { Database } from "@/integrations/supabase/types";
@@ -170,12 +169,14 @@ export default function Clients() {
         }
       />
 
-      <SchedulePickupWithDriver>
-        <Button variant="outline">
-          <Plus className="h-4 w-4 mr-2" />
-          Schedule Pickup
-        </Button>
-      </SchedulePickupWithDriver>
+      <SchedulePickupDialog
+        trigger={
+          <Button variant="outline">
+            <Plus className="h-4 w-4 mr-2" />
+            Schedule Pickup
+          </Button>
+        }
+      />
 
       <Button asChild>
         <Link to="/book">
