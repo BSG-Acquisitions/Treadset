@@ -45,7 +45,7 @@ const Dropoffs = () => {
   const oneTimeCustomers = customers.filter(c => c.customer_type === 'one_time').length;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
       {/* Breadcrumb Navigation */}
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Button asChild variant="ghost" size="sm" className="p-0 h-auto font-normal hover:text-foreground">
@@ -59,19 +59,19 @@ const Dropoffs = () => {
       </div>
 
       {/* Header */}
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Drop-off Management</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Drop-off Management</h1>
           <p className="text-muted-foreground">
             Process tire drop-offs and manage drop-off customers
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setShowCreateCustomerDialog(true)} variant="outline">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-2">
+          <Button onClick={() => setShowCreateCustomerDialog(true)} variant="outline" className="w-full sm:w-auto">
             <Users className="mr-2 h-4 w-4" />
             Add Customer
           </Button>
-          <Button onClick={() => setShowProcessDialog(true)}>
+          <Button onClick={() => setShowProcessDialog(true)} className="w-full sm:w-auto">
             <Plus className="mr-2 h-4 w-4" />
             Process Drop-off
           </Button>
@@ -79,7 +79,7 @@ const Dropoffs = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Today's Drop-offs</CardTitle>

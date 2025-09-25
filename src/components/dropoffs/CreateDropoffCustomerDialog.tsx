@@ -65,7 +65,7 @@ export const CreateDropoffCustomerDialog = ({ open, onOpenChange }: CreateDropof
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto sm:max-w-md">
+      <DialogContent className="max-w-2xl sm:max-w-lg w-full max-h-[90vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
@@ -76,7 +76,7 @@ export const CreateDropoffCustomerDialog = ({ open, onOpenChange }: CreateDropof
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 max-h-[calc(85vh-180px)] overflow-y-auto pr-2">{/* Content wrapper for scrolling */}
+        <div className="space-y-4 overflow-y-auto max-h-[calc(90vh-200px)] pr-2">
           {/* Basic Information */}
           <div className="space-y-4">
             <div className="space-y-2">
@@ -100,7 +100,7 @@ export const CreateDropoffCustomerDialog = ({ open, onOpenChange }: CreateDropof
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input

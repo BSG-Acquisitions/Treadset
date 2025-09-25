@@ -104,7 +104,7 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl sm:max-w-2xl w-full max-h-[95vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <DollarSign className="h-5 w-5" />
@@ -115,7 +115,7 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-6 overflow-y-auto max-h-[calc(95vh-200px)] pr-2">
           {/* Customer Selection */}
           <div className="space-y-3">
             <Label>Customer</Label>
@@ -131,14 +131,14 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
                 <SelectContent>
                   {customers.map((customer) => (
                     <SelectItem key={customer.id} value={customer.id}>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                         <span>{customer.contact_name}</span>
                         {customer.company_name && (
-                          <span className="text-muted-foreground">
+                          <span className="text-muted-foreground text-xs sm:text-sm">
                             ({customer.company_name})
                           </span>
                         )}
-                        <Badge variant={customer.customer_type === 'regular' ? 'default' : 'secondary'}>
+                        <Badge variant={customer.customer_type === 'regular' ? 'default' : 'secondary'} className="w-fit">
                           {customer.customer_type}
                         </Badge>
                       </div>
@@ -152,7 +152,7 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
           {/* Tire Counts */}
           <div className="space-y-4">
             <Label className="text-base font-medium">Tire Counts</Label>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="pte">PTE Count</Label>
                 <Input

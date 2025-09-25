@@ -126,158 +126,161 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
         
         return (
           <Card key={dropoff.id} className="hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between">
-                <div className="flex-1 space-y-3">
-                  {/* Header */}
-                  <div className="flex items-center gap-3">
-                    <div>
-                      <h3 className="font-semibold text-lg flex items-center gap-2">
-                        <User className="h-4 w-4" />
-                        {dropoff.dropoff_customers?.contact_name || 'Unknown Customer'}
-                      </h3>
-                      {dropoff.dropoff_customers?.company_name && (
-                        <p className="text-sm text-muted-foreground flex items-center gap-1">
-                          <Building2 className="h-3 w-3" />
-                          {dropoff.dropoff_customers.company_name}
-                        </p>
-                      )}
-                    </div>
-                    
+            <CardContent className="p-3 sm:p-4">
+              <div className="space-y-4">
+                {/* Mobile Header */}
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                  <div className="space-y-2">
+                    <h3 className="font-semibold text-base sm:text-lg flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      {dropoff.dropoff_customers?.contact_name || 'Unknown Customer'}
+                    </h3>
+                    {dropoff.dropoff_customers?.company_name && (
+                      <p className="text-sm text-muted-foreground flex items-center gap-1">
+                        <Building2 className="h-3 w-3" />
+                        {dropoff.dropoff_customers.company_name}
+                      </p>
+                    )}
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2">
                     <Badge variant={dropoff.status === 'completed' ? 'default' : 'secondary'}>
                       {dropoff.status}
                     </Badge>
-                    
                     <Badge variant={getPaymentStatusColor(dropoff.payment_status || 'pending')}>
                       {dropoff.payment_status}
                     </Badge>
                   </div>
+                </div>
 
-                  {/* Date and Time */}
-                  <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      {format(new Date(dropoff.dropoff_date), 'MMM dd, yyyy')}
-                    </div>
-                    {dropoff.dropoff_time && (
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {dropoff.dropoff_time}
-                      </div>
-                    )}
-                    {dropoff.users && (
-                      <div className="flex items-center gap-1">
-                        <User className="h-3 w-3" />
-                        Processed by {dropoff.users.first_name} {dropoff.users.last_name}
-                      </div>
-                    )}
+                {/* Date and Time - Mobile Stacked */}
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    {format(new Date(dropoff.dropoff_date), 'MMM dd, yyyy')}
                   </div>
-
-                  {/* Tire Counts */}
-                  <div className="flex flex-wrap gap-6 text-sm">
+                  {dropoff.dropoff_time && (
                     <div className="flex items-center gap-1">
-                      <Package className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{totalTires}</span>
-                      <span className="text-muted-foreground">total tires</span>
+                      <Clock className="h-3 w-3" />
+                      {dropoff.dropoff_time}
                     </div>
-                    
-                    {dropoff.pte_count > 0 && (
-                      <div className="text-muted-foreground">
-                        {dropoff.pte_count} PTE
-                      </div>
-                    )}
-                    
-                    {dropoff.otr_count > 0 && (
-                      <div className="text-muted-foreground">
-                        {dropoff.otr_count} OTR
-                      </div>
-                    )}
-                    
-                    {dropoff.tractor_count > 0 && (
-                      <div className="text-muted-foreground">
-                        {dropoff.tractor_count} Tractor
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Revenue and Payment */}
-                  <div className="flex items-center gap-6 text-sm">
+                  )}
+                  {dropoff.users && (
                     <div className="flex items-center gap-1">
-                      <DollarSign className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">
-                        ${(dropoff.computed_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                      </span>
+                      <User className="h-3 w-3" />
+                      <span className="hidden sm:inline">Processed by </span>
+                      {dropoff.users.first_name} {dropoff.users.last_name}
                     </div>
-                    
-                    <div className="flex items-center gap-1 text-muted-foreground">
-                      {getPaymentMethodIcon(dropoff.payment_method || 'cash')}
-                      <span className="capitalize">{dropoff.payment_method}</span>
-                    </div>
-
-                    {dropoff.requires_manifest && (
-                      <Badge variant="outline">
-                        <FileText className="h-3 w-3 mr-1" />
-                        Manifest Required
-                      </Badge>
-                    )}
-                  </div>
-
-                  {/* Notes */}
-                  {dropoff.notes && (
-                    <p className="text-sm text-muted-foreground bg-muted p-2 rounded">
-                      {dropoff.notes}
-                    </p>
                   )}
                 </div>
 
-                {/* Actions */}
-                <div className="flex items-center gap-2">
+                {/* Tire Counts - Mobile Grid */}
+                <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3 sm:gap-6 text-sm">
+                  <div className="flex items-center gap-1 col-span-2 sm:col-span-1">
+                    <Package className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">{totalTires}</span>
+                    <span className="text-muted-foreground">total tires</span>
+                  </div>
+                  
+                  {dropoff.pte_count > 0 && (
+                    <div className="text-muted-foreground">
+                      {dropoff.pte_count} PTE
+                    </div>
+                  )}
+                  
+                  {dropoff.otr_count > 0 && (
+                    <div className="text-muted-foreground">
+                      {dropoff.otr_count} OTR
+                    </div>
+                  )}
+                  
+                  {dropoff.tractor_count > 0 && (
+                    <div className="text-muted-foreground">
+                      {dropoff.tractor_count} Tractor
+                    </div>
+                  )}
+                </div>
+
+                {/* Revenue and Payment - Mobile Stacked */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 text-sm">
+                  <div className="flex items-center gap-1">
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">
+                      ${(dropoff.computed_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center gap-1 text-muted-foreground">
+                    {getPaymentMethodIcon(dropoff.payment_method || 'cash')}
+                    <span className="capitalize">{dropoff.payment_method}</span>
+                  </div>
+
+                  {dropoff.requires_manifest && (
+                    <Badge variant="outline" className="w-fit">
+                      <FileText className="h-3 w-3 mr-1" />
+                      Manifest Required
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Notes */}
+                {dropoff.notes && (
+                  <p className="text-sm text-muted-foreground bg-muted p-2 rounded">
+                    {dropoff.notes}
+                  </p>
+                )}
+
+                {/* Actions - Mobile Full Width */}
+                <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-border/50">
                   {dropoff.requires_manifest && !dropoff.manifest_id && (
                     <Button 
                       size="sm" 
                       variant="outline"
                       onClick={() => handleGenerateManifest(dropoff)}
                       disabled={generateManifest.isPending}
+                      className="w-full sm:w-auto"
                     >
                       {generateManifest.isPending ? (
-                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       ) : (
-                        <FileText className="h-4 w-4 mr-1" />
+                        <FileText className="h-4 w-4 mr-2" />
                       )}
                       Generate Manifest
                     </Button>
                   )}
                   
                   {dropoff.manifest_id && (
-                    <Badge variant="default">
+                    <Badge variant="default" className="w-fit">
                       <FileText className="h-3 w-3 mr-1" />
                       Manifest Generated
                     </Badge>
                   )}
                   
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit Drop-off
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Receipt className="h-4 w-4 mr-2" />
-                        View Receipt
-                      </DropdownMenuItem>
-                      {dropoff.payment_status === 'pending' && (
+                  <div className="flex justify-end sm:ml-auto">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
                         <DropdownMenuItem>
-                          <DollarSign className="h-4 w-4 mr-2" />
-                          Mark as Paid
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit Drop-off
                         </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                        <DropdownMenuItem>
+                          <Receipt className="h-4 w-4 mr-2" />
+                          View Receipt
+                        </DropdownMenuItem>
+                        {dropoff.payment_status === 'pending' && (
+                          <DropdownMenuItem>
+                            <DollarSign className="h-4 w-4 mr-2" />
+                            Mark as Paid
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
               </div>
             </CardContent>
