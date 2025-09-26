@@ -253,7 +253,6 @@ export const useSubmitMichiganReport = () => {
       console.log(`Submitting Michigan report for year ${year}`);
       return { success: true };
     },
-    },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['michigan-report', variables.year] });
       toast({
