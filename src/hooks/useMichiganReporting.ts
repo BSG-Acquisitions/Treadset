@@ -76,9 +76,7 @@ export const useMichiganReport = (year: number) => {
           locations(
             id,
             name,
-            address,
-            city,
-            county
+            address
           )
         `)
         .eq('status', 'completed')
