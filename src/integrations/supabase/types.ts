@@ -289,6 +289,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_summaries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_monthly_entity_rollup"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "client_summaries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_revenue_summary"
+            referencedColumns: ["entity_id"]
+          },
+          {
             foreignKeyName: "client_summaries_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -344,6 +358,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_client_workflows_client"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_monthly_entity_rollup"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "fk_client_workflows_client"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_revenue_summary"
+            referencedColumns: ["entity_id"]
           },
           {
             foreignKeyName: "fk_client_workflows_organization"
@@ -464,6 +492,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      conversions: {
+        Row: {
+          created_at: string | null
+          factor: number
+          id: string
+          notes: string | null
+          precedence: number | null
+          rounding: Database["public"]["Enums"]["rounding_type"] | null
+          unit_from: Database["public"]["Enums"]["unit_basis"]
+          unit_to: Database["public"]["Enums"]["unit_basis"]
+        }
+        Insert: {
+          created_at?: string | null
+          factor: number
+          id?: string
+          notes?: string | null
+          precedence?: number | null
+          rounding?: Database["public"]["Enums"]["rounding_type"] | null
+          unit_from: Database["public"]["Enums"]["unit_basis"]
+          unit_to: Database["public"]["Enums"]["unit_basis"]
+        }
+        Update: {
+          created_at?: string | null
+          factor?: number
+          id?: string
+          notes?: string | null
+          precedence?: number | null
+          rounding?: Database["public"]["Enums"]["rounding_type"] | null
+          unit_from?: Database["public"]["Enums"]["unit_basis"]
+          unit_to?: Database["public"]["Enums"]["unit_basis"]
+        }
+        Relationships: []
       }
       dropoff_customers: {
         Row: {
@@ -656,6 +717,74 @@ export type Database = {
             columns: ["processed_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entities: {
+        Row: {
+          city: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          county: string | null
+          created_at: string | null
+          dba: string | null
+          eg_number: string | null
+          id: string
+          is_active: boolean | null
+          kind: Database["public"]["Enums"]["entity_kind"]
+          legal_name: string
+          organization_id: string
+          state: string | null
+          street_address: string | null
+          updated_at: string | null
+          zip: string | null
+        }
+        Insert: {
+          city?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          county?: string | null
+          created_at?: string | null
+          dba?: string | null
+          eg_number?: string | null
+          id?: string
+          is_active?: boolean | null
+          kind: Database["public"]["Enums"]["entity_kind"]
+          legal_name: string
+          organization_id: string
+          state?: string | null
+          street_address?: string | null
+          updated_at?: string | null
+          zip?: string | null
+        }
+        Update: {
+          city?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          county?: string | null
+          created_at?: string | null
+          dba?: string | null
+          eg_number?: string | null
+          id?: string
+          is_active?: boolean | null
+          kind?: Database["public"]["Enums"]["entity_kind"]
+          legal_name?: string
+          organization_id?: string
+          state?: string | null
+          street_address?: string | null
+          updated_at?: string | null
+          zip?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entities_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -853,6 +982,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "invoices_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_monthly_entity_rollup"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "invoices_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_revenue_summary"
+            referencedColumns: ["entity_id"]
+          },
+          {
             foreignKeyName: "invoices_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -962,6 +1105,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "locations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_monthly_entity_rollup"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "locations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_revenue_summary"
+            referencedColumns: ["entity_id"]
           },
           {
             foreignKeyName: "locations_organization_id_fkey"
@@ -1159,6 +1316,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manifests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_monthly_entity_rollup"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "manifests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_revenue_summary"
+            referencedColumns: ["entity_id"]
           },
           {
             foreignKeyName: "manifests_driver_id_fkey"
@@ -1399,6 +1570,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "payments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_monthly_entity_rollup"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "payments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_revenue_summary"
+            referencedColumns: ["entity_id"]
+          },
+          {
             foreignKeyName: "payments_invoice_id_fkey"
             columns: ["invoice_id"]
             isOneToOne: false
@@ -1582,6 +1767,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "pickups_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_monthly_entity_rollup"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "pickups_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_revenue_summary"
+            referencedColumns: ["entity_id"]
+          },
+          {
             foreignKeyName: "pickups_location_id_fkey"
             columns: ["location_id"]
             isOneToOne: false
@@ -1745,6 +1944,102 @@ export type Database = {
           },
         ]
       }
+      processing_events: {
+        Row: {
+          created_at: string | null
+          destination_entity_id: string | null
+          destination_location_id: string | null
+          end_use: Database["public"]["Enums"]["end_use"] | null
+          ended_at: string | null
+          event_type: Database["public"]["Enums"]["event_type"]
+          facility_entity_id: string
+          id: string
+          input_pte: number
+          location_id: string | null
+          notes: string | null
+          organization_id: string
+          output_breakdown: Json | null
+          output_pte: number
+          started_at: string
+          updated_at: string | null
+          yield_loss_pte: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          destination_entity_id?: string | null
+          destination_location_id?: string | null
+          end_use?: Database["public"]["Enums"]["end_use"] | null
+          ended_at?: string | null
+          event_type: Database["public"]["Enums"]["event_type"]
+          facility_entity_id: string
+          id?: string
+          input_pte?: number
+          location_id?: string | null
+          notes?: string | null
+          organization_id: string
+          output_breakdown?: Json | null
+          output_pte?: number
+          started_at: string
+          updated_at?: string | null
+          yield_loss_pte?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          destination_entity_id?: string | null
+          destination_location_id?: string | null
+          end_use?: Database["public"]["Enums"]["end_use"] | null
+          ended_at?: string | null
+          event_type?: Database["public"]["Enums"]["event_type"]
+          facility_entity_id?: string
+          id?: string
+          input_pte?: number
+          location_id?: string | null
+          notes?: string | null
+          organization_id?: string
+          output_breakdown?: Json | null
+          output_pte?: number
+          started_at?: string
+          updated_at?: string | null
+          yield_loss_pte?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "processing_events_destination_entity_id_fkey"
+            columns: ["destination_entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processing_events_destination_location_id_fkey"
+            columns: ["destination_location_id"]
+            isOneToOne: false
+            referencedRelation: "reporting_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processing_events_facility_entity_id_fkey"
+            columns: ["facility_entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processing_events_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "reporting_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processing_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       receivers: {
         Row: {
           created_at: string | null
@@ -1780,6 +2075,292 @@ export type Database = {
           receiver_zip?: string | null
         }
         Relationships: []
+      }
+      report_monthly_snapshots: {
+        Row: {
+          created_at: string | null
+          entity_id: string
+          id: string
+          organization_id: string
+          rollups: Json
+          yyyymm: number
+        }
+        Insert: {
+          created_at?: string | null
+          entity_id: string
+          id?: string
+          organization_id: string
+          rollups: Json
+          yyyymm: number
+        }
+        Update: {
+          created_at?: string | null
+          entity_id?: string
+          id?: string
+          organization_id?: string
+          rollups?: Json
+          yyyymm?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_monthly_snapshots_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_monthly_snapshots_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reporting_locations: {
+        Row: {
+          city: string
+          county: string
+          created_at: string | null
+          eg_site_id: string | null
+          entity_id: string
+          id: string
+          is_active: boolean | null
+          latitude: number | null
+          longitude: number | null
+          name: string
+          organization_id: string
+          site_type: Database["public"]["Enums"]["site_type"]
+          state: string | null
+          storage_capacity_cy: number | null
+          street_address: string
+          updated_at: string | null
+          zip: string
+        }
+        Insert: {
+          city: string
+          county: string
+          created_at?: string | null
+          eg_site_id?: string | null
+          entity_id: string
+          id?: string
+          is_active?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          name: string
+          organization_id: string
+          site_type?: Database["public"]["Enums"]["site_type"]
+          state?: string | null
+          storage_capacity_cy?: number | null
+          street_address: string
+          updated_at?: string | null
+          zip: string
+        }
+        Update: {
+          city?: string
+          county?: string
+          created_at?: string | null
+          eg_site_id?: string | null
+          entity_id?: string
+          id?: string
+          is_active?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          name?: string
+          organization_id?: string
+          site_type?: Database["public"]["Enums"]["site_type"]
+          state?: string | null
+          storage_capacity_cy?: number | null
+          street_address?: string
+          updated_at?: string | null
+          zip?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reporting_locations_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reporting_locations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reports_annual: {
+        Row: {
+          created_at: string | null
+          entity_id: string
+          exports: Json | null
+          id: string
+          organization_id: string
+          status: Database["public"]["Enums"]["report_status"] | null
+          submitted_at: string | null
+          submitted_by: string | null
+          totals: Json | null
+          updated_at: string | null
+          year: number
+        }
+        Insert: {
+          created_at?: string | null
+          entity_id: string
+          exports?: Json | null
+          id?: string
+          organization_id: string
+          status?: Database["public"]["Enums"]["report_status"] | null
+          submitted_at?: string | null
+          submitted_by?: string | null
+          totals?: Json | null
+          updated_at?: string | null
+          year: number
+        }
+        Update: {
+          created_at?: string | null
+          entity_id?: string
+          exports?: Json | null
+          id?: string
+          organization_id?: string
+          status?: Database["public"]["Enums"]["report_status"] | null
+          submitted_at?: string | null
+          submitted_by?: string | null
+          totals?: Json | null
+          updated_at?: string | null
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_annual_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_annual_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_annual_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shipments: {
+        Row: {
+          arrived_at: string | null
+          bol_number: string | null
+          carrier: string | null
+          created_at: string | null
+          departed_at: string
+          destination_entity_id: string
+          destination_location_id: string | null
+          direction: Database["public"]["Enums"]["direction"]
+          end_use: Database["public"]["Enums"]["end_use"] | null
+          id: string
+          manifest_id: string | null
+          material_form: Database["public"]["Enums"]["material_form"]
+          notes: string | null
+          organization_id: string
+          origin_entity_id: string
+          origin_location_id: string | null
+          quantity: number
+          quantity_pte: number
+          unit_basis: Database["public"]["Enums"]["unit_basis"]
+          updated_at: string | null
+        }
+        Insert: {
+          arrived_at?: string | null
+          bol_number?: string | null
+          carrier?: string | null
+          created_at?: string | null
+          departed_at: string
+          destination_entity_id: string
+          destination_location_id?: string | null
+          direction: Database["public"]["Enums"]["direction"]
+          end_use?: Database["public"]["Enums"]["end_use"] | null
+          id?: string
+          manifest_id?: string | null
+          material_form: Database["public"]["Enums"]["material_form"]
+          notes?: string | null
+          organization_id: string
+          origin_entity_id: string
+          origin_location_id?: string | null
+          quantity: number
+          quantity_pte: number
+          unit_basis: Database["public"]["Enums"]["unit_basis"]
+          updated_at?: string | null
+        }
+        Update: {
+          arrived_at?: string | null
+          bol_number?: string | null
+          carrier?: string | null
+          created_at?: string | null
+          departed_at?: string
+          destination_entity_id?: string
+          destination_location_id?: string | null
+          direction?: Database["public"]["Enums"]["direction"]
+          end_use?: Database["public"]["Enums"]["end_use"] | null
+          id?: string
+          manifest_id?: string | null
+          material_form?: Database["public"]["Enums"]["material_form"]
+          notes?: string | null
+          organization_id?: string
+          origin_entity_id?: string
+          origin_location_id?: string | null
+          quantity?: number
+          quantity_pte?: number
+          unit_basis?: Database["public"]["Enums"]["unit_basis"]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shipments_destination_entity_id_fkey"
+            columns: ["destination_entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shipments_destination_location_id_fkey"
+            columns: ["destination_location_id"]
+            isOneToOne: false
+            referencedRelation: "reporting_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shipments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shipments_origin_entity_id_fkey"
+            columns: ["origin_entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shipments_origin_location_id_fkey"
+            columns: ["origin_location_id"]
+            isOneToOne: false
+            referencedRelation: "reporting_locations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       stops: {
         Row: {
@@ -2188,6 +2769,75 @@ export type Database = {
         }
         Relationships: []
       }
+      mv_monthly_entity_rollup: {
+        Row: {
+          by_destination: Json | null
+          by_end_use: Json | null
+          by_form: Json | null
+          cubic_yards_any: number | null
+          entity_id: string | null
+          inbound_pte: number | null
+          month: number | null
+          organization_id: string | null
+          outbound_pte: number | null
+          tons_any: number | null
+          year: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pickups_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mv_processing_summary: {
+        Row: {
+          entity_id: string | null
+          on_site_proc_pte: number | null
+          organization_id: string | null
+          portable_shred_pte: number | null
+          year: number | null
+          yield_loss_pte: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "processing_events_facility_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processing_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mv_revenue_summary: {
+        Row: {
+          avg_rate_per_pte: number | null
+          entity_id: string | null
+          organization_id: string | null
+          revenue_by_material: Json | null
+          total_revenue: number | null
+          year: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pickups_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       receiver_overlay_view: {
         Row: {
           receiver_city: string | null
@@ -2279,6 +2929,10 @@ export type Database = {
         Args: { "": unknown }
         Returns: unknown
       }
+      refresh_reporting_views: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       set_limit: {
         Args: { "": number }
         Returns: number
@@ -2307,14 +2961,50 @@ export type Database = {
         | "driver"
         | "sales"
         | "client"
+      direction: "inbound" | "outbound" | "internal"
+      end_use:
+        | "reuse"
+        | "tdf"
+        | "crumb_rubberized"
+        | "civil_construction"
+        | "agriculture"
+        | "landfill"
+        | "export"
+        | "other"
+      entity_kind:
+        | "generator"
+        | "hauler"
+        | "collection_site"
+        | "processor"
+        | "end_user"
+      event_type:
+        | "portable_shredding"
+        | "on_site_processing"
+        | "sorting"
+        | "baling"
+        | "granulation"
+        | "tdf"
+        | "devulc"
+      material_form:
+        | "whole_off_rim"
+        | "on_rim"
+        | "semi"
+        | "otr"
+        | "shreds"
+        | "crumb"
+        | "baled"
+        | "tdf"
       price_source:
         | "org_default"
         | "admin_manual"
         | "smart_suggested"
         | "client_override"
         | "location_override"
+      report_status: "in_progress" | "submitted" | "locked"
       rim_status: "off" | "on" | "any"
+      rounding_type: "none" | "up" | "down" | "bankers"
       service_mode: "pickup" | "dropoff"
+      site_type: "yard" | "facility" | "temporary" | "portable_shred_site"
       surcharge_type: "rim_on" | "after_hours" | "fuel" | "distance_band"
       tire_category:
         | "passenger"
@@ -2322,6 +3012,16 @@ export type Database = {
         | "commercial_22_5"
         | "otr"
         | "other"
+      unit_basis:
+        | "pte"
+        | "tons"
+        | "cubic_yards"
+        | "semi"
+        | "otr"
+        | "sidewalls_pass"
+        | "sidewalls_semi"
+        | "shredded_pte"
+        | "crumbed_pte"
       value_type: "flat" | "percent"
     }
     CompositeTypes: {
@@ -2458,6 +3158,43 @@ export const Constants = {
         "sales",
         "client",
       ],
+      direction: ["inbound", "outbound", "internal"],
+      end_use: [
+        "reuse",
+        "tdf",
+        "crumb_rubberized",
+        "civil_construction",
+        "agriculture",
+        "landfill",
+        "export",
+        "other",
+      ],
+      entity_kind: [
+        "generator",
+        "hauler",
+        "collection_site",
+        "processor",
+        "end_user",
+      ],
+      event_type: [
+        "portable_shredding",
+        "on_site_processing",
+        "sorting",
+        "baling",
+        "granulation",
+        "tdf",
+        "devulc",
+      ],
+      material_form: [
+        "whole_off_rim",
+        "on_rim",
+        "semi",
+        "otr",
+        "shreds",
+        "crumb",
+        "baled",
+        "tdf",
+      ],
       price_source: [
         "org_default",
         "admin_manual",
@@ -2465,8 +3202,11 @@ export const Constants = {
         "client_override",
         "location_override",
       ],
+      report_status: ["in_progress", "submitted", "locked"],
       rim_status: ["off", "on", "any"],
+      rounding_type: ["none", "up", "down", "bankers"],
       service_mode: ["pickup", "dropoff"],
+      site_type: ["yard", "facility", "temporary", "portable_shred_site"],
       surcharge_type: ["rim_on", "after_hours", "fuel", "distance_band"],
       tire_category: [
         "passenger",
@@ -2474,6 +3214,17 @@ export const Constants = {
         "commercial_22_5",
         "otr",
         "other",
+      ],
+      unit_basis: [
+        "pte",
+        "tons",
+        "cubic_yards",
+        "semi",
+        "otr",
+        "sidewalls_pass",
+        "sidewalls_semi",
+        "shredded_pte",
+        "crumbed_pte",
       ],
       value_type: ["flat", "percent"],
     },
