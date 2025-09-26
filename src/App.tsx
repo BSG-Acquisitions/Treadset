@@ -40,6 +40,7 @@ import ReceiverSignatures from './pages/ReceiverSignatures';
 import HaulerManagement from './pages/HaulerManagement';
 import ReceiverManagement from './pages/ReceiverManagement';
 import Reports from './pages/Reports';
+import MichiganReports from './pages/MichiganReports';
 import Dropoffs from './pages/Dropoffs';
 
 const queryClient = new QueryClient();
@@ -243,6 +244,13 @@ const App = () => (
               <ProtectedRoute roles={['admin', 'ops_manager']}>
                 <AppLayout>
                   <Reports />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/michigan-reports" element={
+              <ProtectedRoute roles={['admin', 'ops_manager']}>
+                <AppLayout>
+                  <MichiganReports />
                 </AppLayout>
               </ProtectedRoute>
             } />

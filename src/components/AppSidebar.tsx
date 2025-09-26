@@ -13,6 +13,7 @@ import {
   PenTool,
   Truck,
   Building,
+  Recycle,
   LogOut
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
@@ -66,6 +67,7 @@ export function AppSidebar() {
     { id: 'dropoffs', label: 'Drop-offs', icon: PackageOpen, path: '/dropoffs', roles: ['admin', 'ops_manager', 'sales'] as const },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics', roles: ['admin', 'ops_manager'] as const },
     { id: 'reports', label: 'Reports', icon: FileText, path: '/reports', roles: ['admin', 'ops_manager'] as const },
+    { id: 'michigan-reports', label: 'Michigan Reports', icon: Recycle, path: '/michigan-reports', roles: ['admin', 'ops_manager'] as const },
     { id: 'pricing', label: 'Pricing', icon: DollarSign, path: '/pricing', roles: ['admin', 'ops_manager'] as const },
   ];
 
