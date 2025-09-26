@@ -22,6 +22,7 @@ import { Link } from "react-router-dom";
 import { useMichiganReport, useExportMichiganReport, useSubmitMichiganReport } from "@/hooks/useMichiganReporting";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatNumber } from "@/lib/formatters";
+import { MichiganSystemStatus } from "@/components/diagnostics/MichiganSystemStatus";
 
 const MichiganReports = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -182,6 +183,9 @@ const MichiganReports = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* System Status */}
+      <MichiganSystemStatus />
 
       {/* Required Fields Alert */}
       {requiredFields.length > 0 && (
