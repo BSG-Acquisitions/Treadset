@@ -21,7 +21,7 @@ interface PaymentDialogProps {
 
 export function PaymentDialog({
   trigger,
-  defaultAmount = 0,
+  defaultAmount = 50.00, // Default to $50 (minimum $0.50 for Stripe)
   defaultDescription = "",
   defaultClientId = "",
   defaultPickupId = "",
@@ -41,8 +41,8 @@ export function PaymentDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (amount <= 0) {
-      return;
+    if (amount < 0.50) {
+      return; // Stripe minimum is $0.50
     }
 
     const paymentParams: CreatePaymentParams = {
@@ -100,12 +100,15 @@ export function PaymentDialog({
                 id="amount"
                 type="number"
                 step="0.01"
-                min="0.01"
+                min="0.50"
                 value={amount}
-                onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
-                placeholder="0.00"
+                onChange={(e) => setAmount(parseFloat(e.target.value) || 0.50)}
+                placeholder="50.00"
                 required
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Minimum amount: $0.50 (Stripe requirement)
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="client">Client (Optional)</Label>
@@ -168,7 +171,7 @@ export function PaymentDialog({
             </Button>
             <Button 
               type="submit" 
-              disabled={createPayment.isPending || amount <= 0}
+              disabled={createPayment.isPending || amount < 0.50}
               className="min-w-[140px]"
             >
               {createPayment.isPending ? (
