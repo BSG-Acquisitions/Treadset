@@ -135,7 +135,7 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-4 space-y-6">
+    <div className="max-w-3xl mx-auto px-4 py-4 md:py-6 space-y-4 md:space-y-6">
       {/* Assignment Header */}
       <Card>
         <CardHeader>
@@ -147,27 +147,27 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
         <CardContent>
           <div className="space-y-4">
             {/* Client Info */}
-            <div className="bg-secondary/20 rounded-lg p-4">
-              <div className="font-medium text-lg">{pickup?.client?.company_name || 'Unknown Client'}</div>
-              <div className="text-base font-medium text-foreground flex items-center gap-2 mt-2 p-2 bg-background rounded border">
-                <MapPin className="h-5 w-5 text-red-500" />
-                <span className="text-foreground">
+            <div className="bg-secondary/20 rounded-lg p-4 space-y-3">
+              <div className="font-medium text-xl">{pickup?.client?.company_name || 'Unknown Client'}</div>
+              <div className="text-base font-medium text-foreground flex items-start gap-3 p-3 bg-card rounded-lg border">
+                <MapPin className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <span className="text-foreground leading-relaxed">
                   {pickup?.location?.address || 'No address available'}
                 </span>
               </div>
               {pickup?.location?.name && (
-                <div className="text-sm text-muted-foreground mt-1">
-                  Location: {pickup.location.name}
+                <div className="text-sm text-muted-foreground">
+                  <strong>Location:</strong> {pickup.location.name}
                 </div>
               )}
               {pickup?.preferred_window && (
                 <div className="text-sm text-muted-foreground flex items-center gap-2">
                   <Clock className="h-4 w-4" />
-                  Preferred: {pickup.preferred_window}
+                  <strong>Preferred:</strong> {pickup.preferred_window}
                 </div>
               )}
-              <div className="mt-2">
-                <Badge variant={assignment.status === 'completed' ? 'default' : 'secondary'}>
+              <div className="mt-3">
+                <Badge variant={assignment.status === 'completed' ? 'default' : 'secondary'} className="text-sm">
                   {assignment.status}
                 </Badge>
               </div>
@@ -191,17 +191,17 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
             )}
 
             {/* Expected Counts */}
-            <div className="grid grid-cols-3 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-brand-primary">{pickup?.pte_count ?? 0}</div>
+            <div className="grid grid-cols-3 gap-2 md:gap-4">
+              <div className="text-center p-3 bg-card rounded-lg border">
+                <div className="text-xl md:text-2xl font-bold text-brand-primary">{pickup?.pte_count ?? 0}</div>
                 <div className="text-xs text-muted-foreground">PTE Tires</div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-brand-primary">{pickup?.otr_count ?? 0}</div>
+              <div className="text-center p-3 bg-card rounded-lg border">
+                <div className="text-xl md:text-2xl font-bold text-brand-primary">{pickup?.otr_count ?? 0}</div>
                 <div className="text-xs text-muted-foreground">OTR Tires</div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-brand-primary">{pickup?.tractor_count ?? 0}</div>
+              <div className="text-center p-3 bg-card rounded-lg border">
+                <div className="text-xl md:text-2xl font-bold text-brand-primary">{pickup?.tractor_count ?? 0}</div>
                 <div className="text-xs text-muted-foreground">Tractor Tires</div>
               </div>
             </div>
@@ -225,11 +225,11 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="space-y-3 md:space-y-4">
             {assignment.status === 'assigned' && (
               <Button 
                 onClick={handleStartRoute} 
-                className="w-full h-12 text-lg"
+                className="w-full h-12 md:h-14 text-base md:text-lg font-medium"
                 disabled={updateAssignmentStatus.isPending}
               >
                 <Play className="h-5 w-5 mr-2" />
@@ -240,8 +240,8 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
             {(assignment.status === 'in_progress' || assignment.status === 'assigned') && pickup && (
               <>
                 <Separator />
-                <div className="space-y-2">
-                  <h4 className="font-medium">Complete Pickup</h4>
+                <div className="space-y-3">
+                  <h4 className="font-medium text-lg">Complete Pickup</h4>
                   <p className="text-sm text-muted-foreground">
                     Use the same workflow as admin interface to complete pickup and generate manifest.
                   </p>
@@ -260,7 +260,7 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
                       trigger={
                         <Button 
                           variant="outline" 
-                          className="w-full h-12"
+                          className="w-full h-12 md:h-14 text-base border-2"
                         >
                           <FileText className="h-5 w-5 mr-2" />
                           Complete Pickup & Generate Manifest

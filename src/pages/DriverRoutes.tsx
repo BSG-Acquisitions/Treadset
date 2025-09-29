@@ -82,34 +82,34 @@ export default function DriverRoutes() {
   return (
     <div className="min-h-screen bg-background">
       
-      <main className="container py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
-              <Truck className="h-8 w-8 text-brand-primary" />
+      <main className="container max-w-4xl mx-auto px-4 py-4 md:py-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div className="space-y-1">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2">
+              <Truck className="h-6 w-6 md:h-8 md:w-8 text-brand-primary" />
               My Assignments
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm md:text-base text-muted-foreground">
               {format(new Date(selectedDate + 'T00:00:00'), 'EEEE, MMMM d, yyyy')} • {assignments.length} stops scheduled
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 bg-card p-2 rounded-lg border">
             <Calendar className="h-4 w-4 text-muted-foreground" />
             <Input
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-auto"
+              className="w-auto border-0 bg-transparent p-0 text-sm focus-visible:ring-0"
             />
           </div>
         </div>
 
         {assignments.length === 0 ? (
-          <Card>
-            <CardContent className="p-12 text-center">
+          <Card className="mx-auto max-w-md">
+            <CardContent className="p-8 text-center">
               <Truck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-medium mb-2">No routes scheduled</h3>
-              <p className="text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 {selectedDate === new Date().toISOString().split('T')[0] 
                   ? "No routes assigned to you for today"
                   : "No routes assigned to you for this date"
@@ -133,10 +133,10 @@ export default function DriverRoutes() {
                     return (
                       <div
                         key={assignment.id}
-                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-secondary/10 transition-colors"
+                        className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-secondary/10 transition-colors gap-4"
                       >
-                        <div className="flex items-center gap-4">
-                          <div className="flex items-center gap-2">
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-shrink-0">
                             <div className="bg-brand-primary text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
                               {index + 1}
                             </div>
@@ -146,80 +146,86 @@ export default function DriverRoutes() {
                             }`} />
                           </div>
                           
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-3">
-                              <div>
-                                <h3 className="font-semibold text-foreground">
-                                  {assignment.pickup?.client?.company_name || 'Unknown Client'}
-                                </h3>
-                                <div className="flex items-center gap-1 text-base font-medium text-foreground bg-background px-2 py-1 rounded border mt-1">
-                                  <MapPin className="h-4 w-4 text-red-500" />
-                                  <span className="truncate">
-                                    {assignment.pickup?.location?.address || 'No address available'}
-                                  </span>
-                                </div>
-                                {assignment.pickup?.location?.name && (
-                                  <div className="text-sm text-muted-foreground">
-                                    Location: {assignment.pickup.location.name}
-                                  </div>
-                                )}
-                                {assignment.pickup?.notes && (
-                                  <p className="text-sm text-muted-foreground italic">
-                                    Notes: {assignment.pickup.notes}
-                                  </p>
-                                )}
+                          <div className="flex-1 min-w-0 space-y-2">
+                            <div>
+                              <h3 className="font-semibold text-foreground text-lg">
+                                {assignment.pickup?.client?.company_name || 'Unknown Client'}
+                              </h3>
+                              <div className="flex items-center gap-1 text-base font-medium text-foreground bg-card px-3 py-2 rounded-lg border mt-2">
+                                <MapPin className="h-4 w-4 text-red-500 flex-shrink-0" />
+                                <span className="truncate">
+                                  {assignment.pickup?.location?.address || 'No address available'}
+                                </span>
                               </div>
+                              {assignment.pickup?.location?.name && (
+                                <div className="text-sm text-muted-foreground mt-1">
+                                  Location: {assignment.pickup.location.name}
+                                </div>
+                              )}
+                              {assignment.pickup?.notes && (
+                                <div className="text-sm text-muted-foreground italic bg-yellow-50 p-2 rounded mt-2">
+                                  <strong>Notes:</strong> {assignment.pickup.notes}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
                         
-                        <div className="text-right">
-                          <div className="space-y-1">
-                            <div className="text-sm font-medium">
-                              {assignment.pickup?.preferred_window || 'No time preference'}
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
+                          <div className="grid grid-cols-2 sm:flex sm:flex-col gap-2 text-right">
+                            <div className="space-y-1">
+                              <div className="text-sm font-medium">
+                                {assignment.pickup?.preferred_window || 'Any time'}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                Vehicle: {assignment.vehicle?.name || 'TBD'}
+                              </div>
                             </div>
-                            <div className="text-xs text-muted-foreground">
-                              Vehicle: {assignment.vehicle?.name || 'TBD'}
+                            <div className="space-y-1">
+                              <div className="text-xs text-muted-foreground">
+                                PTE {assignment.pickup?.pte_count || 0} | OTR {assignment.pickup?.otr_count || 0} | Tractor {assignment.pickup?.tractor_count || 0}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                Est. Revenue: ${assignment.pickup?.computed_revenue?.toFixed(2) || '0.00'}
+                              </div>
                             </div>
-                            <div className="text-xs text-muted-foreground">
-                              Expected: PTE {assignment.pickup?.pte_count || 0} | OTR {assignment.pickup?.otr_count || 0} | Tractor {assignment.pickup?.tractor_count || 0}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              Est. Revenue: ${assignment.pickup?.computed_revenue?.toFixed(2) || '0.00'}
-                            </div>
-                            <Badge variant={getStatusColor(assignment.status)}>
-                              {assignment.status.replace('_', ' ')}
-                            </Badge>
                           </div>
                           
-                          <div className="flex items-center gap-2 mt-2">
-                            <Button 
-                              size="sm" 
-                              disabled={assignment.status === 'completed'}
-                              onClick={() => setSelectedAssignment(assignment.id)}
-                              className="bg-brand-primary hover:bg-brand-primary/90"
-                            >
-                              {assignment.status === 'completed' ? '✅ Completed' : '📝 Start Pickup'}
-                            </Button>
+                          <div className="flex flex-col gap-2">
+                            <Badge variant={getStatusColor(assignment.status)} className="self-center">
+                              {assignment.status.replace('_', ' ')}
+                            </Badge>
                             
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="sm">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem 
-                                  onClick={() => {
-                                    setSelectedPickupToMove(assignment.pickup);
-                                    setMovePickupOpen(true);
-                                  }}
-                                >
-                                  <Move className="h-4 w-4 mr-2" />
-                                  Move to Different Date
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <div className="flex items-center gap-2">
+                              <Button 
+                                size="sm" 
+                                disabled={assignment.status === 'completed'}
+                                onClick={() => setSelectedAssignment(assignment.id)}
+                                className="bg-brand-primary hover:bg-brand-primary/90 text-white flex-1 sm:flex-none"
+                              >
+                                {assignment.status === 'completed' ? '✅ Done' : '📝 Start'}
+                              </Button>
+                              
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="outline" size="sm" className="px-2">
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="bg-card border shadow-lg z-50">
+                                  <DropdownMenuItem 
+                                    onClick={() => {
+                                      setSelectedPickupToMove(assignment.pickup);
+                                      setMovePickupOpen(true);
+                                    }}
+                                    className="hover:bg-accent"
+                                  >
+                                    <Move className="h-4 w-4 mr-2" />
+                                    Move to Different Date
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -231,29 +237,29 @@ export default function DriverRoutes() {
 
             {/* Summary Card */}
             <Card className="bg-brand-primary/5 border-brand-primary/20">
-              <CardContent className="p-6">
+              <CardContent className="p-4 md:p-6">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                  <div>
-                    <div className="text-2xl font-bold text-brand-primary">{assignments.length}</div>
-                    <div className="text-sm text-muted-foreground">Total Stops</div>
+                  <div className="space-y-1">
+                    <div className="text-xl md:text-2xl font-bold text-brand-primary">{assignments.length}</div>
+                    <div className="text-xs md:text-sm text-muted-foreground">Total Stops</div>
                   </div>
-                  <div>
-                    <div className="text-2xl font-bold text-brand-success">
+                  <div className="space-y-1">
+                    <div className="text-xl md:text-2xl font-bold text-brand-success">
                       {assignments.filter(a => a.status === 'completed').length}
                     </div>
-                    <div className="text-sm text-muted-foreground">Completed</div>
+                    <div className="text-xs md:text-sm text-muted-foreground">Completed</div>
                   </div>
-                  <div>
-                    <div className="text-2xl font-bold text-brand-warning">
+                  <div className="space-y-1">
+                    <div className="text-xl md:text-2xl font-bold text-brand-warning">
                       {assignments.filter(a => a.status !== 'completed').length}
                     </div>
-                    <div className="text-sm text-muted-foreground">Remaining</div>
+                    <div className="text-xs md:text-sm text-muted-foreground">Remaining</div>
                   </div>
-                  <div>
-                    <div className="text-2xl font-bold text-foreground">
+                  <div className="space-y-1">
+                    <div className="text-xl md:text-2xl font-bold text-foreground">
                       ${assignments.reduce((sum, a) => sum + (a.pickup?.computed_revenue || 0), 0).toFixed(2)}
                     </div>
-                    <div className="text-sm text-muted-foreground">Total Value</div>
+                    <div className="text-xs md:text-sm text-muted-foreground">Total Value</div>
                   </div>
                 </div>
               </CardContent>
