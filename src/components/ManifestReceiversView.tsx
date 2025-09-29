@@ -311,8 +311,8 @@ export const ManifestReceiversView = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Manifest #</TableHead>
                     <TableHead>Client</TableHead>
+                    <TableHead>Manifest #</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -328,12 +328,14 @@ export const ManifestReceiversView = () => {
                     filteredPending.map((manifest) => (
                       <TableRow key={manifest.id}>
                         <TableCell>
+                          <div className="font-semibold text-base">
+                            {clientNames[manifest.client_id] || 'Unknown Client'}
+                          </div>
+                        </TableCell>
+                        <TableCell>
                           <Badge variant="outline">
                             {manifest.manifest_number}
                           </Badge>
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {clientNames[manifest.client_id] || 'Unknown'}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
                           {manifest.signed_at ? 
@@ -364,21 +366,22 @@ export const ManifestReceiversView = () => {
                 filteredPending.map((manifest) => (
                   <Card key={manifest.id}>
                     <CardContent className="p-4">
-                      <div className="space-y-2">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <Badge variant="outline" className="mb-1">
+                      <div className="space-y-3">
+                        <div>
+                          <h3 className="font-bold text-lg mb-2">
+                            {clientNames[manifest.client_id] || 'Unknown Client'}
+                          </h3>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">
                               {manifest.manifest_number}
                             </Badge>
-                            <h3 className="font-medium text-sm">{clientNames[manifest.client_id] || 'Unknown'}</h3>
+                            {manifest.signed_at && (
+                              <span className="text-xs text-muted-foreground">
+                                {format(new Date(manifest.signed_at), 'MMM d, h:mm a')}
+                              </span>
+                            )}
                           </div>
                         </div>
-                        
-                        {manifest.signed_at && (
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(manifest.signed_at), 'MMM d, h:mm a')}
-                          </p>
-                        )}
                         
                         <Button 
                           size="sm" 
@@ -386,7 +389,7 @@ export const ManifestReceiversView = () => {
                           onClick={() => handleAddReceiverSignature(manifest.id)}
                         >
                           <Signature className="h-4 w-4 mr-2" />
-                          Sign
+                          Sign for {clientNames[manifest.client_id] || 'Client'}
                         </Button>
                       </div>
                     </CardContent>
