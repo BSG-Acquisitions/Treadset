@@ -164,10 +164,15 @@ export default function DriverRoutes() {
                           <div className="flex items-start gap-3">
                             <MapPin className="h-5 w-5 md:h-6 md:w-6 text-blue-600 flex-shrink-0 mt-1" />
                             <div>
-                              <div className="text-sm md:text-base font-medium text-blue-800 mb-1">Address:</div>
-                              <div className="text-base md:text-lg font-semibold text-blue-900 leading-relaxed">
-                                {assignment.pickup?.location?.address || 'No address available'}
-                              </div>
+                               <div className="text-sm md:text-base font-medium text-blue-800 mb-1">Complete Address:</div>
+                               <div className="text-base md:text-lg font-semibold text-blue-900 leading-relaxed">
+                                 {assignment.pickup?.location?.address || 'No address available'}
+                               </div>
+                               {assignment.pickup?.location?.name && (
+                                 <div className="text-sm text-blue-700 mt-1">
+                                   Location: {assignment.pickup.location.name}
+                                 </div>
+                               )}
                             </div>
                           </div>
                         </div>
