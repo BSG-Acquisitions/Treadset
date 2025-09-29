@@ -6,7 +6,7 @@ import { ManifestPDFControls } from "@/components/ManifestPDFControls";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 import { Building, MapPin, Calendar, CheckCircle2, Clock, AlertCircle, Package, MoreVertical, Move, ChevronLeft, ChevronRight } from "lucide-react";
@@ -14,12 +14,6 @@ import { format, addDays, subDays, startOfWeek, addWeeks, subWeeks } from "date-
 
 export default function RoutesToday() {
   const [currentWeek, setCurrentWeek] = useState(startOfWeek(new Date(), { weekStartsOn: 0 }));
-  // Initialize with local date string to avoid timezone issues
-  const today = new Date();
-  const todayYear = today.getFullYear();
-  const todayMonth = String(today.getMonth() + 1).padStart(2, '0');
-  const todayDay = String(today.getDate()).padStart(2, '0');
-  const [activeDay, setActiveDay] = useState(`${todayYear}-${todayMonth}-${todayDay}`);
   const [movePickupOpen, setMovePickupOpen] = useState(false);
   const [selectedPickupToMove, setSelectedPickupToMove] = useState<any>(null);
   
@@ -37,9 +31,6 @@ export default function RoutesToday() {
     const { data: pickups = [], isLoading } = usePickups(dateStr);
     return { date: dateStr, pickups, isLoading, day };
   });
-  
-  const activeDayData = weekPickups.find(d => d.date === activeDay);
-  const { data: pickups = [], isLoading } = usePickups(activeDay);
 
   useEffect(() => {
     document.title = "Route Planning – BSG";
@@ -49,12 +40,7 @@ export default function RoutesToday() {
   const goToNextWeek = () => setCurrentWeek(prev => addWeeks(prev, 1));
   const goToToday = () => {
     const today = new Date();
-    setCurrentWeek(startOfWeek(today));
-    // Use local date string to avoid timezone issues
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    setActiveDay(`${year}-${month}-${day}`);
+    setCurrentWeek(startOfWeek(today, { weekStartsOn: 0 }));
   };
 
   const getStatusColor = (status: string) => {
@@ -111,192 +97,181 @@ export default function RoutesToday() {
           </div>
         </div>
 
-        {/* Week Navigation */}
-        <div className="mb-4 sm:mb-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4 mb-4">
-            <h2 className="text-lg sm:text-xl font-semibold">
+        {/* Full Week View */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">
               Week of {format(currentWeek, 'MMM d, yyyy')}
             </h2>
-            <div className="text-xs sm:text-sm text-muted-foreground">
-              Total pickups this week: {weekPickups.reduce((sum, day) => sum + day.pickups.length, 0)}
+            <div className="text-sm text-muted-foreground">
+              Total pickups: {weekPickups.reduce((sum, day) => sum + day.pickups.length, 0)}
             </div>
           </div>
-          
-          <Tabs value={activeDay} onValueChange={setActiveDay}>
-            <TabsList className="grid w-full grid-cols-7 h-auto">
-              {weekDays.map((day) => {
-                // Use local date string to avoid timezone issues
-                const year = day.getFullYear();
-                const month = String(day.getMonth() + 1).padStart(2, '0');
-                const dayOfMonth = String(day.getDate()).padStart(2, '0');
-                const dateStr = `${year}-${month}-${dayOfMonth}`;
-                const dayData = weekPickups.find(d => d.date === dateStr);
-                
-                // Compare using local date string
-                const today = new Date();
-                const todayYear = today.getFullYear();
-                const todayMonth = String(today.getMonth() + 1).padStart(2, '0');
-                const todayDay = String(today.getDate()).padStart(2, '0');
-                const todayStr = `${todayYear}-${todayMonth}-${todayDay}`;
-                const isToday = dateStr === todayStr;
-                
-                return (
-                  <TabsTrigger 
-                    key={dateStr} 
-                    value={dateStr}
-                    className="flex flex-col items-center p-2 sm:p-3 min-w-0"
-                  >
-                    <div className="text-xs font-medium truncate">
-                      {format(day, 'EEE')}
-                    </div>
-                    <div className={`text-sm ${isToday ? 'font-bold' : ''}`}>
-                      {format(day, 'd')}
-                    </div>
-                    {dayData && dayData.pickups.length > 0 && (
-                      <Badge variant="secondary" className="mt-1 text-xs px-1.5 py-0.5">
-                        {dayData.pickups.length}
-                      </Badge>
-                    )}
-                  </TabsTrigger>
-                );
-              })}
-            </TabsList>
-            
-            {/* Render only the active day's content to avoid any date mismatches */}
-            <TabsContent value={activeDay} className="mt-6">
-              {(() => {
-                const [y, m, d] = activeDay.split('-').map(Number);
-                const activeDateObj = new Date(y, (m || 1) - 1, d || 1);
-                const dayData = activeDayData;
-                
-                return (
-                  <div className="space-y-4">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
-                      <h3 className="text-base sm:text-lg font-medium">
-                        {format(activeDateObj, 'EEEE, MMM d, yyyy')}
-                      </h3>
-                      <div className="text-xs sm:text-sm text-muted-foreground">
-                        {pickups.length} pickups scheduled
-                      </div>
-                    </div>
 
-                    {!pickups.length ? (
-                      <Card>
-                        <CardContent className="p-8 text-center">
-                          <Calendar className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-                          <h4 className="font-medium mb-1">No pickups scheduled</h4>
-                          <p className="text-sm text-muted-foreground">
-                            No pickups scheduled for this date
-                          </p>
-                        </CardContent>
-                      </Card>
-                    ) : (
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="flex items-center gap-2">
-                            <Package className="h-5 w-5" />
-                            Scheduled Pickups
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-4">
-                            {pickups.map((pickup) => {
-                              const StatusIcon = getStatusIcon(pickup.status);
-                              return (
-                                <div
-                                  key={pickup.id}
-                                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 border rounded-lg hover:bg-secondary/10 transition-colors gap-3 sm:gap-4"
-                                >
-                                  <div className="flex items-start gap-3 sm:gap-4 w-full sm:w-auto min-w-0">
-                                    <StatusIcon className={`h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 mt-0.5 ${
-                                      pickup.status === 'completed' ? 'text-brand-success' :
-                                      pickup.status === 'overdue' ? 'text-destructive' :
-                                      'text-muted-foreground'
-                                    }`} />
-                                    <div className="space-y-1 sm:space-y-2 min-w-0 flex-1">
-                                      <div className="flex items-center gap-2">
-                                        <Building className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
-                                        <span className="font-medium text-sm sm:text-base truncate">
-                                          {pickup.client?.company_name || 'Unknown Client'}
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
-                                        <MapPin className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                                        <span className="truncate">{pickup.location?.name || pickup.location?.address || 'No address'}</span>
-                                      </div>
-                                      {pickup.notes && (
-                                        <p className="text-xs sm:text-sm text-muted-foreground italic truncate">
-                                          Notes: {pickup.notes}
-                                        </p>
-                                      )}
-                                    </div>
+          {/* Weekly Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+            {weekDays.map((day, idx) => {
+              const year = day.getFullYear();
+              const month = String(day.getMonth() + 1).padStart(2, '0');
+              const dayOfMonth = String(day.getDate()).padStart(2, '0');
+              const dateStr = `${year}-${month}-${dayOfMonth}`;
+              const dayData = weekPickups[idx];
+              
+              // Check if today
+              const today = new Date();
+              const todayYear = today.getFullYear();
+              const todayMonth = String(today.getMonth() + 1).padStart(2, '0');
+              const todayDay = String(today.getDate()).padStart(2, '0');
+              const todayStr = `${todayYear}-${todayMonth}-${todayDay}`;
+              const isToday = dateStr === todayStr;
+
+              return (
+                <Card key={dateStr} className={`flex flex-col ${isToday ? 'ring-2 ring-primary' : ''}`}>
+                  <CardHeader className="pb-3 text-center border-b">
+                    <div className="space-y-1">
+                      <div className="text-sm font-medium text-muted-foreground">
+                        {format(day, 'EEE')}
+                      </div>
+                      <div className={`text-2xl font-bold ${isToday ? 'text-primary' : ''}`}>
+                        {format(day, 'd')}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {format(day, 'MMM yyyy')}
+                      </div>
+                      <Badge variant="secondary" className="mt-2">
+                        {dayData?.pickups.length || 0} pickups
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  
+                  <CardContent className="flex-1 p-0">
+                    <ScrollArea className="h-[600px]">
+                      <div className="p-3 space-y-2">
+                        {!dayData?.pickups.length ? (
+                          <div className="text-center py-8">
+                            <Calendar className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
+                            <p className="text-xs text-muted-foreground">No pickups</p>
+                          </div>
+                        ) : (
+                          dayData.pickups.map((pickup) => {
+                            const StatusIcon = getStatusIcon(pickup.status);
+                            return (
+                              <div
+                                key={pickup.id}
+                                className="p-3 border rounded-lg hover:bg-secondary/10 transition-colors space-y-2 bg-card"
+                              >
+                                {/* Client Name */}
+                                <div className="flex items-start gap-2">
+                                  <Building className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                                  <span className="font-semibold text-sm leading-tight">
+                                    {pickup.client?.company_name || 'Unknown Client'}
+                                  </span>
+                                </div>
+
+                                {/* Location */}
+                                <div className="flex items-start gap-2">
+                                  <MapPin className="h-3 w-3 text-muted-foreground flex-shrink-0 mt-0.5" />
+                                  <span className="text-xs text-muted-foreground leading-tight">
+                                    {pickup.location?.name || pickup.location?.address || 'No address'}
+                                  </span>
+                                </div>
+
+                                {/* Counts */}
+                                <div className="text-xs font-medium space-y-0.5">
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">PTE:</span>
+                                    <span>{pickup.pte_count}</span>
                                   </div>
-                                  
-                                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
-                                    <div className="flex-1 sm:text-right">
-                                      <div className="text-xs sm:text-sm font-medium mb-1">
-                                        PTE {pickup.pte_count} | OTR {pickup.otr_count} | Tractor {pickup.tractor_count}
-                                      </div>
-                                      <div className="text-xs text-muted-foreground mb-2">
-                                        Revenue: ${pickup.computed_revenue?.toFixed(2) || '0.00'}
-                                      </div>
-                                       <Badge variant={getStatusColor(pickup.status)} className="text-xs">
-                                         {pickup.status.replace('_', ' ')}
-                                       </Badge>
-                                       {pickup.status === 'completed' && pickup.manifest_pdf_path && (
-                                         <div className="mt-2">
-                                           <ManifestPDFControls 
-                                             manifestId={pickup.manifest_id}
-                                             acroformPdfPath={pickup.manifest_pdf_path}
-                                             clientEmails={[]}
-                                             className="w-full"
-                                           />
-                                         </div>
-                                       )}
-                                     </div>
-                                    
-                                     <div className="flex items-center gap-2 w-full sm:w-auto">
-                                      <CompletePickupDialog
-                                        pickup={pickup}
-                                        trigger={
-                                          <Button size="sm" disabled={pickup.status === 'completed'} className="flex-1 sm:flex-none text-xs sm:text-sm px-2 sm:px-3">
-                                            {pickup.status === 'completed' ? 'Completed' : 'Complete'}
-                                          </Button>
-                                        }
-                                      />
-                                      
-                                      <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                          <Button variant="outline" size="sm" className="px-2">
-                                            <MoreVertical className="h-3 w-3 sm:h-4 sm:w-4" />
-                                          </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                          <DropdownMenuItem 
-                                            onClick={() => {
-                                              setSelectedPickupToMove(pickup);
-                                              setMovePickupOpen(true);
-                                            }}
-                                          >
-                                            <Move className="h-4 w-4 mr-2" />
-                                            Move to Different Date
-                                          </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                      </DropdownMenu>
-                                    </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">OTR:</span>
+                                    <span>{pickup.otr_count}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Tractor:</span>
+                                    <span>{pickup.tractor_count}</span>
+                                  </div>
+                                  <div className="flex justify-between pt-1 border-t">
+                                    <span className="text-muted-foreground">Revenue:</span>
+                                    <span className="font-semibold">${pickup.computed_revenue?.toFixed(2) || '0.00'}</span>
                                   </div>
                                 </div>
-                              );
-                            })}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-                  </div>
-                );
-              })()}
-            </TabsContent>
-          </Tabs>
+
+                                {/* Status Badge */}
+                                <div className="flex items-center gap-2">
+                                  <StatusIcon className={`h-3 w-3 flex-shrink-0 ${
+                                    pickup.status === 'completed' ? 'text-brand-success' :
+                                    pickup.status === 'overdue' ? 'text-destructive' :
+                                    'text-muted-foreground'
+                                  }`} />
+                                  <Badge variant={getStatusColor(pickup.status)} className="text-xs flex-1 justify-center">
+                                    {pickup.status.replace('_', ' ')}
+                                  </Badge>
+                                </div>
+
+                                {/* Notes */}
+                                {pickup.notes && (
+                                  <p className="text-xs text-muted-foreground italic pt-1 border-t">
+                                    {pickup.notes}
+                                  </p>
+                                )}
+
+                                {/* Actions */}
+                                <div className="flex gap-2 pt-2">
+                                  <CompletePickupDialog
+                                    pickup={pickup}
+                                    trigger={
+                                      <Button 
+                                        size="sm" 
+                                        disabled={pickup.status === 'completed'} 
+                                        className="flex-1 text-xs h-8"
+                                      >
+                                        {pickup.status === 'completed' ? 'Completed' : 'Complete'}
+                                      </Button>
+                                    }
+                                  />
+                                  
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="outline" size="sm" className="px-2 h-8">
+                                        <MoreVertical className="h-3 w-3" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem 
+                                        onClick={() => {
+                                          setSelectedPickupToMove(pickup);
+                                          setMovePickupOpen(true);
+                                        }}
+                                      >
+                                        <Move className="h-4 w-4 mr-2" />
+                                        Move to Different Date
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+
+                                {/* Manifest PDF */}
+                                {pickup.status === 'completed' && pickup.manifest_pdf_path && (
+                                  <div className="pt-2 border-t">
+                                    <ManifestPDFControls 
+                                      manifestId={pickup.manifest_id}
+                                      acroformPdfPath={pickup.manifest_pdf_path}
+                                      clientEmails={[]}
+                                      className="w-full"
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         </div>
         
         {selectedPickupToMove && (
