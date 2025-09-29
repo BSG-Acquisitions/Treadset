@@ -50,7 +50,7 @@ export function PaymentDialog({
       description,
       customer_email: customerEmail || undefined,
       customer_name: customerName || undefined,
-      client_id: clientId || defaultClientId || undefined,
+      client_id: (clientId && clientId !== "__no_client__") ? clientId : (defaultClientId || undefined),
       pickup_id: defaultPickupId || undefined,
       manifest_id: defaultManifestId || undefined,
     };
@@ -108,7 +108,7 @@ export function PaymentDialog({
                   <SelectValue placeholder="Select client" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No client selected</SelectItem>
+                  <SelectItem value="__no_client__">No client selected</SelectItem>
                   {clients?.data?.map((client) => (
                     <SelectItem key={client.id} value={client.id}>
                       {client.company_name}
