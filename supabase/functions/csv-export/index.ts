@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
           phone: client.phone,
           notes: client.notes,
           tags: client.tags ? client.tags.join(';') : '',
-          pricing_tier: client.pricing_tier?.name || '',
+          pricing_tier: (client.pricing_tier as any)?.name || '',
           lifetime_revenue: client.lifetime_revenue || 0,
           open_balance: client.open_balance || 0,
           last_pickup_at: client.last_pickup_at || '',
@@ -148,15 +148,15 @@ Deno.serve(async (req) => {
           const assignment = pickup.assignments?.[0]; // Get first assignment
           return {
             pickup_date: pickup.pickup_date,
-            client_name: pickup.client?.company_name || '',
-            location_name: pickup.location?.name || '',
-            location_address: pickup.location?.address || '',
+            client_name: (pickup.client as any)?.company_name || '',
+            location_name: (pickup.location as any)?.name || '',
+            location_address: (pickup.location as any)?.address || '',
             pte_count: pickup.pte_count || 0,
             otr_count: pickup.otr_count || 0,
             tractor_count: pickup.tractor_count || 0,
             computed_revenue: pickup.computed_revenue || 0,
             pickup_status: pickup.status || '',
-            vehicle_name: assignment?.vehicle?.name || '',
+            vehicle_name: (assignment?.vehicle as any)?.name || '',
             estimated_arrival: assignment?.estimated_arrival || '',
             actual_arrival: assignment?.actual_arrival || '',
             assignment_status: assignment?.status || '',
@@ -216,7 +216,7 @@ Deno.serve(async (req) => {
           
           return {
             invoice_number: invoice.invoice_number,
-            client_name: invoice.client?.company_name || '',
+            client_name: (invoice.client as any)?.company_name || '',
             issued_date: invoice.issued_date || '',
             due_date: invoice.due_date || '',
             status: invoice.status || '',
@@ -247,10 +247,10 @@ Deno.serve(async (req) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('CSV export error:', error);
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ success: false, error: error?.message || 'Export error' }),
       { 
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

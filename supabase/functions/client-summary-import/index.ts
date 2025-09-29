@@ -65,7 +65,7 @@ serve(async (req) => {
         }
 
         const row: { [key: string]: string } = {};
-        headers.forEach((header, index) => {
+        headers.forEach((header: string, index: number) => {
           row[header] = values[index] || '';
         });
 
@@ -204,9 +204,9 @@ serve(async (req) => {
 
         processedData.client_summaries.push(summaryData);
 
-      } catch (error) {
+      } catch (error: any) {
         console.error(`Error processing row ${rowNum}:`, error);
-        processedData.errors.push(`Row ${rowNum}: ${error.message}`);
+        processedData.errors.push(`Row ${rowNum}: ${error?.message || 'Unknown error'}`);
       }
     }
 
@@ -252,12 +252,12 @@ serve(async (req) => {
       }
     );
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Function error:', error);
     return new Response(
       JSON.stringify({ 
         error: 'Internal server error', 
-        details: error.message 
+        details: error?.message || 'Unknown error'
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

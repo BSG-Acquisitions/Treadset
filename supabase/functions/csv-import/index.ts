@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
         // Skip validation if this looks like location/pickup data (contains state codes or pickup info)
         if (email.includes('MI ') || email.includes('Last pickup:') || email.includes('|')) {
           console.log(`Row ${rowNum}: Skipping email validation - appears to be location data`);
-          row.email = null; // Clear invalid data
+          row.email = undefined; // Clear invalid data
         } else if (email !== '' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
           errors.push({ row: rowNum, field: 'email', message: `Invalid email format (found: "${email}")` });
         }
@@ -289,10 +289,10 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('CSV import error:', error);
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ success: false, error: error?.message || 'Import error' }),
       { 
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

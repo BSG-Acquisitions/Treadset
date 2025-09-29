@@ -86,8 +86,8 @@ serve(async (req) => {
           }
         }
       }
-    } catch (error) {
-      logStep("No authentication or failed to authenticate (proceeding as guest)", { error: error.message });
+    } catch (error: any) {
+      logStep("No authentication or failed to authenticate (proceeding as guest)", { error: error?.message || 'Unknown error' });
     }
 
     // If no organization from user, try to get it from client_id

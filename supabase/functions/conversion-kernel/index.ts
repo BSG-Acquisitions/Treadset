@@ -163,11 +163,11 @@ const handler = async (req: Request): Promise<Response> => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('Conversion error:', error);
     
     return new Response(JSON.stringify({
-      error: error.message,
+      error: error?.message || 'Conversion error',
       timestamp: new Date().toISOString()
     }), {
       status: 400,

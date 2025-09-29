@@ -217,11 +217,11 @@ serve(async (req) => {
       }
     );
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in create-employee function:', error);
     return new Response(
       JSON.stringify({ 
-        error: error.message || 'An error occurred while creating the employee' 
+        error: error?.message || 'An error occurred while creating the employee' 
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
