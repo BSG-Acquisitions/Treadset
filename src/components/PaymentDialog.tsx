@@ -84,7 +84,13 @@ export function PaymentDialog({
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Create Payment</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            Accept Online Payment
+          </DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            Create a secure Stripe checkout session for your customer. They'll be redirected to Stripe's secure payment page to enter their card details.
+          </p>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -120,14 +126,18 @@ export function PaymentDialog({
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description">Payment Description</Label>
             <Textarea
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Payment for tire pickup services..."
+              placeholder="Service charge for tire pickup and disposal..."
+              rows={3}
               required
             />
+            <p className="text-xs text-muted-foreground">
+              This description will appear on the customer's receipt and invoice.
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -159,8 +169,16 @@ export function PaymentDialog({
             <Button 
               type="submit" 
               disabled={createPayment.isPending || amount <= 0}
+              className="min-w-[140px]"
             >
-              {createPayment.isPending ? "Creating..." : "Create Payment"}
+              {createPayment.isPending ? (
+                <>Creating Session...</>
+              ) : (
+                <>
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Open Stripe Checkout
+                </>
+              )}
             </Button>
           </div>
         </form>

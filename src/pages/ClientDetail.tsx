@@ -150,34 +150,38 @@ export default function ClientDetail() {
                 <FileText className="h-5 w-5" />
                 Financial Management
               </CardTitle>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <CreateInvoiceDialog 
-                  clientId={client.id}
-                  trigger={
-                    <Button 
-                      size="sm" 
-                      disabled={completedPickups.length === 0}
-                      className="w-full"
-                    >
-                      Create Invoice
-                    </Button>
-                  }
-                />
-                <RecordPaymentDialog 
-                  clientId={client.id}
-                  trigger={
-                    <Button size="sm" variant="outline" className="w-full">
-                      Record Payment
-                    </Button>
-                  }
-                />
+               <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <CreateInvoiceDialog 
+                    clientId={client.id}
+                    trigger={
+                      <Button 
+                        size="sm" 
+                        disabled={completedPickups.length === 0}
+                        className="w-full"
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        Create Invoice
+                      </Button>
+                    }
+                  />
+                  <RecordPaymentDialog 
+                    clientId={client.id}
+                    trigger={
+                      <Button size="sm" variant="outline" className="w-full">
+                        <DollarSign className="h-4 w-4 mr-2" />
+                        Record Payment
+                      </Button>
+                    }
+                  />
+                </div>
                 <PaymentDialog 
                   defaultClientId={client.id}
                   defaultDescription={`Payment for ${client.company_name} services`}
                   trigger={
-                    <Button size="sm" variant="secondary" className="w-full">
+                    <Button size="sm" variant="default" className="w-full">
                       <CreditCard className="h-4 w-4 mr-2" />
-                      Accept Payment
+                      Accept Online Payment
                     </Button>
                   }
                 />
