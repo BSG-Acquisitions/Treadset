@@ -150,8 +150,8 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
             <div className="bg-secondary/20 rounded-lg p-4 space-y-3">
               <div className="font-medium text-xl">{pickup?.client?.company_name || 'Unknown Client'}</div>
               <div className="text-base font-medium text-foreground flex items-start gap-3 p-3 bg-card rounded-lg border">
-                <MapPin className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-                <span className="text-foreground leading-relaxed">
+                <MapPin className="h-5 w-5 text-brand-primary flex-shrink-0 mt-0.5" />
+                <span className="text-foreground leading-relaxed whitespace-normal break-words">
                   {pickup?.location?.address || 'No address available'}
                 </span>
               </div>
