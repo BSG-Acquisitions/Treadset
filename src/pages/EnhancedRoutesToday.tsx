@@ -405,13 +405,18 @@ export default function EnhancedRoutesToday() {
                <h2 className="text-xl font-semibold">Week of {format(currentWeek, 'MMMM d, yyyy')}</h2>
                <div className="text-sm text-muted-foreground">All pickups by day</div>
              </div>
-             <WeeklyPickupsGrid
-               currentWeek={currentWeek}
-               onMovePickup={(pickup) => {
-                 setSelectedPickupToMove(pickup);
-                 setMovePickupOpen(true);
-               }}
-             />
+             {/* Full-bleed weekly grid (no horizontal scroll) */}
+             <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen overflow-x-hidden">
+               <div className="px-2 sm:px-4">
+                 <WeeklyPickupsGrid
+                   currentWeek={currentWeek}
+                   onMovePickup={(pickup) => {
+                     setSelectedPickupToMove(pickup);
+                     setMovePickupOpen(true);
+                   }}
+                 />
+               </div>
+             </div>
            </div>
           {/* Route Statistics */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
