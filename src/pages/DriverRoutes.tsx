@@ -10,6 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 
 import { Building, MapPin, Calendar, CheckCircle2, Clock, AlertCircle, Package, Truck, MoreVertical, Move } from "lucide-react";
 import { format } from "date-fns";
+import { resolveGeneratorAddress } from "@/lib/addressResolver";
 
 export default function DriverRoutes() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -17,11 +18,47 @@ export default function DriverRoutes() {
   const [movePickupOpen, setMovePickupOpen] = useState(false);
   const [selectedPickupToMove, setSelectedPickupToMove] = useState<any>(null);
   const { data: assignments = [], isLoading } = useDriverAssignments(selectedDate);
+  const [addressMap, setAddressMap] = useState<Record<string, string>>({});
+  
+  const isGenericAddress = (addr?: string, name?: string) => {
+    if (!addr) return true;
+    const a = addr.trim().toLowerCase();
+    const n = (name || '').trim().toLowerCase();
+    return a === '' || a === 'primary location' || a === n || a.length < 8;
+  };
   
   // Debug logging
   console.log('DriverRoutes - assignments:', assignments);
   console.log('DriverRoutes - selectedAssignment:', selectedAssignment);
   console.log('DriverRoutes - location data sample:', assignments[0]?.pickup?.location);
+  
+  // Resolve addresses for tiles, falling back to client mailing address when needed
+  useEffect(() => {
+    const run = async () => {
+      const entries = await Promise.all(
+        assignments.map(async (a) => {
+          const loc = a.pickup?.location;
+          let display = loc?.address || '';
+          if (isGenericAddress(display, loc?.name) && a.pickup?.client?.id) {
+            const resolved = await resolveGeneratorAddress({
+              clientId: a.pickup.client.id,
+              locationId: loc?.id,
+              operation: 'driver_routes_display',
+            });
+            const parts = [
+              resolved.address,
+              [resolved.city, resolved.state].filter(Boolean).join(', '),
+              resolved.zip,
+            ].filter(Boolean);
+            display = parts.join(' ').replace(/\s+,/g, ',');
+          }
+          return [a.id, display || loc?.address || 'Address missing'] as const;
+        })
+      );
+      setAddressMap(Object.fromEntries(entries));
+    };
+    if (assignments.length) run();
+  }, [assignments]);
 
   useEffect(() => {
     document.title = "Driver Routes – BSG";
@@ -167,12 +204,9 @@ export default function DriverRoutes() {
                             <div>
                                <div className="text-sm md:text-base font-medium text-blue-800 mb-1">Complete Address:</div>
                                <div className="text-base md:text-lg font-semibold text-blue-900 leading-relaxed">
-                                 {/* Show actual address if available, otherwise show what we have */}
-                                 {assignment.pickup?.location?.address && assignment.pickup.location.address !== assignment.pickup?.location?.name 
-                                   ? assignment.pickup.location.address 
-                                   : `${assignment.pickup?.client?.company_name || 'Customer'} - Full address needed`}
+                                 {addressMap[assignment.id] || assignment.pickup?.location?.address || 'No address available'}
                                </div>
-                               {assignment.pickup?.location?.name && assignment.pickup?.location?.name !== assignment.pickup?.location?.address && (
+                               {assignment.pickup?.location?.name && (
                                  <div className="text-sm text-blue-700 mt-1">
                                    Location Reference: {assignment.pickup.location.name}
                                  </div>

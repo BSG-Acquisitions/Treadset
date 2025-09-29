@@ -16,6 +16,7 @@ import { CompletePickupDialog } from "../CompletePickupDialog";
 import { useUpdateAssignmentStatus } from "@/hooks/useDriverWorkflow";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { resolveGeneratorAddress } from "@/lib/addressResolver";
 
 interface DriverAssignmentInterfaceProps {
   assignment: {
@@ -65,6 +66,14 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
 
   // Use pickup data with fallback fetch if missing
   const [pickup, setPickup] = useState<DriverAssignmentInterfaceProps['assignment']['pickup']>(assignment.pickup ?? null);
+  const [displayAddress, setDisplayAddress] = useState<string>(assignment.pickup?.location?.address || '');
+
+  const isGenericAddress = (addr?: string, name?: string) => {
+    if (!addr) return true;
+    const a = addr.trim().toLowerCase();
+    const n = (name || '').trim().toLowerCase();
+    return a === '' || a === 'primary location' || a === n || a.length < 8;
+  };
 
   // Fallback: fetch pickup if nested relation came back null (RLS timing, etc.)
   useEffect(() => {
@@ -84,6 +93,37 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
     };
     loadPickup();
   }, [assignment.pickup_id, pickup]);
+  
+  // Resolve a full, driver-friendly address when needed
+  useEffect(() => {
+    const resolve = async () => {
+      const locAddr = pickup?.location?.address;
+      const locName = pickup?.location?.name;
+      if (!pickup) return;
+      if (locAddr && !isGenericAddress(locAddr, locName)) {
+        setDisplayAddress(locAddr);
+        return;
+      }
+      // Fallback to client mailing address cascade
+      const clientId = pickup?.client?.id;
+      if (clientId) {
+        const resolved = await resolveGeneratorAddress({
+          clientId,
+          locationId: pickup?.location?.id,
+          operation: 'driver_assignment_display',
+        });
+        const parts = [
+          resolved.address,
+          [resolved.city, resolved.state].filter(Boolean).join(', '),
+          resolved.zip,
+        ].filter(Boolean);
+        setDisplayAddress(parts.join(' ').replace(/\s+,/g, ','));
+      } else {
+        setDisplayAddress(locAddr || '');
+      }
+    };
+    resolve();
+  }, [pickup]);
   
   // Debug logging
   console.log('DriverAssignmentInterface - Assignment:', assignment);
@@ -165,17 +205,14 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
                   <MapPin className="h-6 w-6 md:h-7 md:w-7 text-blue-600 flex-shrink-0 mt-1" />
                   <div className="flex-1">
                     <div className="text-sm md:text-base font-medium text-blue-800 mb-2">Complete Address:</div>
-                     <div className="text-lg md:text-xl font-bold text-blue-900 leading-relaxed">
-                       {/* Show actual address if available, otherwise show what we have */}
-                       {pickup?.location?.address && pickup.location.address !== pickup?.location?.name 
-                         ? pickup.location.address 
-                         : `${pickup?.client?.company_name || 'Customer'} - Full address needed`}
-                     </div>
-                     {pickup?.location?.name && pickup?.location?.name !== pickup?.location?.address && (
-                       <div className="text-base font-medium text-blue-800 mt-1">
-                         Location Reference: {pickup.location.name}
-                       </div>
-                     )}
+                    <div className="text-lg md:text-xl font-bold text-blue-900 leading-relaxed">
+                      {displayAddress || 'No address available'}
+                    </div>
+                    {pickup?.location?.name && (
+                      <div className="text-base font-medium text-blue-800 mt-1">
+                        Location Reference: {pickup.location.name}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
