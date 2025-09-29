@@ -123,7 +123,7 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/book" element={
-              <ProtectedRoute roles={['driver']}>
+              <ProtectedRoute roles={['driver', 'admin']}>
                 <AppLayout>
                   <DriverSchedulePickup />
                 </AppLayout>
