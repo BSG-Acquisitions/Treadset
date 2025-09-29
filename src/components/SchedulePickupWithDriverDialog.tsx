@@ -86,7 +86,7 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
       type: 'vehicle' as const,
       name: v.name,
       details: v.license_plate ? `${v.license_plate} • Capacity: ${v.capacity} tires` : `Capacity: ${v.capacity} tires`,
-      driverInfo: v.driver_email || null,
+      driverInfo: v.driver_email || (v.assigned_driver_id ? 'Driver assigned' : null),
       vehicleId: v.id,
       assignedDriverId: v.assigned_driver_id,
     })) || []),
@@ -126,12 +126,20 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
 
       const isVehicle = selectedTruck.type === 'vehicle';
       
+      // Ensure we have a driver ID for vehicles
+      let driverId = '';
+      if (isVehicle && selectedTruck.assignedDriverId) {
+        driverId = selectedTruck.assignedDriverId;
+      } else if (isVehicle) {
+        throw new Error('Selected vehicle does not have an assigned driver. Please assign a driver to this vehicle first.');
+      }
+      
       await schedulePickup.mutateAsync({
         clientId: data.clientId,
         locationId: data.locationId,
         vehicleId: isVehicle ? selectedTruck.vehicleId : undefined,
         haulerId: !isVehicle ? selectedTruck.haulerId : undefined,
-        driverId: isVehicle && selectedTruck.assignedDriverId ? selectedTruck.assignedDriverId : '',
+        driverId: driverId,
         pickupDate: format(data.pickupDate, 'yyyy-MM-dd'),
         pteCount: data.pteCount,
         otrCount: data.otrCount,

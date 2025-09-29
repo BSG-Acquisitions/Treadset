@@ -11,7 +11,7 @@ export interface SchedulePickupWithDriverData {
   locationId?: string;
   vehicleId?: string;
   haulerId?: string;
-  driverId: string;
+  driverId?: string;
   pickupDate: string;
   pteCount: number;
   otrCount: number;
@@ -56,7 +56,7 @@ export const useSchedulePickupWithDriver = () => {
           pickup_id: pickup.id,
           vehicle_id: data.vehicleId || null,
           hauler_id: data.haulerId || null,
-          driver_id: data.driverId,
+          driver_id: data.driverId || null,
           organization_id: orgData,
           scheduled_date: data.pickupDate,
           status: 'assigned',
