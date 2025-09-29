@@ -8,6 +8,7 @@ import { Truck, User, Calendar, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 import { SchedulePickupWithDriverDialog } from "@/components/SchedulePickupWithDriverDialog";
 import { WorkflowTestDialog } from "@/components/WorkflowTestDialog";
+import { ManifestWorkflowTest } from "@/components/ManifestWorkflowTest";
 
 export default function DriverAssignmentHelper() {
   const [loading, setLoading] = useState(false);
@@ -108,6 +109,7 @@ export default function DriverAssignmentHelper() {
                     }
                   />
                   <WorkflowTestDialog />
+                  <ManifestWorkflowTest />
                 </div>
               </div>
             </div>
