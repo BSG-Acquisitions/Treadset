@@ -240,13 +240,9 @@ export const ManifestReceiversView = () => {
   ];
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Signature className="h-6 w-6" />
-          <h1 className="text-2xl font-bold">Receiver Signatures</h1>
-        </div>
-        
+        <h1 className="text-2xl font-bold">Receiver Signatures</h1>
         <div className="flex items-center gap-2">
           <Button
             variant={viewMode === "cards" ? "default" : "outline"}
@@ -266,145 +262,121 @@ export const ManifestReceiversView = () => {
       </div>
 
       {/* Filters */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-wrap gap-4 items-center">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by manifest # or client name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="max-w-sm"
-              />
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              <Select value={dateFilter} onValueChange={setDateFilter}>
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Time</SelectItem>
-                  <SelectItem value="today">Today</SelectItem>
-                  <SelectItem value="week">Past Week</SelectItem>
-                  <SelectItem value="month">Past Month</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="newest">Newest First</SelectItem>
-                  <SelectItem value="oldest">Oldest First</SelectItem>
-                  <SelectItem value="client">By Client</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex flex-wrap gap-3 items-center">
+        <Input
+          placeholder="Search..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="max-w-xs"
+        />
+        
+        <Select value={dateFilter} onValueChange={setDateFilter}>
+          <SelectTrigger className="w-32">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Time</SelectItem>
+            <SelectItem value="today">Today</SelectItem>
+            <SelectItem value="week">Past Week</SelectItem>
+            <SelectItem value="month">Past Month</SelectItem>
+          </SelectContent>
+        </Select>
+        
+        <Select value={sortBy} onValueChange={setSortBy}>
+          <SelectTrigger className="w-32">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="newest">Newest</SelectItem>
+            <SelectItem value="oldest">Oldest</SelectItem>
+            <SelectItem value="client">By Client</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
       {/* Tabbed Content */}
       <Tabs defaultValue="pending" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="pending" className="flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            Awaiting Signature ({filteredPending.length})
+          <TabsTrigger value="pending">
+            Awaiting ({filteredPending.length})
           </TabsTrigger>
-          <TabsTrigger value="completed" className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
+          <TabsTrigger value="completed">
             Completed ({filteredCompleted.length})
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="pending">
           {viewMode === "table" ? (
-            <Card>
-              <CardContent className="p-6">
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Manifest #</TableHead>
-                        <TableHead>Client</TableHead>
-                        <TableHead>Initial Signature</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Manifest #</TableHead>
+                    <TableHead>Client</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredPending.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                        No pending manifests
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredPending.map((manifest) => (
+                      <TableRow key={manifest.id}>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {manifest.manifest_number}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {clientNames[manifest.client_id] || 'Unknown'}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {manifest.signed_at ? 
+                            format(new Date(manifest.signed_at), 'MMM d, h:mm a') : 'N/A'
+                          }
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button 
+                            size="sm" 
+                            onClick={() => handleAddReceiverSignature(manifest.id)}
+                          >
+                            Sign
+                          </Button>
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredPending.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={5} className="text-center py-8">
-                            <p className="text-muted-foreground">No manifests found matching your criteria</p>
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredPending.map((manifest) => (
-                          <TableRow key={manifest.id}>
-                            <TableCell>
-                              <Badge variant="outline" className="text-orange-600">
-                                {manifest.manifest_number}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="font-medium">
-                              {clientNames[manifest.client_id] || 'Unknown Client'}
-                            </TableCell>
-                            <TableCell>
-                              {manifest.signed_at ? 
-                                format(new Date(manifest.signed_at), 'MMM d, yyyy h:mm a') : 'N/A'
-                              }
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="secondary">Awaiting Receiver</Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Button 
-                                size="sm" 
-                                onClick={() => handleAddReceiverSignature(manifest.id)}
-                              >
-                                <Signature className="h-4 w-4 mr-2" />
-                                Sign
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
               {filteredPending.length === 0 ? (
-                <div className="col-span-full text-center py-8">
-                  <p className="text-muted-foreground">No manifests found matching your criteria</p>
+                <div className="col-span-full text-center py-8 text-muted-foreground">
+                  No pending manifests
                 </div>
               ) : (
                 filteredPending.map((manifest) => (
-                  <Card key={manifest.id} className="border-orange-200">
+                  <Card key={manifest.id}>
                     <CardContent className="p-4">
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <Badge variant="outline" className="text-orange-600">
-                            {manifest.manifest_number}
-                          </Badge>
-                          <Badge variant="secondary">Awaiting Receiver</Badge>
+                      <div className="space-y-2">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <Badge variant="outline" className="mb-1">
+                              {manifest.manifest_number}
+                            </Badge>
+                            <h3 className="font-medium text-sm">{clientNames[manifest.client_id] || 'Unknown'}</h3>
+                          </div>
                         </div>
                         
-                        <h3 className="font-medium">{clientNames[manifest.client_id] || 'Unknown Client'}</h3>
-                        
                         {manifest.signed_at && (
-                          <p className="text-sm text-muted-foreground">
-                            Signed: {format(new Date(manifest.signed_at), 'MMM d, yyyy h:mm a')}
+                          <p className="text-xs text-muted-foreground">
+                            {format(new Date(manifest.signed_at), 'MMM d, h:mm a')}
                           </p>
                         )}
                         
@@ -414,7 +386,7 @@ export const ManifestReceiversView = () => {
                           onClick={() => handleAddReceiverSignature(manifest.id)}
                         >
                           <Signature className="h-4 w-4 mr-2" />
-                          Add Receiver Signature
+                          Sign
                         </Button>
                       </div>
                     </CardContent>
@@ -427,104 +399,88 @@ export const ManifestReceiversView = () => {
 
         <TabsContent value="completed">
           {viewMode === "table" ? (
-            <Card>
-              <CardContent className="p-6">
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Manifest #</TableHead>
-                        <TableHead>Client</TableHead>
-                        <TableHead>Initial Signature</TableHead>
-                        <TableHead>Receiver Signature</TableHead>
-                        <TableHead>Actions</TableHead>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Manifest #</TableHead>
+                    <TableHead>Client</TableHead>
+                    <TableHead>Completed</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredCompleted.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                        No completed manifests
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredCompleted.map((manifest) => (
+                      <TableRow key={manifest.id}>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {manifest.manifest_number}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {clientNames[manifest.client_id] || 'Unknown'}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {manifest.receiver_signed_at ? 
+                            format(new Date(manifest.receiver_signed_at), 'MMM d, h:mm a') : 'N/A'
+                          }
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {manifest.acroform_pdf_path && (
+                            <ManifestPDFControls
+                              manifestId={manifest.id}
+                              acroformPdfPath={manifest.acroform_pdf_path}
+                              clientEmails={[]}
+                              className="inline-flex"
+                            />
+                          )}
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredCompleted.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={5} className="text-center py-8">
-                            <p className="text-muted-foreground">No completed manifests found matching your criteria</p>
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredCompleted.map((manifest) => (
-                          <TableRow key={manifest.id}>
-                            <TableCell>
-                              <Badge variant="outline" className="text-green-600">
-                                {manifest.manifest_number}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="font-medium">
-                              {clientNames[manifest.client_id] || 'Unknown Client'}
-                            </TableCell>
-                            <TableCell>
-                              {manifest.signed_at ? 
-                                format(new Date(manifest.signed_at), 'MMM d, yyyy h:mm a') : 'N/A'
-                              }
-                            </TableCell>
-                            <TableCell>
-                              {manifest.receiver_signed_at ? 
-                                format(new Date(manifest.receiver_signed_at), 'MMM d, yyyy h:mm a') : 'N/A'
-                              }
-                            </TableCell>
-                            <TableCell>
-                              {manifest.acroform_pdf_path && (
-                                <ManifestPDFControls
-                                  manifestId={manifest.id}
-                                  acroformPdfPath={manifest.acroform_pdf_path}
-                                  clientEmails={[]}
-                                  className="inline-flex"
-                                />
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
               {filteredCompleted.length === 0 ? (
-                <div className="col-span-full text-center py-8">
-                  <p className="text-muted-foreground">No completed manifests found matching your criteria</p>
+                <div className="col-span-full text-center py-8 text-muted-foreground">
+                  No completed manifests
                 </div>
               ) : (
                 filteredCompleted.map((manifest) => (
-                  <Card key={manifest.id} className="border-green-200">
+                  <Card key={manifest.id}>
                     <CardContent className="p-4">
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <Badge variant="outline" className="text-green-600">
-                            {manifest.manifest_number}
-                          </Badge>
-                          <Badge className="bg-green-100 text-green-800">Complete</Badge>
+                      <div className="space-y-2">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <Badge variant="outline" className="mb-1">
+                              {manifest.manifest_number}
+                            </Badge>
+                            <h3 className="font-medium text-sm">{clientNames[manifest.client_id] || 'Unknown'}</h3>
+                          </div>
+                          <Badge variant="secondary" className="text-xs">Complete</Badge>
                         </div>
                         
-                        <h3 className="font-medium">{clientNames[manifest.client_id] || 'Unknown Client'}</h3>
-                        
-                        <div className="text-sm space-y-1">
-                          {manifest.signed_at && (
-                            <p className="text-muted-foreground">
-                              Initial: {format(new Date(manifest.signed_at), 'MMM d, yyyy h:mm a')}
-                            </p>
-                          )}
-                          {manifest.receiver_signed_at && (
-                            <p className="text-muted-foreground">
-                              Receiver: {format(new Date(manifest.receiver_signed_at), 'MMM d, yyyy h:mm a')}
-                            </p>
-                          )}
-                        </div>
+                        {manifest.receiver_signed_at && (
+                          <p className="text-xs text-muted-foreground">
+                            {format(new Date(manifest.receiver_signed_at), 'MMM d, h:mm a')}
+                          </p>
+                        )}
                         
                         {manifest.acroform_pdf_path && (
                           <ManifestPDFControls
                             manifestId={manifest.id}
                             acroformPdfPath={manifest.acroform_pdf_path}
                             clientEmails={[]}
-                            className="mt-2"
+                            className="w-full"
                           />
                         )}
                       </div>
