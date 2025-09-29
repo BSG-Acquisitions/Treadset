@@ -154,44 +154,8 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
   const manifestIntegration = useManifestIntegration();
   const sendManifestEmail = useSendManifestEmail();
 
-  // Auto-populate generator with client data when dialog opens
-  useEffect(() => {
-    if (open && pickup.client) {
-      // Instead of creating fake generator data, let drivers select from real generators
-      // This ensures complete address information is available for the manifest
-      console.log('Dialog opened - drivers should select a real generator from database');
-    }
-  }, [open, pickup]);
 
-  // Fetch functions for real database data
-  const fetchGenerators = async (search: string): Promise<Generator[]> => {
-    const { data, error } = await supabase
-      .from('generators' as any)
-      .select('*')
-      .ilike('generator_name', `%${search}%`)
-      .eq('is_active', true)
-      .limit(10);
-    
-    if (error) {
-      console.error('Error fetching generators:', error);
-      return [];
-    }
-    
-    return (data || []).map((item: any) => ({
-      id: item.id,
-      generator_name: item.generator_name,
-      generator_mailing_address: item.generator_mailing_address,
-      generator_city: item.generator_city,
-      generator_state: item.generator_state,
-      generator_zip: item.generator_zip,
-      generator_physical_address: item.generator_physical_address,
-      generator_city_2: item.generator_city_2,
-      generator_state_2: item.generator_state_2,
-      generator_zip_2: item.generator_zip_2,
-      generator_county: item.generator_county,
-      generator_phone: item.generator_phone,
-    }));
-  };
+  // Removed fetchGenerators function since generator is auto-populated from client data
 
   const fetchHaulers = async (search: string): Promise<Hauler[]> => {
     const { data, error } = await supabase
@@ -241,6 +205,31 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
       notes: pickup.notes || "",
     },
   });
+
+  // Auto-populate generator with client data when dialog opens
+  useEffect(() => {
+    if (open && pickup.client && !selectedGenerator) {
+      // Create generator object from client data
+      const clientAsGenerator: Generator = {
+        id: pickup.client.id || `client-${pickup.id}`,
+        generator_name: pickup.client.company_name,
+        generator_mailing_address: pickup.location?.address || '',
+        generator_city: '', // Will be filled from address parsing if needed
+        generator_state: '',
+        generator_zip: '',
+        generator_physical_address: pickup.location?.address || '',
+        generator_city_2: '',
+        generator_state_2: '',
+        generator_zip_2: '',
+        generator_county: '',
+        generator_phone: pickup.client.phone || '',
+      };
+      
+      setSelectedGenerator(clientAsGenerator);
+      form.setValue("generator_id", clientAsGenerator.id);
+      form.setValue("generator_print_name", pickup.client.contact_name || pickup.client.company_name || '');
+    }
+  }, [open, pickup, selectedGenerator, form]);
 
   const customPricing = false; // Removed custom pricing for simplified flow
   
@@ -356,7 +345,7 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
     try {
       // Validate required fields
       const missingFields = [];
-      if (!selectedGenerator) missingFields.push("Generator (please select from dropdown)");
+      // selectedGenerator is auto-populated from client data, no need to validate
       if (!selectedHauler) missingFields.push("Hauler");
       
       // Check for signatures
@@ -607,25 +596,23 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
                   <CardTitle className="text-lg">Generator</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <SearchableDropdown
-                    placeholder="Search generators..."
-                    searchFunction={fetchGenerators}
-                    onSelect={setSelectedGenerator}
-                    displayField="generator_name"
-                    selected={selectedGenerator}
-                    className="w-full"
-                  />
-                  {selectedGenerator && (
-                    <div className="mt-3 p-3 bg-muted rounded-lg text-sm space-y-1">
-                      <div><strong>Name:</strong> {selectedGenerator.generator_name}</div>
-                      {selectedGenerator.generator_mailing_address && (
-                        <div><strong>Address:</strong> {selectedGenerator.generator_mailing_address}</div>
-                      )}
-                      {selectedGenerator.generator_city && (
-                        <div><strong>Location:</strong> {selectedGenerator.generator_city}, {selectedGenerator.generator_state} {selectedGenerator.generator_zip}</div>
-                      )}
-                    </div>
-                  )}
+                  <div className="p-3 bg-muted rounded-lg space-y-2">
+                    <h4 className="font-medium">Generator Information (Auto-populated from Client)</h4>
+                    {selectedGenerator && (
+                      <div className="text-sm space-y-1">
+                        <div><strong>Name:</strong> {selectedGenerator.generator_name}</div>
+                        {selectedGenerator.generator_physical_address && (
+                          <div><strong>Address:</strong> {selectedGenerator.generator_physical_address}</div>
+                        )}
+                        {selectedGenerator.generator_phone && (
+                          <div><strong>Phone:</strong> {selectedGenerator.generator_phone}</div>
+                        )}
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Generator information is automatically filled from the client details. This ensures manifest accuracy.
+                    </p>
+                  </div>
                   
                   <FormField
                     control={form.control}
