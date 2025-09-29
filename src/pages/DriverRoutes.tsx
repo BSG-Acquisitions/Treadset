@@ -21,6 +21,7 @@ export default function DriverRoutes() {
   // Debug logging
   console.log('DriverRoutes - assignments:', assignments);
   console.log('DriverRoutes - selectedAssignment:', selectedAssignment);
+  console.log('DriverRoutes - location data sample:', assignments[0]?.pickup?.location);
 
   useEffect(() => {
     document.title = "Driver Routes – BSG";
@@ -166,11 +167,14 @@ export default function DriverRoutes() {
                             <div>
                                <div className="text-sm md:text-base font-medium text-blue-800 mb-1">Complete Address:</div>
                                <div className="text-base md:text-lg font-semibold text-blue-900 leading-relaxed">
-                                 {assignment.pickup?.location?.address || 'No address available'}
+                                 {/* Show actual address if available, otherwise show what we have */}
+                                 {assignment.pickup?.location?.address && assignment.pickup.location.address !== assignment.pickup?.location?.name 
+                                   ? assignment.pickup.location.address 
+                                   : `${assignment.pickup?.client?.company_name || 'Customer'} - Full address needed`}
                                </div>
-                               {assignment.pickup?.location?.name && (
+                               {assignment.pickup?.location?.name && assignment.pickup?.location?.name !== assignment.pickup?.location?.address && (
                                  <div className="text-sm text-blue-700 mt-1">
-                                   Location: {assignment.pickup.location.name}
+                                   Location Reference: {assignment.pickup.location.name}
                                  </div>
                                )}
                             </div>

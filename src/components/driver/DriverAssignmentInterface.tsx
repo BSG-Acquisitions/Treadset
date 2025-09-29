@@ -88,6 +88,7 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
   // Debug logging
   console.log('DriverAssignmentInterface - Assignment:', assignment);
   console.log('DriverAssignmentInterface - Pickup:', pickup);
+  console.log('DriverAssignmentInterface - Location data:', pickup?.location);
   const handleStartRoute = async () => {
     try {
       await updateAssignmentStatus.mutateAsync({
@@ -164,14 +165,17 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
                   <MapPin className="h-6 w-6 md:h-7 md:w-7 text-blue-600 flex-shrink-0 mt-1" />
                   <div className="flex-1">
                     <div className="text-sm md:text-base font-medium text-blue-800 mb-2">Complete Address:</div>
-                    <div className="text-lg md:text-xl font-bold text-blue-900 leading-relaxed">
-                      {pickup?.location?.address || 'No address available'}
-                    </div>
-                    {pickup?.location?.name && (
-                      <div className="text-base font-medium text-blue-800 mt-1">
-                        Location Name: {pickup.location.name}
-                      </div>
-                    )}
+                     <div className="text-lg md:text-xl font-bold text-blue-900 leading-relaxed">
+                       {/* Show actual address if available, otherwise show what we have */}
+                       {pickup?.location?.address && pickup.location.address !== pickup?.location?.name 
+                         ? pickup.location.address 
+                         : `${pickup?.client?.company_name || 'Customer'} - Full address needed`}
+                     </div>
+                     {pickup?.location?.name && pickup?.location?.name !== pickup?.location?.address && (
+                       <div className="text-base font-medium text-blue-800 mt-1">
+                         Location Reference: {pickup.location.name}
+                       </div>
+                     )}
                   </div>
                 </div>
               </div>
