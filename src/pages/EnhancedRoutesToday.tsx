@@ -398,7 +398,7 @@ export default function EnhancedRoutesToday() {
           </div>
         </div>
 
-        <div className="container py-6">
+        <div className="py-6 px-2 sm:px-4">
            {/* Week Overview - Full Week Grid */}
            <div className="mb-6">
              <div className="flex items-center justify-between mb-4">
