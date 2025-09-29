@@ -65,18 +65,24 @@ serve(async (req) => {
         const token = authHeader.replace("Bearer ", "");
         const { data: userData } = await supabaseService.auth.getUser(token);
         if (userData.user) {
-          userId = userData.user.id;
-          logStep("User authenticated", { userId });
+          logStep("User authenticated", { userId: userData.user.id });
 
-          // Get user's organization
-          const { data: userOrg } = await supabaseService
-            .from("user_organization_roles")
-            .select("organization_id")
-            .eq("user_id", userData.user.id)
-            .single();
+          // Get user record from public.users table (not auth.users)
+          const { data: publicUser } = await supabaseService
+            .from("users")
+            .select("id, organization_id")
+            .eq("auth_user_id", userData.user.id)
+            .maybeSingle();
           
-          if (userOrg) {
-            organizationId = userOrg.organization_id;
+          if (publicUser) {
+            userId = publicUser.id; // Use public.users.id, not auth.users.id
+            if (publicUser.organization_id) {
+              organizationId = publicUser.organization_id;
+            }
+            logStep("Found public user record", { publicUserId: userId, organizationId });
+          } else {
+            logStep("No public user record found for auth user");
+            userId = null; // Don't set processed_by if no public user record
           }
         }
       }
@@ -175,7 +181,7 @@ serve(async (req) => {
       customer_name: customer_name || null,
       description: description || "BSG Tire Service",
       metadata: metadata ? JSON.stringify(metadata) : null,
-      processed_by: userId
+      processed_by: userId || null // Only set if we have a valid public.users.id
     };
 
     const { data: payment, error: paymentError } = await supabaseService
