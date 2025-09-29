@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Upload, Download, Edit } from "lucide-react";
 import { SchedulePickupDialog } from "@/components/SchedulePickupDialog";
+import { CreateClientDialog } from "@/components/CreateClientDialog";
 
 
 import type { Database } from "@/integrations/supabase/types";
@@ -164,12 +165,14 @@ export default function Clients() {
         }
       />
 
-      <Button asChild>
-        <Link to="/book">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Client
-        </Link>
-      </Button>
+      <CreateClientDialog
+        trigger={
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Client
+          </Button>
+        }
+      />
     </div>
   );
 

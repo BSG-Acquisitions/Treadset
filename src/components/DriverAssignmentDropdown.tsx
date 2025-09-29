@@ -23,6 +23,11 @@ export const DriverAssignmentDropdown: React.FC<DriverAssignmentDropdownProps> =
   routeDate,
   onDriverAssigned
 }) => {
+  // Extract truck number and driver name from vehicle name
+  const getTruckDisplayName = (name: string) => {
+    const match = name.match(/Truck (\d+)/);
+    return match ? `Truck ${match[1]}` : name;
+  };
   const { data: employees = [] } = useEmployees();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -55,7 +60,7 @@ export const DriverAssignmentDropdown: React.FC<DriverAssignmentDropdownProps> =
       const driverName = driverId ? drivers.find(d => d.id === driverId)?.firstName || 'Driver' : 'Unassigned';
       toast({
         title: "Driver Assignment Updated",
-        description: `${vehicleName} is now ${driverId ? `assigned to ${driverName}` : 'unassigned'}`,
+        description: `${getTruckDisplayName(vehicleName)} is now ${driverId ? `assigned to ${driverName}` : 'unassigned'}`,
       });
       onDriverAssigned?.(driverId);
       queryClient.invalidateQueries({ queryKey: ['assignments'] });

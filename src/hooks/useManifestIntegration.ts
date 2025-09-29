@@ -202,12 +202,29 @@ export const useManifestIntegration = () => {
         populatedFieldCount,
       });
       
-      // Generate the PDF using v4 template system  
+      // Generate precise timestamps for signatures
+      const now = new Date();
+      const timestamp = now.toLocaleString('en-US', {
+        month: '2-digit',
+        day: '2-digit', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      });
+
+      // Generate the PDF using v4 template system with timestamps
       const acroFormResult = await generateAcroForm.mutateAsync({
         // Pass domain-keyed data; the generator will map to template fields and also pick up meta (times)
         manifestData: mergedData as unknown as AcroFormManifestData,
         manifestId: manifestId,
-        outputPath: `manifests/integrated-v4-${manifestId}-${Date.now()}.pdf`
+        outputPath: `manifests/integrated-v4-${manifestId}-${Date.now()}.pdf`,
+        meta: {
+          generator_signature_timestamp: manifestData.generator_signed_at ? timestamp : undefined,
+          hauler_signature_timestamp: manifestData.hauler_signed_at ? timestamp : undefined,
+          receiver_signature_timestamp: manifestData.receiver_signed_at ? timestamp : undefined,
+        }
       });
 
       // 3. Update manifest with AcroForm PDF path (keep status as AWAITING_RECEIVER_SIGNATURE)

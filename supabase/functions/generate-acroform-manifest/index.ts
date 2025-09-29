@@ -19,6 +19,9 @@ interface AcroFormFillRequest {
     generator_time?: string;
     hauler_time?: string;
     receiver_time?: string;
+    generator_signature_timestamp?: string;
+    hauler_signature_timestamp?: string;
+    receiver_signature_timestamp?: string;
   };
 }
 
@@ -276,12 +279,20 @@ const handler = async (req: Request): Promise<Response> => {
                   width: signatureSize.width,
                   height: signatureSize.height,
                 });
-                // Optional timestamp annotation next to signature
+                // Draw timestamp with signature
                 try {
-                  const ts = getTimeFor(fieldName);
-                  if (ts) {
+                  let timestampText = "";
+                  if (fieldName === 'Generator_Signature' && body.meta?.generator_signature_timestamp) {
+                    timestampText = `Signed: ${body.meta.generator_signature_timestamp}`;
+                  } else if (fieldName === 'Hauler_Signature' && body.meta?.hauler_signature_timestamp) {
+                    timestampText = `Signed: ${body.meta.hauler_signature_timestamp}`;
+                  } else if (fieldName === 'Receiver_Signature' && body.meta?.receiver_signature_timestamp) {
+                    timestampText = `Signed: ${body.meta.receiver_signature_timestamp}`;
+                  }
+                  
+                  if (timestampText) {
                     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-                    firstPage.drawText(ts, {
+                    firstPage.drawText(timestampText, {
                       x: 440,
                       y: yPosition - 12,
                       size: 8,

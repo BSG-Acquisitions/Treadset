@@ -9,6 +9,11 @@ export interface GenerateAcroFormV4Params {
   manifestId?: string;
   outputPath?: string;
   templateKeys?: string[]; // Available field names from template for validation
+  meta?: {
+    generator_signature_timestamp?: string;
+    hauler_signature_timestamp?: string;
+    receiver_signature_timestamp?: string;
+  };
 }
 
 export const useGenerateAcroFormManifestV4 = () => {
@@ -87,6 +92,9 @@ export const useGenerateAcroFormManifestV4 = () => {
               generator_time: (params.manifestData as any)?.generator_time,
               hauler_time: (params.manifestData as any)?.hauler_time,
               receiver_time: (params.manifestData as any)?.receiver_time,
+              generator_signature_timestamp: params.meta?.generator_signature_timestamp,
+              hauler_signature_timestamp: params.meta?.hauler_signature_timestamp,
+              receiver_signature_timestamp: params.meta?.receiver_signature_timestamp,
             }
           },
         }

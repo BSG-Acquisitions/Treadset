@@ -17,7 +17,7 @@ import { format, addDays, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval
 import { MapPin, Clock, Truck, Fuel, Star, TrendingUp, Calendar as CalendarIcon } from "lucide-react";
 import { motion } from "framer-motion";
 import { BSGLogo } from "@/components/BSGLogo";
-import { EnhancedVehicleManagement } from "@/components/EnhancedVehicleManagement";
+import { SimplifiedVehicleManagement } from "@/components/SimplifiedVehicleManagement";
 
 interface OptimizedSchedulingCalendarProps {
   clientId: string;
@@ -244,7 +244,7 @@ export function OptimizedSchedulingCalendar({
     return (
       <div className="flex items-center justify-center p-8">
         <div className="w-full max-w-2xl">
-          <EnhancedVehicleManagement />
+          <SimplifiedVehicleManagement />
         </div>
       </div>
     );
