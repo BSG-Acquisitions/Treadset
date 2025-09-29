@@ -261,12 +261,12 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
                        <SelectContent className="z-50 bg-popover">
                          {locations?.map((location) => (
                            <SelectItem key={location.id} value={location.id}>
-                             <div>
-                               <div className="font-medium">{location.name || location.address}</div>
-                               {location.name && (
-                                 <div className="text-sm text-muted-foreground">{location.address}</div>
-                               )}
-                             </div>
+                              <div>
+                                <div className="font-medium">{location.address || location.name}</div>
+                                {location.address && location.name && (
+                                  <div className="text-sm text-muted-foreground">{location.name}</div>
+                                )}
+                              </div>
                            </SelectItem>
                          ))}
                        </SelectContent>

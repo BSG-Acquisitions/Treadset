@@ -260,11 +260,16 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
                          </SelectTrigger>
                        </FormControl>
                        <SelectContent className="z-50 bg-popover">
-                         {locations?.map((location) => (
-                           <SelectItem key={location.id} value={location.id}>
-                             {location.name || location.address}
-                           </SelectItem>
-                         ))}
+                          {locations?.map((location) => (
+                            <SelectItem key={location.id} value={location.id}>
+                              <div>
+                                <div className="font-medium">{location.address || location.name}</div>
+                                {location.address && location.name && (
+                                  <div className="text-sm text-muted-foreground">{location.name}</div>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
                        </SelectContent>
                      </Select>
                     <FormMessage />
