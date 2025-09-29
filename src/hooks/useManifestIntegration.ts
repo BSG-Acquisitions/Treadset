@@ -69,8 +69,8 @@ export const convertManifestToAcroForm = (manifestData: any, receiverData?: any)
     oversized_count: ((manifestData.otr_count || 0) + (manifestData.tractor_count || 0)).toString(),
     generator_date_processed: new Date().toISOString().split('T')[0],
     generator_print_name: manifestData.signed_by_name || manifestData.client?.contact_name || 'Generator Representative',
-    generator_date: manifestData.signed_at ? new Date(manifestData.signed_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-    generator_time: manifestData.signed_at ? new Date(manifestData.signed_at).toLocaleTimeString('en-US', { hour12: false }) : new Date().toLocaleTimeString('en-US', { hour12: false }),
+    generator_date: manifestData.generator_signed_at ? new Date(manifestData.generator_signed_at).toISOString().split('T')[0] : (manifestData.signed_at ? new Date(manifestData.signed_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
+    generator_time: manifestData.generator_signed_at ? new Date(manifestData.generator_signed_at).toLocaleTimeString('en-US', { hour12: false }) : (manifestData.signed_at ? new Date(manifestData.signed_at).toLocaleTimeString('en-US', { hour12: false }) : new Date().toLocaleTimeString('en-US', { hour12: false })),
     generator_signature: manifestData.customer_sig_path || manifestData.customer_signature_png_path || '',
 
     // Hauler information - use actual hauler data from database
@@ -83,8 +83,8 @@ export const convertManifestToAcroForm = (manifestData: any, receiverData?: any)
     hauler_zip: manifestData.hauler?.hauler_zip || '',
     hauler_phone: manifestData.hauler?.hauler_phone || '',
     hauler_print_name: manifestData.signed_by_name || 'Hauler Representative',
-    hauler_date: manifestData.signed_at ? new Date(manifestData.signed_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-    hauler_time: manifestData.signed_at ? new Date(manifestData.signed_at).toLocaleTimeString('en-US', { hour12: false }) : new Date().toLocaleTimeString('en-US', { hour12: false }),
+    hauler_date: manifestData.hauler_signed_at ? new Date(manifestData.hauler_signed_at).toISOString().split('T')[0] : (manifestData.signed_at ? new Date(manifestData.signed_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
+    hauler_time: manifestData.hauler_signed_at ? new Date(manifestData.hauler_signed_at).toLocaleTimeString('en-US', { hour12: false }) : (manifestData.signed_at ? new Date(manifestData.signed_at).toLocaleTimeString('en-US', { hour12: false }) : new Date().toLocaleTimeString('en-US', { hour12: false })),
     hauler_gross_weight: (manifestData.gross_weight || manifestData.weight_tons || '').toString(),
     hauler_tare_weight: (manifestData.tare_weight || '').toString(), 
     hauler_net_weight: (manifestData.net_weight || manifestData.weight_tons || '').toString(),

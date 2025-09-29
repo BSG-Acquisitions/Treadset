@@ -11,6 +11,7 @@ import { useManifestIntegration } from "@/hooks/useManifestIntegration";
 import { ManifestPDFControls } from "./ManifestPDFControls";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useSendManifestEmail } from "@/hooks/useSendManifestEmail";
 import {
   Dialog,
   DialogContent,
@@ -151,6 +152,7 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
   
   const createManifest = useCreateManifest();
   const manifestIntegration = useManifestIntegration();
+  const sendManifestEmail = useSendManifestEmail();
 
   // Auto-populate generator with client data when dialog opens
   useEffect(() => {
@@ -491,6 +493,44 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
         id: manifest.id, 
         acroform_pdf_path: genResult.pdfPath 
       });
+
+      // Send email with manifest to client after driver completes pickup
+      try {
+        const manifestNumber = manifest.manifest_number || manifest.id;
+        await sendManifestEmail.mutateAsync({
+          manifestId: manifest.id,
+          pdfPath: genResult.pdfPath,
+          subject: `Pickup Completed - Manifest ${manifestNumber}`,
+          messageHtml: `
+            <h2>Pickup Completion Notice</h2>
+            <p>Dear Customer,</p>
+            <p>Your tire pickup has been completed successfully. Our driver has collected the following:</p>
+            <ul>
+              <li>PTE Tires: ${data.equivalents_off_rim + data.equivalents_on_rim}</li>
+              <li>Commercial Tires: ${data.commercial_17_5_19_5_off + data.commercial_17_5_19_5_on + data.commercial_22_5_off + data.commercial_22_5_on}</li>
+              <li>OTR Tires: ${data.otr_count}</li>
+              <li>Tractor Tires: ${data.tractor_count}</li>
+              <li>Total Weight: ${data.weight_tons} tons</li>
+            </ul>
+            <p>Signed by Driver: ${data.hauler_print_name} at ${new Date(haulerSigResult.timestamp).toLocaleString()}</p>
+            <p>Signed by Generator: ${data.generator_print_name} at ${new Date(generatorSigResult.timestamp).toLocaleString()}</p>
+            <p>The manifest is attached for your records. The receiver will complete their signature separately.</p>
+            <p>Best regards,<br>BSG Tire Recycling</p>
+          `
+        });
+        
+        toast({
+          title: "Manifest emailed",
+          description: "Manifest has been sent to the client successfully.",
+        });
+      } catch (emailError) {
+        console.error('Failed to send manifest email:', emailError);
+        toast({
+          title: "Email failed",
+          description: "Manifest completed but email could not be sent to client.",
+          variant: "destructive"
+        });
+      }
 
       // Close dialog and notify parent to update assignment status
       setOpen(false);

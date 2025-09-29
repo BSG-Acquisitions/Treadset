@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Truck, User, Calendar, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 import { SchedulePickupWithDriverDialog } from "@/components/SchedulePickupWithDriverDialog";
+import { WorkflowTestDialog } from "@/components/WorkflowTestDialog";
 
 export default function DriverAssignmentHelper() {
   const [loading, setLoading] = useState(false);
@@ -97,14 +98,17 @@ export default function DriverAssignmentHelper() {
                 <p className="text-sm text-green-600 mb-3">
                   Use this to schedule a pickup and assign it directly to Test Driver:
                 </p>
-                <SchedulePickupWithDriverDialog 
-                  trigger={
-                    <Button className="bg-green-600 hover:bg-green-700">
-                      <User className="h-4 w-4 mr-2" />
-                      Schedule Pickup for Test Driver
-                    </Button>
-                  }
-                />
+                <div className="flex gap-3">
+                  <SchedulePickupWithDriverDialog 
+                    trigger={
+                      <Button className="bg-green-600 hover:bg-green-700 text-white">
+                        <User className="h-4 w-4 mr-2" />
+                        Schedule Pickup for Test Driver
+                      </Button>
+                    }
+                  />
+                  <WorkflowTestDialog />
+                </div>
               </div>
             </div>
 
