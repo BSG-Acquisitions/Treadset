@@ -6,7 +6,6 @@ import { useSchedulePickupWithDriver } from "@/hooks/useSchedulePickupWithDriver
 import { useClients } from "@/hooks/useClients";
 import { useLocations } from "@/hooks/useLocations";
 import { useVehicles } from "@/hooks/useVehicles";
-import { useEmployees } from "@/hooks/useEmployees";
 import {
   Dialog,
   DialogContent,
@@ -49,8 +48,7 @@ import { cn } from "@/lib/utils";
 const scheduleWithDriverSchema = z.object({
   clientId: z.string().min(1, "Client is required"),
   locationId: z.string().optional(),
-  vehicleId: z.string().min(1, "Vehicle is required"),
-  driverId: z.string().min(1, "Driver is required"),
+  vehicleId: z.string().min(1, "Vehicle/Truck is required"),
   pickupDate: z.date({
     required_error: "Pickup date is required",
   }),
@@ -77,13 +75,7 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
   const { data: clients } = useClients({ search: clientSearch, limit: 100 });
   const { data: locations } = useLocations(selectedClientId);
   const { data: vehicles } = useVehicles();
-  const { data: employees } = useEmployees();
   const schedulePickup = useSchedulePickupWithDriver();
-
-  // Filter employees to get only active drivers
-  const drivers = employees?.filter(emp => 
-    emp.roles.includes('driver') && emp.isActive
-  ) || [];
 
   const form = useForm<ScheduleWithDriverFormData>({
     resolver: zodResolver(scheduleWithDriverSchema),
@@ -91,7 +83,6 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
       clientId: defaultClientId || "",
       locationId: "",
       vehicleId: "",
-      driverId: "",
       pickupDate: new Date(),
       pteCount: 0,
       otrCount: 0,
@@ -103,11 +94,15 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
 
   const onSubmit = async (data: ScheduleWithDriverFormData) => {
     try {
+      // Find the selected vehicle to get its assigned driver
+      const selectedVehicle = vehicles?.find(v => v.id === data.vehicleId);
+      const driverId = selectedVehicle?.assigned_driver_id;
+
       await schedulePickup.mutateAsync({
         clientId: data.clientId,
         locationId: data.locationId,
         vehicleId: data.vehicleId,
-        driverId: data.driverId,
+        driverId: driverId || '', // Automatically use the truck's assigned driver
         pickupDate: format(data.pickupDate, 'yyyy-MM-dd'),
         pteCount: data.pteCount,
         otrCount: data.otrCount,
@@ -136,8 +131,8 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            Schedule Pickup with Driver Assignment
+            <Truck className="h-5 w-5" />
+            Schedule Pickup with Truck Assignment
           </DialogTitle>
         </DialogHeader>
         <Form {...form}>
@@ -246,84 +241,46 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
               />
             )}
 
-            {/* Vehicle & Driver Selection */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="vehicleId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Vehicle</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select vehicle">
+            {/* Vehicle/Truck Selection */}
+            <FormField
+              control={form.control}
+              name="vehicleId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Select Truck (Driver Auto-Assigned)</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select truck" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="z-50 bg-popover">
+                      {vehicles?.map((vehicle) => {
+                        const driverInfo = vehicle.driver_email || 'No driver assigned';
+                        return (
+                          <SelectItem key={vehicle.id} value={vehicle.id}>
                             <div className="flex items-center gap-2">
                               <Truck className="h-4 w-4" />
-                              <span>Select vehicle</span>
+                              <div>
+                                <div className="font-medium">{vehicle.name}</div>
+                                {vehicle.license_plate && (
+                                  <div className="text-sm text-muted-foreground">{vehicle.license_plate}</div>
+                                )}
+                                <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                                  <User className="h-3 w-3" />
+                                  Driver: {driverInfo}
+                                </div>
+                              </div>
                             </div>
-                          </SelectValue>
-                        </SelectTrigger>
-                      </FormControl>
-                       <SelectContent className="z-50 bg-popover">
-                         {vehicles?.map((vehicle) => (
-                           <SelectItem key={vehicle.id} value={vehicle.id}>
-                             <div className="flex items-center gap-2">
-                               <Truck className="h-4 w-4" />
-                               <div>
-                                 <div className="font-medium">{vehicle.name}</div>
-                                 {vehicle.license_plate && (
-                                   <div className="text-sm text-muted-foreground">{vehicle.license_plate}</div>
-                                 )}
-                               </div>
-                             </div>
-                           </SelectItem>
-                         ))}
-                       </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="driverId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Driver</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select driver">
-                            <div className="flex items-center gap-2">
-                              <User className="h-4 w-4" />
-                              <span>Select driver</span>
-                            </div>
-                          </SelectValue>
-                        </SelectTrigger>
-                      </FormControl>
-                       <SelectContent className="z-50 bg-popover">
-                         {drivers.map((driver) => (
-                           <SelectItem key={driver.id} value={driver.id}>
-                             <div className="flex items-center gap-2">
-                               <User className="h-4 w-4" />
-                               <div>
-                                 <div className="font-medium">
-                                   {driver.firstName} {driver.lastName}
-                                 </div>
-                                 <div className="text-sm text-muted-foreground">{driver.email}</div>
-                               </div>
-                             </div>
-                           </SelectItem>
-                         ))}
-                       </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             {/* Date & Time */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

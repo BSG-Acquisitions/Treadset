@@ -6,7 +6,6 @@ import { useSchedulePickup } from "@/hooks/usePickups";
 import { useClients } from "@/hooks/useClients";
 import { useLocations } from "@/hooks/useLocations";
 import { useVehicles } from "@/hooks/useVehicles";
-import { useEmployees } from "@/hooks/useEmployees";
 import { SchedulePickupWithDriverDialog } from "./SchedulePickupWithDriverDialog";
 import {
   Dialog,
@@ -58,7 +57,6 @@ const scheduleSchema = z.object({
   tractorCount: z.number().min(0).default(0),
   preferredWindow: z.enum(["AM", "PM", "Any"]).default("Any"),
   vehicleId: z.string().min(1, "Vehicle/Truck is required"),
-  driverId: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -78,13 +76,7 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
   const { data: clients } = useClients({ search: clientSearch, limit: 100 });
   const { data: locations } = useLocations(selectedClientId);
   const { data: vehicles } = useVehicles();
-  const { data: employees } = useEmployees();
   const schedulePickup = useSchedulePickup();
-
-  // Filter to get only active drivers
-  const drivers = employees?.filter(emp => 
-    emp.roles.includes('driver') && emp.isActive
-  ) || [];
 
   const form = useForm<ScheduleFormData>({
     resolver: zodResolver(scheduleSchema),
@@ -96,13 +88,16 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
       tractorCount: 0,
       preferredWindow: "Any",
       vehicleId: "",
-      driverId: "",
       notes: "",
     },
   });
 
   const onSubmit = async (data: ScheduleFormData) => {
     try {
+      // Find the selected vehicle to get its assigned driver
+      const selectedVehicle = vehicles?.find(v => v.id === data.vehicleId);
+      const driverId = selectedVehicle?.assigned_driver_id;
+
       await schedulePickup.mutateAsync({
         clientId: data.clientId,
         locationId: data.locationId,
@@ -113,7 +108,7 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
         preferredWindow: data.preferredWindow,
         assignmentType: 'vehicle',
         vehicleId: data.vehicleId,
-        driverId: data.driverId,
+        driverId: driverId, // Automatically use the truck's assigned driver
         notes: data.notes,
       });
       setOpen(false);
@@ -242,73 +237,47 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
               />
             </div>
 
-            {/* Truck/Vehicle and Driver Selection - Side by side */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="vehicleId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Truck/Vehicle</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a truck" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent className="z-50 bg-popover">
-                        {vehicles?.map((vehicle) => (
+            {/* Truck/Vehicle Selection */}
+            <FormField
+              control={form.control}
+              name="vehicleId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Select Truck (Driver Auto-Assigned)</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a truck" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="z-50 bg-popover">
+                      {vehicles?.map((vehicle) => {
+                        const driverInfo = vehicle.driver_email || 'No driver assigned';
+                        return (
                           <SelectItem key={vehicle.id} value={vehicle.id}>
                             <div className="flex flex-col items-start">
-                              <span className="font-medium">{vehicle.name}</span>
+                              <div className="flex items-center gap-2">
+                                <Truck className="h-4 w-4" />
+                                <span className="font-medium">{vehicle.name}</span>
+                              </div>
                               <span className="text-muted-foreground text-sm">
                                 {vehicle.license_plate && `${vehicle.license_plate} • `}
                                 Capacity: {vehicle.capacity} tires
                               </span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Driver Assignment Field */}
-              <FormField
-                control={form.control}
-                name="driverId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Assign Driver (Optional)</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a driver (optional)" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent className="z-50 bg-popover">
-                        {drivers.map((employee) => (
-                          <SelectItem key={employee.id} value={employee.id}>
-                            <div className="flex items-center gap-2">
-                              <User className="h-4 w-4" />
-                              <span>
-                                {employee.firstName} {employee.lastName}
-                                {employee.email && (
-                                  <span className="text-muted-foreground ml-1">({employee.email})</span>
-                                )}
+                              <span className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                                <User className="h-3 w-3" />
+                                Driver: {driverInfo}
                               </span>
                             </div>
                           </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
