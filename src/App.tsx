@@ -42,6 +42,7 @@ import ReceiverManagement from './pages/ReceiverManagement';
 import Reports from './pages/Reports';
 import MichiganReports from './pages/MichiganReports';
 import Dropoffs from './pages/Dropoffs';
+import DriverSchedulePickup from "./pages/DriverSchedulePickup";
 
 const queryClient = new QueryClient();
 
@@ -122,9 +123,9 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/book" element={
-              <ProtectedRoute roles={['admin', 'ops_manager', 'sales', 'driver']}>
+              <ProtectedRoute roles={['driver']}>
                 <AppLayout>
-                  <Book />
+                  <DriverSchedulePickup />
                 </AppLayout>
               </ProtectedRoute>
             } />
