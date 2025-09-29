@@ -86,7 +86,7 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
       type: 'vehicle' as const,
       name: v.name,
       details: v.license_plate ? `${v.license_plate} • Capacity: ${v.capacity} tires` : `Capacity: ${v.capacity} tires`,
-      driverInfo: v.driver_email || 'No driver assigned',
+      driverInfo: v.driver_email || null,
       vehicleId: v.id,
       assignedDriverId: v.assigned_driver_id,
     })) || []),
@@ -297,10 +297,12 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
                               {truck.details && (
                                 <div className="text-sm text-muted-foreground">{truck.details}</div>
                               )}
-                              <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                                <User className="h-3 w-3" />
-                                {truck.driverInfo}
-                              </div>
+                              {truck.driverInfo && (
+                                <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                                  <User className="h-3 w-3" />
+                                  {truck.driverInfo}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </SelectItem>

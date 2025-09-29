@@ -87,7 +87,7 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
       type: 'vehicle' as const,
       name: v.name,
       details: v.license_plate ? `${v.license_plate} • Capacity: ${v.capacity} tires` : `Capacity: ${v.capacity} tires`,
-      driverInfo: v.driver_email || 'No driver assigned',
+      driverInfo: v.driver_email || null,
       vehicleId: v.id,
       assignedDriverId: v.assigned_driver_id,
     })) || []),
@@ -296,10 +296,12 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
                                 {truck.details}
                               </span>
                             )}
-                            <span className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                              <User className="h-3 w-3" />
-                              {truck.driverInfo}
-                            </span>
+                            {truck.driverInfo && (
+                              <span className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                                <User className="h-3 w-3" />
+                                {truck.driverInfo}
+                              </span>
+                            )}
                           </div>
                         </SelectItem>
                       ))}
