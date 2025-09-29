@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -150,8 +150,15 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
   const handleClientChange = (clientId: string) => {
     setSelectedClientId(clientId);
     form.setValue("clientId", clientId);
-    form.setValue("locationId", ""); // Reset location when client changes
+    form.setValue("locationId", ""); // Will be auto-filled by useEffect if only one location
   };
+
+  // Auto-select location if there's only one for the selected client
+  useEffect(() => {
+    if (locations && locations.length === 1 && selectedClientId) {
+      form.setValue("locationId", locations[0].id);
+    }
+  }, [locations, selectedClientId, form]);
 
 
   return (
