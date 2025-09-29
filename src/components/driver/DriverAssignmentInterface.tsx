@@ -38,11 +38,18 @@ interface DriverAssignmentInterfaceProps {
       client?: { 
         id: string;
         company_name: string; 
+        contact_name?: string;
         email?: string;
+        phone?: string;
         mailing_address?: string;
         city?: string;
         state?: string;
         zip?: string;
+        county?: string;
+        physical_address?: string;
+        physical_city?: string;
+        physical_state?: string;
+        physical_zip?: string;
       };
       location?: { 
         id: string;
@@ -77,7 +84,22 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
           .from('pickups')
           .select(`
             id, client_id, pickup_date, preferred_window, pte_count, otr_count, tractor_count, notes, manifest_id, status,
-            client:clients(id, company_name, email),
+            client:clients(
+              id, 
+              company_name, 
+              contact_name,
+              email, 
+              phone,
+              mailing_address, 
+              city, 
+              state, 
+              zip, 
+              county,
+              physical_address,
+              physical_city,
+              physical_state,
+              physical_zip
+            ),
             location:locations(id, address, name, latitude, longitude)
           `)
           .eq('id', assignment.pickup_id)

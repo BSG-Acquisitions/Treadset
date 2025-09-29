@@ -43,7 +43,21 @@ export const usePickups = (date?: string) => {
         .from('pickups')
         .select(`
           *,
-          client:client_id(company_name),
+          client:client_id(
+            company_name, 
+            contact_name, 
+            email, 
+            phone,
+            mailing_address,
+            city,
+            state,
+            zip,
+            county,
+            physical_address,
+            physical_city,
+            physical_state,
+            physical_zip
+          ),
           location:location_id(name, address)
         `)
         .eq('organization_id', orgData); // Explicitly filter by organization

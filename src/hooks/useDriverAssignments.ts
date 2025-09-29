@@ -15,7 +15,22 @@ export const useDriverAssignments = (date?: string) => {
         .select(`
           *,
           pickup:pickups(*,
-            client:clients(id, company_name, email, mailing_address, city, state, zip),
+            client:clients(
+              id, 
+              company_name, 
+              contact_name,
+              email, 
+              phone,
+              mailing_address, 
+              city, 
+              state, 
+              zip, 
+              county,
+              physical_address,
+              physical_city,
+              physical_state,
+              physical_zip
+            ),
             location:locations(id, address, name, latitude, longitude)
           ),
           vehicle:vehicles(id, name, capacity, license_plate),

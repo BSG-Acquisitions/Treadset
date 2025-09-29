@@ -119,6 +119,17 @@ interface CompletePickupDialogProps {
       contact_name?: string;
       email?: string;
       phone?: string;
+      // Mailing address fields
+      mailing_address?: string;
+      city?: string;
+      state?: string;
+      zip?: string;
+      county?: string;
+      // Physical address fields
+      physical_address?: string;
+      physical_city?: string;
+      physical_state?: string;
+      physical_zip?: string;
     };
     location?: { 
       id?: string;
@@ -209,19 +220,21 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
   // Auto-populate generator with client data when dialog opens
   useEffect(() => {
     if (open && pickup.client && !selectedGenerator) {
-      // Create generator object from client data
+      // Create generator object from client data with proper address field mapping
       const clientAsGenerator: Generator = {
         id: pickup.client.id || `client-${pickup.id}`,
         generator_name: pickup.client.company_name,
-        generator_mailing_address: pickup.location?.address || '',
-        generator_city: '', // Will be filled from address parsing if needed
-        generator_state: '',
-        generator_zip: '',
-        generator_physical_address: pickup.location?.address || '',
-        generator_city_2: '',
-        generator_state_2: '',
-        generator_zip_2: '',
-        generator_county: '',
+        // Mailing address fields from client
+        generator_mailing_address: pickup.client.mailing_address || pickup.location?.address || '',
+        generator_city: pickup.client.city || '',
+        generator_state: pickup.client.state || '',
+        generator_zip: pickup.client.zip || '',
+        generator_county: pickup.client.county || '',
+        // Physical address fields from client
+        generator_physical_address: pickup.client.physical_address || pickup.client.mailing_address || pickup.location?.address || '',
+        generator_city_2: pickup.client.physical_city || pickup.client.city || '',
+        generator_state_2: pickup.client.physical_state || pickup.client.state || '',
+        generator_zip_2: pickup.client.physical_zip || pickup.client.zip || '',
         generator_phone: pickup.client.phone || '',
       };
       
