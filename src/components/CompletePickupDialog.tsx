@@ -12,6 +12,7 @@ import { ManifestPDFControls } from "./ManifestPDFControls";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useSendManifestEmail } from "@/hooks/useSendManifestEmail";
+import { useCreatePayment } from "@/hooks/useStripePayment";
 import {
   Dialog,
   DialogContent,
@@ -40,7 +41,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { CheckCircle2, Calendar, MapPin, Building, DollarSign, Weight, FileText, PenTool } from "lucide-react";
+import { CheckCircle2, Calendar, MapPin, Building, DollarSign, Weight, FileText, PenTool, CreditCard } from "lucide-react";
 import SignaturePad from 'react-signature-canvas';
 
 // Mock data - replace with actual database calls
@@ -152,7 +153,8 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedGenerator, setSelectedGenerator] = useState<Generator | null>(null);
   const [selectedHauler, setSelectedHauler] = useState<Hauler | null>(null);
-  const [completedManifest, setCompletedManifest] = useState<{ id: string; acroform_pdf_path?: string } | null>(null);
+  const [completedManifest, setCompletedManifest] = useState<{ id: string; acroform_pdf_path?: string; total?: number } | null>(null);
+  const [paymentInitiated, setPaymentInitiated] = useState(false);
   const { user } = useAuth();
   
   const generatorSigRef = useRef<SignaturePad>(null);
@@ -164,6 +166,7 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
   const createManifest = useCreateManifest();
   const manifestIntegration = useManifestIntegration();
   const sendManifestEmail = useSendManifestEmail();
+  const createPayment = useCreatePayment();
 
 
   // Removed fetchGenerators function since generator is auto-populated from client data
@@ -490,7 +493,8 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
       
       setCompletedManifest({ 
         id: manifest.id, 
-        acroform_pdf_path: genResult.pdfPath 
+        acroform_pdf_path: genResult.pdfPath,
+        total: manifest.total || 0
       });
 
       // Send email with manifest to client after driver completes pickup
@@ -531,11 +535,11 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
         });
       }
 
-      // Close dialog and notify parent to update assignment status
-      setOpen(false);
-      if (typeof (onSuccess) === 'function') {
-        onSuccess(manifest.id, genResult.pdfPath);
-      }
+      // Don't close dialog immediately - allow driver to process payment
+      // setOpen(false);
+      // if (typeof (onSuccess) === 'function') {
+      //   onSuccess(manifest.id, genResult.pdfPath);
+      // }
 
       queryClient.invalidateQueries({ queryKey: ['pickups'] });
       
@@ -545,6 +549,15 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
       setIsSubmitting(false);
     }
   };
+
+  // Reset state when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setCompletedManifest(null);
+      setPaymentInitiated(false);
+      form.reset();
+    }
+  }, [open, form]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -1120,6 +1133,56 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
                   <CheckCircle2 className="h-5 w-5 text-brand-success" />
                   <h3 className="font-semibold text-brand-success">Pickup Completed & Manifest Generated!</h3>
                 </div>
+                
+                {/* Payment Section */}
+                {completedManifest.total && completedManifest.total > 0 && !paymentInitiated && (
+                  <Card className="border-blue-200 bg-blue-50/50">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <CreditCard className="h-5 w-5" />
+                        Payment Due: ${completedManifest.total.toFixed(2)}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Process payment now using Stripe secure checkout
+                      </p>
+                      <Button
+                        type="button"
+                        className="w-full"
+                        onClick={() => {
+                          setPaymentInitiated(true);
+                          createPayment.mutate({
+                            amount: completedManifest.total || 0,
+                            description: `Manifest ${pickup.client?.company_name || 'Client'} - Tire Recycling Service`,
+                            customer_email: pickup.client?.email,
+                            customer_name: pickup.client?.company_name,
+                            client_id: pickup.client?.id,
+                            pickup_id: pickup.id,
+                            manifest_id: completedManifest.id,
+                            metadata: {
+                              manifest_number: pickup.pickup_date,
+                              location: pickup.location?.address
+                            }
+                          });
+                        }}
+                        disabled={createPayment.isPending}
+                      >
+                        <CreditCard className="h-4 w-4 mr-2" />
+                        {createPayment.isPending ? "Opening Stripe..." : "Process Payment with Stripe"}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+                
+                {paymentInitiated && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-900">
+                      Payment window opened in new tab. Complete payment there, then close this dialog.
+                    </p>
+                  </div>
+                )}
+                
                 <ManifestPDFControls
                   manifestId={completedManifest.id}
                   acroformPdfPath={completedManifest.acroform_pdf_path}
