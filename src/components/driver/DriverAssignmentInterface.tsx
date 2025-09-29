@@ -9,7 +9,6 @@ import {
   Clock, 
   FileText, 
   CheckCircle2,
-  Play,
   Navigation
 } from "lucide-react";
 import { CompletePickupDialog } from "../CompletePickupDialog";
@@ -88,21 +87,6 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
     };
     loadPickup();
   }, [assignment.pickup_id, pickup]);
-  const handleStartRoute = async () => {
-    try {
-      await updateAssignmentStatus.mutateAsync({
-        assignmentId: assignment.id,
-        status: 'in_progress'
-      });
-      
-      toast({
-        title: "Route Started",
-        description: "You've started working on this pickup."
-      });
-    } catch (error) {
-      console.error('Failed to start route:', error);
-    }
-  };
 
   const handlePickupComplete = () => {
     // Refresh data after completion
@@ -250,18 +234,8 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
         </CardHeader>
         <CardContent>
           <div className="space-y-3 md:space-y-4">
-            {assignment.status === 'assigned' && (
-              <Button 
-                onClick={handleStartRoute} 
-                className="w-full h-12 md:h-14 text-base md:text-lg font-medium"
-                disabled={updateAssignmentStatus.isPending}
-              >
-                <Play className="h-5 w-5 mr-2" />
-                Start This Route
-              </Button>
-            )}
 
-            {(assignment.status === 'in_progress' || assignment.status === 'assigned') && pickup && (
+            {pickup && (
               <>
                 <Separator />
                 <div className="space-y-3">

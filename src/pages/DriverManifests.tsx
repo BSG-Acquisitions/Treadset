@@ -171,7 +171,7 @@ export default function DriverManifests() {
               <div className="text-center py-8 text-muted-foreground">
                 <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
                 <p>No manifests created today</p>
-                <p className="text-sm mt-1">Start by creating a manifest from your assigned routes above</p>
+                <p className="text-sm mt-1">Create manifests from your assigned pickups</p>
               </div>
             ) : (
               <div className="grid gap-4">

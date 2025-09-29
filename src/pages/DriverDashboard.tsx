@@ -206,13 +206,13 @@ export default function DriverDashboard() {
                           {assignment.pickup?.preferred_window || 'Time TBD'} • {assignment.vehicle?.name}
                         </p>
                       </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" asChild>
-                          <Link to={`/driver/assignment/${assignment.id}`}>
-                            Start Route
-                          </Link>
-                        </Button>
-                      </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" asChild>
+                            <Link to={`/driver/assignment/${assignment.id}`}>
+                              View Details
+                            </Link>
+                          </Button>
+                        </div>
                     </div>
                   ))}
                   {todayAssignments.length > 5 && (
