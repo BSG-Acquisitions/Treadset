@@ -152,12 +152,17 @@ export default function DriverRoutes() {
                                 <h3 className="font-semibold text-foreground">
                                   {assignment.pickup?.client?.company_name || 'Unknown Client'}
                                 </h3>
-                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                  <MapPin className="h-3 w-3" />
+                                <div className="flex items-center gap-1 text-base font-medium text-foreground bg-background px-2 py-1 rounded border mt-1">
+                                  <MapPin className="h-4 w-4 text-red-500" />
                                   <span className="truncate">
-                                    {assignment.pickup?.location?.name || assignment.pickup?.location?.address || 'No location'}
+                                    {assignment.pickup?.location?.address || 'No address available'}
                                   </span>
                                 </div>
+                                {assignment.pickup?.location?.name && (
+                                  <div className="text-sm text-muted-foreground">
+                                    Location: {assignment.pickup.location.name}
+                                  </div>
+                                )}
                                 {assignment.pickup?.notes && (
                                   <p className="text-sm text-muted-foreground italic">
                                     Notes: {assignment.pickup.notes}

@@ -149,10 +149,17 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
             {/* Client Info */}
             <div className="bg-secondary/20 rounded-lg p-4">
               <div className="font-medium text-lg">{pickup?.client?.company_name || 'Unknown Client'}</div>
-              <div className="text-sm text-muted-foreground flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
-                {pickup?.location?.address || 'No address available'}
+              <div className="text-base font-medium text-foreground flex items-center gap-2 mt-2 p-2 bg-background rounded border">
+                <MapPin className="h-5 w-5 text-red-500" />
+                <span className="text-foreground">
+                  {pickup?.location?.address || 'No address available'}
+                </span>
               </div>
+              {pickup?.location?.name && (
+                <div className="text-sm text-muted-foreground mt-1">
+                  Location: {pickup.location.name}
+                </div>
+              )}
               {pickup?.preferred_window && (
                 <div className="text-sm text-muted-foreground flex items-center gap-2">
                   <Clock className="h-4 w-4" />
