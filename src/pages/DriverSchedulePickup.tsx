@@ -32,7 +32,19 @@ export default function DriverSchedulePickup() {
           <BrandHeader 
             title="Add Pickup"
             subtitle="Schedule pickup for existing client"
+            showLogo={false}
+            className="md:block hidden"
           />
+          
+          {/* Mobile-optimized header */}
+          <div className="md:hidden text-center py-6">
+            <h1 className="text-2xl font-bold text-brand-primary mb-2">
+              Add Pickup
+            </h1>
+            <p className="text-brand-tire-black/70 text-base">
+              Schedule pickup for existing client
+            </p>
+          </div>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
