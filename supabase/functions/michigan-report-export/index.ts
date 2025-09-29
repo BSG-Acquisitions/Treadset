@@ -124,10 +124,10 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Export error:', error);
     return new Response(JSON.stringify({
-      error: error.message,
+      error: error?.message || 'Unknown error',
       timestamp: new Date().toISOString()
     }), {
       status: 500,

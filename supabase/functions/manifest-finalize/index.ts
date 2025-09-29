@@ -259,17 +259,18 @@ const handler = async (req: Request): Promise<Response> => {
       // Boxes for signature fields
       for (const [sigId, box] of Object.entries(MANIFEST_LAYOUT.signatures)) {
         const b = box as any;
-        firstPage.drawRectangle({ x: b.x, y: b.y, width: b.w, height: b.h, borderColor: rgb(0, 0, 1), borderWidth: 1, color: rgb(0,0,0,0) as any });
+        firstPage.drawRectangle({ x: b.x, y: b.y, width: b.w, height: b.h, borderColor: rgb(0, 0, 1), borderWidth: 1 });
         firstPage.drawText(String(sigId), { x: b.x + 4, y: b.y + b.h + 4, size: 8, font, color: rgb(0, 0, 1) });
       }
     } else {
       // Text overlays based on configuration
       for (const [fieldId, fieldConfig] of Object.entries(MANIFEST_FIELDS)) {
-        if (typeof fieldConfig !== 'object' || !fieldConfig.source) continue;
-        const layoutConfig = MANIFEST_LAYOUT.text[fieldId];
+        if (!manifest_data || typeof fieldConfig !== 'object' || !fieldConfig.source) continue;
+        
+        const layoutConfig = (MANIFEST_LAYOUT.text as any)[fieldId];
         if (!layoutConfig) continue;
         const rawValue = manifest_data[fieldConfig.source as keyof typeof manifest_data];
-        const formattedValue = formatValue(rawValue, fieldConfig.format);
+        const formattedValue = formatValue(rawValue, (fieldConfig as any).format);
         if (formattedValue) {
           const fontSize = layoutConfig.fontSize || 10;
           const useFont = layoutConfig.bold ? boldFont : font;
@@ -283,10 +284,10 @@ const handler = async (req: Request): Promise<Response> => {
         }
       }
       // Add signatures
-      const signatures = [
-        { data: manifest_data.generator_signature, config: MANIFEST_LAYOUT.signatures.generatorSig },
-        { data: manifest_data.hauler_signature, config: MANIFEST_LAYOUT.signatures.haulerSig },
-        { data: manifest_data.processor_signature, config: MANIFEST_LAYOUT.signatures.receiverSig }
+    const signatures = [
+      { data: manifest_data?.generator_signature, config: MANIFEST_LAYOUT.signatures.generatorSig },
+      { data: manifest_data?.hauler_signature, config: MANIFEST_LAYOUT.signatures.haulerSig },
+      { data: manifest_data?.processor_signature, config: MANIFEST_LAYOUT.signatures.receiverSig }
       ];
       for (const sig of signatures) {
         if (sig.data && sig.config) {

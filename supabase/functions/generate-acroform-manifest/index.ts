@@ -319,8 +319,8 @@ const handler = async (req: Request): Promise<Response> => {
             console.log(`Field "${fieldName}" is not a text field, type: ${field.constructor.name}`);
           }
         }
-      } catch (error) {
-        console.warn(`Could not set field "${fieldName}":`, error.message);
+      } catch (error: any) {
+        console.warn(`Could not set field "${fieldName}":`, error?.message || 'Unknown error');
       }
     }
 
@@ -391,7 +391,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Calculate hash for integrity checking
-    const hash = await crypto.subtle.digest('SHA-256', filledPdfBytes);
+    const hash = await crypto.subtle.digest('SHA-256', new Uint8Array(filledPdfBytes));
     const hashArray = Array.from(new Uint8Array(hash));
     const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
@@ -412,12 +412,12 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in generate-acroform-manifest function:', error);
     return new Response(
       JSON.stringify({ 
         error: 'Internal server error', 
-        details: error.message 
+        details: error?.message || 'Unknown error'
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

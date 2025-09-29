@@ -223,7 +223,7 @@ serve(async (req) => {
         } else {
           const arrBuf = await pdfDataResp.data.arrayBuffer();
           const buf = new Uint8Array(arrBuf);
-          const base64 = b64encode(buf);
+          const base64 = b64encode(buf.buffer);
           // Attempt to derive filename from path
           const parts = (pdfPath.includes('/') ? pdfPath : toggled).split("/");
           const filename = parts[parts.length - 1] || "manifest.pdf";
