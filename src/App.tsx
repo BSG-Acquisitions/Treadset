@@ -43,6 +43,8 @@ import Reports from './pages/Reports';
 import MichiganReports from './pages/MichiganReports';
 import Dropoffs from './pages/Dropoffs';
 import DriverSchedulePickup from "./pages/DriverSchedulePickup";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentCancelled from "./pages/PaymentCancelled";
 
 const queryClient = new QueryClient();
 
@@ -262,6 +264,8 @@ const App = () => (
                 </AppLayout>
               </ProtectedRoute>
             } />
+            <Route path="/payment-success" element={<PaymentSuccess />} />
+            <Route path="/payment-cancelled" element={<PaymentCancelled />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

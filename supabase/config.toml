@@ -95,3 +95,9 @@ verify_jwt = false
 
 [functions.generate-acroform-manifest]
 verify_jwt = false
+
+[functions.create-payment]
+verify_jwt = false
+
+[functions.verify-payment]
+verify_jwt = false

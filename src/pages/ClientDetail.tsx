@@ -5,6 +5,7 @@ import { useLocations } from "@/hooks/useLocations";
 import { useInvoices, useCompletedPickups } from "@/hooks/useFinance";
 import { CreateInvoiceDialog } from "@/components/finance/CreateInvoiceDialog";
 import { RecordPaymentDialog } from "@/components/finance/RecordPaymentDialog";
+import { PaymentDialog } from "@/components/PaymentDialog";
 import { OptimizedSchedulingCalendar } from "@/components/OptimizedSchedulingCalendar";
 import { SchedulePickupDialog } from "@/components/SchedulePickupDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -152,6 +153,16 @@ export default function ClientDetail() {
                   trigger={
                     <Button size="sm" variant="outline" className="w-full sm:flex-1 whitespace-nowrap">
                       Record Payment
+                    </Button>
+                  }
+                />
+                <PaymentDialog 
+                  defaultClientId={client.id}
+                  defaultDescription={`Payment for ${client.company_name} services`}
+                  trigger={
+                    <Button size="sm" variant="secondary" className="w-full sm:flex-1 whitespace-nowrap">
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      Accept Payment
                     </Button>
                   }
                 />
