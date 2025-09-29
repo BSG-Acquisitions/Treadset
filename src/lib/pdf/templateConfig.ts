@@ -142,7 +142,11 @@ export const TEMPLATE_CONFIGS: Record<string, PDFTemplateConfig> = {
       'receiver_print_name': 'Processor_Print_Name',
       'generator_date': 'Generator_Date',
       'hauler_date': 'Hauler_Date',
-      'receiver_date': 'Processor_Date'
+      'receiver_date': 'Processor_Date',
+      // Include timestamps in the printed names since there are no separate time fields
+      'generator_print_name_with_time': 'Generator_Print_Name',
+      'hauler_print_name_with_time': 'Hauler_Print_Name', 
+      'receiver_print_name_with_time': 'Processor_Print_Name'
     }
   }
 };

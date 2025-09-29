@@ -217,7 +217,9 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
     },
   });
 
-  // Auto-populate generator with client data when dialog opens
+  // CRITICAL: Auto-populate generator with client data when dialog opens
+  // This ensures the generator information is ALWAYS filled from the client's data
+  // and should NEVER be changed to a dropdown or manual selection
   useEffect(() => {
     if (open && pickup.client && !selectedGenerator) {
       // Create generator object from client data with proper address field mapping

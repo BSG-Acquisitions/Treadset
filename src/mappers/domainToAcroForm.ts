@@ -48,7 +48,11 @@ export function mapDomainToAcroForm(domain: ManifestDomain): AcroFormManifestDat
     
     generator_date_processed: domain.signatures.generator_date,
     generator_signature: domain.signatures.generator_signature_path || '',
-    generator_print_name: domain.signatures.generator_print_name,
+    generator_print_name: (() => {
+      const name = domain.signatures.generator_print_name;
+      const time = domain.signatures.generator_time ? new Date(`1970-01-01T${domain.signatures.generator_time}`).toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit' }) : '';
+      return time ? `${name} - ${time}` : name;
+    })(),
     generator_date: domain.signatures.generator_date,
     generator_time: domain.signatures.generator_time,
     
@@ -62,7 +66,11 @@ export function mapDomainToAcroForm(domain: ManifestDomain): AcroFormManifestDat
     hauler_zip: domain.hauler.zip,
     hauler_phone: domain.hauler.phone || '',
     hauler_signature: domain.signatures.hauler_signature_path || '',
-    hauler_print_name: domain.signatures.hauler_print_name,
+    hauler_print_name: (() => {
+      const name = domain.signatures.hauler_print_name;
+      const time = domain.signatures.hauler_time ? new Date(`1970-01-01T${domain.signatures.hauler_time}`).toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit' }) : '';
+      return time ? `${name} - ${time}` : name;
+    })(),
     hauler_date: domain.signatures.hauler_date,
     hauler_time: domain.signatures.hauler_time,
     hauler_gross_weight: domain.calculated.gross_weight_lbs.toFixed(1),
@@ -79,7 +87,11 @@ export function mapDomainToAcroForm(domain: ManifestDomain): AcroFormManifestDat
     receiver_zip: domain.receiver.zip,
     receiver_phone: domain.receiver.phone || '',
     receiver_signature: domain.signatures.receiver_signature_path || '',
-    receiver_print_name: domain.signatures.receiver_print_name || '',
+    receiver_print_name: (() => {
+      const name = domain.signatures.receiver_print_name || '';
+      const time = domain.signatures.receiver_time ? new Date(`1970-01-01T${domain.signatures.receiver_time}`).toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit' }) : '';
+      return (name && time) ? `${name} - ${time}` : name;
+    })(),
     receiver_date: domain.signatures.receiver_date || '',
     receiver_time: domain.signatures.receiver_time || '',
     receiver_gross_weight: domain.calculated.gross_weight_lbs.toFixed(1),
