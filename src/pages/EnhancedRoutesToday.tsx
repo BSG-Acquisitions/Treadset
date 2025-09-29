@@ -55,6 +55,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { format, addDays, subDays, startOfWeek, addWeeks, subWeeks } from "date-fns";
 import { motion } from "framer-motion";
+import { WeeklyPickupsGrid } from "@/components/routes/WeeklyPickupsGrid";
 
 interface OptimizedStop {
   id: string;
@@ -398,52 +399,20 @@ export default function EnhancedRoutesToday() {
         </div>
 
         <div className="container py-6">
-          {/* Week Navigation */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">
-                Week of {format(currentWeek, 'MMMM d, yyyy')}
-              </h2>
-              <div className="text-sm text-muted-foreground">
-                Planning across multiple days
-              </div>
-            </div>
-            
-            <Tabs value={activeDay} onValueChange={setActiveDay}>
-              <TabsList className="grid w-full grid-cols-7">
-                {weekDays.map((day) => {
-                  // Use local date string to avoid timezone issues
-                  const year = day.getFullYear();
-                  const month = String(day.getMonth() + 1).padStart(2, '0');
-                  const dayOfMonth = String(day.getDate()).padStart(2, '0');
-                  const dateStr = `${year}-${month}-${dayOfMonth}`;
-                  
-                  // Compare using local date string
-                  const today = new Date();
-                  const todayYear = today.getFullYear();
-                  const todayMonth = String(today.getMonth() + 1).padStart(2, '0');
-                  const todayDay = String(today.getDate()).padStart(2, '0');
-                  const todayStr = `${todayYear}-${todayMonth}-${todayDay}`;
-                  const isToday = dateStr === todayStr;
-                  
-                  return (
-                    <TabsTrigger 
-                      key={dateStr} 
-                      value={dateStr}
-                      className="flex flex-col items-center p-3"
-                    >
-                      <div className="text-xs font-medium">
-                        {format(day, 'EEE')}
-                      </div>
-                      <div className={`text-sm ${isToday ? 'font-bold' : ''}`}>
-                        {format(day, 'd')}
-                      </div>
-                    </TabsTrigger>
-                  );
-                })}
-              </TabsList>
-            </Tabs>
-          </div>
+           {/* Week Overview - Full Week Grid */}
+           <div className="mb-6">
+             <div className="flex items-center justify-between mb-4">
+               <h2 className="text-xl font-semibold">Week of {format(currentWeek, 'MMMM d, yyyy')}</h2>
+               <div className="text-sm text-muted-foreground">All pickups by day</div>
+             </div>
+             <WeeklyPickupsGrid
+               currentWeek={currentWeek}
+               onMovePickup={(pickup) => {
+                 setSelectedPickupToMove(pickup);
+                 setMovePickupOpen(true);
+               }}
+             />
+           </div>
           {/* Route Statistics */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <Card>
