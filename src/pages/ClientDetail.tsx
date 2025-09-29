@@ -50,100 +50,115 @@ export default function ClientDetail() {
 
   return (
     <div className="min-h-screen bg-background">
-      
-      <main>
-      <header className="container py-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">{client.company_name}</h1>
-          <p className="text-sm text-muted-foreground">Last pickup {client.last_pickup_at ? new Date(client.last_pickup_at).toLocaleDateString() : 'Never'}</p>
-        </div>
-        <div className="flex gap-2">
-          <SchedulePickupDialog
-            defaultClientId={client.id}
-            trigger={
-              <Button variant="brand">
-                <Plus className="h-4 w-4 mr-2" />
-                Schedule New Pickup
-              </Button>
-            }
-          />
-          <Link to="/routes/today">
-            <Button variant="outline">
-              <CheckCircle2 className="h-4 w-4 mr-2" />
-              Complete Pickups
-            </Button>
-          </Link>
-          <Button 
-            variant="outline" 
-            onClick={() => setShowSchedulingCalendar(true)}
-          >
-            <Calendar className="h-4 w-4 mr-2" />
-            Optimize Routes
-          </Button>
-          <Link to="/routes/today"><Button variant="outline">View Today’s Routes</Button></Link>
-        </div>
-      </header>
-
-      <section className="container grid md:grid-cols-3 gap-4 pb-8">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-primary" />
-              Lifetime Revenue
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold text-foreground">${(client.lifetime_revenue || 0).toFixed(2)}</div>
-            <div className="text-sm text-muted-foreground">Total revenue from all pickups</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-destructive" />
-              Open Balance
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold text-destructive">${(client.open_balance || 0).toFixed(2)}</div>
-            <div className="text-sm text-muted-foreground">Outstanding invoices</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-muted-foreground" />
-              Last Pickup
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold text-foreground">
-              {client.last_pickup_at 
-                ? new Date(client.last_pickup_at).toLocaleDateString()
-                : 'Never'
-              }
+      <main className="container py-8">
+        {/* Header Section */}
+        <div className="mb-8">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">{client.company_name}</h1>
+              <p className="text-muted-foreground">
+                Last pickup: {client.last_pickup_at ? new Date(client.last_pickup_at).toLocaleDateString() : 'Never'}
+              </p>
             </div>
-            <div className="text-sm text-muted-foreground">Most recent service</div>
-          </CardContent>
-        </Card>
-      </section>
+            <div className="flex flex-wrap gap-2">
+              <SchedulePickupDialog
+                defaultClientId={client.id}
+                trigger={
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Schedule Pickup
+                  </Button>
+                }
+              />
+              <Button variant="outline" onClick={() => setShowSchedulingCalendar(true)}>
+                <Calendar className="h-4 w-4 mr-2" />
+                Optimize Routes
+              </Button>
+              <Link to="/routes/today">
+                <Button variant="outline">
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Today's Routes
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
 
-      <section className="container grid md:grid-cols-2 gap-6 pb-12">
-        {/* Invoices and Finance */}
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col gap-4">
+        {/* Key Metrics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <DollarSign className="h-5 w-5 text-primary" />
+                Lifetime Revenue
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-foreground">
+                ${(client.lifetime_revenue || 0).toFixed(2)}
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                Total revenue from all pickups
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <CreditCard className="h-5 w-5 text-destructive" />
+                Open Balance
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-destructive">
+                ${(client.open_balance || 0).toFixed(2)}
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                Outstanding invoices
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Calendar className="h-5 w-5 text-muted-foreground" />
+                Last Pickup
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-foreground">
+                {client.last_pickup_at 
+                  ? new Date(client.last_pickup_at).toLocaleDateString()
+                  : 'Never'
+                }
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                Most recent service
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Financial Management */}
+          <Card>
+            <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="h-5 w-5" />
-                Recent Invoices
+                Financial Management
               </CardTitle>
-              <div className="flex flex-col sm:flex-row gap-2 w-full">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <CreateInvoiceDialog 
                   clientId={client.id}
                   trigger={
-                    <Button size="sm" disabled={completedPickups.length === 0} className="w-full sm:flex-1 whitespace-nowrap">
+                    <Button 
+                      size="sm" 
+                      disabled={completedPickups.length === 0}
+                      className="w-full"
+                    >
                       Create Invoice
                     </Button>
                   }
@@ -151,7 +166,7 @@ export default function ClientDetail() {
                 <RecordPaymentDialog 
                   clientId={client.id}
                   trigger={
-                    <Button size="sm" variant="outline" className="w-full sm:flex-1 whitespace-nowrap">
+                    <Button size="sm" variant="outline" className="w-full">
                       Record Payment
                     </Button>
                   }
@@ -160,73 +175,79 @@ export default function ClientDetail() {
                   defaultClientId={client.id}
                   defaultDescription={`Payment for ${client.company_name} services`}
                   trigger={
-                    <Button size="sm" variant="secondary" className="w-full sm:flex-1 whitespace-nowrap">
+                    <Button size="sm" variant="secondary" className="w-full">
                       <CreditCard className="h-4 w-4 mr-2" />
                       Accept Payment
                     </Button>
                   }
                 />
               </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {invoices.length === 0 ? (
-              <p className="text-muted-foreground text-center py-4">
-                No invoices found for this client.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {invoices.slice(0, 5).map((invoice) => (
-                  <div key={invoice.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <p className="font-medium">{invoice.invoice_number}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {invoice.issued_date && new Date(invoice.issued_date).toLocaleDateString()}
-                      </p>
+            </CardHeader>
+            <CardContent>
+              <h4 className="font-medium mb-3">Recent Invoices</h4>
+              {invoices.length === 0 ? (
+                <div className="text-center py-6">
+                  <FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-2" />
+                  <p className="text-muted-foreground">No invoices found</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {invoices.slice(0, 3).map((invoice) => (
+                    <div key={invoice.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                      <div>
+                        <p className="font-medium">{invoice.invoice_number}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {invoice.issued_date && new Date(invoice.issued_date).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium">${invoice.total_amount.toFixed(2)}</p>
+                        <Badge 
+                          variant={
+                            invoice.status === 'paid' ? 'default' : 
+                            invoice.status === 'partial' ? 'secondary' : 
+                            'outline'
+                          }
+                        >
+                          {invoice.status}
+                        </Badge>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-medium">${invoice.total_amount.toFixed(2)}</p>
-                      <Badge 
-                        variant={
-                          invoice.status === 'paid' ? 'default' : 
-                          invoice.status === 'partial' ? 'secondary' : 
-                          'outline'
-                        }
-                      >
-                        {invoice.status}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  ))}
+                  {invoices.length > 3 && (
+                    <p className="text-sm text-muted-foreground text-center">
+                      +{invoices.length - 3} more invoices
+                    </p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-        {/* Locations */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MapPin className="h-5 w-5" />
-              Locations ({locations.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {locations.length === 0 ? (
-              <p className="text-muted-foreground text-center py-4">
-                No locations found for this client.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {locations.map((location) => (
-                  <div key={location.id} className="p-3 border rounded-lg">
-                    <div className="space-y-2">
+          {/* Location Management */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="h-5 w-5" />
+                Locations ({locations.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {locations.length === 0 ? (
+                <div className="text-center py-6">
+                  <MapPin className="h-12 w-12 mx-auto text-muted-foreground/50 mb-2" />
+                  <p className="text-muted-foreground">No locations found</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {locations.slice(0, 4).map((location) => (
+                    <div key={location.id} className="p-3 bg-muted/30 rounded-lg">
                       {location.name && (
-                        <p className="font-medium">{location.name}</p>
+                        <p className="font-medium mb-1">{location.name}</p>
                       )}
-                      <p className="text-sm text-muted-foreground">{location.address}</p>
+                      <p className="text-sm text-muted-foreground mb-2">{location.address}</p>
                       {location.access_notes && (
-                        <p className="text-xs text-muted-foreground italic">
+                        <p className="text-xs text-muted-foreground italic mb-2">
                           {location.access_notes}
                         </p>
                       )}
@@ -239,13 +260,17 @@ export default function ClientDetail() {
                         )}
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </section>
+                  ))}
+                  {locations.length > 4 && (
+                    <p className="text-sm text-muted-foreground text-center">
+                      +{locations.length - 4} more locations
+                    </p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </main>
 
       {/* Optimized Scheduling Calendar Dialog */}

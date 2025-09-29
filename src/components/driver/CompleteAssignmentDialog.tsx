@@ -9,7 +9,8 @@ import { NumericInput } from "@/components/ui/numeric-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useUpdateAssignmentStatus } from "@/hooks/useDriverWorkflow";
-import { Upload, Camera } from "lucide-react";
+import { PaymentDialog } from "@/components/PaymentDialog";
+import { Upload, Camera, CreditCard } from "lucide-react";
 
 const completeAssignmentSchema = z.object({
   actualPteCount: z.number().min(0, "PTE count must be 0 or greater"),
@@ -282,6 +283,23 @@ export function CompleteAssignmentDialog({
               </Button>
             </div>
             
+            {/* Payment Collection Section */}
+            <div className="border-t pt-4">
+              <h4 className="font-medium mb-2">Payment Collection (Optional)</h4>
+              <PaymentDialog
+                defaultClientId={assignment?.pickup?.client_id}
+                defaultPickupId={assignment?.pickup?.id}
+                defaultManifestId={assignment?.pickup?.manifest_id}
+                defaultDescription={`Pickup payment for ${assignment?.pickup?.client?.company_name || 'client'}`}
+                trigger={
+                  <Button type="button" variant="outline" className="w-full">
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    Accept Payment
+                  </Button>
+                }
+              />
+            </div>
+
             {/* Auto-actions info */}
             <div className="text-xs text-muted-foreground bg-secondary/20 p-3 rounded-lg">
               <p className="font-medium mb-1">📧 Automatic Actions:</p>
