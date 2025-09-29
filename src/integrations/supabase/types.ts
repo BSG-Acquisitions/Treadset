@@ -2471,6 +2471,116 @@ export type Database = {
           },
         ]
       }
+      stripe_payments: {
+        Row: {
+          amount: number
+          client_id: string | null
+          created_at: string
+          currency: string | null
+          customer_email: string | null
+          customer_name: string | null
+          description: string | null
+          id: string
+          manifest_id: string | null
+          metadata: Json | null
+          organization_id: string
+          pickup_id: string | null
+          processed_by: string | null
+          status: string
+          stripe_payment_intent_id: string | null
+          stripe_session_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          client_id?: string | null
+          created_at?: string
+          currency?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          description?: string | null
+          id?: string
+          manifest_id?: string | null
+          metadata?: Json | null
+          organization_id: string
+          pickup_id?: string | null
+          processed_by?: string | null
+          status?: string
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          client_id?: string | null
+          created_at?: string
+          currency?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          description?: string | null
+          id?: string
+          manifest_id?: string | null
+          metadata?: Json | null
+          organization_id?: string
+          pickup_id?: string | null
+          processed_by?: string | null
+          status?: string
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stripe_payments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stripe_payments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_monthly_entity_rollup"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "stripe_payments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_revenue_summary"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "stripe_payments_manifest_id_fkey"
+            columns: ["manifest_id"]
+            isOneToOne: false
+            referencedRelation: "manifests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stripe_payments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stripe_payments_pickup_id_fkey"
+            columns: ["pickup_id"]
+            isOneToOne: false
+            referencedRelation: "pickups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stripe_payments_processed_by_fkey"
+            columns: ["processed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       surcharge_rules: {
         Row: {
           created_at: string
