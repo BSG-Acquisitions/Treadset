@@ -146,70 +146,85 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {/* Client Info */}
-            <div className="bg-secondary/20 rounded-lg p-4 space-y-3">
-              <div className="font-medium text-xl">{pickup?.client?.company_name || 'Unknown Client'}</div>
-              <div className="text-base font-medium text-foreground flex items-start gap-3 p-3 bg-card rounded-lg border">
-                <MapPin className="h-5 w-5 text-brand-primary flex-shrink-0 mt-0.5" />
-                <span className="text-foreground leading-relaxed whitespace-normal break-words">
-                  {pickup?.location?.address || 'No address available'}
-                </span>
-              </div>
-              {pickup?.location?.name && (
-                <div className="text-sm text-muted-foreground">
-                  <strong>Location:</strong> {pickup.location.name}
-                </div>
-              )}
-              {pickup?.preferred_window && (
-                <div className="text-sm text-muted-foreground flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  <strong>Preferred:</strong> {pickup.preferred_window}
-                </div>
-              )}
-              <div className="mt-3">
-                <Badge variant={assignment.status === 'completed' ? 'default' : 'secondary'} className="text-sm">
-                  {assignment.status}
+            {/* Shop Information */}
+            <div className="bg-card rounded-xl p-4 md:p-6 border shadow-sm space-y-4">
+              <div className="text-center">
+                <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
+                  {pickup?.client?.company_name || 'Unknown Shop'}
+                </h2>
+                <Badge variant={assignment.status === 'completed' ? 'default' : 'secondary'} className="text-base px-4 py-2">
+                  {assignment.status === 'completed' ? 'Completed' : 
+                   assignment.status === 'in_progress' ? 'In Progress' : 'Assigned'}
                 </Badge>
               </div>
+
+              {/* Address - Most Important for Drivers */}
+              <div className="p-4 md:p-5 bg-blue-50 rounded-xl border-2 border-blue-200">
+                <div className="flex items-start gap-3">
+                  <MapPin className="h-6 w-6 md:h-7 md:w-7 text-blue-600 flex-shrink-0 mt-1" />
+                  <div className="flex-1">
+                    <div className="text-sm md:text-base font-medium text-blue-800 mb-2">Address:</div>
+                    <div className="text-lg md:text-xl font-bold text-blue-900 leading-relaxed">
+                      {pickup?.location?.address || 'No address available'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Preferred Time */}
+              {pickup?.preferred_window && (
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                  <Clock className="h-5 w-5 text-gray-600" />
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Preferred Time: </span>
+                    <span className="text-base font-semibold text-gray-900">{pickup.preferred_window}</span>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Vehicle Info */}
+            {/* Vehicle Assignment */}
             {assignment.vehicle && (
-              <div className="bg-secondary/20 rounded-lg p-4">
-                <div className="font-medium">{assignment.vehicle.name}</div>
-                {assignment.vehicle.license_plate && (
-                  <div className="text-sm text-muted-foreground">
-                    License: {assignment.vehicle.license_plate}
+              <div className="bg-card rounded-xl p-4 md:p-6 border shadow-sm">
+                <div className="flex items-center gap-4">
+                  <Truck className="h-6 w-6 md:h-8 md:w-8 text-gray-600" />
+                  <div>
+                    <div className="text-sm md:text-base font-medium text-gray-700 mb-1">Your Vehicle:</div>
+                    <div className="text-xl md:text-2xl font-bold text-gray-900">{assignment.vehicle.name}</div>
+                    {assignment.vehicle.license_plate && (
+                      <div className="text-sm md:text-base text-gray-600 mt-1">
+                        License: {assignment.vehicle.license_plate}
+                      </div>
+                    )}
                   </div>
-                )}
-                {assignment.vehicle.capacity && (
-                  <div className="text-sm text-muted-foreground">
-                    Capacity: {assignment.vehicle.capacity} units
-                  </div>
-                )}
+                </div>
               </div>
             )}
 
-            {/* Expected Counts */}
-            <div className="grid grid-cols-3 gap-2 md:gap-4">
-              <div className="text-center p-3 bg-card rounded-lg border">
-                <div className="text-xl md:text-2xl font-bold text-brand-primary">{pickup?.pte_count ?? 0}</div>
-                <div className="text-xs text-muted-foreground">PTE Tires</div>
-              </div>
-              <div className="text-center p-3 bg-card rounded-lg border">
-                <div className="text-xl md:text-2xl font-bold text-brand-primary">{pickup?.otr_count ?? 0}</div>
-                <div className="text-xs text-muted-foreground">OTR Tires</div>
-              </div>
-              <div className="text-center p-3 bg-card rounded-lg border">
-                <div className="text-xl md:text-2xl font-bold text-brand-primary">{pickup?.tractor_count ?? 0}</div>
-                <div className="text-xs text-muted-foreground">Tractor Tires</div>
+            {/* Expected Tire Counts */}
+            <div className="bg-card rounded-xl p-4 md:p-6 border shadow-sm">
+              <h3 className="text-lg md:text-xl font-semibold text-foreground mb-4 text-center">Expected Pickup</h3>
+              <div className="grid grid-cols-3 gap-3 md:gap-4">
+                <div className="text-center p-3 md:p-4 bg-green-50 rounded-xl border border-green-200">
+                  <div className="text-2xl md:text-3xl font-bold text-green-700">{pickup?.pte_count ?? 0}</div>
+                  <div className="text-sm md:text-base text-green-600 font-medium">PTE Tires</div>
+                </div>
+                <div className="text-center p-3 md:p-4 bg-orange-50 rounded-xl border border-orange-200">
+                  <div className="text-2xl md:text-3xl font-bold text-orange-700">{pickup?.otr_count ?? 0}</div>
+                  <div className="text-sm md:text-base text-orange-600 font-medium">OTR Tires</div>
+                </div>
+                <div className="text-center p-3 md:p-4 bg-purple-50 rounded-xl border border-purple-200">
+                  <div className="text-2xl md:text-3xl font-bold text-purple-700">{pickup?.tractor_count ?? 0}</div>
+                  <div className="text-sm md:text-base text-purple-600 font-medium">Tractor Tires</div>
+                </div>
               </div>
             </div>
 
+            {/* Special Notes */}
             {pickup?.notes && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
-                <div className="text-sm font-medium text-yellow-800">Notes:</div>
-                <div className="text-sm text-yellow-700">{pickup?.notes}</div>
+              <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-4 md:p-5">
+                <div className="text-base md:text-lg font-semibold text-yellow-800 mb-2">Special Instructions:</div>
+                <div className="text-base md:text-lg text-yellow-700 leading-relaxed">{pickup.notes}</div>
               </div>
             )}
           </div>
