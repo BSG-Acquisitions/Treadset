@@ -2760,8 +2760,10 @@ export type Database = {
       }
       vehicles: {
         Row: {
+          assigned_driver_id: string | null
           capacity: number | null
           created_at: string
+          driver_email: string | null
           id: string
           is_active: boolean | null
           license_plate: string | null
@@ -2770,8 +2772,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          assigned_driver_id?: string | null
           capacity?: number | null
           created_at?: string
+          driver_email?: string | null
           id?: string
           is_active?: boolean | null
           license_plate?: string | null
@@ -2780,8 +2784,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          assigned_driver_id?: string | null
           capacity?: number | null
           created_at?: string
+          driver_email?: string | null
           id?: string
           is_active?: boolean | null
           license_plate?: string | null
@@ -2790,6 +2796,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "vehicles_assigned_driver_id_fkey"
+            columns: ["assigned_driver_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "vehicles_organization_id_fkey"
             columns: ["organization_id"]

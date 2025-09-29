@@ -3,16 +3,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useCreateVehicle, useVehicles, useUpdateVehicle, useDeleteVehicle } from "@/hooks/useVehicles";
+import { useEmployees } from "@/hooks/useEmployees";
 import { useToast } from "@/hooks/use-toast";
-import { Truck, Plus, Edit, Trash2 } from "lucide-react";
+import { Truck, Plus, Edit, Trash2, User } from "lucide-react";
 
 interface VehicleFormData {
   name: string;
   license_plate: string;
   capacity: number;
-  driver_name: string;
+  assigned_driver_id: string;
 }
 
 export function SimplifiedVehicleManagement() {
@@ -22,20 +24,30 @@ export function SimplifiedVehicleManagement() {
     name: "",
     license_plate: "",
     capacity: 500,
-    driver_name: "",
+    assigned_driver_id: "",
   });
 
   const { data: vehicles = [], refetch } = useVehicles();
+  const { data: employees } = useEmployees();
   const createVehicle = useCreateVehicle();
   const updateVehicle = useUpdateVehicle();
   const deleteVehicle = useDeleteVehicle();
   const { toast } = useToast();
 
+  // Filter to get only active drivers
+  const drivers = employees?.filter(emp => 
+    emp.roles.includes('driver') && emp.isActive
+  ) || [];
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     try {
-      const vehicleName = `Truck ${vehicles.length + 1} - ${formData.driver_name}`;
+      const selectedDriver = drivers.find(d => d.id === formData.assigned_driver_id);
+      const driverEmail = selectedDriver?.email || '';
+      const driverName = selectedDriver ? `${selectedDriver.firstName} ${selectedDriver.lastName}` : '';
+      
+      const vehicleName = formData.name || `Truck ${vehicles.length + 1}${driverName ? ` - ${driverName}` : ''}`;
 
       if (editingVehicle) {
         await updateVehicle.mutateAsync({
@@ -44,6 +56,8 @@ export function SimplifiedVehicleManagement() {
             name: vehicleName,
             license_plate: formData.license_plate || undefined,
             capacity: formData.capacity,
+            assigned_driver_id: formData.assigned_driver_id || null,
+            driver_email: driverEmail || null,
           }
         });
         toast({
@@ -56,7 +70,9 @@ export function SimplifiedVehicleManagement() {
           license_plate: formData.license_plate || undefined,
           capacity: formData.capacity,
           is_active: true,
-          organization_id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73'
+          organization_id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
+          assigned_driver_id: formData.assigned_driver_id || null,
+          driver_email: driverEmail || null,
         });
         toast({
           title: "Vehicle Added",
@@ -75,19 +91,18 @@ export function SimplifiedVehicleManagement() {
       name: "",
       license_plate: "",
       capacity: 500,
-      driver_name: "",
+      assigned_driver_id: "",
     });
     setShowForm(false);
     setEditingVehicle(null);
   };
 
   const handleEdit = (vehicle: any) => {
-    const driverName = vehicle.name.split(' - ')[1] || "";
     setFormData({
       name: vehicle.name,
       license_plate: vehicle.license_plate || "",
       capacity: vehicle.capacity || 500,
-      driver_name: driverName,
+      assigned_driver_id: vehicle.assigned_driver_id || "",
     });
     setEditingVehicle(vehicle);
     setShowForm(true);
@@ -99,14 +114,13 @@ export function SimplifiedVehicleManagement() {
     }
   };
 
-  const getTruckNumber = (vehicleName: string) => {
-    const match = vehicleName.match(/Truck (\d+)/);
-    return match ? match[1] : "?";
-  };
-
-  const getDriverName = (vehicleName: string) => {
-    const parts = vehicleName.split(' - ');
-    return parts.length > 1 ? parts[1] : "No Driver";
+  const getDriverInfo = (vehicle: any) => {
+    if (vehicle.driver_email) {
+      return vehicle.driver_email;
+    }
+    // Fallback to old format for backwards compatibility
+    const parts = vehicle.name?.split(' - ');
+    return parts && parts.length > 1 ? parts[1] : "No Driver Assigned";
   };
 
   return (
@@ -140,14 +154,49 @@ export function SimplifiedVehicleManagement() {
                 
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
-                    <Label htmlFor="driver_name">Driver Name</Label>
+                    <Label htmlFor="name">Truck Name (Optional)</Label>
                     <Input
-                      id="driver_name"
-                      value={formData.driver_name}
-                      onChange={(e) => setFormData(prev => ({ ...prev, driver_name: e.target.value }))}
-                      placeholder="e.g., John Smith"
-                      required
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="Leave blank for auto-generated name"
                     />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="assigned_driver">Assign Driver</Label>
+                    <Select
+                      value={formData.assigned_driver_id}
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, assigned_driver_id: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a driver">
+                          {formData.assigned_driver_id ? (
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4" />
+                              {(() => {
+                                const driver = drivers.find(d => d.id === formData.assigned_driver_id);
+                                return driver ? `${driver.firstName} ${driver.lastName}` : 'Select driver';
+                              })()}
+                            </div>
+                          ) : 'Select a driver'}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent className="z-50 bg-popover">
+                        <SelectItem value="">No Driver (Unassigned)</SelectItem>
+                        {drivers.map((driver) => (
+                          <SelectItem key={driver.id} value={driver.id}>
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4" />
+                              <div>
+                                <div>{driver.firstName} {driver.lastName}</div>
+                                <div className="text-xs text-muted-foreground">{driver.email}</div>
+                              </div>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -203,8 +252,13 @@ export function SimplifiedVehicleManagement() {
                   <div className="flex items-center gap-3">
                     <Truck className="h-5 w-5 text-primary" />
                     <div>
-                      <p className="font-medium">Truck {index + 1}</p>
-                      <p className="text-sm text-muted-foreground">{getDriverName(vehicle.name)}</p>
+                      <p className="font-medium">
+                        {vehicle.name || `Truck ${index + 1}`}
+                      </p>
+                      <p className="text-sm text-muted-foreground flex items-center gap-1">
+                        <User className="h-3 w-3" />
+                        {getDriverInfo(vehicle)}
+                      </p>
                       {vehicle.license_plate && (
                         <p className="text-xs text-muted-foreground mt-1">
                           License: {vehicle.license_plate}

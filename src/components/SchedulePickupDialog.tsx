@@ -6,7 +6,6 @@ import { useSchedulePickup } from "@/hooks/usePickups";
 import { useClients } from "@/hooks/useClients";
 import { useLocations } from "@/hooks/useLocations";
 import { useVehicles } from "@/hooks/useVehicles";
-import { useHaulers } from "@/hooks/useHaulers";
 import { useEmployees } from "@/hooks/useEmployees";
 import { SchedulePickupWithDriverDialog } from "./SchedulePickupWithDriverDialog";
 import {
@@ -42,7 +41,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Calendar, CalendarIcon, Check, ChevronsUpDown, Truck, Building, User } from "lucide-react";
+import { CalendarIcon, Check, ChevronsUpDown, Truck, User } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -58,21 +57,9 @@ const scheduleSchema = z.object({
   otrCount: z.number().min(0).default(0),
   tractorCount: z.number().min(0).default(0),
   preferredWindow: z.enum(["AM", "PM", "Any"]).default("Any"),
-  assignmentType: z.enum(["vehicle", "hauler"]).default("vehicle"),
-  vehicleId: z.string().optional(),
-  haulerId: z.string().optional(),
+  vehicleId: z.string().min(1, "Vehicle/Truck is required"),
   driverId: z.string().optional(),
   notes: z.string().optional(),
-}).refine((data) => {
-  if (data.assignmentType === "vehicle") {
-    return data.vehicleId && data.vehicleId.length > 0;
-  } else if (data.assignmentType === "hauler") {
-    return data.haulerId && data.haulerId.length > 0;
-  }
-  return false;
-}, {
-  message: "Please select a vehicle or hauler",
-  path: ["vehicleId"],
 });
 
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
@@ -91,9 +78,13 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
   const { data: clients } = useClients({ search: clientSearch, limit: 100 });
   const { data: locations } = useLocations(selectedClientId);
   const { data: vehicles } = useVehicles();
-  const { data: haulers } = useHaulers();
   const { data: employees } = useEmployees();
   const schedulePickup = useSchedulePickup();
+
+  // Filter to get only active drivers
+  const drivers = employees?.filter(emp => 
+    emp.roles.includes('driver') && emp.isActive
+  ) || [];
 
   const form = useForm<ScheduleFormData>({
     resolver: zodResolver(scheduleSchema),
@@ -104,9 +95,7 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
       otrCount: 0,
       tractorCount: 0,
       preferredWindow: "Any",
-      assignmentType: "vehicle",
       vehicleId: "",
-      haulerId: "",
       driverId: "",
       notes: "",
     },
@@ -122,9 +111,8 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
         otrCount: data.otrCount,
         tractorCount: data.tractorCount,
         preferredWindow: data.preferredWindow,
-        assignmentType: data.assignmentType,
+        assignmentType: 'vehicle',
         vehicleId: data.vehicleId,
-        haulerId: data.haulerId,
         driverId: data.driverId,
         notes: data.notes,
       });
@@ -141,7 +129,6 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
     form.setValue("locationId", ""); // Reset location when client changes
   };
 
-  const assignmentType = form.watch("assignmentType");
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -255,112 +242,38 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
               />
             </div>
 
+            {/* Truck/Vehicle and Driver Selection - Side by side */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="assignmentType"
+                name="vehicleId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Assignment Type</FormLabel>
-                    <Select onValueChange={(value) => {
-                      field.onChange(value);
-                      // Reset the opposite field when changing type
-                      if (value === "vehicle") {
-                        form.setValue("haulerId", "");
-                      } else {
-                        form.setValue("vehicleId", "");
-                      }
-                    }} value={field.value}>
-                       <FormControl>
-                         <SelectTrigger>
-                           <SelectValue />
-                         </SelectTrigger>
-                       </FormControl>
-                       <SelectContent className="z-50 bg-popover">
-                         <SelectItem value="vehicle">
-                           <div className="flex items-center gap-2">
-                             <Truck className="h-4 w-4" />
-                             Internal Vehicle
-                           </div>
-                         </SelectItem>
-                         <SelectItem value="hauler">
-                           <div className="flex items-center gap-2">
-                             <Building className="h-4 w-4" />
-                             External Hauler
-                           </div>
-                         </SelectItem>
-                       </SelectContent>
+                    <FormLabel>Truck/Vehicle</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a truck" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="z-50 bg-popover">
+                        {vehicles?.map((vehicle) => (
+                          <SelectItem key={vehicle.id} value={vehicle.id}>
+                            <div className="flex flex-col items-start">
+                              <span className="font-medium">{vehicle.name}</span>
+                              <span className="text-muted-foreground text-sm">
+                                {vehicle.license_plate && `${vehicle.license_plate} • `}
+                                Capacity: {vehicle.capacity} tires
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
                     </Select>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
-              {assignmentType === "vehicle" ? (
-                <FormField
-                  control={form.control}
-                  name="vehicleId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Vehicle</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a vehicle" />
-                          </SelectTrigger>
-                        </FormControl>
-                         <SelectContent className="z-50 bg-popover">
-                           {vehicles?.map((vehicle) => (
-                             <SelectItem key={vehicle.id} value={vehicle.id}>
-                               <div className="flex flex-col items-start">
-                                 <span className="font-medium">{vehicle.name}</span>
-                                 <span className="text-muted-foreground text-sm">
-                                   {vehicle.license_plate} • Capacity: {vehicle.capacity} tires
-                                 </span>
-                               </div>
-                             </SelectItem>
-                           ))}
-                         </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              ) : (
-                <FormField
-                  control={form.control}
-                  name="haulerId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Hauler</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a hauler" />
-                          </SelectTrigger>
-                        </FormControl>
-                         <SelectContent className="z-50 bg-popover">
-                           {haulers?.map((hauler) => (
-                             <SelectItem key={hauler.id} value={hauler.id}>
-                               <div className="flex flex-col items-start">
-                                 <span className="font-medium">{hauler.hauler_name}</span>
-                                 {(hauler.hauler_mi_reg || hauler.hauler_phone) && (
-                                   <span className="text-muted-foreground text-sm">
-                                     {hauler.hauler_mi_reg && `Reg: ${hauler.hauler_mi_reg}`}
-                                     {hauler.hauler_mi_reg && hauler.hauler_phone && " • "}
-                                     {hauler.hauler_phone && `Phone: ${hauler.hauler_phone}`}
-                                   </span>
-                                 )}
-                               </div>
-                             </SelectItem>
-                           ))}
-                         </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
 
               {/* Driver Assignment Field */}
               <FormField
@@ -375,21 +288,21 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
                           <SelectValue placeholder="Select a driver (optional)" />
                         </SelectTrigger>
                       </FormControl>
-                       <SelectContent className="z-50 bg-popover">
-                         {employees?.filter(emp => emp.isActive).map((employee) => (
-                           <SelectItem key={employee.id} value={employee.id}>
-                             <div className="flex items-center gap-2">
-                               <User className="h-4 w-4" />
-                               <span>
-                                 {employee.firstName} {employee.lastName}
-                                 {employee.email && (
-                                   <span className="text-muted-foreground ml-1">({employee.email})</span>
-                                 )}
-                               </span>
-                             </div>
-                           </SelectItem>
-                         ))}
-                       </SelectContent>
+                      <SelectContent className="z-50 bg-popover">
+                        {drivers.map((employee) => (
+                          <SelectItem key={employee.id} value={employee.id}>
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4" />
+                              <span>
+                                {employee.firstName} {employee.lastName}
+                                {employee.email && (
+                                  <span className="text-muted-foreground ml-1">({employee.email})</span>
+                                )}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
                     </Select>
                     <FormMessage />
                   </FormItem>
