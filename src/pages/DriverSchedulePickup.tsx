@@ -22,7 +22,8 @@ export default function DriverSchedulePickup() {
         
         {/* Header */}
         <div className="space-y-4 mb-6">
-          <Button variant="outline" asChild className="w-fit">
+          {/* Back button - hidden on mobile since sidebar navigation is available */}
+          <Button variant="outline" asChild className="w-fit hidden md:flex">
             <Link to="/routes/driver">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Routes
@@ -138,13 +139,13 @@ export default function DriverSchedulePickup() {
                 <CardTitle className="text-lg">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button variant="outline" className="w-full justify-start" asChild>
+                <Button variant="outline" className="w-full justify-start hidden md:flex" asChild>
                   <Link to="/routes/driver">
                     <Truck className="h-4 w-4 mr-2" />
                     View All Routes
                   </Link>
                 </Button>
-                <Button variant="outline" className="w-full justify-start" asChild>
+                <Button variant="outline" className="w-full justify-start hidden md:flex" asChild>
                   <Link to="/driver/dashboard">
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Driver Dashboard
