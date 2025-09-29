@@ -157,14 +157,9 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
   // Auto-populate generator with client data when dialog opens
   useEffect(() => {
     if (open && pickup.client) {
-      setSelectedGenerator({
-        id: 'client-' + pickup.id,
-        generator_name: pickup.client.company_name,
-        generator_mailing_address: pickup.location?.address,
-        generator_city: '', // These would need to be parsed from address or fetched from client data
-        generator_state: '',
-        generator_zip: ''
-      });
+      // Instead of creating fake generator data, let drivers select from real generators
+      // This ensures complete address information is available for the manifest
+      console.log('Dialog opened - drivers should select a real generator from database');
     }
   }, [open, pickup]);
 
@@ -361,7 +356,7 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
     try {
       // Validate required fields
       const missingFields = [];
-      if (!selectedGenerator) missingFields.push("Generator");
+      if (!selectedGenerator) missingFields.push("Generator (please select from dropdown)");
       if (!selectedHauler) missingFields.push("Hauler");
       
       // Check for signatures
