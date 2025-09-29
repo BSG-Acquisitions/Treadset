@@ -8,8 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ReceiverSignatureDialog } from "./ReceiverSignatureDialog";
-import { format, subDays, startOfDay, endOfDay } from "date-fns";
-import { Clock, FileText, Signature, Search, Calendar, Filter } from "lucide-react";
+import { format, subDays, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
+import { Clock, FileText, Signature, Search, Calendar, Filter, ChevronDown, ChevronRight } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { ManifestPDFControls } from "@/components/ManifestPDFControls";
@@ -184,6 +185,39 @@ export const ManifestReceiversView = () => {
   const pendingList = pendingReceiverSignature.length ? pendingReceiverSignature : fallbackPending;
   const filteredPending = getFilteredManifests(pendingList, true);
   const filteredCompleted = getFilteredManifests(completedManifests, false);
+
+  // Group completed manifests by time period
+  const groupCompletedByPeriod = (manifests: any[]) => {
+    const now = new Date();
+    const groups: Record<string, any[]> = {
+      'This Week': [],
+      'Last Week': [],
+      'This Month': [],
+      'Last Month': [],
+      'Older': []
+    };
+
+    manifests.forEach(manifest => {
+      const date = new Date(manifest.receiver_signed_at || manifest.signed_at);
+      
+      if (isWithinInterval(date, { start: startOfWeek(now), end: endOfWeek(now) })) {
+        groups['This Week'].push(manifest);
+      } else if (isWithinInterval(date, { start: startOfWeek(subDays(now, 7)), end: endOfWeek(subDays(now, 7)) })) {
+        groups['Last Week'].push(manifest);
+      } else if (isWithinInterval(date, { start: startOfMonth(now), end: endOfMonth(now) })) {
+        groups['This Month'].push(manifest);
+      } else if (isWithinInterval(date, { start: startOfMonth(subDays(now, 30)), end: endOfMonth(subDays(now, 30)) })) {
+        groups['Last Month'].push(manifest);
+      } else {
+        groups['Older'].push(manifest);
+      }
+    });
+
+    // Remove empty groups
+    return Object.entries(groups).filter(([_, items]) => items.length > 0);
+  };
+
+  const groupedCompleted = groupCompletedByPeriod(filteredCompleted);
 
   // Table columns for data table view
   const columns = [
@@ -402,93 +436,125 @@ export const ManifestReceiversView = () => {
 
         <TabsContent value="completed">
           {viewMode === "table" ? (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Manifest #</TableHead>
-                    <TableHead>Client</TableHead>
-                    <TableHead>Completed</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredCompleted.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                        No completed manifests
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredCompleted.map((manifest) => (
-                      <TableRow key={manifest.id}>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {manifest.manifest_number}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {clientNames[manifest.client_id] || 'Unknown'}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {manifest.receiver_signed_at ? 
-                            format(new Date(manifest.receiver_signed_at), 'MMM d, h:mm a') : 'N/A'
-                          }
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {manifest.acroform_pdf_path && (
-                            <ManifestPDFControls
-                              manifestId={manifest.id}
-                              acroformPdfPath={manifest.acroform_pdf_path}
-                              clientEmails={[]}
-                              className="inline-flex"
-                            />
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-              {filteredCompleted.length === 0 ? (
-                <div className="col-span-full text-center py-8 text-muted-foreground">
+            <div className="space-y-4">
+              {groupedCompleted.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
                   No completed manifests
                 </div>
               ) : (
-                filteredCompleted.map((manifest) => (
-                  <Card key={manifest.id}>
-                    <CardContent className="p-4">
-                      <div className="space-y-2">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <Badge variant="outline" className="mb-1">
-                              {manifest.manifest_number}
-                            </Badge>
-                            <h3 className="font-medium text-sm">{clientNames[manifest.client_id] || 'Unknown'}</h3>
-                          </div>
-                          <Badge variant="secondary" className="text-xs">Complete</Badge>
+                groupedCompleted.map(([period, manifests]) => (
+                  <Collapsible key={period} defaultOpen={period === 'This Week' || period === 'This Month'}>
+                    <div className="rounded-md border">
+                      <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-accent">
+                        <div className="flex items-center gap-2">
+                          <ChevronRight className="h-4 w-4 transition-transform [[data-state=open]>&]:rotate-90" />
+                          <h3 className="font-semibold">{period}</h3>
+                          <Badge variant="secondary">{manifests.length}</Badge>
                         </div>
-                        
-                        {manifest.receiver_signed_at && (
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(manifest.receiver_signed_at), 'MMM d, h:mm a')}
-                          </p>
-                        )}
-                        
-                        {manifest.acroform_pdf_path && (
-                          <ManifestPDFControls
-                            manifestId={manifest.id}
-                            acroformPdfPath={manifest.acroform_pdf_path}
-                            clientEmails={[]}
-                            className="w-full"
-                          />
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Manifest #</TableHead>
+                              <TableHead>Client</TableHead>
+                              <TableHead>Completed</TableHead>
+                              <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {manifests.map((manifest: any) => (
+                              <TableRow key={manifest.id}>
+                                <TableCell>
+                                  <Badge variant="outline">
+                                    {manifest.manifest_number}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="font-medium">
+                                  {clientNames[manifest.client_id] || 'Unknown'}
+                                </TableCell>
+                                <TableCell className="text-muted-foreground text-sm">
+                                  {manifest.receiver_signed_at ? 
+                                    format(new Date(manifest.receiver_signed_at), 'MMM d, h:mm a') : 'N/A'
+                                  }
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {manifest.acroform_pdf_path && (
+                                    <ManifestPDFControls
+                                      manifestId={manifest.id}
+                                      acroformPdfPath={manifest.acroform_pdf_path}
+                                      clientEmails={[]}
+                                      className="inline-flex"
+                                    />
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </CollapsibleContent>
+                    </div>
+                  </Collapsible>
+                ))
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {groupedCompleted.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No completed manifests
+                </div>
+              ) : (
+                groupedCompleted.map(([period, manifests]) => (
+                  <Collapsible key={period} defaultOpen={period === 'This Week' || period === 'This Month'}>
+                    <Card>
+                      <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-accent">
+                        <div className="flex items-center gap-2">
+                          <ChevronRight className="h-4 w-4 transition-transform [[data-state=open]>&]:rotate-90" />
+                          <h3 className="font-semibold">{period}</h3>
+                          <Badge variant="secondary">{manifests.length}</Badge>
+                        </div>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <CardContent className="pt-0">
+                          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 pt-4">
+                            {manifests.map((manifest: any) => (
+                              <Card key={manifest.id}>
+                                <CardContent className="p-4">
+                                  <div className="space-y-2">
+                                    <div className="flex items-start justify-between">
+                                      <div>
+                                        <Badge variant="outline" className="mb-1">
+                                          {manifest.manifest_number}
+                                        </Badge>
+                                        <h3 className="font-medium text-sm">{clientNames[manifest.client_id] || 'Unknown'}</h3>
+                                      </div>
+                                      <Badge variant="secondary" className="text-xs">Complete</Badge>
+                                    </div>
+                                    
+                                    {manifest.receiver_signed_at && (
+                                      <p className="text-xs text-muted-foreground">
+                                        {format(new Date(manifest.receiver_signed_at), 'MMM d, h:mm a')}
+                                      </p>
+                                    )}
+                                    
+                                    {manifest.acroform_pdf_path && (
+                                      <ManifestPDFControls
+                                        manifestId={manifest.id}
+                                        acroformPdfPath={manifest.acroform_pdf_path}
+                                        clientEmails={[]}
+                                        className="w-full"
+                                      />
+                                    )}
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </CollapsibleContent>
+                    </Card>
+                  </Collapsible>
                 ))
               )}
             </div>
