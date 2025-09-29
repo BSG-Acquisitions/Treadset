@@ -31,70 +31,70 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
 
   return (
     <Card className={`flex flex-col h-full ${isToday ? "ring-2 ring-primary" : ""}`}>
-      <CardHeader className="pb-2 text-center border-b">
-        <div className="space-y-0.5">
-          <div className="text-xs font-medium text-muted-foreground">{format(day, "EEE")}</div>
-          <div className={`text-xl font-bold ${isToday ? "text-primary" : ""}`}>{format(day, "d")}</div>
-          <div className="text-[10px] text-muted-foreground">{format(day, "MMM yyyy")}</div>
-          <Badge variant="secondary" className="mt-1 text-[10px] px-1.5 py-0">{pickups.length}</Badge>
+      <CardHeader className="pb-3 text-center border-b bg-muted/30">
+        <div className="space-y-1">
+          <div className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">{format(day, "EEE")}</div>
+          <div className={`text-3xl font-bold ${isToday ? "text-primary" : ""}`}>{format(day, "d")}</div>
+          <div className="text-xs text-muted-foreground">{format(day, "MMM yyyy")}</div>
+          <Badge variant="secondary" className="mt-2 text-xs px-2 py-0.5 font-medium">{pickups.length}</Badge>
         </div>
       </CardHeader>
 
       <CardContent className="flex-1 p-0">
-        <div className="p-2 space-y-1.5 max-h-[calc(100vh-300px)] overflow-y-auto">{/* Compact scrollable area */}
+        <div className="p-3 space-y-3 max-h-[calc(100vh-280px)] overflow-y-auto">{/* Readable scrollable area */}
             {pickups.length === 0 ? (
-              <div className="text-center py-6">
-                <Calendar className="h-5 w-5 text-muted-foreground mx-auto mb-1" />
-                <p className="text-[10px] text-muted-foreground">No pickups</p>
+              <div className="text-center py-12">
+                <Calendar className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">No pickups</p>
               </div>
             ) : (
               pickups.map((pickup: any) => (
-                <div key={pickup.id} className="p-2 border rounded-md hover:bg-secondary/10 transition-colors bg-card space-y-1.5 text-xs">
+                <div key={pickup.id} className="p-3 border-2 rounded-lg hover:bg-secondary/10 hover:border-primary/50 transition-all bg-card space-y-2.5 shadow-sm">
                   {/* Client */}
-                  <div className="flex items-start gap-1.5">
-                    <Building className="h-3 w-3 text-muted-foreground flex-shrink-0 mt-0.5" />
-                    <span className="font-semibold text-xs leading-tight line-clamp-2">
+                  <div className="flex items-start gap-2">
+                    <Building className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                    <span className="font-bold text-sm leading-tight line-clamp-2">
                       {pickup.client?.company_name || "Unknown Client"}
                     </span>
                   </div>
 
                   {/* Location */}
-                  <div className="flex items-start gap-1.5">
-                    <MapPin className="h-3 w-3 text-muted-foreground flex-shrink-0 mt-0.5" />
-                    <span className="text-[10px] text-muted-foreground leading-tight line-clamp-1">
+                  <div className="flex items-start gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                    <span className="text-xs text-muted-foreground leading-tight line-clamp-2">
                       {pickup.location?.name || pickup.location?.address || "No address"}
                     </span>
                   </div>
 
                   {/* Counts & Revenue */}
-                  <div className="text-[10px] font-medium space-y-0.5 py-1">
-                    <div className="grid grid-cols-2 gap-x-2 gap-y-0.5">
+                  <div className="text-xs font-medium bg-muted/30 rounded-md p-2">
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
                       <span className="text-muted-foreground">PTE:</span>
-                      <span className="text-right">{pickup.pte_count}</span>
+                      <span className="text-right font-semibold">{pickup.pte_count}</span>
                       <span className="text-muted-foreground">OTR:</span>
-                      <span className="text-right">{pickup.otr_count}</span>
-                      <span className="text-muted-foreground">Tract:</span>
-                      <span className="text-right">{pickup.tractor_count}</span>
-                      <span className="text-muted-foreground font-semibold">$:</span>
-                      <span className="text-right font-semibold">{pickup.computed_revenue?.toFixed(0) || "0"}</span>
+                      <span className="text-right font-semibold">{pickup.otr_count}</span>
+                      <span className="text-muted-foreground">Tractor:</span>
+                      <span className="text-right font-semibold">{pickup.tractor_count}</span>
+                      <span className="text-muted-foreground font-bold text-primary">Revenue:</span>
+                      <span className="text-right font-bold text-primary">${pickup.computed_revenue?.toFixed(2) || "0.00"}</span>
                     </div>
                   </div>
 
                   {/* Actions */}
-                  <div className="flex gap-1.5 pt-1">
+                  <div className="flex gap-2 pt-1">
                     <CompletePickupDialog
                       pickup={pickup}
                       trigger={
-                        <Button size="sm" disabled={pickup.status === "completed"} className="flex-1 text-[10px] h-6 px-2">
-                          {pickup.status === "completed" ? "✓ Done" : "Complete"}
+                        <Button size="sm" disabled={pickup.status === "completed"} className="flex-1 text-xs h-8 font-semibold">
+                          {pickup.status === "completed" ? "✓ Complete" : "Complete"}
                         </Button>
                       }
                     />
 
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="px-1.5 h-6">
-                          <MoreVertical className="h-3 w-3" />
+                        <Button variant="outline" size="sm" className="px-2 h-8">
+                          <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
@@ -107,10 +107,10 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
                     </DropdownMenu>
                   </div>
 
-                  {/* Manifest PDF - Hide in compact view */}
+                  {/* Manifest PDF */}
                   {pickup.status === "completed" && pickup.manifest_pdf_path && (
-                    <Badge variant="outline" className="text-[9px] w-full justify-center py-0.5">
-                      PDF Ready
+                    <Badge variant="outline" className="text-[10px] w-full justify-center py-1 bg-green-50 text-green-700 border-green-300">
+                      ✓ PDF Ready
                     </Badge>
                   )}
                 </div>
@@ -126,7 +126,7 @@ export function WeeklyPickupsGrid({ currentWeek, onMovePickup }: WeeklyPickupsGr
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeek, i));
 
   return (
-    <div className="grid grid-cols-7 gap-3 auto-rows-fr">{/* Equal height columns */}
+    <div className="grid grid-cols-7 gap-4">{/* 7 equal columns for full week */}
       {weekDays.map((day) => (
         <DayColumn key={day.toISOString()} day={day} onMovePickup={onMovePickup} />
       ))}
