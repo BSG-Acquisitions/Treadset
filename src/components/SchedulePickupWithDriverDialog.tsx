@@ -6,6 +6,7 @@ import { useSchedulePickupWithDriver } from "@/hooks/useSchedulePickupWithDriver
 import { useClients } from "@/hooks/useClients";
 import { useLocations } from "@/hooks/useLocations";
 import { useVehicles } from "@/hooks/useVehicles";
+import { useHaulers } from "@/hooks/useHaulers";
 import {
   Dialog,
   DialogContent,
@@ -48,7 +49,7 @@ import { cn } from "@/lib/utils";
 const scheduleWithDriverSchema = z.object({
   clientId: z.string().min(1, "Client is required"),
   locationId: z.string().optional(),
-  vehicleId: z.string().min(1, "Vehicle/Truck is required"),
+  truckSelection: z.string().min(1, "Truck/Hauler is required"),
   pickupDate: z.date({
     required_error: "Pickup date is required",
   }),
@@ -75,14 +76,36 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
   const { data: clients } = useClients({ search: clientSearch, limit: 100 });
   const { data: locations } = useLocations(selectedClientId);
   const { data: vehicles } = useVehicles();
+  const { data: haulers } = useHaulers();
   const schedulePickup = useSchedulePickupWithDriver();
+
+  // Combine vehicles and haulers into one unified list
+  const allTrucks = [
+    ...(vehicles?.map(v => ({
+      id: `vehicle-${v.id}`,
+      type: 'vehicle' as const,
+      name: v.name,
+      details: v.license_plate ? `${v.license_plate} • Capacity: ${v.capacity} tires` : `Capacity: ${v.capacity} tires`,
+      driverInfo: v.driver_email || 'No driver assigned',
+      vehicleId: v.id,
+      assignedDriverId: v.assigned_driver_id,
+    })) || []),
+    ...(haulers?.map(h => ({
+      id: `hauler-${h.id}`,
+      type: 'hauler' as const,
+      name: h.hauler_name,
+      details: [h.hauler_mi_reg && `Reg: ${h.hauler_mi_reg}`, h.hauler_phone && `Phone: ${h.hauler_phone}`].filter(Boolean).join(' • '),
+      driverInfo: 'External Hauler',
+      haulerId: h.id,
+    })) || []),
+  ];
 
   const form = useForm<ScheduleWithDriverFormData>({
     resolver: zodResolver(scheduleWithDriverSchema),
     defaultValues: {
       clientId: defaultClientId || "",
       locationId: "",
-      vehicleId: "",
+      truckSelection: "",
       pickupDate: new Date(),
       pteCount: 0,
       otrCount: 0,
@@ -94,15 +117,21 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
 
   const onSubmit = async (data: ScheduleWithDriverFormData) => {
     try {
-      // Find the selected vehicle to get its assigned driver
-      const selectedVehicle = vehicles?.find(v => v.id === data.vehicleId);
-      const driverId = selectedVehicle?.assigned_driver_id;
+      // Parse the truck selection to determine if it's a vehicle or hauler
+      const selectedTruck = allTrucks.find(t => t.id === data.truckSelection);
+      
+      if (!selectedTruck) {
+        throw new Error('Selected truck not found');
+      }
 
+      const isVehicle = selectedTruck.type === 'vehicle';
+      
       await schedulePickup.mutateAsync({
         clientId: data.clientId,
         locationId: data.locationId,
-        vehicleId: data.vehicleId,
-        driverId: driverId || '', // Automatically use the truck's assigned driver
+        vehicleId: isVehicle ? selectedTruck.vehicleId : undefined,
+        haulerId: !isVehicle ? selectedTruck.haulerId : undefined,
+        driverId: isVehicle && selectedTruck.assignedDriverId ? selectedTruck.assignedDriverId : '',
         pickupDate: format(data.pickupDate, 'yyyy-MM-dd'),
         pteCount: data.pteCount,
         otrCount: data.otrCount,
@@ -241,40 +270,41 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
               />
             )}
 
-            {/* Vehicle/Truck Selection */}
+            {/* Unified Truck/Hauler Selection */}
             <FormField
               control={form.control}
-              name="vehicleId"
+              name="truckSelection"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Select Truck (Driver Auto-Assigned)</FormLabel>
+                  <FormLabel>Select Truck or Hauler</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select truck" />
+                        <SelectValue placeholder="Select truck or hauler" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent className="z-50 bg-popover">
-                      {vehicles?.map((vehicle) => {
-                        const driverInfo = vehicle.driver_email || 'No driver assigned';
-                        return (
-                          <SelectItem key={vehicle.id} value={vehicle.id}>
-                            <div className="flex items-center gap-2">
-                              <Truck className="h-4 w-4" />
-                              <div>
-                                <div className="font-medium">{vehicle.name}</div>
-                                {vehicle.license_plate && (
-                                  <div className="text-sm text-muted-foreground">{vehicle.license_plate}</div>
-                                )}
-                                <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                                  <User className="h-3 w-3" />
-                                  Driver: {driverInfo}
-                                </div>
+                      {allTrucks.map((truck) => (
+                        <SelectItem key={truck.id} value={truck.id}>
+                          <div className="flex items-center gap-2">
+                            {truck.type === 'vehicle' ? (
+                              <Truck className="h-4 w-4 text-primary" />
+                            ) : (
+                              <Building className="h-4 w-4 text-secondary" />
+                            )}
+                            <div>
+                              <div className="font-medium">{truck.name}</div>
+                              {truck.details && (
+                                <div className="text-sm text-muted-foreground">{truck.details}</div>
+                              )}
+                              <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                                <User className="h-3 w-3" />
+                                {truck.driverInfo}
                               </div>
                             </div>
-                          </SelectItem>
-                        );
-                      })}
+                          </div>
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />

@@ -9,7 +9,8 @@ type Assignment = Database["public"]["Tables"]["assignments"]["Row"];
 export interface SchedulePickupWithDriverData {
   clientId: string;
   locationId?: string;
-  vehicleId: string;
+  vehicleId?: string;
+  haulerId?: string;
   driverId: string;
   pickupDate: string;
   pteCount: number;
@@ -48,13 +49,14 @@ export const useSchedulePickupWithDriver = () => {
 
       if (pickupError) throw pickupError;
 
-      // Create the assignment with specified driver and vehicle
+      // Create the assignment with specified driver and vehicle/hauler
       const { data: assignment, error: assignmentError } = await supabase
         .from('assignments')
         .insert({
           pickup_id: pickup.id,
-          vehicle_id: data.vehicleId,
-          driver_id: data.driverId,  // THIS WAS MISSING!
+          vehicle_id: data.vehicleId || null,
+          hauler_id: data.haulerId || null,
+          driver_id: data.driverId,
           organization_id: orgData,
           scheduled_date: data.pickupDate,
           status: 'assigned',

@@ -6,6 +6,7 @@ import { useSchedulePickup } from "@/hooks/usePickups";
 import { useClients } from "@/hooks/useClients";
 import { useLocations } from "@/hooks/useLocations";
 import { useVehicles } from "@/hooks/useVehicles";
+import { useHaulers } from "@/hooks/useHaulers";
 import { SchedulePickupWithDriverDialog } from "./SchedulePickupWithDriverDialog";
 import {
   Dialog,
@@ -40,7 +41,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, Check, ChevronsUpDown, Truck, User } from "lucide-react";
+import { CalendarIcon, Check, ChevronsUpDown, Truck, User, Building } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -56,7 +57,7 @@ const scheduleSchema = z.object({
   otrCount: z.number().min(0).default(0),
   tractorCount: z.number().min(0).default(0),
   preferredWindow: z.enum(["AM", "PM", "Any"]).default("Any"),
-  vehicleId: z.string().min(1, "Vehicle/Truck is required"),
+  truckSelection: z.string().min(1, "Truck/Hauler is required"),
   notes: z.string().optional(),
 });
 
@@ -76,7 +77,29 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
   const { data: clients } = useClients({ search: clientSearch, limit: 100 });
   const { data: locations } = useLocations(selectedClientId);
   const { data: vehicles } = useVehicles();
+  const { data: haulers } = useHaulers();
   const schedulePickup = useSchedulePickup();
+
+  // Combine vehicles and haulers into one unified list
+  const allTrucks = [
+    ...(vehicles?.map(v => ({
+      id: `vehicle-${v.id}`,
+      type: 'vehicle' as const,
+      name: v.name,
+      details: v.license_plate ? `${v.license_plate} • Capacity: ${v.capacity} tires` : `Capacity: ${v.capacity} tires`,
+      driverInfo: v.driver_email || 'No driver assigned',
+      vehicleId: v.id,
+      assignedDriverId: v.assigned_driver_id,
+    })) || []),
+    ...(haulers?.map(h => ({
+      id: `hauler-${h.id}`,
+      type: 'hauler' as const,
+      name: h.hauler_name,
+      details: [h.hauler_mi_reg && `Reg: ${h.hauler_mi_reg}`, h.hauler_phone && `Phone: ${h.hauler_phone}`].filter(Boolean).join(' • '),
+      driverInfo: 'External Hauler',
+      haulerId: h.id,
+    })) || []),
+  ];
 
   const form = useForm<ScheduleFormData>({
     resolver: zodResolver(scheduleSchema),
@@ -87,17 +110,22 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
       otrCount: 0,
       tractorCount: 0,
       preferredWindow: "Any",
-      vehicleId: "",
+      truckSelection: "",
       notes: "",
     },
   });
 
   const onSubmit = async (data: ScheduleFormData) => {
     try {
-      // Find the selected vehicle to get its assigned driver
-      const selectedVehicle = vehicles?.find(v => v.id === data.vehicleId);
-      const driverId = selectedVehicle?.assigned_driver_id;
+      // Parse the truck selection to determine if it's a vehicle or hauler
+      const selectedTruck = allTrucks.find(t => t.id === data.truckSelection);
+      
+      if (!selectedTruck) {
+        throw new Error('Selected truck not found');
+      }
 
+      const isVehicle = selectedTruck.type === 'vehicle';
+      
       await schedulePickup.mutateAsync({
         clientId: data.clientId,
         locationId: data.locationId,
@@ -106,9 +134,10 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
         otrCount: data.otrCount,
         tractorCount: data.tractorCount,
         preferredWindow: data.preferredWindow,
-        assignmentType: 'vehicle',
-        vehicleId: data.vehicleId,
-        driverId: driverId, // Automatically use the truck's assigned driver
+        assignmentType: isVehicle ? 'vehicle' : 'hauler',
+        vehicleId: isVehicle ? selectedTruck.vehicleId : undefined,
+        haulerId: !isVehicle ? selectedTruck.haulerId : undefined,
+        driverId: isVehicle ? selectedTruck.assignedDriverId : undefined,
         notes: data.notes,
       });
       setOpen(false);
@@ -237,41 +266,43 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
               />
             </div>
 
-            {/* Truck/Vehicle Selection */}
+            {/* Unified Truck/Hauler Selection */}
             <FormField
               control={form.control}
-              name="vehicleId"
+              name="truckSelection"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Select Truck (Driver Auto-Assigned)</FormLabel>
+                  <FormLabel>Select Truck or Hauler</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a truck" />
+                        <SelectValue placeholder="Select a truck or hauler" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent className="z-50 bg-popover">
-                      {vehicles?.map((vehicle) => {
-                        const driverInfo = vehicle.driver_email || 'No driver assigned';
-                        return (
-                          <SelectItem key={vehicle.id} value={vehicle.id}>
-                            <div className="flex flex-col items-start">
-                              <div className="flex items-center gap-2">
-                                <Truck className="h-4 w-4" />
-                                <span className="font-medium">{vehicle.name}</span>
-                              </div>
-                              <span className="text-muted-foreground text-sm">
-                                {vehicle.license_plate && `${vehicle.license_plate} • `}
-                                Capacity: {vehicle.capacity} tires
-                              </span>
-                              <span className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                                <User className="h-3 w-3" />
-                                Driver: {driverInfo}
-                              </span>
+                      {allTrucks.map((truck) => (
+                        <SelectItem key={truck.id} value={truck.id}>
+                          <div className="flex flex-col items-start">
+                            <div className="flex items-center gap-2">
+                              {truck.type === 'vehicle' ? (
+                                <Truck className="h-4 w-4 text-primary" />
+                              ) : (
+                                <Building className="h-4 w-4 text-secondary" />
+                              )}
+                              <span className="font-medium">{truck.name}</span>
                             </div>
-                          </SelectItem>
-                        );
-                      })}
+                            {truck.details && (
+                              <span className="text-muted-foreground text-sm">
+                                {truck.details}
+                              </span>
+                            )}
+                            <span className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                              <User className="h-3 w-3" />
+                              {truck.driverInfo}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
