@@ -58,7 +58,7 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
             const driver = vehiclePickups[0]?.daily_assignments?.[0]?.assigned_driver;
             
             return (
-              <div key={vehicleId} className="space-y-2">
+              <div key={vehicleId} className="space-y-3">
                 {(vehiclePickups as any[]).map((pickup: any) => (
                   <div
                     key={pickup.id}
@@ -66,20 +66,20 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
                     onClick={() => onMovePickup?.(pickup)}
                   >
                     {/* Vehicle/Driver Header */}
-                    <div className="flex items-center gap-2 mb-2 text-gray-600 text-sm">
+                    <div className="flex items-center gap-2 mb-3 text-gray-600 text-sm">
                       <span>🚚</span>
-                      <span className="font-medium">
+                      <span className="font-semibold">
                         {vehicle?.name || 'Truck'} - {driver?.full_name || 'Unassigned'}
                       </span>
                     </div>
 
                     {/* Client Name */}
-                    <div className="font-bold text-gray-900 mb-1">
+                    <div className="font-bold text-base text-gray-900 mb-2 leading-tight">
                       {pickup.client?.company_name || "Unknown Client"}
                     </div>
 
                     {/* Address */}
-                    <div className="text-sm text-gray-600 leading-relaxed">
+                    <div className="text-sm text-gray-700 leading-relaxed mb-3">
                       {pickup.location?.address || 
                        [
                          pickup.client?.mailing_address,
@@ -88,6 +88,25 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
                        ].filter(Boolean).join(' ') || 
                        'No address'}
                     </div>
+
+                    {/* Tire Counts */}
+                    <div className="flex items-center gap-4 text-xs text-gray-600 mb-2">
+                      <span>PTE: <span className="font-semibold text-gray-900">{pickup.pte_count || 0}</span></span>
+                      <span>OTR: <span className="font-semibold text-gray-900">{pickup.otr_count || 0}</span></span>
+                      <span>Tractor: <span className="font-semibold text-gray-900">{pickup.tractor_count || 0}</span></span>
+                    </div>
+
+                    {/* Revenue */}
+                    <div className="text-xs text-gray-600 pt-2 border-t border-gray-200">
+                      Revenue: <span className="font-bold text-green-600">${pickup.computed_revenue?.toFixed(2) || '0.00'}</span>
+                    </div>
+
+                    {/* Notes if present */}
+                    {pickup.notes && (
+                      <div className="text-xs text-gray-500 italic mt-2 pt-2 border-t border-gray-100">
+                        📝 {pickup.notes}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
