@@ -58,7 +58,21 @@ export const usePickups = (date?: string) => {
             physical_state,
             physical_zip
           ),
-          location:location_id(name, address)
+          location:location_id(name, address),
+          daily_assignments:assignments(
+            id,
+            vehicle_id,
+            driver_id,
+            status,
+            scheduled_date,
+            vehicle:vehicles(id, name, capacity),
+            assigned_driver:users!driver_id(
+              id,
+              first_name,
+              last_name,
+              email
+            )
+          )
         `)
         .eq('organization_id', orgData); // Explicitly filter by organization
 
