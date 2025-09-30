@@ -262,9 +262,6 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
                 <Separator />
                 <div className="space-y-3">
                   <h4 className="font-medium text-lg">Complete Pickup</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Use the same workflow as admin interface to complete pickup and generate manifest.
-                  </p>
                     <CompletePickupDialog
                       pickup={{
                         id: pickup.id,
