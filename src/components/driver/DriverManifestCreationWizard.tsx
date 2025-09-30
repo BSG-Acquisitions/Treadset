@@ -16,6 +16,7 @@ import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
+import { SearchableDropdown } from "@/components/SearchableDropdown";
 import { 
   Building, 
   MapPin, 
@@ -29,36 +30,19 @@ import {
 
 // Validation schema
 const manifestSchema = z.object({
-  // Generator Info (Part 1)
-  generator_company_name: z.string().min(1, "Company name is required").max(100),
-  generator_street_address: z.string().min(1, "Street address is required").max(200),
-  generator_city: z.string().min(1, "City is required").max(100),
-  generator_state: z.string().length(2, "State must be 2 characters"),
-  generator_zip: z.string().min(5, "ZIP code is required").max(10),
+  // Generator Info (read-only, auto-filled from client/pickup)
+  generator_company_name: z.string().max(100).optional(),
+  generator_street_address: z.string().max(200).optional(),
+  generator_city: z.string().max(100).optional(),
+  generator_state: z.string().length(2).optional(),
+  generator_zip: z.string().max(10).optional(),
   generator_phone: z.string().max(20).optional(),
   generator_email: z.string().email().optional().or(z.literal("")),
   generator_contact_person: z.string().max(100).optional(),
   generator_signature_printed_name: z.string().max(100).optional(),
   
-  // Hauler Info (Part 2)
-  hauler_company_name: z.string().min(1, "Hauler company name is required").max(100),
-  hauler_street_address: z.string().max(200).optional(),
-  hauler_city: z.string().max(100).optional(),
-  hauler_state: z.string().max(2).optional(),
-  hauler_zip: z.string().max(10).optional(),
-  hauler_phone: z.string().max(20).optional(),
-  hauler_drivers_license: z.string().max(50).optional(),
-  hauler_vehicle_license_plate: z.string().max(20).optional(),
-  hauler_signature_printed_name: z.string().max(100).optional(),
-  
-  // Receiver Info (Part 3)
-  receiver_company_name: z.string().min(1, "Receiver company name is required").max(100),
-  receiver_street_address: z.string().max(200).optional(),
-  receiver_city: z.string().max(100).optional(),
-  receiver_state: z.string().max(2).optional(),
-  receiver_zip: z.string().max(10).optional(),
-  receiver_phone: z.string().max(20).optional(),
-  receiver_signature_printed_name: z.string().max(100).optional(),
+  // Hauler selection (required)
+  hauler_id: z.string().min(1, "Please select a hauler"),
   
   // Tire Counts
   passenger_count: z.number().int().min(0).optional(),
@@ -68,7 +52,7 @@ const manifestSchema = z.object({
   off_road_count: z.number().int().min(0).optional(),
   off_road_rim_count: z.number().int().min(0).optional(),
   
-  // Pricing
+  // Pricing (optional display only)
   passenger_unit_price: z.number().min(0).optional(),
   truck_unit_price: z.number().min(0).optional(),
   off_road_unit_price: z.number().min(0).optional(),
@@ -88,8 +72,7 @@ interface DriverManifestCreationWizardProps {
 
 const steps = [
   { key: "generator", title: "Generator Info", icon: Building },
-  { key: "hauler", title: "Hauler Info", icon: Truck },
-  { key: "receiver", title: "Receiver Info", icon: MapPin },
+  { key: "hauler", title: "Hauler", icon: Truck },
   { key: "tires", title: "Tire Counts", icon: Package },
   { key: "review", title: "Review", icon: FileCheck },
 ];
