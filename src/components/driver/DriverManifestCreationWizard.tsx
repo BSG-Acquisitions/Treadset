@@ -74,6 +74,7 @@ export function DriverManifestCreationWizard({
   const [haulerData, setHaulerData] = useState<any>(null);
   const [assignmentData, setAssignmentData] = useState<any>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [manualWeightOverride, setManualWeightOverride] = useState<boolean>(false);
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -123,6 +124,32 @@ hauler_print_name: "",
     const vals = form.getValues();
     return pteToTons(computeTotalPTE(vals));
   };
+
+  // Auto-calculate weights from PTE when not manually overridden
+  useEffect(() => {
+    if (!manualWeightOverride) {
+      const totalPTE = computeTotalPTE(form.getValues());
+      // Michigan conversion: 89 PTE = 1 ton, 1 ton = 2000 lbs
+      const tons = totalPTE / 89;
+      const pounds = tons * 2000;
+      const calculatedGross = Math.round(pounds * 10) / 10; // Round to 1 decimal
+      const calculatedTare = Math.round(calculatedGross * 0.15 * 10) / 10; // Estimate tare as 15% of gross
+      
+      form.setValue('gross_weight_lbs', calculatedGross, { shouldValidate: false });
+      form.setValue('tare_weight_lbs', calculatedTare, { shouldValidate: false });
+    }
+  }, [
+    form.watch('pte_off_rim'),
+    form.watch('pte_on_rim'),
+    form.watch('commercial_17_5_19_5_off'),
+    form.watch('commercial_17_5_19_5_on'),
+    form.watch('commercial_22_5_off'),
+    form.watch('commercial_22_5_on'),
+    form.watch('otr_count'),
+    form.watch('tractor_count'),
+    manualWeightOverride,
+    form
+  ]);
 
   // Fetch pickup, assignment, and hauler data on mount
   useEffect(() => {
@@ -353,11 +380,17 @@ hauler_print_name: "",
       // 4. Generate initial PDF with generator and hauler info only
       const totalPteForPdf = computeTotalPTE(data);
       
-      console.log('[DRIVER_WIZARD] Preparing PDF overrides with weights:', {
-        gross_weight_lbs: gross,
-        tare_weight_lbs: tare,
-        net_weight_lbs: net,
-        totalPTE: totalPteForPdf
+      // Calculate weights for PDF (use manual values if overridden, otherwise use calculated)
+      const finalGross = Number(gross || 0);
+      const finalTare = Number(tare || 0);
+      const finalNet = Math.max(0, finalGross - finalTare);
+
+      console.log('[DRIVER_WIZARD] PDF overrides with auto-calculated weights:', {
+        totalPTE: totalPteForPdf,
+        manualOverride: manualWeightOverride,
+        gross_weight_lbs: finalGross,
+        tare_weight_lbs: finalTare,
+        net_weight_lbs: finalNet
       });
 
       await manifestIntegration.mutateAsync({
@@ -394,10 +427,10 @@ hauler_print_name: "",
           hauler_print_name: `${data.hauler_print_name} - ${new Date(haulerSignedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}`,
           hauler_date: new Date(haulerSignedAt).toLocaleDateString('en-US'),
           hauler_total_pte: String(totalPteForPdf),
-          // Weight fields - always send as strings with at least "0"
-          hauler_gross_weight: gross > 0 ? gross.toFixed(1) : '',
-          hauler_tare_weight: tare > 0 ? tare.toFixed(1) : '',
-          hauler_net_weight: net > 0 ? net.toFixed(1) : '',
+          // Weight fields - send calculated values
+          hauler_gross_weight: finalGross > 0 ? finalGross.toFixed(1) : '0.0',
+          hauler_tare_weight: finalTare > 0 ? finalTare.toFixed(1) : '0.0',
+          hauler_net_weight: finalNet > 0 ? finalNet.toFixed(1) : '0.0',
         },
       });
 
@@ -661,66 +694,115 @@ hauler_print_name: "",
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Weights (optional)</CardTitle>
-                <CardDescription>Enter scale weights or manual tons; otherwise we calculate from PTE (89 PTE = 1 ton)</CardDescription>
-              </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="gross_weight_lbs"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Gross Weight (lbs)</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="lbs" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="tare_weight_lbs"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tare Weight (lbs)</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="lbs" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="col-span-2 grid grid-cols-2 gap-4 items-end">
+                <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-sm">Net Weight (lbs)</div>
-                    <div className="font-medium">
-                      {(() => {
-                        const v = form.getValues();
-                        const gross = Number(v.gross_weight_lbs || 0);
-                        const tare = Number(v.tare_weight_lbs || 0);
-                        const net = Math.max(0, gross - tare);
-                        return net.toFixed(1);
-                      })()}
-                    </div>
+                    <CardTitle className="text-base">Weights</CardTitle>
+                    <CardDescription>
+                      {manualWeightOverride 
+                        ? "Manual entry enabled for special cases" 
+                        : "Auto-calculated from PTE (89 PTE = 1 ton)"}
+                    </CardDescription>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="manual_override" className="text-sm text-muted-foreground cursor-pointer">
+                      Manual Override
+                    </Label>
+                    <input
+                      id="manual_override"
+                      type="checkbox"
+                      checked={manualWeightOverride}
+                      onChange={(e) => setManualWeightOverride(e.target.checked)}
+                      className="h-4 w-4 cursor-pointer"
+                    />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
-                    name="weight_tons_manual"
+                    name="gross_weight_lbs"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Manual Weight (tons)</FormLabel>
+                        <FormLabel>Gross Weight (lbs)</FormLabel>
                         <FormControl>
-                          <Input type="number" step="0.01" placeholder="tons" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
+                          <Input 
+                            type="number" 
+                            placeholder={manualWeightOverride ? "Enter gross weight" : "Auto-calculated"}
+                            {...field} 
+                            onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                            disabled={!manualWeightOverride}
+                            className={!manualWeightOverride ? 'bg-muted' : ''}
+                          />
                         </FormControl>
-                        <FormDescription>Optional override; leave blank to auto-calc</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="tare_weight_lbs"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tare Weight (lbs)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            placeholder={manualWeightOverride ? "Enter tare weight" : "Auto-calc (15% of gross)"}
+                            {...field} 
+                            onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                            disabled={!manualWeightOverride}
+                            className={!manualWeightOverride ? 'bg-muted' : ''}
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 </div>
-                <div className="col-span-2 text-sm text-muted-foreground">
-                  Calculated tons from PTE (89 PTE = 1 ton): <strong>{calcTonsFromPTE().toFixed(2)}</strong>
+                
+                <div>
+                  <Label>Net Weight (lbs)</Label>
+                  <div className="text-lg font-semibold p-2 bg-muted rounded-md">
+                    {(() => {
+                      const v = form.getValues();
+                      const gross = Number(v.gross_weight_lbs || 0);
+                      const tare = Number(v.tare_weight_lbs || 0);
+                      const net = Math.max(0, gross - tare);
+                      return net.toFixed(1);
+                    })()}
+                  </div>
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="weight_tons_manual"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Manual Weight (tons) - Optional</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          placeholder="Optional override; leave blank to auto-calc" 
+                          {...field} 
+                          onChange={e => field.onChange(parseFloat(e.target.value) || 0)} 
+                        />
+                      </FormControl>
+                      <FormDescription>Leave blank to use calculated weight from PTE</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <div className="text-sm text-muted-foreground space-y-1 p-3 bg-muted/50 rounded-md">
+                  <div>Total PTE: <strong>{computeTotalPTE(form.getValues())}</strong></div>
+                  <div>Calculated tons (89 PTE = 1 ton): <strong>{calcTonsFromPTE().toFixed(2)}</strong></div>
+                  {!manualWeightOverride && (
+                    <div className="text-xs mt-2 text-primary">
+                      ✓ Weights auto-calculated based on Michigan conversions
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
