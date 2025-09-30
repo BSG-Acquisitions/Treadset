@@ -806,9 +806,9 @@ export function DriverManifestCreationWizard({
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardContent>
-            <ScrollArea className="max-h-[70vh] pr-2 sm:pr-4" hideScrollbar>
+            <div className="max-h-[50vh] overflow-y-auto pr-2 sm:pr-4">
               {renderStepContent()}
-            </ScrollArea>
+            </div>
           </CardContent>
 
           <div className="flex items-center justify-between p-6 border-t">
