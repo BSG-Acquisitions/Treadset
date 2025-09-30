@@ -318,10 +318,7 @@ hauler_print_name: "",
         commercial_22_5_on: data.commercial_22_5_on,
         otr_count: data.otr_count,
         tractor_count: data.tractor_count,
-        // Weights and conversions
-        gross_weight_lbs: gross,
-        tare_weight_lbs: tare,
-        net_weight_lbs: net,
+        // Weights and conversions (store only tons in DB; PDF gets detailed weights via overrides)
         weight_tons: resolvedTons,
         payment_method: 'INVOICE' as const,
         status: 'AWAITING_RECEIVER_SIGNATURE' as const,
