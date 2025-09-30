@@ -18,14 +18,31 @@ export const useClientsWithTable = ({ tableState }: UseClientsWithTableOptions) 
   return useQuery({
     queryKey: ['clients-table', JSON.stringify(tableState)],
     queryFn: async () => {
-      // Simple approach to avoid type inference issues
-      const { data: clients, error, count } = await supabase
+      // Build base query with count
+      let query = supabase
         .from('clients')
-        .select('*', { count: 'exact' })
-        .range(
-          (tableState.page - 1) * tableState.pageSize,
-          tableState.page * tableState.pageSize - 1
+        .select('*', { count: 'exact' });
+
+      // Apply search across key fields
+      const search = (tableState.search || '').trim();
+      if (search) {
+        query = query.or(
+          `company_name.ilike.%${search}%,contact_name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`
         );
+      }
+
+      // Apply sorting
+      if (tableState.sortBy) {
+        query = query.order(tableState.sortBy, { ascending: tableState.sortOrder === 'asc' });
+      }
+
+      // Pagination
+      query = query.range(
+        (tableState.page - 1) * tableState.pageSize,
+        tableState.page * tableState.pageSize - 1
+      );
+
+      const { data: clients, error, count } = await query;
 
       if (error) throw error;
 
