@@ -86,6 +86,7 @@ export function DriverManifestCreationWizard({
 
   const form = useForm<ManifestFormData>({
     resolver: zodResolver(manifestSchema),
+    mode: "onChange",
     defaultValues: {
       pte_off_rim: 0,
       pte_on_rim: 0,
@@ -286,6 +287,7 @@ export function DriverManifestCreationWizard({
         otr_count: data.otr_count,
         tractor_count: data.tractor_count,
         payment_method: 'INVOICE' as const,
+        status: 'IN_PROGRESS' as const,
       };
 
       const manifest = await createManifest.mutateAsync(manifestData);
@@ -625,7 +627,12 @@ export function DriverManifestCreationWizard({
                     <FormItem>
                       <FormLabel>Printed Name *</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Full name" />
+                        <Input 
+                          {...field} 
+                          value={field.value || ""} 
+                          placeholder="Full name"
+                          type="text"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -669,7 +676,12 @@ export function DriverManifestCreationWizard({
                     <FormItem>
                       <FormLabel>Printed Name *</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Full name" />
+                        <Input 
+                          {...field} 
+                          value={field.value || ""} 
+                          placeholder="Full name"
+                          type="text"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -811,12 +823,21 @@ export function DriverManifestCreationWizard({
             </Button>
 
             {step < steps.length - 1 ? (
-              <Button type="button" onClick={handleNext} disabled={isSubmitting}>
+              <Button 
+                type="button" 
+                onClick={handleNext} 
+                disabled={isSubmitting}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
                 Next
                 <ChevronRight className="ml-2 h-4 w-4" />
               </Button>
             ) : (
-              <Button type="submit" disabled={isSubmitting}>
+              <Button 
+                type="submit" 
+                disabled={isSubmitting}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
                 {isSubmitting ? "Creating..." : "Create & Email Manifest"}
               </Button>
             )}
