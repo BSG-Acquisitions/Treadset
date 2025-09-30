@@ -307,7 +307,7 @@ hauler_print_name: "",
 
       if (generatorSigRef.current && !generatorSigRef.current.isEmpty()) {
         const generatorBlob = await fetch(generatorSigRef.current.toDataURL()).then(r => r.blob());
-        const generatorFileName = `manifests/signatures/${timestamp}-generator.png`;
+        const generatorFileName = `signatures/${timestamp}-generator.png`;
         
         const { error: genUploadError } = await supabase.storage
           .from('manifests')
@@ -319,7 +319,7 @@ hauler_print_name: "",
 
       if (haulerSigRef.current && !haulerSigRef.current.isEmpty()) {
         const haulerBlob = await fetch(haulerSigRef.current.toDataURL()).then(r => r.blob());
-        const haulerFileName = `manifests/signatures/${timestamp}-hauler.png`;
+        const haulerFileName = `signatures/${timestamp}-hauler.png`;
         
         const { error: haulUploadError } = await supabase.storage
           .from('manifests')
@@ -419,6 +419,7 @@ hauler_print_name: "",
           generator_signature: generatorSigPath,
           generator_print_name: `${data.generator_print_name} - ${new Date(generatorSignedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}`,
           generator_date: new Date(generatorSignedAt).toLocaleDateString('en-US'),
+          generator_time: new Date(generatorSignedAt).toLocaleTimeString('en-US', { hour12: false }),
           generator_volume_weight: String(totalPteForPdf),
           
           // Tire counts for PDF
@@ -436,14 +437,24 @@ hauler_print_name: "",
           hauler_phone: haulerData.hauler_phone || '',
           hauler_mi_reg: haulerData.hauler_mi_reg || '',
           hauler_signature: haulerSigPath,
+          'Hauler_Signature _es_:signer:signature': haulerSigPath,
           hauler_print_name: `${data.hauler_print_name} - ${new Date(haulerSignedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}`,
           hauler_date: new Date(haulerSignedAt).toLocaleDateString('en-US'),
+          hauler_time: new Date(haulerSignedAt).toLocaleTimeString('en-US', { hour12: false }),
           hauler_total_pte: String(totalPteForPdf),
+          // Also provide the template field directly to be extra-safe
+          Passenger_Tire_Equivalents: String(totalPteForPdf),
+          
           // Weight fields - send calculated values
           hauler_gross_weight: finalGross > 0 ? finalGross.toFixed(1) : '0.0',
           hauler_tare_weight: finalTare > 0 ? finalTare.toFixed(1) : '0.0',
           hauler_net_weight: finalNet > 0 ? finalNet.toFixed(1) : '0.0',
-        },
+          
+          // Duplicate as direct template field keys (defensive)
+          Gross: finalGross > 0 ? finalGross.toFixed(1) : '0.0',
+          Tare: finalTare > 0 ? finalTare.toFixed(1) : '0.0',
+          Net_Weight: finalNet > 0 ? finalNet.toFixed(1) : '0.0',
+        }
       });
 
       // 5. Email the initial manifest to client
