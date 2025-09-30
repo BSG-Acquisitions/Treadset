@@ -10,11 +10,11 @@ export const useDriverAssignments = (date?: string) => {
     queryFn: async () => {
       if (!user?.email) return [];
       
-      // First, get vehicles assigned to this driver's email
+      // First, get vehicles assigned to this driver's email (case-insensitive)
       const { data: driverVehicles } = await supabase
         .from('vehicles')
         .select('id')
-        .eq('driver_email', user.email);
+        .ilike('driver_email', user.email);
       
       if (!driverVehicles || driverVehicles.length === 0) return [];
       
