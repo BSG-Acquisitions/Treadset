@@ -85,13 +85,28 @@ textarea {
 /* Better dropdown positioning on mobile */
 @media (max-width: 768px) {
   [data-radix-popper-content-wrapper] {
-    transform: none !important;
+    position: fixed !important;
+    z-index: 9999 !important;
+  }
+
+  /* Center small dropdowns */
+  [role="dialog"][data-radix-popper-content-wrapper],
+  [data-radix-select-content],
+  [data-radix-dropdown-menu-content] {
     position: fixed !important;
     top: 50% !important;
     left: 50% !important;
-    translate: -50% -50% !important;
+    transform: translate(-50%, -50%) !important;
     width: calc(100vw - 2rem) !important;
     max-width: 400px !important;
+    max-height: 60vh !important;
+    overflow-y: auto !important;
+  }
+
+  /* Ensure proper stacking */
+  [data-radix-select-viewport],
+  [data-radix-dropdown-menu-viewport] {
+    max-height: 50vh !important;
   }
 }
 
@@ -100,5 +115,36 @@ textarea {
   .mobile-form-grid {
     grid-template-columns: 1fr;
     gap: 1rem;
+  }
+
+  /* Ensure forms are scrollable and inputs are accessible */
+  form {
+    max-height: 100%;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Add padding to bottom of forms to prevent keyboard obstruction */
+  form > div:last-child,
+  [role="form"] > div:last-child {
+    padding-bottom: 120px;
+  }
+
+  /* Better input spacing on mobile */
+  input, textarea, select {
+    margin-bottom: 0.75rem;
+  }
+
+  /* Ensure buttons are always accessible */
+  button[type="submit"],
+  button[type="button"] {
+    position: sticky;
+    bottom: 0;
+    width: 100%;
+    z-index: 10;
+    background: var(--background);
+    padding: 1rem;
+    margin: 0;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
   }
 }

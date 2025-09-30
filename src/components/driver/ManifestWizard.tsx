@@ -1,13 +1,15 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Camera, CheckCircle, Clock, FileText, PenTool } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import { supabase } from '@/integrations/supabase/client';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 import { useManifestIntegration } from '@/hooks/useManifestIntegration';
 import { useSendManifestEmail } from '@/hooks/useSendManifestEmail';
@@ -26,10 +28,36 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
   const [manifestCompleted, setManifestCompleted] = useState(false);
   const [clientEmails, setClientEmails] = useState<string[]>([]);
   
+  const isMobile = useIsMobile();
+  const contentRef = useRef<HTMLDivElement>(null);
   const manifestIntegration = useManifestIntegration();
   const sendEmail = useSendManifestEmail();
   const customerSigRef = useRef<SignatureCanvas>(null);
   const driverSigRef = useRef<SignatureCanvas>(null);
+
+  // Scroll to top when step changes
+  useEffect(() => {
+    if (contentRef.current && isMobile) {
+      contentRef.current.scrollTop = 0;
+    }
+  }, [step, isMobile]);
+
+  // Handle input focus on mobile - scroll into view
+  useEffect(() => {
+    if (!isMobile) return;
+
+    const handleFocus = (e: FocusEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+        setTimeout(() => {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300); // Delay to allow keyboard to appear
+      }
+    };
+
+    document.addEventListener('focusin', handleFocus);
+    return () => document.removeEventListener('focusin', handleFocus);
+  }, [isMobile]);
   
   const [data, setData] = useState({
     arriveTime: '',
@@ -514,8 +542,8 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader>
+    <Card className={`w-full max-w-md mx-auto ${isMobile ? 'h-[calc(100vh-2rem)] flex flex-col' : ''}`}>
+      <CardHeader className="flex-shrink-0">
         <CardTitle className="flex items-center justify-between">
           <span>Manifest {manifestId.slice(-8)}</span>
           <span className="text-sm font-normal">{Math.round(progress)}%</span>
@@ -525,13 +553,23 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
           {steps.map((s, i) => (
             <div key={s.key} className={`flex items-center gap-1 ${i <= currentStepIndex ? 'text-primary' : ''}`}>
               {s.icon}
-              <span>{s.title}</span>
+              <span className="hidden sm:inline">{s.title}</span>
             </div>
           ))}
         </div>
       </CardHeader>
-      <CardContent>
-        {renderStepContent()}
+      <CardContent className={isMobile ? 'flex-1 overflow-hidden p-0' : ''}>
+        {isMobile ? (
+          <ScrollArea className="h-full">
+            <div ref={contentRef} className="p-6 pb-32">
+              {renderStepContent()}
+            </div>
+          </ScrollArea>
+        ) : (
+          <div ref={contentRef}>
+            {renderStepContent()}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
