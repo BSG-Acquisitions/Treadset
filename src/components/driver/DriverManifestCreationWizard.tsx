@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -18,13 +18,15 @@ import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import SignatureCanvas from "react-signature-canvas";
 import { 
   Building, 
   Truck, 
   Package, 
   FileCheck,
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  PenTool
 } from "lucide-react";
 
 // Validation schema
@@ -75,6 +77,7 @@ const steps = [
   { key: "generator", title: "Generator Info", icon: Building },
   { key: "hauler", title: "Hauler", icon: Truck },
   { key: "tires", title: "Tire Counts", icon: Package },
+  { key: "signatures", title: "Signatures", icon: PenTool },
   { key: "review", title: "Review", icon: FileCheck },
 ];
 
@@ -92,6 +95,11 @@ export function DriverManifestCreationWizard({
   
   const createManifest = useCreateManifest();
   const manifestIntegration = useManifestIntegration();
+
+  // Signature pads
+  const generatorSigRef = useRef<SignatureCanvas>(null);
+  const haulerSigRef = useRef<SignatureCanvas>(null);
+  const receiverSigRef = useRef<SignatureCanvas>(null);
   
   // Fetch haulers and receivers
   const { data: haulers = [] } = useHaulers();
@@ -671,6 +679,65 @@ export function DriverManifestCreationWizard({
                 </FormItem>
               )}
             />
+          </div>
+        );
+
+      case "signatures":
+        return (
+          <div className="space-y-6">
+            <div className="text-center">
+              <h3 className="text-lg font-medium mb-2">Digital Signatures Required</h3>
+              <p className="text-sm text-muted-foreground">
+                Generator, Hauler, and Receiver must sign to finalize the state manifest.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6">
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <FormLabel className="text-sm font-medium">Generator Signature</FormLabel>
+                  <Button type="button" variant="outline" size="sm" onClick={() => generatorSigRef.current?.clear()}>
+                    Clear
+                  </Button>
+                </div>
+                <div className="border border-border rounded-lg p-2 bg-background">
+                  <SignatureCanvas
+                    ref={generatorSigRef}
+                    canvasProps={{ className: "signature-canvas w-full h-32 bg-white rounded", style: { width: '100%', height: '128px' } }}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <FormLabel className="text-sm font-medium">Hauler Signature</FormLabel>
+                  <Button type="button" variant="outline" size="sm" onClick={() => haulerSigRef.current?.clear()}>
+                    Clear
+                  </Button>
+                </div>
+                <div className="border border-border rounded-lg p-2 bg-background">
+                  <SignatureCanvas
+                    ref={haulerSigRef}
+                    canvasProps={{ className: "signature-canvas w-full h-32 bg-white rounded", style: { width: '100%', height: '128px' } }}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <FormLabel className="text-sm font-medium">Receiver Signature</FormLabel>
+                  <Button type="button" variant="outline" size="sm" onClick={() => receiverSigRef.current?.clear()}>
+                    Clear
+                  </Button>
+                </div>
+                <div className="border border-border rounded-lg p-2 bg-background">
+                  <SignatureCanvas
+                    ref={receiverSigRef}
+                    canvasProps={{ className: "signature-canvas w-full h-32 bg-white rounded", style: { width: '100%', height: '128px' } }}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         );
 
