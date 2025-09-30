@@ -2,208 +2,202 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import * as z from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useCreateManifest } from "@/hooks/useManifests";
+import { useAuth } from "@/contexts/AuthContext";
+import { useCreateManifest, useUpdateManifest } from "@/hooks/useManifests";
 import { useManifestIntegration } from "@/hooks/useManifestIntegration";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { useHaulers } from "@/hooks/useHaulers";
-import { useReceivers } from "@/hooks/useReceivers";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useSendManifestEmail } from "@/hooks/useSendManifestEmail";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SignatureCanvas from "react-signature-canvas";
 import { 
   Building, 
   Truck, 
   Package, 
-  FileCheck,
   ChevronRight,
   ChevronLeft,
-  PenTool
+  PenTool,
+  CheckCircle
 } from "lucide-react";
 
-// Validation schema
+// Validation schema - only tire counts and printed names are required from driver
 const manifestSchema = z.object({
-  // Generator Info (read-only, auto-filled from client/pickup)
-  generator_company_name: z.string().max(100).optional(),
-  generator_street_address: z.string().max(200).optional(),
-  generator_city: z.string().max(100).optional(),
-  generator_state: z.string().length(2).optional(),
-  generator_zip: z.string().max(10).optional(),
-  generator_phone: z.string().max(20).optional(),
-  generator_email: z.string().email().optional().or(z.literal("")),
-  generator_contact_person: z.string().max(100).optional(),
-  
-  // Hauler selection (required)
-  hauler_id: z.string().min(1, "Please select a hauler"),
-  
-  // Receiver selection (required)
-  receiver_id: z.string().min(1, "Please select a receiver"),
-  
-  // Tire Counts
-  passenger_count: z.number().int().min(0).optional(),
-  passenger_rim_count: z.number().int().min(0).optional(),
-  truck_count: z.number().int().min(0).optional(),
-  truck_rim_count: z.number().int().min(0).optional(),
-  off_road_count: z.number().int().min(0).optional(),
-  off_road_rim_count: z.number().int().min(0).optional(),
-  
-  // Pricing (optional display only)
-  passenger_unit_price: z.number().min(0).optional(),
-  truck_unit_price: z.number().min(0).optional(),
-  off_road_unit_price: z.number().min(0).optional(),
-  
-  // Notes
-  special_notes: z.string().max(500).optional(),
+  pte_off_rim: z.coerce.number().min(0).default(0),
+  pte_on_rim: z.coerce.number().min(0).default(0),
+  commercial_17_5_19_5_off: z.coerce.number().min(0).default(0),
+  commercial_17_5_19_5_on: z.coerce.number().min(0).default(0),
+  commercial_22_5_off: z.coerce.number().min(0).default(0),
+  commercial_22_5_on: z.coerce.number().min(0).default(0),
+  otr_count: z.coerce.number().min(0).default(0),
+  tractor_count: z.coerce.number().min(0).default(0),
+  generator_print_name: z.string().min(1, "Generator printed name required"),
+  hauler_print_name: z.string().min(1, "Hauler printed name required"),
 });
 
 type ManifestFormData = z.infer<typeof manifestSchema>;
 
 interface DriverManifestCreationWizardProps {
-  pickupId?: string;
-  clientId?: string;
-  pickup?: any; // Full pickup data for pre-population
+  pickupId: string;
+  clientId: string;
   onComplete?: () => void;
 }
 
 const steps = [
-  { key: "generator", title: "Generator Info", icon: Building },
-  { key: "hauler", title: "Hauler", icon: Truck },
+  { key: "info", title: "Review Info", icon: Building },
   { key: "tires", title: "Tire Counts", icon: Package },
   { key: "signatures", title: "Signatures", icon: PenTool },
-  { key: "review", title: "Review", icon: FileCheck },
+  { key: "review", title: "Review & Submit", icon: CheckCircle },
 ];
 
 export function DriverManifestCreationWizard({ 
   pickupId, 
   clientId,
-  pickup,
   onComplete 
 }: DriverManifestCreationWizardProps) {
   const [step, setStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pickupData, setPickupData] = useState<any>(null);
+  const [haulerData, setHaulerData] = useState<any>(null);
+  const [assignmentData, setAssignmentData] = useState<any>(null);
+  
   const { toast } = useToast();
+  const { user } = useAuth();
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
   
   const createManifest = useCreateManifest();
+  const updateManifest = useUpdateManifest();
   const manifestIntegration = useManifestIntegration();
+  const sendEmail = useSendManifestEmail();
 
-  // Signature pads
+  // Signature refs
   const generatorSigRef = useRef<SignatureCanvas>(null);
   const haulerSigRef = useRef<SignatureCanvas>(null);
-  const receiverSigRef = useRef<SignatureCanvas>(null);
-  
-  // Fetch haulers and receivers
-  const { data: haulers = [] } = useHaulers();
-  const { data: receivers = [] } = useReceivers();
 
   const form = useForm<ManifestFormData>({
     resolver: zodResolver(manifestSchema),
     defaultValues: {
-      // Pre-populate generator from client data
-      generator_company_name: pickup?.client?.company_name || "",
-      generator_street_address: pickup?.client?.physical_address || pickup?.client?.mailing_address || pickup?.location?.address || "",
-      generator_city: pickup?.client?.physical_city || pickup?.client?.city || "",
-      generator_state: pickup?.client?.physical_state || pickup?.client?.state || "MI",
-      generator_zip: pickup?.client?.physical_zip || pickup?.client?.zip || "",
-      generator_phone: pickup?.client?.phone || "",
-      generator_email: pickup?.client?.email || "",
-      generator_contact_person: pickup?.client?.contact_name || "",
-      
-      // Hauler and receiver selection (will be set by dropdown)
-      hauler_id: "",
-      receiver_id: "",
-      
-      // Tire counts from pickup
-      passenger_count: 0,
-      passenger_rim_count: 0,
-      truck_count: 0,
-      truck_rim_count: 0,
-      off_road_count: 0,
-      off_road_rim_count: 0,
-      
-      // Pricing
-      passenger_unit_price: 0,
-      truck_unit_price: 0,
-      off_road_unit_price: 0,
+      pte_off_rim: 0,
+      pte_on_rim: 0,
+      commercial_17_5_19_5_off: 0,
+      commercial_17_5_19_5_on: 0,
+      commercial_22_5_off: 0,
+      commercial_22_5_on: 0,
+      otr_count: 0,
+      tractor_count: 0,
+      generator_print_name: "",
+      hauler_print_name: "",
     },
   });
 
-  // Scroll to top on step change
+  // Fetch pickup, assignment, and hauler data on mount
   useEffect(() => {
-    if (isMobile) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  }, [step, isMobile]);
+    const fetchData = async () => {
+      try {
+        // Get pickup with client and location
+        const { data: pickup, error: pickupError } = await supabase
+          .from('pickups')
+          .select(`
+            *,
+            client:clients(
+              id, company_name, contact_name, email, phone,
+              mailing_address, city, state, zip, county,
+              physical_address, physical_city, physical_state, physical_zip
+            ),
+            location:locations(id, name, address)
+          `)
+          .eq('id', pickupId)
+          .single();
 
-  // Handle input focus on mobile
-  useEffect(() => {
-    if (!isMobile) return;
+        if (pickupError) throw pickupError;
+        setPickupData(pickup);
 
-    const handleFocus = (e: FocusEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
-        setTimeout(() => {
-          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 300);
+        // Get assignment for this pickup to find hauler
+        const { data: assignment, error: assignmentError } = await supabase
+          .from('assignments')
+          .select(`
+            *,
+            hauler:haulers(
+              id, hauler_name, hauler_mailing_address,
+              hauler_city, hauler_state, hauler_zip, hauler_phone, hauler_mi_reg
+            ),
+            vehicle:vehicles(id, name, license_plate)
+          `)
+          .eq('pickup_id', pickupId)
+          .maybeSingle();
+
+        if (assignmentError) throw assignmentError;
+        
+        if (assignment) {
+          setAssignmentData(assignment);
+          setHaulerData(assignment.hauler);
+          
+          // Pre-fill hauler printed name with driver's name if available
+          if (user?.firstName && user?.lastName) {
+            form.setValue('hauler_print_name', `${user.firstName} ${user.lastName}`);
+          }
+        }
+
+        // Pre-fill generator printed name with client contact
+        if (pickup?.client?.contact_name) {
+          form.setValue('generator_print_name', pickup.client.contact_name);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load pickup data",
+          variant: "destructive",
+        });
       }
     };
 
-    document.addEventListener('focusin', handleFocus);
-    return () => document.removeEventListener('focusin', handleFocus);
-  }, [isMobile]);
+    fetchData();
+  }, [pickupId, user, form, toast]);
 
   const currentStep = steps[step];
   const progress = ((step + 1) / steps.length) * 100;
 
   const handleNext = async () => {
-    let fieldsToValidate: (keyof ManifestFormData)[] = [];
-    
-    switch (currentStep.key) {
-      case "generator":
-        fieldsToValidate = [
-          "generator_company_name",
-          "generator_street_address",
-          "generator_city",
-          "generator_state",
-          "generator_zip",
-        ];
-        break;
-      case "hauler":
-        fieldsToValidate = ["hauler_id", "receiver_id"];
-        break;
-      case "tires":
-        // No required fields, just validate they entered some counts
-        const counts = form.getValues();
-        const totalCount = (counts.passenger_count || 0) + 
-                          (counts.passenger_rim_count || 0) +
-                          (counts.truck_count || 0) + 
-                          (counts.truck_rim_count || 0) +
-                          (counts.off_road_count || 0) + 
-                          (counts.off_road_rim_count || 0);
-        
-        if (totalCount === 0) {
-          toast({
-            title: "Missing Information",
-            description: "Please enter at least one tire count",
-            variant: "destructive",
-          });
-          return;
-        }
-        break;
+    // Validate current step before proceeding
+    if (currentStep.key === "tires") {
+      const values = form.getValues();
+      const totalTires = values.pte_off_rim + values.pte_on_rim + 
+                        values.commercial_17_5_19_5_off + values.commercial_17_5_19_5_on +
+                        values.commercial_22_5_off + values.commercial_22_5_on +
+                        values.otr_count + values.tractor_count;
+      
+      if (totalTires === 0) {
+        toast({
+          title: "Missing Information",
+          description: "Please enter at least one tire count",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
-    if (fieldsToValidate.length > 0) {
-      const result = await form.trigger(fieldsToValidate);
-      if (!result) return;
+    if (currentStep.key === "signatures") {
+      const hasGeneratorSig = generatorSigRef.current && !generatorSigRef.current.isEmpty();
+      const hasHaulerSig = haulerSigRef.current && !haulerSigRef.current.isEmpty();
+      
+      if (!hasGeneratorSig || !hasHaulerSig) {
+        toast({
+          title: "Missing Signatures",
+          description: "Both generator and hauler signatures are required",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const valid = await form.trigger(['generator_print_name', 'hauler_print_name']);
+      if (!valid) return;
     }
 
     if (step < steps.length - 1) {
@@ -212,77 +206,161 @@ export function DriverManifestCreationWizard({
   };
 
   const handleBack = () => {
-    if (step > 0) {
-      setStep(step - 1);
-    }
+    if (step > 0) setStep(step - 1);
   };
 
   const onSubmit = async (data: ManifestFormData) => {
+    if (!pickupData || !haulerData) {
+      toast({
+        title: "Error",
+        description: "Missing pickup or hauler data",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
-    
+
     try {
-      // Map form data to manifest tire counts
-      // passenger -> pte
-      // truck -> commercial_22_5
-      // off_road -> otr
+      // 1. Upload signatures to storage
+      const now = new Date();
+      const timestamp = now.toISOString().replace(/[:.]/g, '-');
+      
+      let generatorSigPath = '';
+      let haulerSigPath = '';
+
+      if (generatorSigRef.current && !generatorSigRef.current.isEmpty()) {
+        const generatorBlob = await fetch(generatorSigRef.current.toDataURL()).then(r => r.blob());
+        const generatorFileName = `manifests/signatures/${timestamp}-generator.png`;
+        
+        const { error: genUploadError } = await supabase.storage
+          .from('manifests')
+          .upload(generatorFileName, generatorBlob, { contentType: 'image/png', upsert: true });
+        
+        if (genUploadError) throw genUploadError;
+        generatorSigPath = generatorFileName;
+      }
+
+      if (haulerSigRef.current && !haulerSigRef.current.isEmpty()) {
+        const haulerBlob = await fetch(haulerSigRef.current.toDataURL()).then(r => r.blob());
+        const haulerFileName = `manifests/signatures/${timestamp}-hauler.png`;
+        
+        const { error: haulUploadError } = await supabase.storage
+          .from('manifests')
+          .upload(haulerFileName, haulerBlob, { contentType: 'image/png', upsert: true });
+        
+        if (haulUploadError) throw haulUploadError;
+        haulerSigPath = haulerFileName;
+      }
+
+      // 2. Create manifest with all data
       const manifestData = {
-        pickup_id: pickupId || null,
-        client_id: clientId || null,
-        status: "DRAFT" as const,
-        pte_off_rim: data.passenger_count || 0,
-        pte_on_rim: data.passenger_rim_count || 0,
-        commercial_22_5_off: data.truck_count || 0,
-        commercial_22_5_on: data.truck_rim_count || 0,
-        otr_count: (data.off_road_count || 0) + (data.off_road_rim_count || 0),
+        client_id: clientId,
+        location_id: pickupData.location_id,
+        pickup_id: pickupId,
+        driver_id: assignmentData?.driver_id,
+        vehicle_id: assignmentData?.vehicle_id,
+        pte_off_rim: data.pte_off_rim,
+        pte_on_rim: data.pte_on_rim,
+        commercial_17_5_19_5_off: data.commercial_17_5_19_5_off,
+        commercial_17_5_19_5_on: data.commercial_17_5_19_5_on,
+        commercial_22_5_off: data.commercial_22_5_off,
+        commercial_22_5_on: data.commercial_22_5_on,
+        otr_count: data.otr_count,
+        tractor_count: data.tractor_count,
         payment_method: 'INVOICE' as const,
       };
-      
-      // Create manifest
-      const manifestResult = await createManifest.mutateAsync(manifestData);
-      
-      // Update with hauler_id, receiver_id and generator info
+
+      const manifest = await createManifest.mutateAsync(manifestData);
+
+      // 3. Update manifest with hauler, signatures, and timestamps (to-the-second precision)
+      const generatorSignedAt = new Date().toISOString();
+      const haulerSignedAt = new Date().toISOString();
+
+      await updateManifest.mutateAsync({
+        id: manifest.id,
+        customer_signature_png_path: generatorSigPath,
+        driver_signature_png_path: haulerSigPath,
+        status: 'AWAITING_RECEIVER_SIGNATURE',
+      });
+
+      // Also update additional fields via direct Supabase update
       const { error: updateError } = await supabase
         .from('manifests')
         .update({
-          hauler_id: data.hauler_id,
-          receiver_id: data.receiver_id,
-          generator_company_name: data.generator_company_name,
-          generator_street_address: data.generator_street_address,
-          generator_city: data.generator_city,
-          generator_state: data.generator_state,
-          generator_zip: data.generator_zip,
-          generator_phone: data.generator_phone,
-          generator_email: data.generator_email,
-          generator_contact_person: data.generator_contact_person,
-          generator_signed_at: new Date().toISOString(),
-          hauler_signed_at: new Date().toISOString(),
-          receiver_signed_at: new Date().toISOString(),
-          special_notes: data.special_notes,
-        } as any)
-        .eq('id', manifestResult.id);
-      
+          hauler_id: haulerData.id,
+          generator_signed_at: generatorSignedAt,
+          hauler_signed_at: haulerSignedAt,
+          signed_by_name: data.generator_print_name,
+        })
+        .eq('id', manifest.id);
+
       if (updateError) throw updateError;
 
-      // Generate PDF
+      // 4. Generate initial PDF with generator and hauler info only
       await manifestIntegration.mutateAsync({
-        manifestId: manifestResult.id,
+        manifestId: manifest.id,
+        overrides: {
+          // Generator info from client
+          generator_name: pickupData.client.company_name,
+          generator_mail_address: pickupData.client.physical_address || pickupData.client.mailing_address,
+          generator_city: pickupData.client.physical_city || pickupData.client.city,
+          generator_state: pickupData.client.physical_state || pickupData.client.state,
+          generator_zip: pickupData.client.physical_zip || pickupData.client.zip,
+          generator_county: pickupData.client.county || '',
+          generator_phone: pickupData.client.phone || '',
+          generator_signature: generatorSigPath,
+          generator_print_name: `${data.generator_print_name} - ${new Date(generatorSignedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}`,
+          generator_date: new Date(generatorSignedAt).toLocaleDateString('en-US'),
+          
+          // Hauler info from assignment
+          hauler_name: haulerData.hauler_name,
+          hauler_mail_address: haulerData.hauler_mailing_address || '',
+          hauler_city: haulerData.hauler_city || '',
+          hauler_state: haulerData.hauler_state || '',
+          hauler_zip: haulerData.hauler_zip || '',
+          hauler_phone: haulerData.hauler_phone || '',
+          hauler_mi_reg: haulerData.hauler_mi_reg || '',
+          hauler_signature: haulerSigPath,
+          hauler_print_name: `${data.hauler_print_name} - ${new Date(haulerSignedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}`,
+          hauler_date: new Date(haulerSignedAt).toLocaleDateString('en-US'),
+        },
       });
+
+      // 5. Email the initial manifest to client
+      if (pickupData.client.email) {
+        await sendEmail.mutateAsync({
+          manifestId: manifest.id,
+          to: pickupData.client.email,
+          subject: `Tire Manifest - ${pickupData.client.company_name}`,
+          messageHtml: `<p>Your tire pickup manifest is attached. This is the initial manifest with generator and hauler signatures. A final version will be sent once the receiver has signed.</p>`,
+        });
+      }
 
       toast({
         title: "Success",
-        description: "Manifest created successfully",
+        description: "Manifest created and emailed successfully. Receiver will complete their section later.",
       });
+
+      // Update pickup status to completed
+      await supabase
+        .from('pickups')
+        .update({ 
+          status: 'completed',
+          manifest_id: manifest.id 
+        })
+        .eq('id', pickupId);
 
       if (onComplete) {
         onComplete();
       } else {
         navigate("/driver/manifests");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating manifest:", error);
       toast({
         title: "Error",
-        description: "Failed to create manifest",
+        description: error.message || "Failed to create manifest",
         variant: "destructive",
       });
     } finally {
@@ -291,190 +369,54 @@ export function DriverManifestCreationWizard({
   };
 
   const renderStepContent = () => {
-    const StepIcon = currentStep.icon;
-
     switch (currentStep.key) {
-      case "generator":
+      case "info":
         return (
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-4">
-              <StepIcon className="h-5 w-5 text-primary" />
-              <h3 className="text-lg font-semibold">Generator Information</h3>
+              <Building className="h-5 w-5 text-primary" />
+              <h3 className="text-lg font-semibold">Review Generator & Hauler Info</h3>
             </div>
             
-            <FormField
-              control={form.control}
-              name="generator_company_name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Company Name *</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Enter company name" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Generator (Client)</CardTitle>
+                <CardDescription>This information will appear on the manifest</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div><strong>Company:</strong> {pickupData?.client?.company_name || 'N/A'}</div>
+                <div><strong>Address:</strong> {pickupData?.client?.physical_address || pickupData?.client?.mailing_address || 'N/A'}</div>
+                <div><strong>City, State ZIP:</strong> {pickupData?.client?.physical_city || pickupData?.client?.city}, {pickupData?.client?.physical_state || pickupData?.client?.state} {pickupData?.client?.physical_zip || pickupData?.client?.zip}</div>
+                <div><strong>Phone:</strong> {pickupData?.client?.phone || 'N/A'}</div>
+                <div><strong>Contact:</strong> {pickupData?.client?.contact_name || 'N/A'}</div>
+              </CardContent>
+            </Card>
 
-            <FormField
-              control={form.control}
-              name="generator_street_address"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Street Address *</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Enter street address" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Hauler</CardTitle>
+                <CardDescription>Your company information</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div><strong>Company:</strong> {haulerData?.hauler_name || 'N/A'}</div>
+                <div><strong>Address:</strong> {haulerData?.hauler_mailing_address || 'N/A'}</div>
+                <div><strong>City, State ZIP:</strong> {haulerData?.hauler_city}, {haulerData?.hauler_state} {haulerData?.hauler_zip}</div>
+                <div><strong>Phone:</strong> {haulerData?.hauler_phone || 'N/A'}</div>
+                <div><strong>MI Registration:</strong> {haulerData?.hauler_mi_reg || 'N/A'}</div>
+              </CardContent>
+            </Card>
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="generator_city"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>City *</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="City" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="generator_state"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>State *</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="MI" maxLength={2} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="generator_zip"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>ZIP Code *</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Enter ZIP code" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="generator_phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Phone</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="(555) 123-4567" type="tel" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="generator_email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="email@example.com" type="email" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="generator_contact_person"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Contact Person</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Enter contact person name" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        );
-
-      case "hauler":
-        return (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 mb-4">
-              <StepIcon className="h-5 w-5 text-primary" />
-              <h3 className="text-lg font-semibold">Select Hauler & Receiver</h3>
-            </div>
-
-            <FormField
-              control={form.control}
-              name="hauler_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Hauler *</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a hauler" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {haulers.map(h => (
-                        <SelectItem key={h.id} value={h.id}>
-                          {h.hauler_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="receiver_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Receiver *</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a receiver" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {receivers.map(r => (
-                        <SelectItem key={r.id} value={r.id}>
-                          {r.receiver_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {assignmentData?.vehicle && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Vehicle</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <div><strong>Name:</strong> {assignmentData.vehicle.name}</div>
+                  <div><strong>License Plate:</strong> {assignmentData.vehicle.license_plate || 'N/A'}</div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         );
 
@@ -482,352 +424,292 @@ export function DriverManifestCreationWizard({
         return (
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-4">
-              <StepIcon className="h-5 w-5 text-primary" />
-              <h3 className="text-lg font-semibold">Tire Counts & Pricing</h3>
+              <Package className="h-5 w-5 text-primary" />
+              <h3 className="text-lg font-semibold">Enter Tire Counts</h3>
             </div>
 
-            <div className="space-y-4">
-              <div className="border rounded-lg p-4 space-y-3">
-                <h4 className="font-semibold">Passenger Tires</h4>
-                <div className="grid grid-cols-2 gap-3">
-                  <FormField
-                    control={form.control}
-                    name="passenger_count"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Count</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            {...field}
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="passenger_rim_count"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>With Rims</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            {...field}
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Passenger Tire Equivalents (PTE)</CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="passenger_unit_price"
+                  name="pte_off_rim"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Unit Price ($)</FormLabel>
+                      <FormLabel>Off Rim</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          step="0.01"
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                        />
+                        <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value) || 0)} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              </div>
-
-              <div className="border rounded-lg p-4 space-y-3">
-                <h4 className="font-semibold">Truck Tires</h4>
-                <div className="grid grid-cols-2 gap-3">
-                  <FormField
-                    control={form.control}
-                    name="truck_count"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Count</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            {...field}
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="truck_rim_count"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>With Rims</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            {...field}
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
                 <FormField
                   control={form.control}
-                  name="truck_unit_price"
+                  name="pte_on_rim"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Unit Price ($)</FormLabel>
+                      <FormLabel>On Rim</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          step="0.01"
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                        />
+                        <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value) || 0)} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              </div>
+              </CardContent>
+            </Card>
 
-              <div className="border rounded-lg p-4 space-y-3">
-                <h4 className="font-semibold">Off-Road Tires</h4>
-                <div className="grid grid-cols-2 gap-3">
-                  <FormField
-                    control={form.control}
-                    name="off_road_count"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Count</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            {...field}
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="off_road_rim_count"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>With Rims</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            {...field}
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Commercial 17.5/19.5</CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="off_road_unit_price"
+                  name="commercial_17_5_19_5_off"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Unit Price ($)</FormLabel>
+                      <FormLabel>Off Rim</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          step="0.01"
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                        />
+                        <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value) || 0)} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              </div>
-            </div>
+                <FormField
+                  control={form.control}
+                  name="commercial_17_5_19_5_on"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>On Rim</FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value) || 0)} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
 
-            <FormField
-              control={form.control}
-              name="special_notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Special Notes</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      {...field} 
-                      placeholder="Add any special notes or instructions"
-                      rows={3}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Commercial 22.5</CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="commercial_22_5_off"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Off Rim</FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value) || 0)} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="commercial_22_5_on"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>On Rim</FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value) || 0)} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Oversized</CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="otr_count"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>OTR Count</FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value) || 0)} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="tractor_count"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tractor Count</FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value) || 0)} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
           </div>
         );
 
       case "signatures":
         return (
           <div className="space-y-6">
-            <div className="text-center">
-              <h3 className="text-lg font-medium mb-2">Digital Signatures Required</h3>
-              <p className="text-sm text-muted-foreground">
-                Generator, Hauler, and Receiver must sign to finalize the state manifest.
-              </p>
+            <div className="flex items-center gap-2 mb-4">
+              <PenTool className="h-5 w-5 text-primary" />
+              <h3 className="text-lg font-semibold">Digital Signatures</h3>
             </div>
 
-            <div className="grid grid-cols-1 gap-6">
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <FormLabel className="text-sm font-medium">Generator Signature</FormLabel>
-                  <Button type="button" variant="outline" size="sm" onClick={() => generatorSigRef.current?.clear()}>
-                    Clear
-                  </Button>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Generator Signature</CardTitle>
+                <CardDescription>Client representative signature</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <FormField
+                  control={form.control}
+                  name="generator_print_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Printed Name *</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Full name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <Label>Signature *</Label>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => generatorSigRef.current?.clear()}
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                  <div className="border-2 border-border rounded-lg bg-white">
+                    <SignatureCanvas
+                      ref={generatorSigRef}
+                      canvasProps={{ 
+                        className: "w-full h-32 touch-none",
+                        style: { width: '100%', height: '128px' }
+                      }}
+                    />
+                  </div>
                 </div>
-                <div className="border border-border rounded-lg p-2 bg-background">
-                  <SignatureCanvas
-                    ref={generatorSigRef}
-                    canvasProps={{ className: "signature-canvas w-full h-32 bg-white rounded", style: { width: '100%', height: '128px' } }}
-                  />
-                </div>
-              </div>
+              </CardContent>
+            </Card>
 
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <FormLabel className="text-sm font-medium">Hauler Signature</FormLabel>
-                  <Button type="button" variant="outline" size="sm" onClick={() => haulerSigRef.current?.clear()}>
-                    Clear
-                  </Button>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Hauler Signature</CardTitle>
+                <CardDescription>Driver signature</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <FormField
+                  control={form.control}
+                  name="hauler_print_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Printed Name *</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Full name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <Label>Signature *</Label>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => haulerSigRef.current?.clear()}
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                  <div className="border-2 border-border rounded-lg bg-white">
+                    <SignatureCanvas
+                      ref={haulerSigRef}
+                      canvasProps={{ 
+                        className: "w-full h-32 touch-none",
+                        style: { width: '100%', height: '128px' }
+                      }}
+                    />
+                  </div>
                 </div>
-                <div className="border border-border rounded-lg p-2 bg-background">
-                  <SignatureCanvas
-                    ref={haulerSigRef}
-                    canvasProps={{ className: "signature-canvas w-full h-32 bg-white rounded", style: { width: '100%', height: '128px' } }}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <FormLabel className="text-sm font-medium">Receiver Signature</FormLabel>
-                  <Button type="button" variant="outline" size="sm" onClick={() => receiverSigRef.current?.clear()}>
-                    Clear
-                  </Button>
-                </div>
-                <div className="border border-border rounded-lg p-2 bg-background">
-                  <SignatureCanvas
-                    ref={receiverSigRef}
-                    canvasProps={{ className: "signature-canvas w-full h-32 bg-white rounded", style: { width: '100%', height: '128px' } }}
-                  />
-                </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </div>
         );
 
       case "review":
         const values = form.getValues();
-        const selectedHauler = haulers.find(h => h.id === values.hauler_id);
-        const selectedReceiver = receivers.find(r => r.id === values.receiver_id);
-        const totalTires = (values.passenger_count || 0) + 
-                          (values.passenger_rim_count || 0) +
-                          (values.truck_count || 0) + 
-                          (values.truck_rim_count || 0) +
-                          (values.off_road_count || 0) + 
-                          (values.off_road_rim_count || 0);
+        const totalPTE = values.pte_off_rim + values.pte_on_rim;
+        const totalCommercial = values.commercial_17_5_19_5_off + values.commercial_17_5_19_5_on + 
+                               values.commercial_22_5_off + values.commercial_22_5_on;
+        const totalOversized = values.otr_count + values.tractor_count;
+        const grandTotal = totalPTE + totalCommercial + totalOversized;
 
         return (
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-4">
-              <StepIcon className="h-5 w-5 text-primary" />
+              <CheckCircle className="h-5 w-5 text-primary" />
               <h3 className="text-lg font-semibold">Review & Submit</h3>
             </div>
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Generator</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm space-y-1">
-                <p className="font-medium">{values.generator_company_name}</p>
-                <p>{values.generator_street_address}</p>
-                <p>{values.generator_city}, {values.generator_state} {values.generator_zip}</p>
-                {values.generator_phone && <p>Phone: {values.generator_phone}</p>}
-                {values.generator_email && <p>Email: {values.generator_email}</p>}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Hauler</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm space-y-1">
-                <p className="font-medium">{selectedHauler?.hauler_name}</p>
-                {selectedHauler?.hauler_mailing_address && <p>{selectedHauler.hauler_mailing_address}</p>}
-                {selectedHauler?.hauler_city && (
-                  <p>{selectedHauler.hauler_city}, {selectedHauler.hauler_state} {selectedHauler.hauler_zip}</p>
-                )}
-                {selectedHauler?.hauler_phone && <p>Phone: {selectedHauler.hauler_phone}</p>}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Receiver</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm space-y-1">
-                <p className="font-medium">{selectedReceiver?.receiver_name}</p>
-                {selectedReceiver?.receiver_mailing_address && <p>{selectedReceiver.receiver_mailing_address}</p>}
-                {selectedReceiver?.receiver_city && (
-                  <p>{selectedReceiver.receiver_city}, {selectedReceiver.receiver_state} {selectedReceiver.receiver_zip}</p>
-                )}
-                {selectedReceiver?.receiver_phone && <p>Phone: {selectedReceiver.receiver_phone}</p>}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
                 <CardTitle className="text-base">Tire Summary</CardTitle>
               </CardHeader>
-              <CardContent className="text-sm space-y-2">
-                <p className="font-medium">Total Tires: {totalTires}</p>
-                {values.passenger_count! > 0 && (
-                  <p>Passenger: {values.passenger_count} ({values.passenger_rim_count} with rims)</p>
-                )}
-                {values.truck_count! > 0 && (
-                  <p>Truck: {values.truck_count} ({values.truck_rim_count} with rims)</p>
-                )}
-                {values.off_road_count! > 0 && (
-                  <p>Off-Road: {values.off_road_count} ({values.off_road_rim_count} with rims)</p>
-                )}
+              <CardContent className="space-y-2 text-sm">
+                <div className="flex justify-between"><span>PTE (Off/On Rim):</span> <strong>{totalPTE}</strong></div>
+                <div className="flex justify-between"><span>Commercial:</span> <strong>{totalCommercial}</strong></div>
+                <div className="flex justify-between"><span>Oversized:</span> <strong>{totalOversized}</strong></div>
+                <div className="border-t pt-2 flex justify-between"><span><strong>Total:</strong></span> <strong>{grandTotal}</strong></div>
               </CardContent>
             </Card>
 
-            {values.special_notes && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Special Notes</CardTitle>
-                </CardHeader>
-                <CardContent className="text-sm">
-                  <p>{values.special_notes}</p>
-                </CardContent>
-              </Card>
-            )}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Signatures</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div><strong>Generator:</strong> {values.generator_print_name}</div>
+                <div><strong>Hauler:</strong> {values.hauler_print_name}</div>
+              </CardContent>
+            </Card>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
+              <p className="font-semibold mb-2">What happens next:</p>
+              <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                <li>Initial manifest PDF will be generated with generator and hauler signatures</li>
+                <li>Manifest will be emailed to the client</li>
+                <li>Receiver will complete their section later on the admin portal</li>
+                <li>Final manifest with all signatures will be generated and emailed</li>
+              </ol>
+            </div>
           </div>
         );
 
@@ -836,62 +718,60 @@ export function DriverManifestCreationWizard({
     }
   };
 
+  if (!pickupData || !haulerData) {
+    return (
+      <Card className="max-w-4xl mx-auto">
+        <CardContent className="flex items-center justify-center p-12">
+          <div className="text-center text-muted-foreground">Loading manifest data...</div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <div className="h-full flex flex-col">
-      {/* Progress Header */}
-      <div className="border-b bg-card p-4">
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="font-medium">{currentStep.title}</span>
-            <span className="text-muted-foreground">Step {step + 1} of {steps.length}</span>
+    <Card className="max-w-4xl mx-auto">
+      <CardHeader>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <CardTitle>Create Manifest</CardTitle>
+            <CardDescription>Step {step + 1} of {steps.length}: {currentStep.title}</CardDescription>
           </div>
-          <Progress value={progress} className="h-2" />
         </div>
-      </div>
+        <Progress value={progress} className="h-2" />
+      </CardHeader>
 
-      {/* Content Area */}
-      <ScrollArea className="flex-1">
-        <div className="p-4 max-w-2xl mx-auto">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <CardContent>
+            <ScrollArea className="h-[500px] pr-4">
               {renderStepContent()}
-            </form>
-          </Form>
-        </div>
-      </ScrollArea>
+            </ScrollArea>
+          </CardContent>
 
-      {/* Navigation Footer */}
-      <div className="border-t bg-card p-4">
-        <div className="flex items-center justify-between gap-4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleBack}
-            disabled={step === 0}
-          >
-            <ChevronLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-
-          {step < steps.length - 1 ? (
+          <div className="flex items-center justify-between p-6 border-t">
             <Button
               type="button"
-              onClick={handleNext}
+              variant="outline"
+              onClick={handleBack}
+              disabled={step === 0 || isSubmitting}
             >
-              Next
-              <ChevronRight className="h-4 w-4 ml-2" />
+              <ChevronLeft className="mr-2 h-4 w-4" />
+              Back
             </Button>
-          ) : (
-            <Button
-              type="button"
-              onClick={form.handleSubmit(onSubmit)}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Creating..." : "Create Manifest"}
-            </Button>
-          )}
-        </div>
-      </div>
-    </div>
+
+            {step < steps.length - 1 ? (
+              <Button type="button" onClick={handleNext} disabled={isSubmitting}>
+                Next
+                <ChevronRight className="ml-2 h-4 w-4" />
+              </Button>
+            ) : (
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Creating..." : "Create & Email Manifest"}
+              </Button>
+            )}
+          </div>
+        </form>
+      </Form>
+    </Card>
   );
 }

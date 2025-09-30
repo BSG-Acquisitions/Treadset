@@ -81,7 +81,6 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
         <DriverManifestCreationWizard
           pickupId={pickup.id}
           clientId={pickup.client?.id}
-          pickup={pickup}
           onComplete={handleComplete}
         />
       </DialogContent>
