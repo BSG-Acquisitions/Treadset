@@ -68,6 +68,7 @@ export function DriverManifestCreationWizard({
   const [pickupData, setPickupData] = useState<any>(null);
   const [haulerData, setHaulerData] = useState<any>(null);
   const [assignmentData, setAssignmentData] = useState<any>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -103,23 +104,29 @@ export function DriverManifestCreationWizard({
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Get pickup with client and location
-        const { data: pickup, error: pickupError } = await supabase
+        // Get pickup only (no implicit joins)
+        const { data: pickupRow, error: pickupError } = await supabase
           .from('pickups')
-          .select(`
-            *,
-            client:clients(
-              id, company_name, contact_name, email, phone,
-              mailing_address, city, state, zip, county,
-              physical_address, physical_city, physical_state, physical_zip
-            ),
-            location:locations(id, name, address)
-          `)
+          .select('*')
           .eq('id', pickupId)
-          .single();
+          .maybeSingle();
 
         if (pickupError) throw pickupError;
-        setPickupData(pickup);
+        if (!pickupRow) {
+          setLoadError('Pickup not found');
+          return;
+        }
+
+        // Fetch client and location explicitly
+        const [{ data: client }, { data: location }] = await Promise.all([
+          supabase.from('clients').select(
+            'id, company_name, contact_name, email, phone, mailing_address, city, state, zip, county, physical_address, physical_city, physical_state, physical_zip'
+          ).eq('id', pickupRow.client_id).maybeSingle(),
+          supabase.from('locations').select('id, name, address').eq('id', pickupRow.location_id).maybeSingle(),
+        ]);
+
+        setPickupData({ ...pickupRow, client, location });
+        setLoadError(null);
 
         // Get assignment for this pickup to find hauler
         const { data: assignment, error: assignmentError } = await supabase
@@ -148,8 +155,8 @@ export function DriverManifestCreationWizard({
         }
 
         // Pre-fill generator printed name with client contact
-        if (pickup?.client?.contact_name) {
-          form.setValue('generator_print_name', pickup.client.contact_name);
+        if (client?.contact_name) {
+          form.setValue('generator_print_name', client.contact_name);
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -748,6 +755,19 @@ export function DriverManifestCreationWizard({
         return null;
     }
   };
+
+  if (loadError) {
+    return (
+      <Card className="max-w-4xl mx-auto">
+        <CardContent className="flex items-center justify-center p-12">
+          <div className="text-center">
+            <div className="font-semibold mb-2">Unable to load pickup</div>
+            <div className="text-muted-foreground text-sm">{loadError}</div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (!pickupData) {
     return (
