@@ -72,9 +72,18 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
   const [open, setOpen] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState(defaultClientId || "");
   const [clientSearch, setClientSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [clientComboOpen, setClientComboOpen] = useState(false);
   
-  const { data: clients } = useClients({ search: clientSearch, limit: 100 });
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(clientSearch);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [clientSearch]);
+  
+  const { data: clients } = useClients({ search: debouncedSearch, limit: 100 });
   const { data: locations } = useLocations(selectedClientId);
   const { data: vehicles } = useVehicles();
   const { data: haulers } = useHaulers();

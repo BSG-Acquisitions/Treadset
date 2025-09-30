@@ -34,15 +34,17 @@ export const VehicleManagementDialog: React.FC<VehicleManagementDialogProps> = (
   const { toast } = useToast();
   const [editingVehicle, setEditingVehicle] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [editValues, setEditValues] = useState<{ name: string; capacity: number; licensePlate?: string }>({
+  const [editValues, setEditValues] = useState<{ name: string; capacity: number; licensePlate?: string; driverEmail?: string }>({
     name: '',
     capacity: 500,
-    licensePlate: ''
+    licensePlate: '',
+    driverEmail: ''
   });
-  const [newVehicle, setNewVehicle] = useState<{ name: string; capacity: number; licensePlate?: string }>({
+  const [newVehicle, setNewVehicle] = useState<{ name: string; capacity: number; licensePlate?: string; driverEmail?: string }>({
     name: '',
     capacity: 500,
-    licensePlate: ''
+    licensePlate: '',
+    driverEmail: ''
   });
 
   const handleEdit = (vehicle: any) => {
@@ -50,7 +52,8 @@ export const VehicleManagementDialog: React.FC<VehicleManagementDialogProps> = (
     setEditValues({
       name: vehicle.name,
       capacity: vehicle.capacity || 500,
-      licensePlate: vehicle.license_plate || ''
+      licensePlate: vehicle.license_plate || '',
+      driverEmail: vehicle.driver_email || ''
     });
   };
 
@@ -61,7 +64,8 @@ export const VehicleManagementDialog: React.FC<VehicleManagementDialogProps> = (
         updates: {
           name: editValues.name,
           capacity: editValues.capacity,
-          license_plate: editValues.licensePlate
+          license_plate: editValues.licensePlate,
+          driver_email: editValues.driverEmail || null
         }
       });
       setEditingVehicle(null);
@@ -80,7 +84,7 @@ export const VehicleManagementDialog: React.FC<VehicleManagementDialogProps> = (
 
   const handleCancel = () => {
     setEditingVehicle(null);
-    setEditValues({ name: '', capacity: 500, licensePlate: '' });
+    setEditValues({ name: '', capacity: 500, licensePlate: '', driverEmail: '' });
   };
 
   const handleCreateVehicle = async () => {
@@ -107,10 +111,11 @@ export const VehicleManagementDialog: React.FC<VehicleManagementDialogProps> = (
         name: newVehicle.name,
         capacity: newVehicle.capacity,
         license_plate: newVehicle.licensePlate || null,
+        driver_email: newVehicle.driverEmail || null,
         organization_id: user.currentOrganization.id,
         is_active: true
       });
-      setNewVehicle({ name: '', capacity: 500, licensePlate: '' });
+      setNewVehicle({ name: '', capacity: 500, licensePlate: '', driverEmail: '' });
       setShowAddForm(false);
       toast({
         title: "Vehicle Added",
@@ -168,7 +173,7 @@ export const VehicleManagementDialog: React.FC<VehicleManagementDialogProps> = (
                 <Plus className="h-4 w-4" />
                 Add New Vehicle/Subcontractor
               </h4>
-              <div className="grid grid-cols-3 gap-3 mb-3">
+              <div className="grid grid-cols-2 gap-3 mb-3">
                 <div>
                   <Label htmlFor="newName" className="text-xs">Vehicle/Company Name</Label>
                   <Input
@@ -176,6 +181,17 @@ export const VehicleManagementDialog: React.FC<VehicleManagementDialogProps> = (
                     value={newVehicle.name}
                     onChange={(e) => setNewVehicle(prev => ({ ...prev, name: e.target.value }))}
                     placeholder="e.g., ABC Trucking, XYZ Fleet"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="newDriverEmail" className="text-xs">Driver Email</Label>
+                  <Input
+                    id="newDriverEmail"
+                    type="email"
+                    value={newVehicle.driverEmail}
+                    onChange={(e) => setNewVehicle(prev => ({ ...prev, driverEmail: e.target.value }))}
+                    placeholder="brenner.whitt@example.com"
                     className="mt-1"
                   />
                 </div>
@@ -213,7 +229,7 @@ export const VehicleManagementDialog: React.FC<VehicleManagementDialogProps> = (
                   size="sm" 
                   onClick={() => {
                     setShowAddForm(false);
-                    setNewVehicle({ name: '', capacity: 500, licensePlate: '' });
+                    setNewVehicle({ name: '', capacity: 500, licensePlate: '', driverEmail: '' });
                   }}
                   disabled={createVehicle.isPending}
                 >
@@ -229,7 +245,7 @@ export const VehicleManagementDialog: React.FC<VehicleManagementDialogProps> = (
             {vehicles.map((vehicle) => (
               <div key={vehicle.id} className="flex items-center justify-between p-4 border rounded-lg bg-muted/30">
                 {editingVehicle === vehicle.id ? (
-                  <div className="flex-1 grid grid-cols-3 gap-3">
+                  <div className="flex-1 grid grid-cols-2 gap-3">
                     <div>
                       <Label htmlFor="name" className="text-xs">Vehicle/Company Name</Label>
                       <Input
@@ -237,6 +253,17 @@ export const VehicleManagementDialog: React.FC<VehicleManagementDialogProps> = (
                         value={editValues.name}
                         onChange={(e) => setEditValues(prev => ({ ...prev, name: e.target.value }))}
                         placeholder="e.g., RMH, ABC Trucking"
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="driverEmail" className="text-xs">Driver Email</Label>
+                      <Input
+                        id="driverEmail"
+                        type="email"
+                        value={editValues.driverEmail}
+                        onChange={(e) => setEditValues(prev => ({ ...prev, driverEmail: e.target.value }))}
+                        placeholder="brenner.whitt@example.com"
                         className="mt-1"
                       />
                     </div>
@@ -269,6 +296,7 @@ export const VehicleManagementDialog: React.FC<VehicleManagementDialogProps> = (
                       <div className="text-sm text-muted-foreground">
                         Capacity: {vehicle.capacity || 500} PTE
                         {vehicle.license_plate && ` • ${vehicle.license_plate}`}
+                        {vehicle.driver_email && ` • Driver: ${vehicle.driver_email}`}
                       </div>
                     </div>
                     <Badge variant={vehicle.is_active ? "default" : "secondary"}>
