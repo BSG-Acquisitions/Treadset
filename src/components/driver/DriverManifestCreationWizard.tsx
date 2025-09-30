@@ -389,17 +389,21 @@ hauler_print_name: "",
       const totalPteForPdf = computeTotalPTE(data);
       
       // Calculate weights for PDF (use manual values if overridden, otherwise use calculated)
-      const finalGross = Number(gross || 0);
-      const finalTare = Number(tare || 0);
-      const finalNet = Math.max(0, finalGross - finalTare);
+      const grossFromForm = Number(gross || 0);
+      const tareFromForm = Number(tare || 0);
+      let finalGross = grossFromForm;
+      let finalTare = tareFromForm;
 
-      console.log('[DRIVER_WIZARD] PDF overrides with auto-calculated weights:', {
-        totalPTE: totalPteForPdf,
-        manualOverride: manualWeightOverride,
-        gross_weight_lbs: finalGross,
-        tare_weight_lbs: finalTare,
-        net_weight_lbs: finalNet
-      });
+      // Fallback: if auto mode and weights are zero, derive from PTE to ensure PDF gets real numbers
+      if (!manualWeightOverride && (grossFromForm <= 0 || tareFromForm <= 0)) {
+        const computedTons = totalPteForPdf / 89; // Michigan rule
+        const computedGross = Math.round((computedTons * 2000) * 10) / 10; // lbs, 1 decimal
+        const computedTare = Math.round((computedGross * 0.15) * 10) / 10; // 15% of gross
+        finalGross = computedGross;
+        finalTare = computedTare;
+      }
+
+      const finalNet = Math.max(0, finalGross - finalTare);
 
       await manifestIntegration.mutateAsync({
         manifestId: manifest.id,
