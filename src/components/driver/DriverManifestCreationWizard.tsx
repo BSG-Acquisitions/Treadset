@@ -82,6 +82,7 @@ type ManifestFormData = z.infer<typeof manifestSchema>;
 interface DriverManifestCreationWizardProps {
   pickupId?: string;
   clientId?: string;
+  pickup?: any; // Full pickup data for pre-population
   onComplete?: () => void;
 }
 
@@ -96,6 +97,7 @@ const steps = [
 export function DriverManifestCreationWizard({ 
   pickupId, 
   clientId,
+  pickup,
   onComplete 
 }: DriverManifestCreationWizardProps) {
   const [step, setStep] = useState(0);
@@ -110,15 +112,31 @@ export function DriverManifestCreationWizard({
   const form = useForm<ManifestFormData>({
     resolver: zodResolver(manifestSchema),
     defaultValues: {
-      generator_state: "MI",
+      // Pre-populate generator from client data
+      generator_company_name: pickup?.client?.company_name || "",
+      generator_street_address: pickup?.client?.physical_address || pickup?.client?.mailing_address || pickup?.location?.address || "",
+      generator_city: pickup?.client?.physical_city || pickup?.client?.city || "",
+      generator_state: pickup?.client?.physical_state || pickup?.client?.state || "MI",
+      generator_zip: pickup?.client?.physical_zip || pickup?.client?.zip || "",
+      generator_phone: pickup?.client?.phone || "",
+      generator_email: pickup?.client?.email || "",
+      generator_contact_person: pickup?.client?.contact_name || "",
+      
+      // Hauler defaults
       hauler_state: "MI",
+      
+      // Receiver defaults
       receiver_state: "MI",
+      
+      // Tire counts from pickup
       passenger_count: 0,
       passenger_rim_count: 0,
       truck_count: 0,
       truck_rim_count: 0,
       off_road_count: 0,
       off_road_rim_count: 0,
+      
+      // Pricing
       passenger_unit_price: 0,
       truck_unit_price: 0,
       off_road_unit_price: 0,
