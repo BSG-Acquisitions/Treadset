@@ -16,9 +16,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SignatureCanvas from "react-signature-canvas";
+import { pteToTons } from "@/lib/michigan-conversions";
 import { 
   Building, 
   Truck, 
@@ -29,7 +30,7 @@ import {
   CheckCircle
 } from "lucide-react";
 
-// Validation schema - only tire counts and printed names are required from driver
+// Validation schema - tire counts, printed names, and optional weights
 const manifestSchema = z.object({
   pte_off_rim: z.coerce.number().min(0).default(0),
   pte_on_rim: z.coerce.number().min(0).default(0),
@@ -39,6 +40,10 @@ const manifestSchema = z.object({
   commercial_22_5_on: z.coerce.number().min(0).default(0),
   otr_count: z.coerce.number().min(0).default(0),
   tractor_count: z.coerce.number().min(0).default(0),
+  // Optional weights
+  gross_weight_lbs: z.coerce.number().min(0).optional().default(0),
+  tare_weight_lbs: z.coerce.number().min(0).optional().default(0),
+  weight_tons_manual: z.coerce.number().min(0).optional().default(0),
   generator_print_name: z.string().min(1, "Generator printed name required"),
   hauler_print_name: z.string().min(1, "Hauler printed name required"),
 });
@@ -87,19 +92,35 @@ export function DriverManifestCreationWizard({
   const form = useForm<ManifestFormData>({
     resolver: zodResolver(manifestSchema),
     mode: "onChange",
-    defaultValues: {
-      pte_off_rim: 0,
-      pte_on_rim: 0,
-      commercial_17_5_19_5_off: 0,
-      commercial_17_5_19_5_on: 0,
-      commercial_22_5_off: 0,
-      commercial_22_5_on: 0,
-      otr_count: 0,
-      tractor_count: 0,
-      generator_print_name: "",
-      hauler_print_name: "",
+defaultValues: {
+  pte_off_rim: 0,
+  pte_on_rim: 0,
+  commercial_17_5_19_5_off: 0,
+  commercial_17_5_19_5_on: 0,
+  commercial_22_5_off: 0,
+  commercial_22_5_on: 0,
+  otr_count: 0,
+  tractor_count: 0,
+  gross_weight_lbs: 0,
+  tare_weight_lbs: 0,
+  weight_tons_manual: 0,
+  generator_print_name: "",
+hauler_print_name: "",
     },
   });
+
+  // Helpers for PTE and weight calculations (Michigan rule: 89 PTE = 1 ton)
+  const computeTotalPTE = (vals: ManifestFormData) => {
+    const passenger = (vals.pte_off_rim || 0) + (vals.pte_on_rim || 0);
+    const truck = ((vals.commercial_17_5_19_5_off || 0) + (vals.commercial_17_5_19_5_on || 0) + (vals.commercial_22_5_off || 0) + (vals.commercial_22_5_on || 0)) * 5;
+    const oversized = ((vals.otr_count || 0) + (vals.tractor_count || 0)) * 15;
+    return passenger + truck + oversized;
+  };
+
+  const calcTonsFromPTE = () => {
+    const vals = form.getValues();
+    return pteToTons(computeTotalPTE(vals));
+  };
 
   // Fetch pickup, assignment, and hauler data on mount
   useEffect(() => {
@@ -271,7 +292,16 @@ export function DriverManifestCreationWizard({
         haulerSigPath = haulerFileName;
       }
 
-      // 2. Create manifest with all data
+      // 2. Create manifest with all data (including weights)
+      const gross = Number(data.gross_weight_lbs || 0);
+      const tare = Number(data.tare_weight_lbs || 0);
+      const net = Math.max(0, gross - tare);
+      const tonsFromPte = calcTonsFromPTE();
+      const tonsFromNet = net > 0 ? Math.round((net / 2000) * 100) / 100 : 0;
+      const resolvedTons = Number(data.weight_tons_manual || 0) > 0 
+        ? Number(data.weight_tons_manual)
+        : (tonsFromNet > 0 ? tonsFromNet : tonsFromPte);
+
       const manifestData = {
         client_id: clientId,
         location_id: pickupData.location_id,
@@ -286,6 +316,11 @@ export function DriverManifestCreationWizard({
         commercial_22_5_on: data.commercial_22_5_on,
         otr_count: data.otr_count,
         tractor_count: data.tractor_count,
+        // Weights and conversions
+        gross_weight_lbs: gross,
+        tare_weight_lbs: tare,
+        net_weight_lbs: net,
+        weight_tons: resolvedTons,
         payment_method: 'INVOICE' as const,
         status: 'AWAITING_RECEIVER_SIGNATURE' as const,
       };
@@ -317,6 +352,7 @@ export function DriverManifestCreationWizard({
       if (updateError) throw updateError;
 
       // 4. Generate initial PDF with generator and hauler info only
+      const totalPteForPdf = computeTotalPTE(data);
       await manifestIntegration.mutateAsync({
         manifestId: manifest.id,
         overrides: {
@@ -331,6 +367,7 @@ export function DriverManifestCreationWizard({
           generator_signature: generatorSigPath,
           generator_print_name: `${data.generator_print_name} - ${new Date(generatorSignedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}`,
           generator_date: new Date(generatorSignedAt).toLocaleDateString('en-US'),
+          generator_volume_weight: String(totalPteForPdf),
           
           // Hauler info from assignment
           hauler_name: haulerData.hauler_name,
@@ -343,6 +380,15 @@ export function DriverManifestCreationWizard({
           hauler_signature: haulerSigPath,
           hauler_print_name: `${data.hauler_print_name} - ${new Date(haulerSignedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}`,
           hauler_date: new Date(haulerSignedAt).toLocaleDateString('en-US'),
+          // Weight fields
+          hauler_gross_weight: String((form.getValues().gross_weight_lbs || 0).toFixed ? (form.getValues().gross_weight_lbs as number).toFixed(1) : form.getValues().gross_weight_lbs || ''),
+          hauler_tare_weight: String((form.getValues().tare_weight_lbs || 0).toFixed ? (form.getValues().tare_weight_lbs as number).toFixed(1) : form.getValues().tare_weight_lbs || ''),
+          hauler_net_weight: (() => {
+            const gross = Number(form.getValues().gross_weight_lbs || 0);
+            const tare = Number(form.getValues().tare_weight_lbs || 0);
+            const net = Math.max(0, gross - tare);
+            return net.toFixed(1);
+          })(),
         },
       });
 
@@ -603,6 +649,72 @@ export function DriverManifestCreationWizard({
                 />
               </CardContent>
             </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Weights (optional)</CardTitle>
+                <CardDescription>Enter scale weights or manual tons; otherwise we calculate from PTE (89 PTE = 1 ton)</CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="gross_weight_lbs"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Gross Weight (lbs)</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="lbs" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="tare_weight_lbs"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tare Weight (lbs)</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="lbs" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="col-span-2 grid grid-cols-2 gap-4 items-end">
+                  <div>
+                    <div className="text-sm">Net Weight (lbs)</div>
+                    <div className="font-medium">
+                      {(() => {
+                        const v = form.getValues();
+                        const gross = Number(v.gross_weight_lbs || 0);
+                        const tare = Number(v.tare_weight_lbs || 0);
+                        const net = Math.max(0, gross - tare);
+                        return net.toFixed(1);
+                      })()}
+                    </div>
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="weight_tons_manual"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Manual Weight (tons)</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.01" placeholder="tons" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
+                        </FormControl>
+                        <FormDescription>Optional override; leave blank to auto-calc</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="col-span-2 text-sm text-muted-foreground">
+                  Calculated tons from PTE (89 PTE = 1 ton): <strong>{calcTonsFromPTE().toFixed(2)}</strong>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         );
 
@@ -721,6 +833,10 @@ export function DriverManifestCreationWizard({
                                values.commercial_22_5_off + values.commercial_22_5_on;
         const totalOversized = values.otr_count + values.tractor_count;
         const grandTotal = totalPTE + totalCommercial + totalOversized;
+        const gross = Number(values.gross_weight_lbs || 0);
+        const tare = Number(values.tare_weight_lbs || 0);
+        const net = Math.max(0, gross - tare);
+        const tonsCalc = calcTonsFromPTE();
 
         return (
           <div className="space-y-4">
@@ -738,6 +854,18 @@ export function DriverManifestCreationWizard({
                 <div className="flex justify-between"><span>Commercial:</span> <strong>{totalCommercial}</strong></div>
                 <div className="flex justify-between"><span>Oversized:</span> <strong>{totalOversized}</strong></div>
                 <div className="border-t pt-2 flex justify-between"><span><strong>Total:</strong></span> <strong>{grandTotal}</strong></div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Weights</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div className="flex justify-between"><span>Gross (lbs):</span> <strong>{gross.toFixed(1)}</strong></div>
+                <div className="flex justify-between"><span>Tare (lbs):</span> <strong>{tare.toFixed(1)}</strong></div>
+                <div className="flex justify-between"><span>Net (lbs):</span> <strong>{net.toFixed(1)}</strong></div>
+                <div className="flex justify-between"><span>Calc tons (89 PTE = 1 ton):</span> <strong>{tonsCalc.toFixed(2)}</strong></div>
               </CardContent>
             </Card>
 

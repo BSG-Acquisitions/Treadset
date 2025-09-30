@@ -34,6 +34,9 @@ export interface Manifest {
   // Additional measurements
   weight_tons?: number;
   volume_yards?: number;
+  gross_weight_lbs?: number;
+  tare_weight_lbs?: number;
+  net_weight_lbs?: number;
   
   // File paths
   photos?: string[];
@@ -93,6 +96,9 @@ export interface CreateManifestData {
   tractor_count?: number;
   weight_tons?: number;
   volume_yards?: number;
+  gross_weight_lbs?: number;
+  tare_weight_lbs?: number;
+  net_weight_lbs?: number;
   payment_method?: 'CARD' | 'INVOICE' | 'CASH' | 'CHECK';
   status?: 'DRAFT' | 'IN_PROGRESS' | 'AWAITING_SIGNATURE' | 'AWAITING_PAYMENT' | 'AWAITING_RECEIVER_SIGNATURE' | 'COMPLETED';
   // Optional fields that may be set at creation time
