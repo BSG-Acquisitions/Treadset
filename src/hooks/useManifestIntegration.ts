@@ -179,17 +179,25 @@ export const useManifestIntegration = () => {
       
       Object.entries(mergedData).forEach(([key, value]) => {
         const templateField = config.fieldMapping[key];
-        if (templateField && value !== null && value !== undefined) {
+        if (templateField && value !== null && value !== undefined && value !== '') {
           templateFields[templateField] = String(value);
         }
       });
 
       // Observability
       const populatedFieldCount = Object.keys(templateFields).length;
-      console.log('[MANIFEST_INTEGRATION][v4] Restored working converter', {
+      console.log('[MANIFEST_INTEGRATION][v4] Field mapping complete', {
         manifestId,
         populatedFieldCount,
         templateVersion: config.version,
+        sampleFields: {
+          hauler_name: mergedData.hauler_name,
+          hauler_gross_weight: mergedData.hauler_gross_weight,
+          receiver_name: mergedData.receiver_name,
+          mappedHaulerName: templateFields['Hauler_Name'],
+          mappedHaulerGross: templateFields['Gross'],
+          mappedReceiverName: templateFields['Receiver_Name']
+        }
       });
       
       if (populatedFieldCount === 0) {

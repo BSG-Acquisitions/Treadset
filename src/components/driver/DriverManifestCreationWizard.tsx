@@ -352,6 +352,14 @@ hauler_print_name: "",
 
       // 4. Generate initial PDF with generator and hauler info only
       const totalPteForPdf = computeTotalPTE(data);
+      
+      console.log('[DRIVER_WIZARD] Preparing PDF overrides with weights:', {
+        gross_weight_lbs: gross,
+        tare_weight_lbs: tare,
+        net_weight_lbs: net,
+        totalPTE: totalPteForPdf
+      });
+
       await manifestIntegration.mutateAsync({
         manifestId: manifest.id,
         overrides: {
@@ -368,6 +376,12 @@ hauler_print_name: "",
           generator_date: new Date(generatorSignedAt).toLocaleDateString('en-US'),
           generator_volume_weight: String(totalPteForPdf),
           
+          // Tire counts for PDF
+          passenger_car_count: String((data.pte_off_rim || 0) + (data.pte_on_rim || 0)),
+          truck_count: String((data.commercial_17_5_19_5_off || 0) + (data.commercial_17_5_19_5_on || 0) + 
+                             (data.commercial_22_5_off || 0) + (data.commercial_22_5_on || 0)),
+          oversized_count: String((data.otr_count || 0) + (data.tractor_count || 0)),
+          
           // Hauler info from assignment
           hauler_name: haulerData.hauler_name,
           hauler_mail_address: haulerData.hauler_mailing_address || '',
@@ -379,15 +393,11 @@ hauler_print_name: "",
           hauler_signature: haulerSigPath,
           hauler_print_name: `${data.hauler_print_name} - ${new Date(haulerSignedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}`,
           hauler_date: new Date(haulerSignedAt).toLocaleDateString('en-US'),
-          // Weight fields
-          hauler_gross_weight: String((form.getValues().gross_weight_lbs || 0).toFixed ? (form.getValues().gross_weight_lbs as number).toFixed(1) : form.getValues().gross_weight_lbs || ''),
-          hauler_tare_weight: String((form.getValues().tare_weight_lbs || 0).toFixed ? (form.getValues().tare_weight_lbs as number).toFixed(1) : form.getValues().tare_weight_lbs || ''),
-          hauler_net_weight: (() => {
-            const gross = Number(form.getValues().gross_weight_lbs || 0);
-            const tare = Number(form.getValues().tare_weight_lbs || 0);
-            const net = Math.max(0, gross - tare);
-            return net.toFixed(1);
-          })(),
+          hauler_total_pte: String(totalPteForPdf),
+          // Weight fields - always send as strings with at least "0"
+          hauler_gross_weight: gross > 0 ? gross.toFixed(1) : '',
+          hauler_tare_weight: tare > 0 ? tare.toFixed(1) : '',
+          hauler_net_weight: net > 0 ? net.toFixed(1) : '',
         },
       });
 
