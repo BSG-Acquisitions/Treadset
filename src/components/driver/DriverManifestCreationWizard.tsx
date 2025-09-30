@@ -287,6 +287,7 @@ export function DriverManifestCreationWizard({
         otr_count: data.otr_count,
         tractor_count: data.tractor_count,
         payment_method: 'INVOICE' as const,
+        status: 'AWAITING_RECEIVER_SIGNATURE' as const,
       };
 
       const manifest = await createManifest.mutateAsync(manifestData);
