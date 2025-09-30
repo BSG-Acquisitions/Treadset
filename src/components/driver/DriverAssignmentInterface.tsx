@@ -261,7 +261,7 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
               <>
                 <Separator />
                 <div className="space-y-3">
-                  <h4 className="font-medium text-lg">Complete Pickup</h4>
+                  <h4 className="font-medium text-base md:text-lg">Complete Pickup</h4>
                     <CompletePickupDialog
                       pickup={{
                         id: pickup.id,
@@ -277,10 +277,10 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
                       trigger={
                         <Button 
                           variant="outline" 
-                          className="w-full h-12 md:h-14 text-base border-2 flex items-center justify-center"
+                          className="w-full h-auto py-3 px-4 text-sm md:text-base border-2 flex items-center justify-center"
                         >
-                          <FileText className="h-5 w-5 mr-2" />
-                          Complete Pickup & Generate Manifest
+                          <FileText className="h-4 w-4 md:h-5 md:w-5 mr-2 flex-shrink-0" />
+                          <span className="text-center">Complete Pickup & Generate Manifest</span>
                         </Button>
                       }
                       onSuccess={async (_manifestId, pdfPath) => {
