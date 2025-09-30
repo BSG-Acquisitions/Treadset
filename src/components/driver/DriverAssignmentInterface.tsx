@@ -277,7 +277,7 @@ export function DriverAssignmentInterface({ assignment, onComplete }: DriverAssi
                       trigger={
                         <Button 
                           variant="outline" 
-                          className="w-full h-12 md:h-14 text-base border-2"
+                          className="w-full h-12 md:h-14 text-base border-2 flex items-center justify-center"
                         >
                           <FileText className="h-5 w-5 mr-2" />
                           Complete Pickup & Generate Manifest
