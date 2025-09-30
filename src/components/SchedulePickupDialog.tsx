@@ -8,6 +8,7 @@ import { useLocations } from "@/hooks/useLocations";
 import { useVehicles } from "@/hooks/useVehicles";
 import { useHaulers } from "@/hooks/useHaulers";
 import { SchedulePickupWithDriverDialog } from "./SchedulePickupWithDriverDialog";
+import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
   DialogContent,
@@ -74,6 +75,7 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
   const [clientSearch, setClientSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [clientComboOpen, setClientComboOpen] = useState(false);
+  const { toast } = useToast();
   
   // Debounce search
   useEffect(() => {
@@ -130,17 +132,20 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
       const selectedTruck = allTrucks.find(t => t.id === data.truckSelection);
       
       if (!selectedTruck) {
-        throw new Error('Selected truck not found');
+        toast({
+          title: "Error",
+          description: "Selected truck not found. Please try again.",
+          variant: "destructive",
+        });
+        return;
       }
 
       const isVehicle = selectedTruck.type === 'vehicle';
       
-      // Ensure we have a driver ID for vehicles
+      // For vehicles, use assignedDriverId if available (allows scheduling even without it)
       let driverId = undefined;
       if (isVehicle && selectedTruck.assignedDriverId) {
         driverId = selectedTruck.assignedDriverId;
-      } else if (isVehicle) {
-        throw new Error('Selected vehicle does not have an assigned driver. Please assign a driver to this vehicle first.');
       }
       
       await schedulePickup.mutateAsync({
@@ -157,10 +162,21 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
         driverId: driverId,
         notes: data.notes,
       });
+      
+      toast({
+        title: "Success",
+        description: "Pickup scheduled successfully!",
+      });
+      
       setOpen(false);
       form.reset();
     } catch (error) {
       console.error('Failed to schedule pickup:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to schedule pickup. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
