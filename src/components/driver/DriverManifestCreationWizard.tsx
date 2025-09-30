@@ -827,7 +827,8 @@ export function DriverManifestCreationWizard({
                 type="button" 
                 onClick={handleNext} 
                 disabled={isSubmitting}
-                className="bg-green-600 hover:bg-green-700 text-white font-semibold disabled:opacity-50"
+                className="!bg-green-600 hover:!bg-green-700 !text-white font-semibold disabled:opacity-50"
+                style={{ backgroundColor: '#16a34a', color: 'white' }}
               >
                 Next
                 <ChevronRight className="ml-2 h-4 w-4" />
@@ -836,7 +837,8 @@ export function DriverManifestCreationWizard({
               <Button 
                 type="submit" 
                 disabled={isSubmitting}
-                className="bg-green-600 hover:bg-green-700 text-white font-semibold disabled:opacity-50"
+                className="!bg-green-600 hover:!bg-green-700 !text-white font-semibold disabled:opacity-50"
+                style={{ backgroundColor: '#16a34a', color: 'white' }}
               >
                 {isSubmitting ? "Creating..." : "Create & Email Manifest"}
               </Button>
