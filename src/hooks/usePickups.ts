@@ -159,7 +159,25 @@ export const useSchedulePickup = () => {
 
         const bestOption = plannerResult.options[0];
         options = plannerResult.options;
-
+        
+        // Resolve driver based on the vehicle's driver_email so drivers can see assignments per RLS
+        let resolvedDriverId: string | null = null;
+        if (bestOption?.vehicleId) {
+          const { data: vehicleRow } = await supabase
+            .from('vehicles')
+            .select('driver_email')
+            .eq('id', bestOption.vehicleId)
+            .single();
+          if (vehicleRow?.driver_email) {
+            const { data: driverRow } = await supabase
+              .from('users')
+              .select('id')
+              .ilike('email', vehicleRow.driver_email)
+              .single();
+            resolvedDriverId = driverRow?.id ?? null;
+          }
+        }
+        
         const { data: autoAssignment, error: assignmentError } = await supabase
           .from('assignments')
           .insert({
@@ -168,7 +186,8 @@ export const useSchedulePickup = () => {
             organization_id: orgData,
             scheduled_date: data.pickupDate,
             estimated_arrival: bestOption.eta,
-            sequence_order: bestOption.insertionIndex || 0
+            sequence_order: bestOption.insertionIndex || 0,
+            driver_id: resolvedDriverId,
           })
           .select()
           .single();
@@ -198,7 +217,26 @@ export const useSchedulePickup = () => {
         if (data.driverId && data.driverId !== '') {
           assignmentData.driver_id = data.driverId;
         }
-
+        
+        // Fallback: if assigning to a vehicle and no driverId provided, resolve from vehicle's driver_email
+        if (!assignmentData.driver_id && assignmentData.vehicle_id) {
+          const { data: vehicleRow } = await supabase
+            .from('vehicles')
+            .select('driver_email')
+            .eq('id', assignmentData.vehicle_id)
+            .single();
+          if (vehicleRow?.driver_email) {
+            const { data: driverRow } = await supabase
+              .from('users')
+              .select('id')
+              .ilike('email', vehicleRow.driver_email)
+              .single();
+            if (driverRow?.id) {
+              assignmentData.driver_id = driverRow.id;
+            }
+          }
+        }
+        
         const { data: manualAssignment, error: assignmentError } = await supabase
           .from('assignments')
           .insert(assignmentData)
