@@ -8,6 +8,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useCreateManifest } from "@/hooks/useManifests";
 import { useManifestIntegration } from "@/hooks/useManifestIntegration";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useHaulers } from "@/hooks/useHaulers";
+import { useReceivers } from "@/hooks/useReceivers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,14 +17,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Checkbox } from "@/components/ui/checkbox";
-import { SearchableDropdown } from "@/components/SearchableDropdown";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Building, 
-  MapPin, 
   Truck, 
   Package, 
-  Camera, 
   FileCheck,
   ChevronRight,
   ChevronLeft
@@ -39,10 +38,12 @@ const manifestSchema = z.object({
   generator_phone: z.string().max(20).optional(),
   generator_email: z.string().email().optional().or(z.literal("")),
   generator_contact_person: z.string().max(100).optional(),
-  generator_signature_printed_name: z.string().max(100).optional(),
   
   // Hauler selection (required)
   hauler_id: z.string().min(1, "Please select a hauler"),
+  
+  // Receiver selection (required)
+  receiver_id: z.string().min(1, "Please select a receiver"),
   
   // Tire Counts
   passenger_count: z.number().int().min(0).optional(),
@@ -91,6 +92,10 @@ export function DriverManifestCreationWizard({
   
   const createManifest = useCreateManifest();
   const manifestIntegration = useManifestIntegration();
+  
+  // Fetch haulers and receivers
+  const { data: haulers = [] } = useHaulers();
+  const { data: receivers = [] } = useReceivers();
 
   const form = useForm<ManifestFormData>({
     resolver: zodResolver(manifestSchema),
@@ -105,11 +110,9 @@ export function DriverManifestCreationWizard({
       generator_email: pickup?.client?.email || "",
       generator_contact_person: pickup?.client?.contact_name || "",
       
-      // Hauler defaults
-      hauler_state: "MI",
-      
-      // Receiver defaults
-      receiver_state: "MI",
+      // Hauler and receiver selection (will be set by dropdown)
+      hauler_id: "",
+      receiver_id: "",
       
       // Tire counts from pickup
       passenger_count: 0,
@@ -167,10 +170,7 @@ export function DriverManifestCreationWizard({
         ];
         break;
       case "hauler":
-        fieldsToValidate = ["hauler_company_name"];
-        break;
-      case "receiver":
-        fieldsToValidate = ["receiver_company_name"];
+        fieldsToValidate = ["hauler_id", "receiver_id"];
         break;
       case "tires":
         // No required fields, just validate they entered some counts
@@ -232,10 +232,12 @@ export function DriverManifestCreationWizard({
       // Create manifest
       const manifestResult = await createManifest.mutateAsync(manifestData);
       
-      // Update with AcroForm data using raw SQL since the type doesn't include these fields
+      // Update with hauler_id, receiver_id and generator info
       const { error: updateError } = await supabase
         .from('manifests')
         .update({
+          hauler_id: data.hauler_id,
+          receiver_id: data.receiver_id,
           generator_company_name: data.generator_company_name,
           generator_street_address: data.generator_street_address,
           generator_city: data.generator_city,
@@ -244,26 +246,9 @@ export function DriverManifestCreationWizard({
           generator_phone: data.generator_phone,
           generator_email: data.generator_email,
           generator_contact_person: data.generator_contact_person,
-          generator_signature_printed_name: data.generator_signature_printed_name,
-          hauler_company_name: data.hauler_company_name,
-          hauler_street_address: data.hauler_street_address,
-          hauler_city: data.hauler_city,
-          hauler_state: data.hauler_state,
-          hauler_zip: data.hauler_zip,
-          hauler_phone: data.hauler_phone,
-          hauler_drivers_license: data.hauler_drivers_license,
-          hauler_vehicle_license_plate: data.hauler_vehicle_license_plate,
-          hauler_signature_printed_name: data.hauler_signature_printed_name,
-          receiver_company_name: data.receiver_company_name,
-          receiver_street_address: data.receiver_street_address,
-          receiver_city: data.receiver_city,
-          receiver_state: data.receiver_state,
-          receiver_zip: data.receiver_zip,
-          receiver_phone: data.receiver_phone,
-          receiver_signature_printed_name: data.receiver_signature_printed_name,
-          passenger_unit_price: data.passenger_unit_price || 0,
-          truck_unit_price: data.truck_unit_price || 0,
-          off_road_unit_price: data.off_road_unit_price || 0,
+          generator_signed_at: new Date().toISOString(),
+          hauler_signed_at: new Date().toISOString(),
+          receiver_signed_at: new Date().toISOString(),
           special_notes: data.special_notes,
         } as any)
         .eq('id', manifestResult.id);
@@ -430,214 +415,54 @@ export function DriverManifestCreationWizard({
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-4">
               <StepIcon className="h-5 w-5 text-primary" />
-              <h3 className="text-lg font-semibold">Hauler Information</h3>
+              <h3 className="text-lg font-semibold">Select Hauler & Receiver</h3>
             </div>
 
             <FormField
               control={form.control}
-              name="hauler_company_name"
+              name="hauler_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Company Name *</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Enter hauler company name" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="hauler_street_address"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Street Address</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Enter street address" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="hauler_city"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>City</FormLabel>
+                  <FormLabel>Hauler *</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <Input {...field} placeholder="City" />
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a hauler" />
+                      </SelectTrigger>
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                    <SelectContent>
+                      {haulers.map(h => (
+                        <SelectItem key={h.id} value={h.id}>
+                          {h.hauler_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-              <FormField
-                control={form.control}
-                name="hauler_state"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>State</FormLabel>
+            <FormField
+              control={form.control}
+              name="receiver_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Receiver *</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <Input {...field} placeholder="MI" maxLength={2} />
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a receiver" />
+                      </SelectTrigger>
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="hauler_zip"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>ZIP Code</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Enter ZIP code" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="hauler_phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Phone</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="(555) 123-4567" type="tel" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="hauler_drivers_license"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Driver's License</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Enter driver's license number" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="hauler_vehicle_license_plate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Vehicle License Plate</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Enter license plate" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        );
-
-      case "receiver":
-        return (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 mb-4">
-              <StepIcon className="h-5 w-5 text-primary" />
-              <h3 className="text-lg font-semibold">Receiver Information</h3>
-            </div>
-
-            <FormField
-              control={form.control}
-              name="receiver_company_name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Company Name *</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Enter receiver company name" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="receiver_street_address"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Street Address</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Enter street address" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="receiver_city"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>City</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="City" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="receiver_state"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>State</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="MI" maxLength={2} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="receiver_zip"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>ZIP Code</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Enter ZIP code" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="receiver_phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Phone</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="(555) 123-4567" type="tel" />
-                  </FormControl>
+                    <SelectContent>
+                      {receivers.map(r => (
+                        <SelectItem key={r.id} value={r.id}>
+                          {r.receiver_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
@@ -851,6 +676,8 @@ export function DriverManifestCreationWizard({
 
       case "review":
         const values = form.getValues();
+        const selectedHauler = haulers.find(h => h.id === values.hauler_id);
+        const selectedReceiver = receivers.find(r => r.id === values.receiver_id);
         const totalTires = (values.passenger_count || 0) + 
                           (values.passenger_rim_count || 0) +
                           (values.truck_count || 0) + 
@@ -883,11 +710,12 @@ export function DriverManifestCreationWizard({
                 <CardTitle className="text-base">Hauler</CardTitle>
               </CardHeader>
               <CardContent className="text-sm space-y-1">
-                <p className="font-medium">{values.hauler_company_name}</p>
-                {values.hauler_street_address && <p>{values.hauler_street_address}</p>}
-                {values.hauler_city && (
-                  <p>{values.hauler_city}, {values.hauler_state} {values.hauler_zip}</p>
+                <p className="font-medium">{selectedHauler?.hauler_name}</p>
+                {selectedHauler?.hauler_mailing_address && <p>{selectedHauler.hauler_mailing_address}</p>}
+                {selectedHauler?.hauler_city && (
+                  <p>{selectedHauler.hauler_city}, {selectedHauler.hauler_state} {selectedHauler.hauler_zip}</p>
                 )}
+                {selectedHauler?.hauler_phone && <p>Phone: {selectedHauler.hauler_phone}</p>}
               </CardContent>
             </Card>
 
@@ -896,11 +724,12 @@ export function DriverManifestCreationWizard({
                 <CardTitle className="text-base">Receiver</CardTitle>
               </CardHeader>
               <CardContent className="text-sm space-y-1">
-                <p className="font-medium">{values.receiver_company_name}</p>
-                {values.receiver_street_address && <p>{values.receiver_street_address}</p>}
-                {values.receiver_city && (
-                  <p>{values.receiver_city}, {values.receiver_state} {values.receiver_zip}</p>
+                <p className="font-medium">{selectedReceiver?.receiver_name}</p>
+                {selectedReceiver?.receiver_mailing_address && <p>{selectedReceiver.receiver_mailing_address}</p>}
+                {selectedReceiver?.receiver_city && (
+                  <p>{selectedReceiver.receiver_city}, {selectedReceiver.receiver_state} {selectedReceiver.receiver_zip}</p>
                 )}
+                {selectedReceiver?.receiver_phone && <p>Phone: {selectedReceiver.receiver_phone}</p>}
               </CardContent>
             </Card>
 
@@ -940,104 +769,62 @@ export function DriverManifestCreationWizard({
     }
   };
 
-  const content = (
-    <div className="space-y-4">
-      {/* Progress Bar */}
-      <div className="space-y-2">
-        <div className="flex justify-between text-sm text-muted-foreground">
-          <span>Step {step + 1} of {steps.length}</span>
-          <span>{Math.round(progress)}%</span>
-        </div>
-        <Progress value={progress} className="h-2" />
-      </div>
-
-      {/* Step Indicators */}
-      <div className="flex justify-between">
-        {steps.map((s, i) => {
-          const StepIcon = s.icon;
-          return (
-            <div 
-              key={s.key} 
-              className={`flex flex-col items-center gap-1 ${
-                i === step ? 'text-primary' : i < step ? 'text-green-500' : 'text-muted-foreground'
-              }`}
-            >
-              <div className={`rounded-full p-2 ${
-                i === step ? 'bg-primary/10' : i < step ? 'bg-green-500/10' : 'bg-muted'
-              }`}>
-                <StepIcon className="h-4 w-4" />
-              </div>
-              <span className="text-xs hidden sm:block">{s.title}</span>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Step Content */}
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {renderStepContent()}
-
-          {/* Navigation Buttons */}
-          <div className="flex gap-3 pt-4 sticky bottom-0 bg-background pb-4 border-t">
-            {step > 0 && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleBack}
-                className="flex-1"
-              >
-                <ChevronLeft className="h-4 w-4 mr-2" />
-                Back
-              </Button>
-            )}
-            
-            {step < steps.length - 1 ? (
-              <Button
-                type="button"
-                onClick={handleNext}
-                className="flex-1"
-              >
-                Next
-                <ChevronRight className="h-4 w-4 ml-2" />
-              </Button>
-            ) : (
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                className="flex-1"
-              >
-                {isSubmitting ? "Creating..." : "Create Manifest"}
-              </Button>
-            )}
-          </div>
-        </form>
-      </Form>
-    </div>
-  );
-
-  if (isMobile) {
-    return (
-      <Card className="border-0 shadow-none">
-        <CardContent className="p-4">
-          <ScrollArea className="h-[calc(100vh-8rem)]">
-            <div className="pr-4">
-              {content}
-            </div>
-          </ScrollArea>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Create New Manifest</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {content}
-      </CardContent>
-    </Card>
+    <div className="h-full flex flex-col">
+      {/* Progress Header */}
+      <div className="border-b bg-card p-4">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="font-medium">{currentStep.title}</span>
+            <span className="text-muted-foreground">Step {step + 1} of {steps.length}</span>
+          </div>
+          <Progress value={progress} className="h-2" />
+        </div>
+      </div>
+
+      {/* Content Area */}
+      <ScrollArea className="flex-1">
+        <div className="p-4 max-w-2xl mx-auto">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {renderStepContent()}
+            </form>
+          </Form>
+        </div>
+      </ScrollArea>
+
+      {/* Navigation Footer */}
+      <div className="border-t bg-card p-4">
+        <div className="flex items-center justify-between gap-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleBack}
+            disabled={step === 0}
+          >
+            <ChevronLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
+
+          {step < steps.length - 1 ? (
+            <Button
+              type="button"
+              onClick={handleNext}
+            >
+              Next
+              <ChevronRight className="h-4 w-4 ml-2" />
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              onClick={form.handleSubmit(onSubmit)}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Creating..." : "Create Manifest"}
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
