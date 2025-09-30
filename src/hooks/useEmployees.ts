@@ -25,6 +25,7 @@ export interface CreateEmployeeData {
 }
 
 export interface UpdateEmployeeData {
+  email?: string;
   firstName?: string;
   lastName?: string;
   phone?: string;
@@ -147,15 +148,43 @@ export const useUpdateEmployee = () => {
         throw new Error('No organization selected');
       }
 
+      // Update email in auth if provided
+      if (updates.email) {
+        const normalizedEmail = updates.email.toLowerCase().trim();
+        
+        // Get the auth_user_id for this employee
+        const { data: userData, error: userFetchError } = await supabase
+          .from('users')
+          .select('auth_user_id')
+          .eq('id', employeeId)
+          .single();
+
+        if (userFetchError) throw userFetchError;
+        if (!userData?.auth_user_id) throw new Error('Auth user not found');
+
+        // Update email in both places
+        const { error: authError } = await supabase.auth.updateUser({
+          email: normalizedEmail
+        });
+
+        if (authError) throw authError;
+      }
+
       // Update user record
+      const updateData: any = {
+        first_name: updates.firstName,
+        last_name: updates.lastName,
+        phone: updates.phone,
+        is_active: updates.isActive
+      };
+
+      if (updates.email) {
+        updateData.email = updates.email.toLowerCase().trim();
+      }
+
       const { error: userError } = await supabase
         .from('users')
-        .update({
-          first_name: updates.firstName,
-          last_name: updates.lastName,
-          phone: updates.phone,
-          is_active: updates.isActive
-        })
+        .update(updateData)
         .eq('id', employeeId);
 
       if (userError) throw userError;

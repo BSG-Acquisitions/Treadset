@@ -32,6 +32,7 @@ interface EditEmployeeDialogProps {
 export function EditEmployeeDialog({ employee, trigger }: EditEmployeeDialogProps) {
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState<UpdateEmployeeData>({
+    email: employee.email,
     firstName: employee.firstName || '',
     lastName: employee.lastName || '',
     phone: employee.phone || '',
@@ -112,12 +113,12 @@ export function EditEmployeeDialog({ employee, trigger }: EditEmployeeDialogProp
             <Input
               id="email"
               type="email"
-              value={employee.email}
-              disabled
-              className="bg-muted"
+              value={formData.email}
+              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+              placeholder="email@example.com"
             />
             <p className="text-xs text-muted-foreground">
-              Email cannot be changed after account creation
+              Email will be normalized to lowercase
             </p>
           </div>
 
