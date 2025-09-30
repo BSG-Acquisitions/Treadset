@@ -278,6 +278,14 @@ hauler_print_name: "",
   };
 
   const onSubmit = async (data: ManifestFormData) => {
+    console.log('[DRIVER_WIZARD] Form submitted with data:', {
+      gross_weight_lbs: data.gross_weight_lbs,
+      tare_weight_lbs: data.tare_weight_lbs,
+      pte_off_rim: data.pte_off_rim,
+      pte_on_rim: data.pte_on_rim,
+      totalPTE: computeTotalPTE(data)
+    });
+
     if (!pickupData || !haulerData) {
       toast({
         title: "Error",
@@ -731,8 +739,8 @@ hauler_print_name: "",
                             placeholder={manualWeightOverride ? "Enter gross weight" : "Auto-calculated"}
                             {...field} 
                             onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
-                            disabled={!manualWeightOverride}
-                            className={!manualWeightOverride ? 'bg-muted' : ''}
+                            readOnly={!manualWeightOverride}
+                            className={!manualWeightOverride ? 'bg-muted cursor-not-allowed' : ''}
                           />
                         </FormControl>
                         <FormMessage />
@@ -751,8 +759,8 @@ hauler_print_name: "",
                             placeholder={manualWeightOverride ? "Enter tare weight" : "Auto-calc (15% of gross)"}
                             {...field} 
                             onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
-                            disabled={!manualWeightOverride}
-                            className={!manualWeightOverride ? 'bg-muted' : ''}
+                            readOnly={!manualWeightOverride}
+                            className={!manualWeightOverride ? 'bg-muted cursor-not-allowed' : ''}
                           />
                         </FormControl>
                         <FormMessage />
