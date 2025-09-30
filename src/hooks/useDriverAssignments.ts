@@ -6,9 +6,19 @@ export const useDriverAssignments = (date?: string) => {
   const { user } = useAuth();
   
   return useQuery({
-    queryKey: ['driver-assignments', user?.id, date],
+    queryKey: ['driver-assignments', user?.email, date],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!user?.email) return [];
+      
+      // First, get vehicles assigned to this driver's email
+      const { data: driverVehicles } = await supabase
+        .from('vehicles')
+        .select('id')
+        .eq('driver_email', user.email);
+      
+      if (!driverVehicles || driverVehicles.length === 0) return [];
+      
+      const vehicleIds = driverVehicles.map(v => v.id);
       
       let query = supabase
         .from('assignments')
@@ -33,10 +43,10 @@ export const useDriverAssignments = (date?: string) => {
             ),
             location:locations(id, address, name, latitude, longitude)
           ),
-          vehicle:vehicles(id, name, capacity, license_plate),
+          vehicle:vehicles(id, name, capacity, license_plate, driver_email),
           hauler:haulers(id, hauler_name, hauler_mi_reg)
         `)
-        .eq('driver_id', user.id);
+        .in('vehicle_id', vehicleIds);
       
       if (date) {
         query = query.eq('scheduled_date', date);
@@ -47,6 +57,6 @@ export const useDriverAssignments = (date?: string) => {
       return data || [];
     },
     refetchInterval: 5000, // Refetch every 5 seconds for live updates
-    enabled: !!user?.id,
+    enabled: !!user?.email,
   });
 };
