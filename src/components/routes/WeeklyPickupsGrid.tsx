@@ -69,7 +69,7 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
                       <div className="flex items-center gap-1.5 mb-2.5">
                         <span className="text-base">🚚</span>
                         <span className="text-sm font-medium text-gray-700">
-                          {vehicle?.name || 'Truck'} - {driver ? `${driver.first_name || ''} ${driver.last_name || ''}`.trim() || driver.email || 'Unassigned' : 'Unassigned'}
+                          {vehicle?.name || 'Truck'} - {driver ? (`${driver.first_name || ''} ${driver.last_name || ''}`.trim() || driver.email) : 'Unassigned'}
                         </span>
                       </div>
 
