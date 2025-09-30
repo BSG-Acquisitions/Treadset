@@ -330,11 +330,24 @@ hauler_print_name: "",
       }
 
       // 2. Create manifest with all data (including weights)
+      const totalPteForPdf = computeTotalPTE(data);
       const gross = Number(data.gross_weight_lbs || 0);
       const tare = Number(data.tare_weight_lbs || 0);
-      const net = Math.max(0, gross - tare);
+      
+      // Calculate final weights for manifest
+      let finalGross = gross;
+      let finalTare = tare;
+      
+      // If auto mode and weights are zero, derive from PTE
+      if (!manualWeightOverride && (gross <= 0 || tare <= 0)) {
+        const computedTons = totalPteForPdf / 89; // Michigan rule: 89 PTE = 1 ton
+        finalGross = Math.round((computedTons * 2000) * 10) / 10; // Convert to lbs
+        finalTare = Math.round((finalGross * 0.15) * 10) / 10; // 15% of gross
+      }
+      
+      const finalNet = Math.max(0, finalGross - finalTare);
       const tonsFromPte = calcTonsFromPTE();
-      const tonsFromNet = net > 0 ? Math.round((net / 2000) * 100) / 100 : 0;
+      const tonsFromNet = finalNet > 0 ? Math.round((finalNet / 2000) * 100) / 100 : 0;
       const resolvedTons = Number(data.weight_tons_manual || 0) > 0 
         ? Number(data.weight_tons_manual)
         : (tonsFromNet > 0 ? tonsFromNet : tonsFromPte);
@@ -345,6 +358,7 @@ hauler_print_name: "",
         pickup_id: pickupId,
         driver_id: assignmentData?.driver_id,
         vehicle_id: assignmentData?.vehicle_id,
+        hauler_id: haulerData.id,
         pte_off_rim: data.pte_off_rim,
         pte_on_rim: data.pte_on_rim,
         commercial_17_5_19_5_off: data.commercial_17_5_19_5_off,
@@ -353,8 +367,11 @@ hauler_print_name: "",
         commercial_22_5_on: data.commercial_22_5_on,
         otr_count: data.otr_count,
         tractor_count: data.tractor_count,
-        // Weights and conversions (store only tons in DB; PDF gets detailed weights via overrides)
         weight_tons: resolvedTons,
+        // Store weights directly in manifest for PDF generation
+        gross_weight_lbs: finalGross,
+        tare_weight_lbs: finalTare,
+        net_weight_lbs: finalNet,
         payment_method: 'INVOICE' as const,
         status: 'AWAITING_RECEIVER_SIGNATURE' as const,
       };
