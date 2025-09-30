@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useCreateManifest } from "@/hooks/useManifests";
 import { useManifestIntegration } from "@/hooks/useManifestIntegration";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
 import { ArrowLeft, Save, Building, MapPin, Calendar, Truck, Upload, FileText } from "lucide-react";
@@ -103,6 +105,8 @@ export default function DriverManifestCreate() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
+  const formRef = useRef<HTMLDivElement>(null);
   
   const pickupId = searchParams.get('pickup');
   const clientId = searchParams.get('client');
@@ -118,6 +122,23 @@ export default function DriverManifestCreate() {
   // Use the same hooks as the other manifest creation flows
   const createManifest = useCreateManifest();
   const manifestIntegration = useManifestIntegration();
+
+  // Handle input focus on mobile - scroll into view
+  useEffect(() => {
+    if (!isMobile) return;
+
+    const handleFocus = (e: FocusEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+        setTimeout(() => {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300);
+      }
+    };
+
+    document.addEventListener('focusin', handleFocus);
+    return () => document.removeEventListener('focusin', handleFocus);
+  }, [isMobile]);
 
   const form = useForm<ManifestFormData>({
     resolver: zodResolver(manifestSchema),
@@ -382,25 +403,25 @@ export default function DriverManifestCreate() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className={`min-h-screen bg-background ${isMobile ? 'pb-24' : ''}`}>
       
-      <div className="container mx-auto p-6 space-y-6">
+      <div className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
         
         {/* Header */}
         <div className="flex items-center gap-4">
-          <Button variant="outline" asChild>
+          <Button variant="outline" asChild size={isMobile ? "sm" : "default"}>
             <Link to="/driver/manifests">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
+              {!isMobile && "Back"}
             </Link>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">Michigan EGLE Scrap Tire Transportation Record</h1>
-            <p className="text-muted-foreground">State-compliant manifest form as required by Michigan Department of Environment</p>
+            <h1 className="text-xl md:text-3xl font-bold">Michigan EGLE Scrap Tire Transportation Record</h1>
+            <p className="text-xs md:text-sm text-muted-foreground hidden sm:block">State-compliant manifest form as required by Michigan Department of Environment</p>
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-4 gap-6">
+        <div className={`grid gap-4 md:gap-6 ${isMobile ? '' : 'lg:grid-cols-4'}`}>
           
           {/* Pickup Info Sidebar */}
           {pickup && (
@@ -437,9 +458,10 @@ export default function DriverManifestCreate() {
           )}
 
           {/* Main Form */}
-          <div className="lg:col-span-3">
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <div className={isMobile ? '' : 'lg:col-span-3'}>
+            <div className={isMobile ? 'h-[calc(100vh-12rem)] overflow-y-auto' : ''} ref={formRef}>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className={`space-y-4 md:space-y-6 ${isMobile ? 'pb-32' : ''}`}>
                 
                 {/* PDF Upload First */}
                 <Card>
@@ -1342,6 +1364,7 @@ export default function DriverManifestCreate() {
 
               </form>
             </Form>
+            </div>
           </div>
         </div>
       </div>
