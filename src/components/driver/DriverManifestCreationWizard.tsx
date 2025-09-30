@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useCreateManifest, useUpdateManifest } from "@/hooks/useManifests";
 import { useManifestIntegration } from "@/hooks/useManifestIntegration";
 import { useSendManifestEmail } from "@/hooks/useSendManifestEmail";
+import { useHaulers } from "@/hooks/useHaulers";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SignatureCanvas from "react-signature-canvas";
 import { 
   Building, 
@@ -75,6 +77,7 @@ export function DriverManifestCreationWizard({
   const updateManifest = useUpdateManifest();
   const manifestIntegration = useManifestIntegration();
   const sendEmail = useSendManifestEmail();
+  const { data: haulers = [] } = useHaulers();
 
   // Signature refs
   const generatorSigRef = useRef<SignatureCanvas>(null);
@@ -160,6 +163,13 @@ export function DriverManifestCreationWizard({
 
     fetchData();
   }, [pickupId, user, form, toast]);
+
+  // If assignment didn't provide hauler, and there is exactly one active hauler, auto-select it
+  useEffect(() => {
+    if (!haulerData && haulers.length === 1) {
+      setHaulerData(haulers[0]);
+    }
+  }, [haulers, haulerData]);
 
   const currentStep = steps[step];
   const progress = ((step + 1) / steps.length) * 100;
@@ -397,12 +407,33 @@ export function DriverManifestCreationWizard({
                 <CardTitle className="text-base">Hauler</CardTitle>
                 <CardDescription>Your company information</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div><strong>Company:</strong> {haulerData?.hauler_name || 'N/A'}</div>
-                <div><strong>Address:</strong> {haulerData?.hauler_mailing_address || 'N/A'}</div>
-                <div><strong>City, State ZIP:</strong> {haulerData?.hauler_city}, {haulerData?.hauler_state} {haulerData?.hauler_zip}</div>
-                <div><strong>Phone:</strong> {haulerData?.hauler_phone || 'N/A'}</div>
-                <div><strong>MI Registration:</strong> {haulerData?.hauler_mi_reg || 'N/A'}</div>
+              <CardContent className="space-y-3 text-sm">
+                {haulerData ? (
+                  <div className="space-y-2">
+                    <div><strong>Company:</strong> {haulerData?.hauler_name || 'N/A'}</div>
+                    <div><strong>Address:</strong> {haulerData?.hauler_mailing_address || 'N/A'}</div>
+                    <div><strong>City, State ZIP:</strong> {haulerData?.hauler_city}, {haulerData?.hauler_state} {haulerData?.hauler_zip}</div>
+                    <div><strong>Phone:</strong> {haulerData?.hauler_phone || 'N/A'}</div>
+                    <div><strong>MI Registration:</strong> {haulerData?.hauler_mi_reg || 'N/A'}</div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="text-muted-foreground">No hauler detected from assignment. Select your hauler to continue.</div>
+                    <Select onValueChange={(value) => {
+                      const selected = haulers.find(h => h.id === value);
+                      if (selected) setHaulerData(selected);
+                    }}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a hauler" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {haulers.map((h) => (
+                          <SelectItem key={h.id} value={h.id}>{h.hauler_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -718,7 +749,7 @@ export function DriverManifestCreationWizard({
     }
   };
 
-  if (!pickupData || !haulerData) {
+  if (!pickupData) {
     return (
       <Card className="max-w-4xl mx-auto">
         <CardContent className="flex items-center justify-center p-12">
