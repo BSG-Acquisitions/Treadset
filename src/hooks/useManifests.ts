@@ -181,11 +181,15 @@ export const useCreateManifest = () => {
       const { data: manifestNumber, error: numberError } = await supabase
         .rpc('generate_manifest_number', { org_id: orgId });
       if (numberError) throw numberError;
-      // Strip status to avoid violating DB status check; let DB default handle it
-      const { status: _ignoredStatus, ...rest } = data as any;
+      // Ensure valid status is set (DB requires non-null constrained values)
+      const allowedStatuses = ['DRAFT','IN_PROGRESS','AWAITING_SIGNATURE','AWAITING_PAYMENT','AWAITING_RECEIVER_SIGNATURE','COMPLETED'] as const;
+      const statusToInsert = (data as any).status && allowedStatuses.includes((data as any).status)
+        ? (data as any).status
+        : 'AWAITING_RECEIVER_SIGNATURE';
 
       const manifestData = {
-        ...rest,
+        ...data,
+        status: statusToInsert,
         manifest_number: manifestNumber as unknown as string,
         organization_id: orgId as unknown as string,
       };
