@@ -148,29 +148,7 @@ export const useUpdateEmployee = () => {
         throw new Error('No organization selected');
       }
 
-      // Update email in auth if provided
-      if (updates.email) {
-        const normalizedEmail = updates.email.toLowerCase().trim();
-        
-        // Get the auth_user_id for this employee
-        const { data: userData, error: userFetchError } = await supabase
-          .from('users')
-          .select('auth_user_id')
-          .eq('id', employeeId)
-          .single();
-
-        if (userFetchError) throw userFetchError;
-        if (!userData?.auth_user_id) throw new Error('Auth user not found');
-
-        // Update email in both places
-        const { error: authError } = await supabase.auth.updateUser({
-          email: normalizedEmail
-        });
-
-        if (authError) throw authError;
-      }
-
-      // Update user record
+      // Build update data
       const updateData: any = {
         first_name: updates.firstName,
         last_name: updates.lastName,
@@ -178,10 +156,12 @@ export const useUpdateEmployee = () => {
         is_active: updates.isActive
       };
 
+      // Normalize email to lowercase if provided
       if (updates.email) {
         updateData.email = updates.email.toLowerCase().trim();
       }
 
+      // Update user record in public.users
       const { error: userError } = await supabase
         .from('users')
         .update(updateData)
