@@ -403,25 +403,6 @@ hauler_print_name: "",
       if (updateError) throw updateError;
 
       // 4. Generate initial PDF with generator and hauler info only
-      const totalPteForPdf = computeTotalPTE(data);
-      
-      // Calculate weights for PDF (use manual values if overridden, otherwise use calculated)
-      const grossFromForm = Number(gross || 0);
-      const tareFromForm = Number(tare || 0);
-      let finalGross = grossFromForm;
-      let finalTare = tareFromForm;
-
-      // Fallback: if auto mode and weights are zero, derive from PTE to ensure PDF gets real numbers
-      if (!manualWeightOverride && (grossFromForm <= 0 || tareFromForm <= 0)) {
-        const computedTons = totalPteForPdf / 89; // Michigan rule
-        const computedGross = Math.round((computedTons * 2000) * 10) / 10; // lbs, 1 decimal
-        const computedTare = Math.round((computedGross * 0.15) * 10) / 10; // 15% of gross
-        finalGross = computedGross;
-        finalTare = computedTare;
-      }
-
-      const finalNet = Math.max(0, finalGross - finalTare);
-
       await manifestIntegration.mutateAsync({
         manifestId: manifest.id,
         overrides: {
@@ -454,23 +435,15 @@ hauler_print_name: "",
           hauler_phone: haulerData.hauler_phone || '',
           hauler_mi_reg: haulerData.hauler_mi_reg || '',
           hauler_signature: haulerSigPath,
-          'Hauler_Signature _es_:signer:signature': haulerSigPath,
           hauler_print_name: `${data.hauler_print_name} - ${new Date(haulerSignedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}`,
           hauler_date: new Date(haulerSignedAt).toLocaleDateString('en-US'),
           hauler_time: new Date(haulerSignedAt).toLocaleTimeString('en-US', { hour12: false }),
           hauler_total_pte: String(totalPteForPdf),
-          // Also provide the template field directly to be extra-safe
-          Passenger_Tire_Equivalents: String(totalPteForPdf),
           
           // Weight fields - send calculated values
           hauler_gross_weight: finalGross > 0 ? finalGross.toFixed(1) : '0.0',
           hauler_tare_weight: finalTare > 0 ? finalTare.toFixed(1) : '0.0',
           hauler_net_weight: finalNet > 0 ? finalNet.toFixed(1) : '0.0',
-          
-          // Duplicate as direct template field keys (defensive)
-          Gross: finalGross > 0 ? finalGross.toFixed(1) : '0.0',
-          Tare: finalTare > 0 ? finalTare.toFixed(1) : '0.0',
-          Net_Weight: finalNet > 0 ? finalNet.toFixed(1) : '0.0',
         }
       });
 
