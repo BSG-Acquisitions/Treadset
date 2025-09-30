@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useGenerateAcroFormManifestV4 } from "@/hooks/useAcroFormManifestV4";
 import { AcroFormManifestData } from "@/types/acroform-manifest";
 import { getCurrentTemplateConfig } from "@/lib/pdf/templateConfig";
+import { MICHIGAN_CONVERSIONS } from "@/lib/michigan-conversions";
 
 export interface ManifestIntegrationParams {
   manifestId: string;
@@ -54,11 +55,13 @@ export const convertManifestToAcroForm = (manifestData: any, receiverData?: any)
     generator_county: manifestData.client?.county || '',
     generator_phone: manifestData.client?.phone || '',
     generator_volume_weight: (() => {
-      // Calculate total PTE from individual tire types using simplified PTE system
-      const passengerPTE = (manifestData.pte_off_rim || 0) + (manifestData.pte_on_rim || 0);
-      const truckPTE = ((manifestData.commercial_17_5_19_5_off || 0) + (manifestData.commercial_17_5_19_5_on || 0) + 
-                       (manifestData.commercial_22_5_off || 0) + (manifestData.commercial_22_5_on || 0)) * 5; // Each truck tire = 5 PTE
-      const oversizedPTE = (manifestData.otr_count || 0) * 15 + (manifestData.tractor_count || 0) * 15; // OTR = 15 PTE, Tractor = 15 PTE
+      // Calculate total PTE using Michigan conversion constants
+      const passengerPTE = ((manifestData.pte_off_rim || 0) + (manifestData.pte_on_rim || 0)) * MICHIGAN_CONVERSIONS.PASSENGER_TIRE_TO_PTE;
+      const truckCount = (manifestData.commercial_17_5_19_5_off || 0) + (manifestData.commercial_17_5_19_5_on || 0) +
+                         (manifestData.commercial_22_5_off || 0) + (manifestData.commercial_22_5_on || 0);
+      const truckPTE = truckCount * MICHIGAN_CONVERSIONS.SEMI_TIRE_TO_PTE;
+      const oversizedCount = (manifestData.otr_count || 0) + (manifestData.tractor_count || 0);
+      const oversizedPTE = oversizedCount * MICHIGAN_CONVERSIONS.OTR_TIRE_TO_PTE;
       return (passengerPTE + truckPTE + oversizedPTE).toString();
     })(),
     
@@ -97,11 +100,13 @@ export const convertManifestToAcroForm = (manifestData: any, receiverData?: any)
     hauler_tare_weight: (manifestData.tare_weight_lbs || manifestData.tare_weight || '').toString(), 
     hauler_net_weight: (manifestData.net_weight_lbs || manifestData.net_weight || '').toString(),
     hauler_total_pte: (() => {
-      // Same total PTE calculation as generator using simplified PTE system
-      const passengerPTE = (manifestData.pte_off_rim || 0) + (manifestData.pte_on_rim || 0);
-      const truckPTE = ((manifestData.commercial_17_5_19_5_off || 0) + (manifestData.commercial_17_5_19_5_on || 0) + 
-                       (manifestData.commercial_22_5_off || 0) + (manifestData.commercial_22_5_on || 0)) * 5; // Each truck tire = 5 PTE
-      const oversizedPTE = (manifestData.otr_count || 0) * 15 + (manifestData.tractor_count || 0) * 15; // OTR = 15 PTE, Tractor = 15 PTE
+      // Same total PTE calculation using Michigan conversion constants
+      const passengerPTE = ((manifestData.pte_off_rim || 0) + (manifestData.pte_on_rim || 0)) * MICHIGAN_CONVERSIONS.PASSENGER_TIRE_TO_PTE;
+      const truckCount = (manifestData.commercial_17_5_19_5_off || 0) + (manifestData.commercial_17_5_19_5_on || 0) +
+                         (manifestData.commercial_22_5_off || 0) + (manifestData.commercial_22_5_on || 0);
+      const truckPTE = truckCount * MICHIGAN_CONVERSIONS.SEMI_TIRE_TO_PTE;
+      const oversizedCount = (manifestData.otr_count || 0) + (manifestData.tractor_count || 0);
+      const oversizedPTE = oversizedCount * MICHIGAN_CONVERSIONS.OTR_TIRE_TO_PTE;
       return (passengerPTE + truckPTE + oversizedPTE).toString();
     })(),
     hauler_signature: manifestData.driver_sig_path || manifestData.driver_signature_png_path || '',
@@ -119,11 +124,13 @@ export const convertManifestToAcroForm = (manifestData: any, receiverData?: any)
     receiver_time: manifestData.receiver_signed_at ? new Date(manifestData.receiver_signed_at).toLocaleTimeString('en-US', { hour12: false }) : '',
     receiver_gross_weight: '',
     receiver_total_pte: (() => {
-      // Same total PTE calculation as generator and hauler using simplified PTE system
-      const passengerPTE = (manifestData.pte_off_rim || 0) + (manifestData.pte_on_rim || 0);
-      const truckPTE = ((manifestData.commercial_17_5_19_5_off || 0) + (manifestData.commercial_17_5_19_5_on || 0) + 
-                       (manifestData.commercial_22_5_off || 0) + (manifestData.commercial_22_5_on || 0)) * 5; // Each truck tire = 5 PTE
-      const oversizedPTE = (manifestData.otr_count || 0) * 15 + (manifestData.tractor_count || 0) * 15; // OTR = 15 PTE, Tractor = 15 PTE
+      // Same total PTE calculation using Michigan conversion constants
+      const passengerPTE = ((manifestData.pte_off_rim || 0) + (manifestData.pte_on_rim || 0)) * MICHIGAN_CONVERSIONS.PASSENGER_TIRE_TO_PTE;
+      const truckCount = (manifestData.commercial_17_5_19_5_off || 0) + (manifestData.commercial_17_5_19_5_on || 0) +
+                         (manifestData.commercial_22_5_off || 0) + (manifestData.commercial_22_5_on || 0);
+      const truckPTE = truckCount * MICHIGAN_CONVERSIONS.SEMI_TIRE_TO_PTE;
+      const oversizedCount = (manifestData.otr_count || 0) + (manifestData.tractor_count || 0);
+      const oversizedPTE = oversizedCount * MICHIGAN_CONVERSIONS.OTR_TIRE_TO_PTE;
       return (passengerPTE + truckPTE + oversizedPTE).toString();
     })(),
     receiver_tare_weight: '',

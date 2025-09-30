@@ -5,6 +5,7 @@ import { convertManifestToAcroForm } from '@/hooks/useManifestIntegration';
 import { convertToAcroFormFields } from '@/hooks/useAcroFormManifest';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { MICHIGAN_CONVERSIONS } from '@/lib/michigan-conversions';
 
 interface AcroFormLivePreviewProps {
   manifestId: string;
@@ -15,6 +16,8 @@ interface AcroFormLivePreviewProps {
     commercial_17_5_19_5_on: number;
     commercial_22_5_off: number;
     commercial_22_5_on: number;
+    otr_count: number;
+    tractor_count: number;
     generator_signature_name: string;
     driver_signature_name: string;
     generator_date?: string;
@@ -52,7 +55,15 @@ export const AcroFormLivePreview: React.FC<AcroFormLivePreviewProps> = ({ manife
         const withOverrides = {
           ...baseData,
           // apply incoming overrides to acroform data if relevant
-          hauler_total_pte: ((overrides?.pte_off_rim ?? manifest.pte_off_rim ?? 0) + (overrides?.pte_on_rim ?? manifest.pte_on_rim ?? 0)).toString(),
+          hauler_total_pte: (() => {
+            const passenger = ((overrides?.pte_off_rim ?? manifest.pte_off_rim ?? 0) + (overrides?.pte_on_rim ?? manifest.pte_on_rim ?? 0)) * MICHIGAN_CONVERSIONS.PASSENGER_TIRE_TO_PTE;
+            const truckCount = (overrides?.commercial_17_5_19_5_off ?? manifest.commercial_17_5_19_5_off ?? 0) + (overrides?.commercial_17_5_19_5_on ?? manifest.commercial_17_5_19_5_on ?? 0) +
+                               (overrides?.commercial_22_5_off ?? manifest.commercial_22_5_off ?? 0) + (overrides?.commercial_22_5_on ?? manifest.commercial_22_5_on ?? 0);
+            const truck = truckCount * MICHIGAN_CONVERSIONS.SEMI_TIRE_TO_PTE;
+            const oversizedCount = (overrides?.otr_count ?? manifest.otr_count ?? 0) + (overrides?.tractor_count ?? manifest.tractor_count ?? 0);
+            const oversized = oversizedCount * MICHIGAN_CONVERSIONS.OTR_TIRE_TO_PTE;
+            return (passenger + truck + oversized).toString();
+          })(),
           generator_date: overrides?.generator_date ?? baseData.generator_date ?? today,
           hauler_date: overrides?.hauler_date ?? baseData.hauler_date ?? today,
           receiver_date: baseData.receiver_date ?? today,

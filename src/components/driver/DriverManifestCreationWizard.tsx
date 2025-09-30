@@ -19,7 +19,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SignatureCanvas from "react-signature-canvas";
-import { pteToTons } from "@/lib/michigan-conversions";
+import { pteToTons, MICHIGAN_CONVERSIONS } from "@/lib/michigan-conversions";
 import { 
   Building, 
   Truck, 
@@ -111,9 +111,11 @@ hauler_print_name: "",
 
   // Helpers for PTE and weight calculations (Michigan rule: 89 PTE = 1 ton)
   const computeTotalPTE = (vals: ManifestFormData) => {
-    const passenger = (vals.pte_off_rim || 0) + (vals.pte_on_rim || 0);
-    const truck = ((vals.commercial_17_5_19_5_off || 0) + (vals.commercial_17_5_19_5_on || 0) + (vals.commercial_22_5_off || 0) + (vals.commercial_22_5_on || 0)) * 5;
-    const oversized = ((vals.otr_count || 0) + (vals.tractor_count || 0)) * 15;
+    const passenger = ((vals.pte_off_rim || 0) + (vals.pte_on_rim || 0)) * MICHIGAN_CONVERSIONS.PASSENGER_TIRE_TO_PTE;
+    const truckCount = (vals.commercial_17_5_19_5_off || 0) + (vals.commercial_17_5_19_5_on || 0) + (vals.commercial_22_5_off || 0) + (vals.commercial_22_5_on || 0);
+    const truck = truckCount * MICHIGAN_CONVERSIONS.SEMI_TIRE_TO_PTE;
+    const oversizedCount = (vals.otr_count || 0) + (vals.tractor_count || 0);
+    const oversized = oversizedCount * MICHIGAN_CONVERSIONS.OTR_TIRE_TO_PTE;
     return passenger + truck + oversized;
   };
 
