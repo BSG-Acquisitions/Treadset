@@ -70,19 +70,21 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
       <DialogTrigger asChild>
         {trigger}
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden w-[95vw] sm:w-auto p-3 sm:p-6" hideClose>
-        <DialogHeader>
+      <DialogContent className="w-screen sm:w-auto max-w-[100vw] sm:max-w-4xl max-h-[90dvh] overflow-y-auto overflow-x-hidden p-0 sm:p-6 rounded-none sm:rounded-lg mobile-safe mobile-scroll" hideClose>
+        <DialogHeader className="px-4 pt-4 pb-2 sm:p-0">
           <DialogTitle className="flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5 text-brand-success flex-shrink-0" />
             <span className="truncate">Complete Pickup & Generate Manifest</span>
           </DialogTitle>
         </DialogHeader>
 
-        <DriverManifestCreationWizard
-          pickupId={pickup.id}
-          clientId={pickup.client?.id}
-          onComplete={handleComplete}
-        />
+        <div className="w-full max-w-full sm:max-w-3xl mx-auto px-4 py-3 sm:p-0 overflow-x-hidden">
+          <DriverManifestCreationWizard
+            pickupId={pickup.id}
+            clientId={pickup.client?.id}
+            onComplete={handleComplete}
+          />
+        </div>
       </DialogContent>
     </Dialog>
   );
