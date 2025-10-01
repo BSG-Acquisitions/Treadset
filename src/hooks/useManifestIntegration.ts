@@ -74,7 +74,7 @@ export const convertManifestToAcroForm = (manifestData: any, receiverData?: any)
     generator_date_processed: new Date().toISOString().split('T')[0],
     generator_print_name: (() => {
       const name = manifestData.signed_by_name || manifestData.client?.contact_name || 'Generator Representative';
-      const time = manifestData.generator_signed_at ? new Date(manifestData.generator_signed_at).toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit' }) : (manifestData.signed_at ? new Date(manifestData.signed_at).toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit' }) : new Date().toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit' }));
+      const time = manifestData.generator_signed_at ? new Date(manifestData.generator_signed_at).toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit', second: '2-digit' }) : (manifestData.signed_at ? new Date(manifestData.signed_at).toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit', second: '2-digit' }) : new Date().toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit', second: '2-digit' }));
       return `${name} - ${time}`;
     })(),
     generator_date: manifestData.generator_signed_at ? new Date(manifestData.generator_signed_at).toISOString().split('T')[0] : (manifestData.signed_at ? new Date(manifestData.signed_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
@@ -92,7 +92,7 @@ export const convertManifestToAcroForm = (manifestData: any, receiverData?: any)
     hauler_phone: manifestData.hauler?.hauler_phone || '',
     hauler_print_name: (() => {
       const name = manifestData.signed_by_name || 'Hauler Representative';
-      const time = manifestData.hauler_signed_at ? new Date(manifestData.hauler_signed_at).toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit' }) : (manifestData.signed_at ? new Date(manifestData.signed_at).toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit' }) : new Date().toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit' }));
+      const time = manifestData.hauler_signed_at ? new Date(manifestData.hauler_signed_at).toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit', second: '2-digit' }) : (manifestData.signed_at ? new Date(manifestData.signed_at).toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit', second: '2-digit' }) : new Date().toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit', second: '2-digit' }));
       return `${name} - ${time}`;
     })(),
     hauler_date: manifestData.hauler_signed_at ? new Date(manifestData.hauler_signed_at).toISOString().split('T')[0] : (manifestData.signed_at ? new Date(manifestData.signed_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
