@@ -18,6 +18,7 @@ import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CollectPaymentWithCard } from "@/components/driver/CollectPaymentWithCard";
 import SignatureCanvas from "react-signature-canvas";
 import { pteToTons, MICHIGAN_CONVERSIONS } from "@/lib/michigan-conversions";
 import { 
@@ -87,6 +88,7 @@ export function DriverManifestCreationWizard({
   const [otrRate, setOtrRate] = useState<string>("");
   const [calculatedTotal, setCalculatedTotal] = useState(0);
   const [offlineMethod, setOfflineMethod] = useState<'CASH' | 'CHECK'>('CASH');
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
 
   const PRESET_RATES = {
     passengerOffRim: ['2.50', '2.75', '3.00', '3.25', '3.50'],
@@ -1121,43 +1123,13 @@ hauler_print_name: "",
 
             if (error) throw error;
 
-            // Import and open payment dialog
-            const { supabase: supabaseClient } = await import("@/integrations/supabase/client");
-            const { data, error: paymentError } = await supabaseClient.functions.invoke("create-pickup-payment", {
-              body: { pickup_id: pickupId },
-            });
-
-            if (paymentError) {
-              console.error('Payment function error:', paymentError);
-              throw new Error(paymentError.message || 'Failed to invoke payment function');
-            }
-
-            if (data?.error) {
-              console.error('Payment function returned error:', data.error);
-              throw new Error(data.error);
-            }
-
-            if (data?.url) {
-              window.open(data.url, '_blank');
-              toast({
-                title: "Payment Link Opened",
-                description: "Complete the payment in the new tab",
-              });
-            } else {
-              throw new Error('No payment URL returned from function');
-            }
-
-            // Navigate after payment initiated
-            if (onComplete) {
-              onComplete();
-            } else {
-              navigate("/driver/manifests");
-            }
+            // Show payment dialog
+            setShowPaymentDialog(true);
           } catch (error: any) {
-            console.error('Failed to initiate payment:', error);
+            console.error('Failed to update revenue:', error);
             toast({
-              title: "Payment Error",
-              description: error.message || "Failed to create payment link",
+              title: "Error",
+              description: error.message || "Failed to prepare payment",
               variant: "destructive",
             });
           }
@@ -1503,6 +1475,22 @@ hauler_print_name: "",
           </div>
         </form>
       </Form>
+
+      {/* Payment Dialog */}
+      <CollectPaymentWithCard
+        open={showPaymentDialog}
+        onOpenChange={setShowPaymentDialog}
+        pickupId={pickupId}
+        amount={calculatedTotal}
+        onSuccess={() => {
+          setShowPaymentDialog(false);
+          if (onComplete) {
+            onComplete();
+          } else {
+            navigate("/driver/manifests");
+          }
+        }}
+      />
     </Card>
   );
 }
