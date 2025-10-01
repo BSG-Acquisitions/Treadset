@@ -56,11 +56,14 @@ interface DriverManifestCreationWizardProps {
   onComplete?: () => void;
 }
 
+import { DollarSign } from "lucide-react";
+
 const steps = [
   { key: "info", title: "Review Info", icon: Building },
   { key: "tires", title: "Tire Counts", icon: Package },
   { key: "signatures", title: "Signatures", icon: PenTool },
   { key: "review", title: "Review & Submit", icon: CheckCircle },
+  { key: "payment", title: "Payment", icon: DollarSign },
 ];
 
 export function DriverManifestCreationWizard({ 
@@ -75,6 +78,18 @@ export function DriverManifestCreationWizard({
   const [assignmentData, setAssignmentData] = useState<any>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [manualWeightOverride, setManualWeightOverride] = useState<boolean>(false);
+  const [manifestCreated, setManifestCreated] = useState(false);
+  const [createdManifestId, setCreatedManifestId] = useState<string | null>(null);
+  const [pteRate, setPteRate] = useState<string>("");
+  const [commercialRate, setCommercialRate] = useState<string>("");
+  const [otrRate, setOtrRate] = useState<string>("");
+  const [calculatedTotal, setCalculatedTotal] = useState(0);
+
+  const PRESET_RATES = {
+    passenger: ['2.50', '2.75', '3.00', '3.25'],
+    commercial: ['3.00', '3.50', '4.00', '4.50'],
+    otr: ['4.00', '4.50', '5.00', '5.50']
+  };
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -150,6 +165,22 @@ hauler_print_name: "",
     manualWeightOverride,
     form
   ]);
+
+  // Calculate payment total when rates change
+  useEffect(() => {
+    if (steps[step]?.key === "payment") {
+      const formValues = form.getValues();
+      const passengerCount = formValues.pte_off_rim + formValues.pte_on_rim;
+      const commercialCount = formValues.commercial_17_5_19_5_off + formValues.commercial_17_5_19_5_on + 
+                             formValues.commercial_22_5_off + formValues.commercial_22_5_on;
+      const otrTotalCount = formValues.otr_count + formValues.tractor_count;
+
+      const pteAmount = passengerCount * (parseFloat(pteRate) || 0);
+      const commercialAmount = commercialCount * (parseFloat(commercialRate) || 0);
+      const otrAmount = otrTotalCount * (parseFloat(otrRate) || 0);
+      setCalculatedTotal(pteAmount + commercialAmount + otrAmount);
+    }
+  }, [pteRate, commercialRate, otrRate, step, form]);
 
   // Fetch pickup, assignment, and hauler data on mount
   useEffect(() => {
@@ -518,7 +549,7 @@ hauler_print_name: "",
 
       toast({
         title: "Success",
-        description: "Manifest created and emailed successfully. Receiver will complete their section later.",
+        description: "Manifest created successfully!",
       });
 
       // Update pickup status to completed
@@ -530,11 +561,10 @@ hauler_print_name: "",
         })
         .eq('id', pickupId);
 
-      if (onComplete) {
-        onComplete();
-      } else {
-        navigate("/driver/manifests");
-      }
+      // Store manifest ID and move to payment step
+      setCreatedManifestId(manifest.id);
+      setManifestCreated(true);
+      setStep(step + 1); // Move to payment step
     } catch (error: any) {
       console.error("Error creating manifest:", error);
       toast({
@@ -1062,6 +1092,202 @@ hauler_print_name: "",
           </div>
         );
 
+      case "payment":
+        const formValues = form.getValues();
+        const passengerCount = formValues.pte_off_rim + formValues.pte_on_rim;
+        const commercialCount = formValues.commercial_17_5_19_5_off + formValues.commercial_17_5_19_5_on + 
+                               formValues.commercial_22_5_off + formValues.commercial_22_5_on;
+        const otrTotalCount = formValues.otr_count + formValues.tractor_count;
+
+        const handleCollectPayment = async () => {
+          if (calculatedTotal <= 0) return;
+
+          try {
+            // Update the pickup with computed_revenue
+            const { error } = await supabase
+              .from('pickups')
+              .update({ computed_revenue: calculatedTotal })
+              .eq('id', pickupId);
+
+            if (error) throw error;
+
+            // Import and open payment dialog
+            const { supabase: supabaseClient } = await import("@/integrations/supabase/client");
+            const { data, error: paymentError } = await supabaseClient.functions.invoke("create-pickup-payment", {
+              body: { pickup_id: pickupId },
+            });
+
+            if (paymentError) throw paymentError;
+
+            if (data.url) {
+              window.open(data.url, '_blank');
+              toast({
+                title: "Payment Link Opened",
+                description: "Complete the payment in the new tab",
+              });
+            }
+
+            // Navigate after payment initiated
+            if (onComplete) {
+              onComplete();
+            } else {
+              navigate("/driver/manifests");
+            }
+          } catch (error: any) {
+            console.error('Failed to initiate payment:', error);
+            toast({
+              title: "Payment Error",
+              description: error.message || "Failed to create payment link",
+              variant: "destructive",
+            });
+          }
+        };
+
+        return (
+          <div className="space-y-6">
+            <div className="text-center py-4">
+              <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Manifest Created!</h3>
+              <p className="text-muted-foreground">
+                Now set the rates for payment calculation
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {passengerCount > 0 && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Passenger Tire Rate ({passengerCount} tires)
+                  </label>
+                  <Select value={pteRate} onValueChange={setPteRate}>
+                    <SelectTrigger className="bg-background">
+                      <SelectValue placeholder="Select rate" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background z-50">
+                      {PRESET_RATES.passenger.map((rate) => (
+                        <SelectItem key={rate} value={rate}>
+                          ${rate} per tire
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">or</span>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="Enter custom rate"
+                      value={pteRate}
+                      onChange={(e) => setPteRate(e.target.value)}
+                      className="text-sm"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {commercialCount > 0 && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Commercial Tire Rate ({commercialCount} tires)
+                  </label>
+                  <Select value={commercialRate} onValueChange={setCommercialRate}>
+                    <SelectTrigger className="bg-background">
+                      <SelectValue placeholder="Select rate" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background z-50">
+                      {PRESET_RATES.commercial.map((rate) => (
+                        <SelectItem key={rate} value={rate}>
+                          ${rate} per tire
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">or</span>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="Enter custom rate"
+                      value={commercialRate}
+                      onChange={(e) => setCommercialRate(e.target.value)}
+                      className="text-sm"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {otrTotalCount > 0 && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    OTR/Tractor Tire Rate ({otrTotalCount} tires)
+                  </label>
+                  <Select value={otrRate} onValueChange={setOtrRate}>
+                    <SelectTrigger className="bg-background">
+                      <SelectValue placeholder="Select rate" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background z-50">
+                      {PRESET_RATES.otr.map((rate) => (
+                        <SelectItem key={rate} value={rate}>
+                          ${rate} per tire
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">or</span>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="Enter custom rate"
+                      value={otrRate}
+                      onChange={(e) => setOtrRate(e.target.value)}
+                      className="text-sm"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {calculatedTotal > 0 && (
+                <div className="bg-primary/10 p-4 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Total Amount:</span>
+                    <span className="text-2xl font-bold">${calculatedTotal.toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  if (onComplete) {
+                    onComplete();
+                  } else {
+                    navigate("/driver/manifests");
+                  }
+                }}
+                className="flex-1"
+              >
+                Skip Payment
+              </Button>
+              <Button
+                type="button"
+                onClick={handleCollectPayment}
+                disabled={calculatedTotal <= 0}
+                className="flex-1"
+              >
+                <DollarSign className="w-4 h-4 mr-2" />
+                Collect Payment
+              </Button>
+            </div>
+          </div>
+        );
+
       default:
         return null;
     }
@@ -1111,37 +1337,41 @@ hauler_print_name: "",
           </CardContent>
 
           <div className="flex items-center justify-between px-3 sm:px-6 py-4 border-t gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleBack}
-              disabled={step === 0 || isSubmitting}
-              className="text-xs sm:text-sm"
-            >
-              <ChevronLeft className="mr-1 h-3 w-3 sm:h-4 sm:w-4" />
-              Back
-            </Button>
+            {currentStep.key !== "payment" && (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleBack}
+                  disabled={step === 0 || isSubmitting}
+                  className="text-xs sm:text-sm"
+                >
+                  <ChevronLeft className="mr-1 h-3 w-3 sm:h-4 sm:w-4" />
+                  Back
+                </Button>
 
-            {step < steps.length - 1 ? (
-              <Button 
-                type="button" 
-                onClick={handleNext} 
-                disabled={isSubmitting}
-                className="!bg-green-600 hover:!bg-green-700 !text-white font-semibold disabled:opacity-50 text-xs sm:text-sm"
-                style={{ backgroundColor: '#16a34a', color: 'white' }}
-              >
-                Next
-                <ChevronRight className="ml-1 h-3 w-3 sm:h-4 sm:w-4" />
-              </Button>
-            ) : (
-              <Button 
-                type="submit" 
-                disabled={isSubmitting}
-                className="!bg-green-600 hover:!bg-green-700 !text-white font-semibold disabled:opacity-50 text-xs sm:text-sm whitespace-nowrap"
-                style={{ backgroundColor: '#16a34a', color: 'white' }}
-              >
-                {isSubmitting ? "Creating..." : "Create Manifest"}
-              </Button>
+                {currentStep.key === "review" ? (
+                  <Button 
+                    type="submit" 
+                    disabled={isSubmitting}
+                    className="!bg-green-600 hover:!bg-green-700 !text-white font-semibold disabled:opacity-50 text-xs sm:text-sm whitespace-nowrap"
+                    style={{ backgroundColor: '#16a34a', color: 'white' }}
+                  >
+                    {isSubmitting ? "Creating..." : "Create Manifest"}
+                  </Button>
+                ) : (
+                  <Button 
+                    type="button" 
+                    onClick={handleNext} 
+                    disabled={isSubmitting}
+                    className="!bg-green-600 hover:!bg-green-700 !text-white font-semibold disabled:opacity-50 text-xs sm:text-sm"
+                    style={{ backgroundColor: '#16a34a', color: 'white' }}
+                  >
+                    Next
+                    <ChevronRight className="ml-1 h-3 w-3 sm:h-4 sm:w-4" />
+                  </Button>
+                )}
+              </>
             )}
           </div>
         </form>
