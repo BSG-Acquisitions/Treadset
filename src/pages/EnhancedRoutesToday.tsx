@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Separator } from "@/components/ui/separator";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { CapacityGauge } from "@/components/CapacityGauge";
@@ -543,127 +544,115 @@ export default function EnhancedRoutesToday() {
               )}
               
               {/* Optimized Routes */}
-              {optimizedRoutes.length > 0 && optimizedRoutes.map((route, routeIndex) => (
-                <motion.div
-                  key={route.vehicleId}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: routeIndex * 0.1 }}
-                >
-                  <Card className="overflow-hidden">
-                    <CardHeader className="bg-muted/50">
-                      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                        <div className="flex items-center gap-4">
-                          <div className="p-3 bg-brand-primary rounded-lg">
-                            <Truck className="h-6 w-6 text-white" />
-                          </div>
-                          <div>
-                            <CardTitle className="text-xl">{route.vehicleName}</CardTitle>
-                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                              <span className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                {formatTime(route.startTime)} - {formatTime(route.endTime)}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Navigation className="h-3 w-3" />
-                                {route.totalDistance.toFixed(1)} mi
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <MapPin className="h-3 w-3" />
-                                {route.stops.length} stops
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="flex flex-col lg:flex-row items-start lg:items-center gap-3">
-                          {/* Driver Assignment Dropdown */}
-                          <DriverAssignmentDropdown
-                            vehicleId={route.vehicleId}
-                            vehicleName={route.vehicleName}
-                            routeDate={activeDay}
-                            currentDriverId={
-                              // Get driver from assignments for this vehicle
-                              assignments?.find(a => a.vehicle_id === route.vehicleId)?.assigned_driver?.id
-                            }
-                            onDriverAssigned={(driverId) => {
-                              // Refresh data when driver is assigned
-                              console.log(`Driver ${driverId} assigned to ${route.vehicleName}`);
-                            }}
-                          />
-                          
-                          <div className="flex items-center gap-3">
-                            <Badge className={`${getEfficiencyColor(route.efficiency)} border`}>
-                              <TrendingUp className="h-3 w-3 mr-1" />
-                              {route.efficiency}% efficient
-                            </Badge>
-                            
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handlePrintRoute(route)}
-                            >
-                              <Printer className="h-4 w-4 mr-2" />
-                              Print Route
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    
-                    <CardContent className="p-6">
-                      <div className="space-y-4">
-                        {route.stops.map((stop, index) => (
-                          <div key={stop.id} className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
-                            <div className="flex-shrink-0 w-8 h-8 bg-brand-primary text-white rounded-full flex items-center justify-center text-sm font-bold">
-                              {index + 1}
-                            </div>
-                            
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-start justify-between">
-                                <div>
-                                  <h4 className="font-semibold text-foreground truncate">
-                                    {stop.clientName}
-                                  </h4>
-                                   <p className="text-sm font-medium text-foreground">
-                                     📍 {stop.address}
-                                   </p>
-                                  <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                                    <span className="flex items-center gap-1">
-                                      <Package className="h-3 w-3" />
-                                      {stop.pteCount} PTE
-                                    </span>
-                                    <span className="flex items-center gap-1">
-                                      <Timer className="h-3 w-3" />
-                                      {stop.serviceTimeMinutes} min
-                                    </span>
+              {optimizedRoutes.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Truck className="h-5 w-5" />
+                      Optimized Routes - {format(activeDateLocal, 'EEEE, MMMM d')}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {optimizedRoutes.map((route, routeIndex) => (
+                        <Collapsible key={route.vehicleId} className="border rounded-lg">
+                          <CollapsibleTrigger className="w-full p-4 hover:bg-muted/50 transition-colors">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="p-2 bg-brand-primary rounded-md">
+                                  <Truck className="h-4 w-4 text-white" />
+                                </div>
+                                <div className="text-left">
+                                  <p className="font-semibold">{route.vehicleName}</p>
+                                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                    <span>{route.stops.length} stops</span>
+                                    <span>•</span>
+                                    <span>{route.totalDistance.toFixed(1)} mi</span>
+                                    <span>•</span>
+                                    <span>{formatTime(route.startTime)} - {formatTime(route.endTime)}</span>
                                   </div>
-                                  {stop.notes && (
-                                    <p className="text-xs text-muted-foreground mt-2 italic">
-                                      📝 {stop.notes}
-                                    </p>
-                                  )}
                                 </div>
                               </div>
+                              <div className="flex items-center gap-2">
+                                <Badge className={`${getEfficiencyColor(route.efficiency)} border text-xs`}>
+                                  {route.efficiency}%
+                                </Badge>
+                                <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-90" />
+                              </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                      
-                      {/* Working hours warning */}
-                      {new Date(route.endTime).getHours() > 16 || 
-                       (new Date(route.endTime).getHours() === 16 && new Date(route.endTime).getMinutes() > 30) && (
-                        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center gap-2">
-                          <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                          <span className="text-sm text-yellow-800">
-                            Route extends beyond normal working hours (4:30 PM)
-                          </span>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="px-4 pb-4">
+                            <div className="pt-3 border-t space-y-3">
+                              {/* Driver Assignment */}
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-muted-foreground">Driver:</span>
+                                <DriverAssignmentDropdown
+                                  vehicleId={route.vehicleId}
+                                  vehicleName={route.vehicleName}
+                                  routeDate={activeDay}
+                                  currentDriverId={
+                                    assignments?.find(a => a.vehicle_id === route.vehicleId)?.assigned_driver?.id
+                                  }
+                                  onDriverAssigned={(driverId) => {
+                                    console.log(`Driver ${driverId} assigned to ${route.vehicleName}`);
+                                  }}
+                                />
+                              </div>
+                              
+                              {/* Stops */}
+                              <div className="space-y-2">
+                                {route.stops.map((stop, index) => (
+                                  <div key={stop.id} className="flex items-start gap-3 p-3 bg-muted/30 rounded-md text-sm">
+                                    <div className="flex-shrink-0 w-6 h-6 bg-brand-primary text-white rounded-full flex items-center justify-center text-xs font-bold">
+                                      {index + 1}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="font-medium truncate">{stop.clientName}</p>
+                                      <p className="text-xs text-muted-foreground truncate">📍 {stop.address}</p>
+                                      <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                                        <span>{stop.pteCount} PTE</span>
+                                        <span>•</span>
+                                        <span>{stop.serviceTimeMinutes} min</span>
+                                      </div>
+                                      {stop.notes && (
+                                        <p className="text-xs text-muted-foreground mt-1 italic">📝 {stop.notes}</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                              
+                              {/* Actions */}
+                              <div className="flex items-center gap-2 pt-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handlePrintRoute(route)}
+                                  className="flex-1"
+                                >
+                                  <Printer className="h-4 w-4 mr-2" />
+                                  Print Route
+                                </Button>
+                              </div>
+                              
+                              {/* Warning */}
+                              {(new Date(route.endTime).getHours() > 16 || 
+                               (new Date(route.endTime).getHours() === 16 && new Date(route.endTime).getMinutes() > 30)) && (
+                                <div className="p-2 bg-yellow-50 border border-yellow-200 rounded-md flex items-center gap-2">
+                                  <AlertTriangle className="h-4 w-4 text-yellow-600 flex-shrink-0" />
+                                  <span className="text-xs text-yellow-800">
+                                    Route extends beyond 4:30 PM
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           )}
         </TabsContent>
