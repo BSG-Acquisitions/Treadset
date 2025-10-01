@@ -133,10 +133,9 @@ hauler_print_name: "",
       const tons = totalPTE / 89;
       const pounds = tons * 2000;
       const calculatedGross = Math.round(pounds * 10) / 10; // Round to 1 decimal
-      const calculatedTare = Math.round(calculatedGross * 0.15 * 10) / 10; // Estimate tare as 15% of gross
       
       form.setValue('gross_weight_lbs', calculatedGross, { shouldValidate: false });
-      form.setValue('tare_weight_lbs', calculatedTare, { shouldValidate: false });
+      // Tare weight remains 0 unless manually entered by driver
     }
   }, [
     form.watch('pte_off_rim'),
