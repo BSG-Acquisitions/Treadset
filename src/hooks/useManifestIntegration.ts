@@ -78,7 +78,7 @@ export const convertManifestToAcroForm = (manifestData: any, receiverData?: any)
     })(),
     generator_date: manifestData.generator_signed_at ? new Date(manifestData.generator_signed_at).toISOString().split('T')[0] : (manifestData.signed_at ? new Date(manifestData.signed_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
     generator_time: manifestData.generator_signed_at ? new Date(manifestData.generator_signed_at).toLocaleTimeString('en-US', { hour12: false }) : (manifestData.signed_at ? new Date(manifestData.signed_at).toLocaleTimeString('en-US', { hour12: false }) : new Date().toLocaleTimeString('en-US', { hour12: false })),
-    generator_signature: manifestData.customer_sig_path || manifestData.customer_signature_png_path || '',
+    generator_signature: manifestData.customer_signature_png_path || '',
 
     // Hauler information - use actual hauler data from database
     hauler_mi_reg: manifestData.hauler?.hauler_mi_reg || '',
@@ -109,7 +109,7 @@ export const convertManifestToAcroForm = (manifestData: any, receiverData?: any)
       const oversizedPTE = oversizedCount * MICHIGAN_CONVERSIONS.OTR_TIRE_TO_PTE;
       return (passengerPTE + truckPTE + oversizedPTE).toString();
     })(),
-    hauler_signature: manifestData.driver_sig_path || manifestData.driver_signature_png_path || '',
+    hauler_signature: manifestData.driver_signature_png_path || '',
 
     // Receiver information - prefer overrides; leave blank if not provided
     receiver_mi_reg: receiverData?.receiver_mi_reg || '',
