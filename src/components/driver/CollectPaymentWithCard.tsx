@@ -84,6 +84,7 @@ export function CollectPaymentWithCard({
           </div>
         ) : (
           <Elements
+            key={clientSecret}
             stripe={stripePromise}
             options={{
               clientSecret,

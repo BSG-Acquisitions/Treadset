@@ -60,7 +60,7 @@ export function CardPaymentForm({ amount, clientSecret, onSuccess, onCancel }: C
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
       <div className="bg-muted/50 p-4 rounded-lg">
         <p className="text-sm text-muted-foreground mb-1">Payment Amount</p>
         <p className="text-2xl font-bold">${amount.toFixed(2)}</p>
