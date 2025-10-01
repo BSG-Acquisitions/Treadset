@@ -388,11 +388,13 @@ hauler_print_name: "",
       let finalGross = gross;
       let finalTare = tare;
       
-      // If auto mode and weights are zero, derive from PTE
-      if (!manualWeightOverride && (gross <= 0 || tare <= 0)) {
+      // If auto mode, never auto-calc tare; compute gross only if needed
+      if (!manualWeightOverride && gross <= 0) {
         const computedTons = totalPteForPdf / 89; // Michigan rule: 89 PTE = 1 ton
         finalGross = Math.round((computedTons * 2000) * 10) / 10; // Convert to lbs
-        finalTare = Math.round((finalGross * 0.15) * 10) / 10; // 15% of gross
+      }
+      if (!manualWeightOverride && tare <= 0) {
+        finalTare = 0; // Default tare to 0.0 unless manually entered
       }
       
       const finalNet = Math.max(0, finalGross - finalTare);
