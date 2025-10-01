@@ -356,6 +356,18 @@ export function CompleteAssignmentDialog({
                           ))}
                         </SelectContent>
                       </Select>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">or</span>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="Enter custom rate"
+                          value={pteRate}
+                          onChange={(e) => setPteRate(e.target.value)}
+                          className="text-sm"
+                        />
+                      </div>
                     </div>
                   )}
 
@@ -376,6 +388,18 @@ export function CompleteAssignmentDialog({
                           ))}
                         </SelectContent>
                       </Select>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">or</span>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="Enter custom rate"
+                          value={commercialRate}
+                          onChange={(e) => setCommercialRate(e.target.value)}
+                          className="text-sm"
+                        />
+                      </div>
                     </div>
                   )}
 
@@ -396,6 +420,18 @@ export function CompleteAssignmentDialog({
                           ))}
                         </SelectContent>
                       </Select>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">or</span>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="Enter custom rate"
+                          value={otrRate}
+                          onChange={(e) => setOtrRate(e.target.value)}
+                          className="text-sm"
+                        />
+                      </div>
                     </div>
                   )}
 
