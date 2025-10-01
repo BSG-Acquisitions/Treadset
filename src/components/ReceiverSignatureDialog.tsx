@@ -116,7 +116,7 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
       if (updateError) throw updateError;
 
       // Regenerate AcroForm PDF with receiver signature and data
-      const overrides = {
+      const overrides: Record<string, any> = {
         receiver_signature: `signatures/${fileName}`,
         receiver_print_name: `${printName} - ${new Date(timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}`,
         receiver_date: new Date(timestamp).toISOString().split('T')[0],
@@ -129,6 +129,33 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
         receiver_zip: selectedReceiver.receiver_zip || '',
         receiver_phone: selectedReceiver.receiver_phone || ''
       };
+
+      // Preserve generator signature timestamp formatting
+      const manifestData = manifest as any;
+      if (manifestData?.generator_print_name && manifestData?.generator_signed_at) {
+        const genTime = new Date(manifestData.generator_signed_at).toLocaleTimeString('en-US', { 
+          hour: 'numeric', 
+          minute: '2-digit', 
+          second: '2-digit', 
+          hour12: true 
+        });
+        // Extract just the name without any existing timestamp
+        const genName = manifestData.generator_print_name.split(' - ')[0];
+        overrides.generator_print_name = `${genName} - ${genTime}`;
+      }
+
+      // Preserve hauler signature timestamp formatting
+      if (manifestData?.hauler_print_name && manifestData?.hauler_signed_at) {
+        const haulerTime = new Date(manifestData.hauler_signed_at).toLocaleTimeString('en-US', { 
+          hour: 'numeric', 
+          minute: '2-digit', 
+          second: '2-digit', 
+          hour12: true 
+        });
+        // Extract just the name without any existing timestamp
+        const haulerName = manifestData.hauler_print_name.split(' - ')[0];
+        overrides.hauler_print_name = `${haulerName} - ${haulerTime}`;
+      }
 
       const pdfResult = await manifestIntegration.mutateAsync({ 
         manifestId, 
