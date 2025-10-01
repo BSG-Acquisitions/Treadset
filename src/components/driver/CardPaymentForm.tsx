@@ -1,16 +1,17 @@
 import { useState } from "react";
-import { PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
 interface CardPaymentFormProps {
   amount: number;
+  clientSecret: string;
   onSuccess: () => void;
   onCancel: () => void;
 }
 
-export function CardPaymentForm({ amount, onSuccess, onCancel }: CardPaymentFormProps) {
+export function CardPaymentForm({ amount, clientSecret, onSuccess, onCancel }: CardPaymentFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const { toast } = useToast();
@@ -26,9 +27,12 @@ export function CardPaymentForm({ amount, onSuccess, onCancel }: CardPaymentForm
     setIsProcessing(true);
 
     try {
-      const { error, paymentIntent } = await stripe.confirmPayment({
-        elements,
-        redirect: "if_required",
+      const cardElement = elements.getElement(CardElement);
+      if (!cardElement) {
+        throw new Error("Card details not ready");
+      }
+      const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: { card: cardElement },
       });
 
       if (error) {
@@ -62,13 +66,9 @@ export function CardPaymentForm({ amount, onSuccess, onCancel }: CardPaymentForm
         <p className="text-2xl font-bold">${amount.toFixed(2)}</p>
       </div>
 
-      <PaymentElement options={{
-        fields: {
-          billingDetails: {
-            email: 'never',
-          }
-        }
-      }} />
+      <div className="bg-card p-4 rounded-lg border">
+        <CardElement options={{ hidePostalCode: true }} />
+      </div>
 
       <div className="flex gap-3">
         <Button

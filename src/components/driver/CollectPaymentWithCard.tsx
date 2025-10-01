@@ -99,6 +99,7 @@ export function CollectPaymentWithCard({
             </div>
             <CardPaymentForm
               amount={amount}
+              clientSecret={clientSecret}
               onSuccess={handleSuccess}
               onCancel={() => onOpenChange(false)}
             />
