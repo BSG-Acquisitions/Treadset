@@ -1,6 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useEffect } from "react";
 import {
   Form,
   FormControl,
@@ -41,6 +42,20 @@ export function ReceiverForm({ initialData, onSubmit, onCancel, isLoading }: Rec
       receiver_phone: initialData?.receiver_phone || "",
     },
   });
+
+  // Reset form when initialData changes to ensure updates are reflected
+  useEffect(() => {
+    if (initialData) {
+      form.reset({
+        receiver_name: initialData.receiver_name || "",
+        receiver_mailing_address: initialData.receiver_mailing_address || "",
+        receiver_city: initialData.receiver_city || "",
+        receiver_state: initialData.receiver_state || "",
+        receiver_zip: initialData.receiver_zip || "",
+        receiver_phone: initialData.receiver_phone || "",
+      });
+    }
+  }, [initialData, form]);
 
   return (
     <Form {...form}>

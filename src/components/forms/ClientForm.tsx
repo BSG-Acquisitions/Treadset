@@ -45,6 +45,27 @@ export function ClientForm({ initialData, onSubmit, onCancel, isLoading }: Clien
     },
   });
 
+  // Reset form when initialData changes to ensure updates are reflected
+  useEffect(() => {
+    if (initialData) {
+      form.reset({
+        company_name: initialData.company_name || "",
+        contact_name: initialData.contact_name || "",
+        email: initialData.email || "",
+        phone: initialData.phone || "",
+        notes: initialData.notes || "",
+        tags: initialData.tags || [],
+        sla_weeks: initialData.sla_weeks || undefined,
+        pricing_tier_id: initialData.pricing_tier_id || undefined,
+        mailing_address: initialData.mailing_address || "",
+        city: initialData.city || "",
+        state: initialData.state || "",
+        zip: initialData.zip || "",
+        county: initialData.county || "",
+      });
+    }
+  }, [initialData, form]);
+
   const watchedTags = form.watch("tags") || [];
 
   const addTag = (tag: string) => {

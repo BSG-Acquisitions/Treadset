@@ -1,6 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useEffect } from "react";
 import {
   Form,
   FormControl,
@@ -43,6 +44,21 @@ export function HaulerForm({ initialData, onSubmit, onCancel, isLoading }: Haule
       hauler_mi_reg: initialData?.hauler_mi_reg || "",
     },
   });
+
+  // Reset form when initialData changes to ensure updates are reflected
+  useEffect(() => {
+    if (initialData) {
+      form.reset({
+        hauler_name: initialData.hauler_name || "",
+        hauler_mailing_address: initialData.hauler_mailing_address || "",
+        hauler_city: initialData.hauler_city || "",
+        hauler_state: initialData.hauler_state || "",
+        hauler_zip: initialData.hauler_zip || "",
+        hauler_phone: initialData.hauler_phone || "",
+        hauler_mi_reg: initialData.hauler_mi_reg || "",
+      });
+    }
+  }, [initialData, form]);
 
   return (
     <Form {...form}>
