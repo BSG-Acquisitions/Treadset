@@ -93,6 +93,17 @@ const handler = async (req: Request): Promise<Response> => {
       } catch (e) {
         console.warn('Attempt 4 exception:', (e as any)?.message);
       }
+      // 5) Fetch from public app assets as a final fallback
+      try {
+        const publicBaseUrl = 'https://9afe9a8a-0280-4803-b6c2-3c5497b7f0eb.lovableproject.com';
+        const publicUrl = `${publicBaseUrl}/manifests/templates/${body.templatePath}`;
+        console.log(`Attempt 5: public URL ${publicUrl}`);
+        const resp = await fetch(publicUrl);
+        if (resp.ok) return await resp.arrayBuffer();
+        console.warn('Public URL fetch failed:', resp.status);
+      } catch (e) {
+        console.warn('Attempt 5 exception:', (e as any)?.message);
+      }
       return null;
     }
 
