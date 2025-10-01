@@ -7,7 +7,7 @@ import { formatTime, formatDate } from "@/lib/formatters";
 
 export default function RoutesPrintToday() {
   useEffect(() => {
-    document.title = "Print Today's Routes – BSG Logistics";
+    document.title = "Print Today's Routes – TreadSet";
   }, []);
 
   const today = new Date().toISOString().split('T')[0];

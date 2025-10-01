@@ -16,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { CapacityGauge } from "@/components/CapacityGauge";
-import { BSGLogo } from "@/components/BSGLogo";
+import { TreadSetAnimatedLogo } from "@/components/TreadSetAnimatedLogo";
 import { ManifestPDFControls } from "@/components/ManifestPDFControls";
 import { 
   Truck, 
@@ -108,7 +108,7 @@ export default function EnhancedRoutesToday() {
   const deletePickup = useDeletePickup();
 
   useEffect(() => {
-    document.title = "Route Planning – BSG Tire Recycling";
+    document.title = "Route Planning – TreadSet";
   }, []);
 
   const goToPreviousWeek = () => setCurrentWeek(prev => subWeeks(prev, 1));
@@ -333,7 +333,7 @@ export default function EnhancedRoutesToday() {
         <main className="container py-6">
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="flex flex-col items-center gap-4">
-              <BSGLogo size="md" animated={true} showText={false} />
+              <TreadSetAnimatedLogo size="md" animated={true} showText={false} />
               <p className="text-muted-foreground">Loading route data...</p>
             </div>
           </div>
@@ -351,7 +351,7 @@ export default function EnhancedRoutesToday() {
           <div className="container py-6">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <BSGLogo size="sm" animated={true} showText={false} />
+              <TreadSetAnimatedLogo size="sm" animated={true} showText={false} />
               <div>
                 <h1 className="text-2xl font-bold text-foreground">Route Planning</h1>
                 <p className="text-muted-foreground">

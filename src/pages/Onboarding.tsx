@@ -33,7 +33,7 @@ export default function Onboarding() {
   const [taxRate, setTaxRate] = useState('8.25');
 
   useEffect(() => {
-    document.title = 'Organization Setup – BSG';
+    document.title = 'Organization Setup – TreadSet';
   }, []);
 
   // Auto-generate slug from name

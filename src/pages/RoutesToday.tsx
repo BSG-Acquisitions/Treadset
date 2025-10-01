@@ -33,7 +33,7 @@ export default function RoutesToday() {
   });
 
   useEffect(() => {
-    document.title = "Route Planning – BSG";
+    document.title = "Route Planning – TreadSet";
   }, []);
 
   const goToPreviousWeek = () => setCurrentWeek(prev => subWeeks(prev, 1));

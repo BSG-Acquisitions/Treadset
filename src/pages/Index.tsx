@@ -27,7 +27,7 @@ export default function Index() {
   const { user, hasAnyRole } = useAuth();
 
   useEffect(() => {
-    document.title = "BSG Tire Recycling Dashboard";
+    document.title = "TreadSet Dashboard";
   }, []);
   
   // Redirect drivers to their routes (only once when user loads)

@@ -11,7 +11,7 @@ import { formatCurrency } from "@/lib/formatters";
 
 export default function Payments() {
   useEffect(() => {
-    document.title = "Payments – BSG";
+    document.title = "Payments – TreadSet";
   }, []);
 
   const { data: payments = [], isLoading } = useQuery({

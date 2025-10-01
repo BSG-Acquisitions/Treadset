@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { ClientAnalyticsDashboard } from "@/components/analytics/ClientAnalyticsDashboard";
 
-import { BSGLogo } from "@/components/BSGLogo";
+import { TreadSetAnimatedLogo } from "@/components/TreadSetAnimatedLogo";
 
 export default function ClientAnalytics() {
   useEffect(() => {
@@ -18,7 +18,7 @@ export default function ClientAnalytics() {
         <div className="relative z-10 py-6 sm:py-8 px-4 sm:px-6">
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-4">
-              <BSGLogo size="lg" animated={true} showText={false} />
+              <TreadSetAnimatedLogo size="lg" animated={true} showText={false} />
               <div className="min-w-0 flex-1">
                 <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-brand-primary to-brand-primary-dark bg-clip-text text-transparent">
                   Client Analytics Dashboard

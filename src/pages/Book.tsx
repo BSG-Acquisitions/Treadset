@@ -33,7 +33,7 @@ type PublicBookingData = z.infer<typeof publicBookingSchema>;
 
 export default function Book() {
   useEffect(() => {
-    document.title = "Schedule Pickup – BSG";
+    document.title = "Schedule Pickup – TreadSet";
   }, []);
 
   const [isSubmitting, setIsSubmitting] = useState(false);

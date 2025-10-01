@@ -25,7 +25,7 @@ export default function ClientDetail() {
   const [showSchedulingCalendar, setShowSchedulingCalendar] = useState(false);
 
   useEffect(() => {
-    document.title = client ? `${client.company_name} – Client – BSG` : "Client – BSG";
+    document.title = client ? `${client.company_name} – Client – TreadSet` : "Client – TreadSet";
   }, [client]);
 
   if (isLoading) {

@@ -34,7 +34,7 @@ type Client = {
 
 export default function Clients() {
   useEffect(() => {
-    document.title = "Clients – BSG";
+    document.title = "Clients – TreadSet";
   }, []);
 
   const tableState = useDataTable({

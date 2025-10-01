@@ -42,7 +42,7 @@ export default function PublicBookingConfirmation() {
   const [confirmationData, setConfirmationData] = useState<PublicConfirmationData | null>(null);
   
   useEffect(() => {
-    document.title = "Pickup Confirmed – BSG Tire Collection";
+    document.title = "Pickup Confirmed – TreadSet Tire Collection";
     
     // Get confirmation data from URL params
     const dataParam = searchParams.get('data');

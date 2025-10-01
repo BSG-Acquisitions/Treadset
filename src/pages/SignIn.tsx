@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
-import { BSGLogo } from '@/components/BSGLogo';
+import { TreadSetAnimatedLogo } from '@/components/TreadSetAnimatedLogo';
 import { PasswordResetDialog } from '@/components/auth/PasswordResetDialog';
 
 export default function SignIn() {
@@ -19,7 +19,7 @@ export default function SignIn() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    document.title = 'Sign In – BSG Logistics';
+    document.title = 'Sign In – TreadSet';
     if (user) {
       navigate('/', { replace: true });
     }
@@ -42,9 +42,9 @@ export default function SignIn() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
-          <BSGLogo size="xl" animated={true} />
+          <TreadSetAnimatedLogo size="xl" animated={true} />
           <h1 className="text-2xl font-bold text-foreground mt-4">Sign In</h1>
-          <p className="text-muted-foreground mt-2">Access your BSG Logistics account</p>
+          <p className="text-muted-foreground mt-2">Access your TreadSet account</p>
         </div>
 
         <Card>

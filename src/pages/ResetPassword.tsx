@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Eye, EyeOff, CheckCircle } from 'lucide-react';
-import { BSGLogo } from '@/components/BSGLogo';
+import { TreadSetAnimatedLogo } from '@/components/TreadSetAnimatedLogo';
 
 export default function ResetPassword() {
   const [password, setPassword] = useState('');
@@ -22,7 +22,7 @@ export default function ResetPassword() {
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    document.title = 'Reset Password – BSG Logistics';
+    document.title = 'Reset Password – TreadSet';
     
     // For password reset flow, we need to be more lenient about session validation
     // Supabase provides a temporary session when users click the reset link
@@ -76,7 +76,7 @@ export default function ResetPassword() {
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="w-full max-w-md space-y-6">
           <div className="text-center">
-            <BSGLogo size="xl" animated={true} />
+            <TreadSetAnimatedLogo size="xl" animated={true} />
             <h1 className="text-2xl font-bold text-foreground mt-4">Password Updated</h1>
           </div>
 
@@ -105,7 +105,7 @@ export default function ResetPassword() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
-          <BSGLogo size="xl" animated={true} />
+          <TreadSetAnimatedLogo size="xl" animated={true} />
           <h1 className="text-2xl font-bold text-foreground mt-4">Reset Your Password</h1>
           <p className="text-muted-foreground mt-2">Enter your new password below</p>
         </div>

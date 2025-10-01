@@ -16,7 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, addDays, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval } from "date-fns";
 import { MapPin, Clock, Truck, Fuel, Star, TrendingUp, Calendar as CalendarIcon } from "lucide-react";
 import { motion } from "framer-motion";
-import { BSGLogo } from "@/components/BSGLogo";
+import { TreadSetAnimatedLogo } from "@/components/TreadSetAnimatedLogo";
 import { SimplifiedVehicleManagement } from "@/components/SimplifiedVehicleManagement";
 
 interface OptimizedSchedulingCalendarProps {
@@ -232,7 +232,7 @@ export function OptimizedSchedulingCalendar({
     return (
       <div className="flex items-center justify-center p-8">
         <div className="flex flex-col items-center gap-4">
-          <BSGLogo size="md" animated={true} showText={false} />
+          <TreadSetAnimatedLogo size="md" animated={true} showText={false} />
           <p className="text-muted-foreground">Loading pickup calendar...</p>
         </div>
       </div>
@@ -254,7 +254,7 @@ export function OptimizedSchedulingCalendar({
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <BSGLogo size="sm" animated={true} showText={false} />
+        <TreadSetAnimatedLogo size="sm" animated={true} showText={false} />
         <div>
           <h2 className="text-2xl font-bold">Optimized Pickup Scheduling</h2>
           <p className="text-muted-foreground">Schedule pickup for {clientName}</p>

@@ -1,7 +1,7 @@
 import { RotateCcw, Recycle } from "lucide-react";
 import { motion } from "framer-motion";
 
-interface BSGLogoProps {
+interface TreadSetAnimatedLogoProps {
   size?: "xs" | "sm" | "md" | "lg" | "xl";
   animated?: boolean;
   showText?: boolean;
@@ -24,12 +24,12 @@ const textSizeClasses = {
   xl: "text-2xl"
 };
 
-export function BSGLogo({ 
+export function TreadSetAnimatedLogo({ 
   size = "md", 
   animated = true, 
   showText = true, 
   className = "" 
-}: BSGLogoProps) {
+}: TreadSetAnimatedLogoProps) {
   return (
     <motion.div
       className={`flex items-center gap-3 group cursor-pointer ${className}`}

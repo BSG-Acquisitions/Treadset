@@ -51,7 +51,7 @@ export default function DriverDashboard() {
     .slice(0, 5);
 
   useEffect(() => {
-    document.title = "Driver Dashboard – BSG";
+    document.title = "Driver Dashboard – TreadSet";
   }, []);
 
   return (

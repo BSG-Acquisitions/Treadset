@@ -19,7 +19,7 @@ export default function DriverRoutes() {
   const { data: assignments = [], isLoading } = useDriverAssignments(selectedDate);
 
   useEffect(() => {
-    document.title = "Driver Routes – BSG";
+    document.title = "Driver Routes – TreadSet";
   }, []);
 
   const getStatusColor = (status: string) => {

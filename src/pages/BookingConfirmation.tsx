@@ -40,7 +40,7 @@ export default function BookingConfirmation() {
   const [confirmationData, setConfirmationData] = useState<ConfirmationData | null>(null);
   
   useEffect(() => {
-    document.title = "Booking Confirmed – BSG";
+    document.title = "Booking Confirmed – TreadSet";
     
     // Get confirmation data from URL params
     const dataParam = searchParams.get('data');
@@ -232,7 +232,7 @@ export default function BookingConfirmation() {
             <CardContent className="pt-6">
               <div className="text-center text-sm text-muted-foreground">
                 <p>Questions about your pickup?</p>
-                <p>Contact us at <span className="font-medium">support@bsglogistics.com</span> or <span className="font-medium">(555) 123-4567</span></p>
+                <p>Contact us at <span className="font-medium">support@treadset.com</span> or <span className="font-medium">(555) 123-4567</span></p>
               </div>
             </CardContent>
           </Card>

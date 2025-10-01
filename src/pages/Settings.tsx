@@ -44,7 +44,7 @@ const [generatingCalibration, setGeneratingCalibration] = useState(false);
 const [generatingTestOverlay, setGeneratingTestOverlay] = useState(false);
 
 useEffect(() => {
-  document.title = "Settings – BSG Tire Recycling";
+  document.title = "Settings – TreadSet";
 }, []);
 
   useEffect(() => {
