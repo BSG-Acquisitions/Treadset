@@ -48,9 +48,9 @@ export function CompleteAssignmentDialog({
   const updateStatus = useUpdateAssignmentStatus();
 
   const PRESET_RATES = {
-    passenger: ['2.50', '2.75', '3.00', '3.25'],
-    commercial: ['3.00', '3.50', '4.00', '4.50'],
-    otr: ['4.00', '4.50', '5.00', '5.50']
+    passenger: ['2.50', '2.75', '3.00', '3.25'], // unchanged
+    commercial: ['10.00', '11.00', '12.00', '13.00', '14.00', '15.00', '16.00', '17.00', '18.00', '19.00', '20.00'],
+    otr: ['50.00', '70.00', '90.00', '110.00', '130.00', '150.00']
   };
 
   // Simplified weight calculations: 1 PTE = 22.47 lbs, 1 Truck = 5 PTE, 1 OTR = 15 PTE, 1 Tractor = 15 PTE

@@ -84,11 +84,12 @@ export function DriverManifestCreationWizard({
   const [commercialRate, setCommercialRate] = useState<string>("");
   const [otrRate, setOtrRate] = useState<string>("");
   const [calculatedTotal, setCalculatedTotal] = useState(0);
+  const [offlineMethod, setOfflineMethod] = useState<'CASH' | 'CHECK'>('CASH');
 
   const PRESET_RATES = {
-    passenger: ['2.50', '2.75', '3.00', '3.25'],
-    commercial: ['3.00', '3.50', '4.00', '4.50'],
-    otr: ['4.00', '4.50', '5.00', '5.50']
+    passenger: ['2.50', '2.75', '3.00', '3.25'], // unchanged per your preference
+    commercial: ['10.00', '11.00', '12.00', '13.00', '14.00', '15.00', '16.00', '17.00', '18.00', '19.00', '20.00'],
+    otr: ['50.00', '70.00', '90.00', '110.00', '130.00', '150.00']
   };
   
   const { toast } = useToast();
@@ -1259,6 +1260,49 @@ hauler_print_name: "",
                 </div>
               )}
             </div>
+
+            {/* Offline payment option */}
+            {calculatedTotal > 0 && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Offline Payment Method</label>
+                <Select value={offlineMethod} onValueChange={(v) => setOfflineMethod(v as 'CASH' | 'CHECK')}>
+                  <SelectTrigger className="bg-background">
+                    <SelectValue placeholder="Select method" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background z-50">
+                    <SelectItem value="CASH">Cash</SelectItem>
+                    <SelectItem value="CHECK">Check</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={calculatedTotal <= 0}
+                    onClick={async () => {
+                      try {
+                        const { error } = await supabase
+                          .from('pickups')
+                          .update({
+                            computed_revenue: calculatedTotal,
+                            final_revenue: calculatedTotal,
+                            payment_method: offlineMethod,
+                            payment_status: 'SUCCEEDED'
+                          })
+                          .eq('id', pickupId);
+                        if (error) throw error;
+                        toast({ title: 'Marked Paid', description: `Recorded ${offlineMethod.toLowerCase()} payment.` });
+                        if (onComplete) onComplete(); else navigate('/driver/manifests');
+                      } catch (err: any) {
+                        toast({ title: 'Offline Payment Error', description: err?.message || 'Failed to record offline payment', variant: 'destructive' });
+                      }
+                    }}
+                  >
+                    Mark Paid Offline
+                  </Button>
+                </div>
+              </div>
+            )}
 
             <div className="flex gap-3">
               <Button

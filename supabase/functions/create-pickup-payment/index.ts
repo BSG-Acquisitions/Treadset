@@ -36,28 +36,36 @@ serve(async (req) => {
     }
     console.log('[CREATE-PICKUP-PAYMENT] Processing payment for pickup:', pickup_id);
 
-    // Fetch pickup details with client info
-    const { data: pickup, error: pickupError } = await supabaseClient
+    // Fetch pickup and client separately to avoid single() coercion issues
+    const { data: pickupRow, error: pickupError } = await supabaseClient
       .from('pickups')
-      .select(`
-        *,
-        client:clients(
-          id,
-          company_name,
-          email,
-          contact_name
-        )
-      `)
+      .select('*')
       .eq('id', pickup_id)
-      .single();
+      .maybeSingle();
 
-    if (pickupError || !pickup) {
-      throw new Error(`Failed to fetch pickup: ${pickupError?.message}`);
+    if (pickupError) {
+      throw new Error(`Failed to fetch pickup: ${pickupError.message}`);
+    }
+    if (!pickupRow) {
+      throw new Error('Pickup not found');
     }
 
-    if (pickup.status !== 'completed') {
-      throw new Error('Payment can only be collected for completed pickups');
+    let client: { id: string; company_name: string | null; email: string | null; contact_name: string | null } | null = null;
+    if (pickupRow.client_id) {
+      const { data: clientRow, error: clientError } = await supabaseClient
+        .from('clients')
+        .select('id, company_name, email, contact_name')
+        .eq('id', pickupRow.client_id)
+        .maybeSingle();
+      if (clientError) {
+        console.log('[CREATE-PICKUP-PAYMENT] Warning: failed to fetch client:', clientError.message);
+      }
+      client = clientRow ?? null;
     }
+
+    const pickup = { ...pickupRow, client };
+
+    // Allow collecting payment regardless of pickup status; the app controls the flow
 
     const amount = pickup.computed_revenue || 0;
     if (amount <= 0) {
