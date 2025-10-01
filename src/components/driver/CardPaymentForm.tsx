@@ -62,12 +62,12 @@ export function CardPaymentForm({ amount, onSuccess, onCancel }: CardPaymentForm
         <p className="text-2xl font-bold">${amount.toFixed(2)}</p>
       </div>
 
-      <PaymentElement options={{ 
-        layout: {
-          type: 'tabs',
-          defaultCollapsed: false,
-        },
-        paymentMethodOrder: ['card']
+      <PaymentElement options={{
+        fields: {
+          billingDetails: {
+            email: 'never',
+          }
+        }
       }} />
 
       <div className="flex gap-3">

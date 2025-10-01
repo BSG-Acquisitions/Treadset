@@ -90,8 +90,13 @@ export function CollectPaymentWithCard({
               appearance: {
                 theme: "stripe",
               },
+              loader: 'never',
             }}
           >
+            <div className="mb-4 p-3 bg-muted rounded-lg text-sm">
+              <p className="font-medium">Collecting payment from customer</p>
+              <p className="text-muted-foreground">Enter the customer's card details below</p>
+            </div>
             <CardPaymentForm
               amount={amount}
               onSuccess={handleSuccess}
