@@ -98,8 +98,11 @@ export const convertManifestToAcroForm = (manifestData: any, receiverData?: any)
     hauler_date: manifestData.hauler_signed_at ? new Date(manifestData.hauler_signed_at).toISOString().split('T')[0] : (manifestData.signed_at ? new Date(manifestData.signed_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
     hauler_time: manifestData.hauler_signed_at ? new Date(manifestData.hauler_signed_at).toLocaleTimeString('en-US', { hour12: false }) : (manifestData.signed_at ? new Date(manifestData.signed_at).toLocaleTimeString('en-US', { hour12: false }) : new Date().toLocaleTimeString('en-US', { hour12: false })),
     hauler_gross_weight: (manifestData.gross_weight_lbs || manifestData.gross_weight || '').toString(),
-    hauler_tare_weight: (manifestData.tare_weight_lbs || manifestData.tare_weight || 0).toString(), 
-    hauler_net_weight: (manifestData.net_weight_lbs || manifestData.net_weight || '').toString(),
+    hauler_tare_weight: '0.0',
+    hauler_net_weight: (() => {
+      const g = Number(manifestData.gross_weight_lbs || manifestData.gross_weight);
+      return isNaN(g) ? '' : g.toFixed(1);
+    })(),
     hauler_total_pte: (() => {
       // Same total PTE calculation using Michigan conversion constants
       const passengerPTE = ((manifestData.pte_off_rim || 0) + (manifestData.pte_on_rim || 0)) * MICHIGAN_CONVERSIONS.PASSENGER_TIRE_TO_PTE;
