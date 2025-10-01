@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
-import { TreadSetAnimatedLogo } from '@/components/TreadSetAnimatedLogo';
+import { TreadSetLogo } from '@/components/TreadSetLogo';
 import { PasswordResetDialog } from '@/components/auth/PasswordResetDialog';
 
 export default function SignIn() {
@@ -41,10 +41,12 @@ export default function SignIn() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
-        <div className="text-center">
-          <TreadSetAnimatedLogo size="xl" animated={true} />
-          <h1 className="text-2xl font-bold text-foreground mt-4">Sign In</h1>
-          <p className="text-muted-foreground mt-2">Access your TreadSet account</p>
+        <div className="text-center space-y-4">
+          <TreadSetLogo size="xl" className="mx-auto" />
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Sign In</h1>
+            <p className="text-muted-foreground mt-2">Access your TreadSet account</p>
+          </div>
         </div>
 
         <Card>

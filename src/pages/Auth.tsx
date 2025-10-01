@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
 import { PasswordResetDialog } from '@/components/auth/PasswordResetDialog';
+import { TreadSetLogo } from '@/components/TreadSetLogo';
 
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
@@ -102,9 +103,12 @@ export default function Auth() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">TreadSet</h1>
-          <p className="text-muted-foreground">Access your logistics dashboard</p>
+        <div className="text-center mb-8 space-y-4">
+          <TreadSetLogo size="xl" className="mx-auto" />
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">TreadSet</h1>
+            <p className="text-muted-foreground">Access your logistics dashboard</p>
+          </div>
         </div>
 
         <Card>

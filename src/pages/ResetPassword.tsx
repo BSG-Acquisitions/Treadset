@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Eye, EyeOff, CheckCircle } from 'lucide-react';
-import { TreadSetAnimatedLogo } from '@/components/TreadSetAnimatedLogo';
+import { TreadSetLogo } from '@/components/TreadSetLogo';
 
 export default function ResetPassword() {
   const [password, setPassword] = useState('');
@@ -75,9 +75,9 @@ export default function ResetPassword() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="w-full max-w-md space-y-6">
-          <div className="text-center">
-            <TreadSetAnimatedLogo size="xl" animated={true} />
-            <h1 className="text-2xl font-bold text-foreground mt-4">Password Updated</h1>
+          <div className="text-center space-y-4">
+            <TreadSetLogo size="xl" className="mx-auto" />
+            <h1 className="text-2xl font-bold text-foreground">Password Updated</h1>
           </div>
 
           <Card>
@@ -104,10 +104,12 @@ export default function ResetPassword() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
-        <div className="text-center">
-          <TreadSetAnimatedLogo size="xl" animated={true} />
-          <h1 className="text-2xl font-bold text-foreground mt-4">Reset Your Password</h1>
-          <p className="text-muted-foreground mt-2">Enter your new password below</p>
+        <div className="text-center space-y-4">
+          <TreadSetLogo size="xl" className="mx-auto" />
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Reset Your Password</h1>
+            <p className="text-muted-foreground mt-2">Enter your new password below</p>
+          </div>
         </div>
 
         <Card>
