@@ -89,7 +89,8 @@ export function DriverManifestCreationWizard({
   // Signature refs
   const generatorSigRef = useRef<SignatureCanvas>(null);
   const haulerSigRef = useRef<SignatureCanvas>(null);
-
+  const [genSigPath, setGenSigPath] = useState<string>('');
+  const [haulSigPath, setHaulSigPath] = useState<string>('');
   const form = useForm<ManifestFormData>({
     resolver: zodResolver(manifestSchema),
     mode: "onChange",
@@ -279,6 +280,40 @@ hauler_print_name: "",
 
       const valid = await form.trigger(['generator_print_name', 'hauler_print_name']);
       if (!valid) return;
+
+      // Persist signatures now so they survive navigation to Review step
+      try {
+        const now = new Date();
+        const timestamp = now.toISOString().replace(/[:.]/g, '-');
+
+        if (generatorSigRef.current && !genSigPath) {
+          const generatorBlob = await fetch(generatorSigRef.current.toDataURL()).then(r => r.blob());
+          const generatorFileName = `signatures/${timestamp}-generator.png`;
+          const { error: genUploadError } = await supabase.storage
+            .from('manifests')
+            .upload(generatorFileName, generatorBlob, { contentType: 'image/png', upsert: true });
+          if (genUploadError) throw genUploadError;
+          setGenSigPath(generatorFileName);
+        }
+
+        if (haulerSigRef.current && !haulSigPath) {
+          const haulerBlob = await fetch(haulerSigRef.current.toDataURL()).then(r => r.blob());
+          const haulerFileName = `signatures/${timestamp}-hauler.png`;
+          const { error: haulUploadError } = await supabase.storage
+            .from('manifests')
+            .upload(haulerFileName, haulerBlob, { contentType: 'image/png', upsert: true });
+          if (haulUploadError) throw haulUploadError;
+          setHaulSigPath(haulerFileName);
+        }
+      } catch (e: any) {
+        console.error('Failed to upload signatures before review:', e);
+        toast({
+          title: "Upload Failed",
+          description: "Could not save signatures. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     if (step < steps.length - 1) {
