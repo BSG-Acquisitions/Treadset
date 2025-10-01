@@ -953,7 +953,7 @@ hauler_print_name: "",
         const totalCommercial = values.commercial_17_5_19_5_off + values.commercial_17_5_19_5_on + 
                                values.commercial_22_5_off + values.commercial_22_5_on;
         const totalOversized = values.otr_count + values.tractor_count;
-        const grandTotal = totalPTE + totalCommercial + totalOversized;
+        const totalPteCalculated = computeTotalPTE(values);
         const gross = Number(values.gross_weight_lbs || 0);
         const tare = Number(values.tare_weight_lbs || 0);
         const net = Math.max(0, gross - tare);
@@ -974,7 +974,7 @@ hauler_print_name: "",
                 <div className="flex justify-between"><span>PTE (Off/On Rim):</span> <strong>{totalPTE}</strong></div>
                 <div className="flex justify-between"><span>Commercial:</span> <strong>{totalCommercial}</strong></div>
                 <div className="flex justify-between"><span>Oversized:</span> <strong>{totalOversized}</strong></div>
-                <div className="border-t pt-2 flex justify-between"><span><strong>Total:</strong></span> <strong>{grandTotal}</strong></div>
+                <div className="border-t pt-2 flex justify-between"><span><strong>Total PTE:</strong></span> <strong>{totalPteCalculated}</strong></div>
               </CardContent>
             </Card>
 
