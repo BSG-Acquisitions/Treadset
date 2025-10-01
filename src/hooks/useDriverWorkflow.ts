@@ -70,32 +70,6 @@ export const useUpdateAssignmentStatus = () => {
 
         if (pickupError) throw pickupError;
 
-        // Calculate revenue after updating counts
-        // Get organization default rates for revenue calculation
-        const { data: orgSettings } = await supabase
-          .from('organization_settings')
-          .select('default_pte_rate, default_otr_rate, default_tractor_rate')
-          .single();
-
-        if (orgSettings && data.completionData.actualCounts) {
-          const pteRevenue = data.completionData.actualCounts.pte * (orgSettings.default_pte_rate || 0);
-          const otrRevenue = data.completionData.actualCounts.otr * (orgSettings.default_otr_rate || 0);
-          const tractorRevenue = data.completionData.actualCounts.tractor * (orgSettings.default_tractor_rate || 0);
-          const totalRevenue = pteRevenue + otrRevenue + tractorRevenue;
-
-          // Update computed revenue
-          const { error: revenueError } = await supabase
-            .from('pickups')
-            .update({ computed_revenue: totalRevenue })
-            .eq('id', assignment.pickup_id);
-
-          if (revenueError) {
-            console.error('Failed to update revenue:', revenueError);
-          } else {
-            console.log('Revenue calculated:', totalRevenue);
-          }
-        }
-
         // Get pickup and client info for workflow automation
         const pickup = assignment.pickups;
         const client = pickup?.clients;

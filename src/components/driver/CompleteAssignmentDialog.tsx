@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NumericInput } from "@/components/ui/numeric-input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useUpdateAssignmentStatus } from "@/hooks/useDriverWorkflow";
 import { CollectPaymentDialog } from "@/components/driver/CollectPaymentDialog";
-import { Upload, Camera, CreditCard } from "lucide-react";
+import { Upload, Camera, CreditCard, Check, DollarSign } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const completeAssignmentSchema = z.object({
   actualPteCount: z.number().min(0, "PTE count must be 0 or greater"),
@@ -37,7 +39,19 @@ export function CompleteAssignmentDialog({
   const [photos, setPhotos] = useState<File[]>([]);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [isPickupCompleted, setIsPickupCompleted] = useState(false);
+  const [showRateSelector, setShowRateSelector] = useState(false);
+  const [pteRate, setPteRate] = useState<string>("");
+  const [commercialRate, setCommercialRate] = useState<string>("");
+  const [otrRate, setOtrRate] = useState<string>("");
+  const [calculatedTotal, setCalculatedTotal] = useState(0);
+  const [isCalculatingPayment, setIsCalculatingPayment] = useState(false);
   const updateStatus = useUpdateAssignmentStatus();
+
+  const PRESET_RATES = {
+    passenger: ['2.50', '2.75', '3.00', '3.25'],
+    commercial: ['3.00', '3.50', '4.00', '4.50'],
+    otr: ['4.00', '4.50', '5.00', '5.50']
+  };
 
   // Simplified weight calculations: 1 PTE = 22.47 lbs, 1 Truck = 5 PTE, 1 OTR = 15 PTE, 1 Tractor = 15 PTE
   const TIRE_WEIGHTS = {
@@ -78,6 +92,19 @@ export function CompleteAssignmentDialog({
     form.setValue("calculatedGrossWeight", calculatedGrossWeight);
   }, [calculatedGrossWeight, form]);
 
+  // Calculate total when rates change
+  useEffect(() => {
+    const pte = form.watch('actualPteCount') || 0;
+    const commercial = form.watch('actualTractorCount') || 0;
+    const otr = form.watch('actualOtrCount') || 0;
+
+    const pteAmount = pte * (parseFloat(pteRate) || 0);
+    const commercialAmount = commercial * (parseFloat(commercialRate) || 0);
+    const otrAmount = otr * (parseFloat(otrRate) || 0);
+
+    setCalculatedTotal(pteAmount + commercialAmount + otrAmount);
+  }, [pteRate, commercialRate, otrRate, form]);
+
   const handleSubmit = async (data: CompleteAssignmentData) => {
     try {
       await updateStatus.mutateAsync({
@@ -95,15 +122,33 @@ export function CompleteAssignmentDialog({
         }
       });
       
-      // Mark as completed and show payment option
+      // Mark as completed and show rate selector
       setIsPickupCompleted(true);
-      
-      // If there's a payment amount, automatically show payment dialog
-      if (assignment?.pickup?.computed_revenue > 0) {
-        setTimeout(() => setShowPaymentDialog(true), 500);
-      }
+      setShowRateSelector(true);
     } catch (error) {
       console.error('Error completing assignment:', error);
+    }
+  };
+
+  const handleCollectPayment = async () => {
+    if (calculatedTotal <= 0) return;
+
+    setIsCalculatingPayment(true);
+    try {
+      // Update the pickup with computed_revenue
+      const { error } = await supabase
+        .from('pickups')
+        .update({ computed_revenue: calculatedTotal })
+        .eq('id', assignment.pickup_id);
+
+      if (error) throw error;
+
+      // Open payment dialog
+      setShowPaymentDialog(true);
+    } catch (error) {
+      console.error('Failed to update revenue:', error);
+    } finally {
+      setIsCalculatingPayment(false);
     }
   };
 
@@ -281,7 +326,117 @@ export function CompleteAssignmentDialog({
             </div>
 
 
-            {!isPickupCompleted ? (
+            {isPickupCompleted && showRateSelector ? (
+              <div className="space-y-6">
+                <div className="text-center py-4">
+                  <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mb-4">
+                    <Check className="w-8 h-8 text-green-600 dark:text-green-400" />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">Pickup Completed!</h3>
+                  <p className="text-muted-foreground">
+                    Now set the rates for payment calculation
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  {form.watch('actualPteCount') > 0 && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">
+                        Passenger Tire Rate ({form.watch('actualPteCount')} tires)
+                      </label>
+                      <Select value={pteRate} onValueChange={setPteRate}>
+                        <SelectTrigger className="bg-background">
+                          <SelectValue placeholder="Select rate" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background z-50">
+                          {PRESET_RATES.passenger.map((rate) => (
+                            <SelectItem key={rate} value={rate}>
+                              ${rate} per tire
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {form.watch('actualTractorCount') > 0 && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">
+                        Commercial Tire Rate ({form.watch('actualTractorCount')} tires)
+                      </label>
+                      <Select value={commercialRate} onValueChange={setCommercialRate}>
+                        <SelectTrigger className="bg-background">
+                          <SelectValue placeholder="Select rate" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background z-50">
+                          {PRESET_RATES.commercial.map((rate) => (
+                            <SelectItem key={rate} value={rate}>
+                              ${rate} per tire
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {form.watch('actualOtrCount') > 0 && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">
+                        OTR Tire Rate ({form.watch('actualOtrCount')} tires)
+                      </label>
+                      <Select value={otrRate} onValueChange={setOtrRate}>
+                        <SelectTrigger className="bg-background">
+                          <SelectValue placeholder="Select rate" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background z-50">
+                          {PRESET_RATES.otr.map((rate) => (
+                            <SelectItem key={rate} value={rate}>
+                              ${rate} per tire
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {calculatedTotal > 0 && (
+                    <div className="bg-primary/10 p-4 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Total Amount:</span>
+                        <span className="text-2xl font-bold">${calculatedTotal.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      onOpenChange(false);
+                      form.reset();
+                      setPhotos([]);
+                      setIsPickupCompleted(false);
+                      setShowRateSelector(false);
+                      setPteRate("");
+                      setCommercialRate("");
+                      setOtrRate("");
+                    }}
+                    className="flex-1"
+                  >
+                    Done
+                  </Button>
+                  <Button
+                    onClick={handleCollectPayment}
+                    disabled={calculatedTotal <= 0 || isCalculatingPayment}
+                    className="flex-1"
+                  >
+                    <DollarSign className="w-4 h-4 mr-2" />
+                    {isCalculatingPayment ? "Processing..." : "Collect Payment"}
+                  </Button>
+                </div>
+              </div>
+            ) : !isPickupCompleted ? (
               <div className="flex justify-end gap-3">
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                   Cancel
@@ -290,46 +445,7 @@ export function CompleteAssignmentDialog({
                   {updateStatus.isPending ? "Completing..." : "Complete Pickup"}
                 </Button>
               </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 text-center">
-                  <p className="text-green-800 dark:text-green-200 font-medium">
-                    ✓ Pickup Completed Successfully!
-                  </p>
-                </div>
-                
-                {assignment?.pickup?.computed_revenue > 0 && (
-                  <div className="border-t pt-4">
-                    <h4 className="font-medium mb-3">Collect Payment (Optional)</h4>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Amount due: <span className="font-semibold text-foreground">${assignment.pickup.computed_revenue.toFixed(2)}</span>
-                    </p>
-                    <Button 
-                      type="button" 
-                      className="w-full"
-                      onClick={() => setShowPaymentDialog(true)}
-                    >
-                      <CreditCard className="h-4 w-4 mr-2" />
-                      Collect Payment Now
-                    </Button>
-                  </div>
-                )}
-                
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  className="w-full"
-                  onClick={() => {
-                    onOpenChange(false);
-                    form.reset();
-                    setPhotos([]);
-                    setIsPickupCompleted(false);
-                  }}
-                >
-                  Done
-                </Button>
-              </div>
-            )}
+            ) : null}
 
             {/* Auto-actions info */}
             <div className="text-xs text-muted-foreground bg-secondary/20 p-3 rounded-lg">
@@ -350,17 +466,21 @@ export function CompleteAssignmentDialog({
           open={showPaymentDialog}
           onOpenChange={(open) => {
             setShowPaymentDialog(open);
-            if (!open && isPickupCompleted) {
+            if (!open) {
               // Close main dialog after payment flow
               onOpenChange(false);
               form.reset();
               setPhotos([]);
               setIsPickupCompleted(false);
+              setShowRateSelector(false);
+              setPteRate("");
+              setCommercialRate("");
+              setOtrRate("");
             }
           }}
-          pickupId={assignment.pickup.id}
-          amount={assignment.pickup.computed_revenue || 0}
-          clientName={assignment.pickup.client?.company_name || 'Customer'}
+          pickupId={assignment.pickup_id}
+          amount={calculatedTotal}
+          clientName={assignment.pickup?.clients?.company_name || 'Customer'}
         />
       )}
     </Dialog>
