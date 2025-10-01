@@ -1127,14 +1127,24 @@ hauler_print_name: "",
               body: { pickup_id: pickupId },
             });
 
-            if (paymentError) throw paymentError;
+            if (paymentError) {
+              console.error('Payment function error:', paymentError);
+              throw new Error(paymentError.message || 'Failed to invoke payment function');
+            }
 
-            if (data.url) {
+            if (data?.error) {
+              console.error('Payment function returned error:', data.error);
+              throw new Error(data.error);
+            }
+
+            if (data?.url) {
               window.open(data.url, '_blank');
               toast({
                 title: "Payment Link Opened",
                 description: "Complete the payment in the new tab",
               });
+            } else {
+              throw new Error('No payment URL returned from function');
             }
 
             // Navigate after payment initiated
