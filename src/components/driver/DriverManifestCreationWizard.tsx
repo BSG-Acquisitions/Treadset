@@ -837,24 +837,24 @@ hauler_print_name: "",
 
       case "signatures":
         return (
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div className="flex items-center gap-2 mb-4">
-              <PenTool className="h-5 w-5 text-primary" />
-              <h3 className="text-lg font-semibold">Digital Signatures</h3>
+              <PenTool className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+              <h3 className="text-base sm:text-lg font-semibold">Digital Signatures</h3>
             </div>
 
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Generator Signature</CardTitle>
-                <CardDescription>Client representative signature</CardDescription>
+              <CardHeader className="px-3 sm:px-6 py-3">
+                <CardTitle className="text-sm sm:text-base">Generator Signature</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Client representative signature</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-3 px-3 sm:px-6">
                 <FormField
                   control={form.control}
                   name="generator_print_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Printed Name *</FormLabel>
+                      <FormLabel className="text-xs sm:text-sm">Printed Name *</FormLabel>
                       <FormControl>
                         <Input 
                           {...field} 
@@ -865,6 +865,7 @@ hauler_print_name: "",
                           autoCorrect="off"
                           spellCheck={false}
                           inputMode="text"
+                          className="text-sm"
                         />
                       </FormControl>
                       <FormMessage />
@@ -873,22 +874,23 @@ hauler_print_name: "",
                 />
                 <div>
                   <div className="flex justify-between items-center mb-2">
-                    <Label>Signature *</Label>
+                    <Label className="text-xs sm:text-sm">Signature *</Label>
                     <Button 
                       type="button" 
                       variant="outline" 
                       size="sm" 
                       onClick={() => generatorSigRef.current?.clear()}
+                      className="text-xs h-7"
                     >
                       Clear
                     </Button>
                   </div>
-                  <div className="border-2 border-border rounded-lg bg-white">
+                  <div className="border-2 border-border rounded-lg bg-white overflow-hidden">
                     <SignatureCanvas
                       ref={generatorSigRef}
                       canvasProps={{ 
-                        className: "w-full h-32 touch-none",
-                        style: { width: '100%', height: '128px' }
+                        className: "w-full h-24 sm:h-32 touch-none",
+                        style: { width: '100%', height: '96px' }
                       }}
                     />
                   </div>
@@ -897,23 +899,24 @@ hauler_print_name: "",
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Hauler Signature</CardTitle>
-                <CardDescription>Driver signature</CardDescription>
+              <CardHeader className="px-3 sm:px-6 py-3">
+                <CardTitle className="text-sm sm:text-base">Hauler Signature</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Driver signature</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-3 px-3 sm:px-6">
                 <FormField
                   control={form.control}
                   name="hauler_print_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Printed Name *</FormLabel>
+                      <FormLabel className="text-xs sm:text-sm">Printed Name *</FormLabel>
                       <FormControl>
                         <Input 
                           {...field} 
                           value={field.value || ""} 
                           placeholder="Full name"
                           type="text"
+                          className="text-sm"
                         />
                       </FormControl>
                       <FormMessage />
@@ -922,22 +925,23 @@ hauler_print_name: "",
                 />
                 <div>
                   <div className="flex justify-between items-center mb-2">
-                    <Label>Signature *</Label>
+                    <Label className="text-xs sm:text-sm">Signature *</Label>
                     <Button 
                       type="button" 
                       variant="outline" 
                       size="sm" 
                       onClick={() => haulerSigRef.current?.clear()}
+                      className="text-xs h-7"
                     >
                       Clear
                     </Button>
                   </div>
-                  <div className="border-2 border-border rounded-lg bg-white">
+                  <div className="border-2 border-border rounded-lg bg-white overflow-hidden">
                     <SignatureCanvas
                       ref={haulerSigRef}
                       canvasProps={{ 
-                        className: "w-full h-32 touch-none",
-                        style: { width: '100%', height: '128px' }
+                        className: "w-full h-24 sm:h-32 touch-none",
+                        style: { width: '100%', height: '96px' }
                       }}
                     />
                   </div>
@@ -962,15 +966,15 @@ hauler_print_name: "",
         return (
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-4">
-              <CheckCircle className="h-5 w-5 text-primary" />
-              <h3 className="text-lg font-semibold">Review & Submit</h3>
+              <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+              <h3 className="text-base sm:text-lg font-semibold">Review & Submit</h3>
             </div>
 
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Tire Summary</CardTitle>
+              <CardHeader className="px-3 sm:px-6 py-3">
+                <CardTitle className="text-sm sm:text-base">Tire Summary</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm">
+              <CardContent className="space-y-2 text-xs sm:text-sm px-3 sm:px-6">
                 <div className="flex justify-between"><span>PTE (Off/On Rim):</span> <strong>{totalPTE}</strong></div>
                 <div className="flex justify-between"><span>Commercial:</span> <strong>{totalCommercial}</strong></div>
                 <div className="flex justify-between"><span>Oversized:</span> <strong>{totalOversized}</strong></div>
@@ -979,10 +983,10 @@ hauler_print_name: "",
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Weights</CardTitle>
+              <CardHeader className="px-3 sm:px-6 py-3">
+                <CardTitle className="text-sm sm:text-base">Weights</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm">
+              <CardContent className="space-y-2 text-xs sm:text-sm px-3 sm:px-6">
                 <div className="flex justify-between"><span>Gross (lbs):</span> <strong>{gross.toFixed(1)}</strong></div>
                 <div className="flex justify-between"><span>Tare (lbs):</span> <strong>{tare.toFixed(1)}</strong></div>
                 <div className="flex justify-between"><span>Net (lbs):</span> <strong>{net.toFixed(1)}</strong></div>
@@ -991,16 +995,16 @@ hauler_print_name: "",
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Signatures</CardTitle>
+              <CardHeader className="px-3 sm:px-6 py-3">
+                <CardTitle className="text-sm sm:text-base">Signatures</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm">
+              <CardContent className="space-y-2 text-xs sm:text-sm px-3 sm:px-6">
                 <div><strong>Generator:</strong> {values.generator_print_name}</div>
                 <div><strong>Hauler:</strong> {values.hauler_print_name}</div>
               </CardContent>
             </Card>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 text-xs sm:text-sm">
               <p className="font-semibold mb-2">What happens next:</p>
               <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
                 <li>Initial manifest PDF will be generated with generator and hauler signatures</li>
@@ -1041,12 +1045,12 @@ hauler_print_name: "",
   }
 
   return (
-    <Card className="max-w-4xl mx-auto">
-      <CardHeader>
+    <Card className="w-full max-w-4xl mx-auto">
+      <CardHeader className="px-3 sm:px-6 py-4">
         <div className="flex items-center justify-between mb-4">
-          <div>
-            <CardTitle>Create Manifest</CardTitle>
-            <CardDescription>Step {step + 1} of {steps.length}: {currentStep.title}</CardDescription>
+          <div className="min-w-0 flex-1">
+            <CardTitle className="text-base sm:text-lg truncate">Create Manifest</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Step {step + 1} of {steps.length}: {currentStep.title}</CardDescription>
           </div>
         </div>
         <Progress value={progress} className="h-2" />
@@ -1054,20 +1058,21 @@ hauler_print_name: "",
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent>
-            <div className="max-h-[50vh] overflow-y-auto pr-2 sm:pr-4">
+          <CardContent className="px-3 sm:px-6 py-4">
+            <div className="max-h-[50vh] overflow-y-auto overflow-x-hidden pr-1 sm:pr-4">
               {renderStepContent()}
             </div>
           </CardContent>
 
-          <div className="flex items-center justify-between p-6 border-t">
+          <div className="flex items-center justify-between px-3 sm:px-6 py-4 border-t gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={handleBack}
               disabled={step === 0 || isSubmitting}
+              className="text-xs sm:text-sm"
             >
-              <ChevronLeft className="mr-2 h-4 w-4" />
+              <ChevronLeft className="mr-1 h-3 w-3 sm:h-4 sm:w-4" />
               Back
             </Button>
 
@@ -1076,20 +1081,20 @@ hauler_print_name: "",
                 type="button" 
                 onClick={handleNext} 
                 disabled={isSubmitting}
-                className="!bg-green-600 hover:!bg-green-700 !text-white font-semibold disabled:opacity-50"
+                className="!bg-green-600 hover:!bg-green-700 !text-white font-semibold disabled:opacity-50 text-xs sm:text-sm"
                 style={{ backgroundColor: '#16a34a', color: 'white' }}
               >
                 Next
-                <ChevronRight className="ml-2 h-4 w-4" />
+                <ChevronRight className="ml-1 h-3 w-3 sm:h-4 sm:w-4" />
               </Button>
             ) : (
               <Button 
                 type="submit" 
                 disabled={isSubmitting}
-                className="!bg-green-600 hover:!bg-green-700 !text-white font-semibold disabled:opacity-50"
+                className="!bg-green-600 hover:!bg-green-700 !text-white font-semibold disabled:opacity-50 text-xs sm:text-sm whitespace-nowrap"
                 style={{ backgroundColor: '#16a34a', color: 'white' }}
               >
-                {isSubmitting ? "Creating..." : "Create & Email Manifest"}
+                {isSubmitting ? "Creating..." : "Create Manifest"}
               </Button>
             )}
           </div>
