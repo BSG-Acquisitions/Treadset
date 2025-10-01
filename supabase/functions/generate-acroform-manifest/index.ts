@@ -99,8 +99,9 @@ const handler = async (req: Request): Promise<Response> => {
         const publicUrl = `${publicBaseUrl}/manifests/templates/${body.templatePath}`;
         console.log(`Attempt 5: public URL ${publicUrl}`);
         const resp = await fetch(publicUrl);
-        if (resp.ok) return await resp.arrayBuffer();
-        console.warn('Public URL fetch failed:', resp.status);
+        const ctype = resp.headers.get('content-type') || '';
+        if (resp.ok && ctype.toLowerCase().includes('pdf')) return await resp.arrayBuffer();
+        console.warn('Public URL fetch failed or not a PDF:', resp.status, ctype);
       } catch (e) {
         console.warn('Attempt 5 exception:', (e as any)?.message);
       }
@@ -108,19 +109,27 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const templateBytes = await fetchTemplateBytes();
-    if (!templateBytes) {
+  // Diagnostics: list available templates to help pinpoint mismatched filenames
+      const { data: list, error: listErr } = await supabase.storage
+        .from('manifests')
+        .list('templates', { limit: 200 });
+      const available = Array.isArray(list) ? list.map((o: any) => o.name) : null;
+      console.warn('Template not found. Available in manifests/templates:', available, 'listErr:', listErr?.message);
+
       return new Response(
         JSON.stringify({
           error: 'Template not found in storage',
+          lookedFor: body.templatePath,
           tried: [
             'templates: ' + body.templatePath,
             'manifests: templates/' + body.templatePath,
             'manifests: ' + body.templatePath
-          ]
+          ],
+          availableTemplates: available,
+          listError: listErr?.message ?? null
         }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
-    }
 
     // Load the PDF template
     const pdfDoc = await PDFDocument.load(templateBytes);
