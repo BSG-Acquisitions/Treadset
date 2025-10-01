@@ -74,7 +74,7 @@ export function mapDomainToAcroForm(domain: ManifestDomain): AcroFormManifestDat
     hauler_date: domain.signatures.hauler_date,
     hauler_time: domain.signatures.hauler_time,
     hauler_gross_weight: domain.calculated.gross_weight_lbs.toFixed(1),
-    hauler_tare_weight: domain.calculated.tare_weight_lbs.toFixed(1),
+    hauler_tare_weight: '0.0',
     hauler_net_weight: domain.calculated.net_weight_lbs.toFixed(1),
     hauler_total_pte: domain.calculated.total_pte.toString(),
     
@@ -96,7 +96,7 @@ export function mapDomainToAcroForm(domain: ManifestDomain): AcroFormManifestDat
     receiver_time: domain.signatures.receiver_time || '',
     receiver_gross_weight: domain.calculated.gross_weight_lbs.toFixed(1),
     receiver_total_pte: domain.calculated.total_pte.toString(),
-    receiver_tare_weight: domain.calculated.tare_weight_lbs.toFixed(1),
+    receiver_tare_weight: '0.0',
     receiver_net_weight: domain.calculated.net_weight_lbs.toFixed(1)
   };
 }

@@ -154,6 +154,7 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
           driver_signature_png_path: data.driverSigPath,
           generator_signed_at: timestamp,
           hauler_signed_at: timestamp,
+          tare_weight_lbs: 0,
           status: 'AWAITING_FINALIZATION'
         })
         .eq('id', manifestId);
