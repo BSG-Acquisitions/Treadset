@@ -94,8 +94,14 @@ export function CompleteAssignmentDialog({
           photos: photos.length > 0 ? photos : null,
         }
       });
+      
+      // Mark as completed and show payment option
       setIsPickupCompleted(true);
-      // Don't close dialog yet - allow payment collection
+      
+      // If there's a payment amount, automatically show payment dialog
+      if (assignment?.pickup?.computed_revenue > 0) {
+        setTimeout(() => setShowPaymentDialog(true), 500);
+      }
     } catch (error) {
       console.error('Error completing assignment:', error);
     }
@@ -275,30 +281,52 @@ export function CompleteAssignmentDialog({
             </div>
 
 
-            <div className="flex justify-end gap-3">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={updateStatus.isPending}>
-                {updateStatus.isPending ? "Completing..." : "Complete Pickup"}
-              </Button>
-            </div>
-            
-            {/* Payment Collection Section - Show after pickup is completed */}
-            {isPickupCompleted && assignment?.pickup?.computed_revenue > 0 && (
-              <div className="border-t pt-4">
-                <h4 className="font-medium mb-3">Payment Collection (Optional)</h4>
-                <p className="text-sm text-muted-foreground mb-3">
-                  Collect payment from customer for this completed pickup
-                </p>
+            {!isPickupCompleted ? (
+              <div className="flex justify-end gap-3">
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={updateStatus.isPending}>
+                  {updateStatus.isPending ? "Completing..." : "Complete Pickup"}
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 text-center">
+                  <p className="text-green-800 dark:text-green-200 font-medium">
+                    ✓ Pickup Completed Successfully!
+                  </p>
+                </div>
+                
+                {assignment?.pickup?.computed_revenue > 0 && (
+                  <div className="border-t pt-4">
+                    <h4 className="font-medium mb-3">Collect Payment (Optional)</h4>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Amount due: <span className="font-semibold text-foreground">${assignment.pickup.computed_revenue.toFixed(2)}</span>
+                    </p>
+                    <Button 
+                      type="button" 
+                      className="w-full"
+                      onClick={() => setShowPaymentDialog(true)}
+                    >
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      Collect Payment Now
+                    </Button>
+                  </div>
+                )}
+                
                 <Button 
                   type="button" 
                   variant="outline" 
                   className="w-full"
-                  onClick={() => setShowPaymentDialog(true)}
+                  onClick={() => {
+                    onOpenChange(false);
+                    form.reset();
+                    setPhotos([]);
+                    setIsPickupCompleted(false);
+                  }}
                 >
-                  <CreditCard className="h-4 w-4 mr-2" />
-                  Collect Payment ({assignment.pickup.computed_revenue ? `$${assignment.pickup.computed_revenue.toFixed(2)}` : '$0.00'})
+                  Done
                 </Button>
               </div>
             )}
