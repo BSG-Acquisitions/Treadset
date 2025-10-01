@@ -34,9 +34,9 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
   }, {});
 
   return (
-    <div className="flex flex-col h-full border-r border-gray-300 last:border-r-0">
+    <div className="flex flex-col border-r border-gray-300 last:border-r-0 h-[600px]">
       {/* Day Header */}
-      <div className={`text-center py-4 border-b-2 border-gray-300 ${isToday ? 'bg-[#5b8f4d] text-white' : 'bg-white text-gray-800'}`}>
+      <div className={`text-center py-4 border-b-2 border-gray-300 flex-shrink-0 ${isToday ? 'bg-[#5b8f4d] text-white' : 'bg-white text-gray-800'}`}>
         <div className={`font-semibold text-base mb-1 ${isToday ? 'text-white' : 'text-gray-900'}`}>
           {format(day, "EEEE")}
         </div>
@@ -45,8 +45,8 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
         </div>
       </div>
 
-      {/* Pickups List */}
-      <div className="flex-1 bg-[#f5f5f5] p-2 overflow-y-auto">
+      {/* Pickups List - Scrollable */}
+      <div className="flex-1 bg-[#f5f5f5] p-2 overflow-y-auto min-h-0">
         {pickups.length === 0 ? (
           <div className="text-center py-12 text-gray-400 text-sm">
             {/* Empty state */}
@@ -104,7 +104,7 @@ export function WeeklyPickupsGrid({ currentWeek, onMovePickup }: WeeklyPickupsGr
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeek, i));
 
   return (
-    <div className="grid grid-cols-7 border border-gray-300 rounded-lg overflow-hidden bg-white shadow-sm">
+    <div className="grid grid-cols-7 border border-gray-300 rounded-lg overflow-hidden bg-white shadow-sm h-[600px]">
       {weekDays.map((day) => (
         <DayColumn key={day.toISOString()} day={day} onMovePickup={onMovePickup} />
       ))}
