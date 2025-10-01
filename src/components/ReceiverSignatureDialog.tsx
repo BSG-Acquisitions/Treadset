@@ -132,29 +132,29 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
 
       // Preserve generator signature timestamp formatting
       const manifestData = manifest as any;
-      if (manifestData?.generator_print_name && manifestData?.generator_signed_at) {
+      if (manifestData?.generator_signed_at) {
         const genTime = new Date(manifestData.generator_signed_at).toLocaleTimeString('en-US', { 
           hour: 'numeric', 
           minute: '2-digit', 
           second: '2-digit', 
           hour12: true 
         });
-        // Extract just the name without any existing timestamp
-        const genName = manifestData.generator_print_name.split(' - ')[0];
-        overrides.generator_print_name = `${genName} - ${genTime}`;
+        const genNameBase = manifestData?.signed_by_name || 'Generator Representative';
+        overrides.generator_print_name = `${genNameBase} - ${genTime}`;
+        overrides.generator_print_name_with_time = overrides.generator_print_name;
       }
 
       // Preserve hauler signature timestamp formatting
-      if (manifestData?.hauler_print_name && manifestData?.hauler_signed_at) {
+      if (manifestData?.hauler_signed_at) {
         const haulerTime = new Date(manifestData.hauler_signed_at).toLocaleTimeString('en-US', { 
           hour: 'numeric', 
           minute: '2-digit', 
           second: '2-digit', 
           hour12: true 
         });
-        // Extract just the name without any existing timestamp
-        const haulerName = manifestData.hauler_print_name.split(' - ')[0];
-        overrides.hauler_print_name = `${haulerName} - ${haulerTime}`;
+        const haulerNameBase = manifestData?.signed_by_name || 'Hauler Representative';
+        overrides.hauler_print_name = `${haulerNameBase} - ${haulerTime}`;
+        overrides.hauler_print_name_with_time = overrides.hauler_print_name;
       }
 
       const pdfResult = await manifestIntegration.mutateAsync({ 
