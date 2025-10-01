@@ -70,6 +70,21 @@ const handler = async (req: Request): Promise<Response> => {
       } catch (e) {
         console.warn('Attempt 2 exception:', (e as any)?.message);
       }
+      // 2b) Try signed URL from manifests bucket (templates/ path)
+      try {
+        const altPath = `templates/${body.templatePath}`;
+        console.log('Attempt 2b: signed URL from manifests bucket (templates path)');
+        const { data: signed, error } = await supabase.storage.from('manifests').createSignedUrl(altPath, 300);
+        if (!error && signed?.signedUrl) {
+          const resp = await fetch(signed.signedUrl);
+          if (resp.ok) return await resp.arrayBuffer();
+          console.warn('Signed URL fetch (2b) failed:', resp.status);
+        } else {
+          console.warn('Create signed URL (2b) failed:', error?.message);
+        }
+      } catch (e) {
+        console.warn('Attempt 2b exception:', (e as any)?.message);
+      }
       // 3) Try manifests bucket at root
       try {
         console.log(`Attempt 3: manifests bucket, path: ${body.templatePath}`);
@@ -78,6 +93,20 @@ const handler = async (req: Request): Promise<Response> => {
         console.warn('Attempt 3 failed:', error?.message);
       } catch (e) {
         console.warn('Attempt 3 exception:', (e as any)?.message);
+      }
+      // 3b) Try signed URL from manifests bucket (root path)
+      try {
+        console.log('Attempt 3b: signed URL from manifests bucket (root path)');
+        const { data: signed, error } = await supabase.storage.from('manifests').createSignedUrl(body.templatePath, 300);
+        if (!error && signed?.signedUrl) {
+          const resp = await fetch(signed.signedUrl);
+          if (resp.ok) return await resp.arrayBuffer();
+          console.warn('Signed URL fetch (3b) failed:', resp.status);
+        } else {
+          console.warn('Create signed URL (3b) failed:', error?.message);
+        }
+      } catch (e) {
+        console.warn('Attempt 3b exception:', (e as any)?.message);
       }
       // 4) Try signed URL from templates bucket as last resort
       try {
