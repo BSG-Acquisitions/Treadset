@@ -399,88 +399,28 @@ export default function EnhancedRoutesToday() {
         </div>
 
         <div className="py-6 px-2 sm:px-4">
-           {/* Week Overview - Full Week Grid */}
-           <div className="mb-6">
-             <div className="flex items-center justify-between mb-4">
-               <h2 className="text-xl font-semibold">Week of {format(currentWeek, 'MMMM d, yyyy')}</h2>
-               <div className="text-sm text-muted-foreground">All pickups by day</div>
-             </div>
-             {/* Full-bleed weekly grid (no horizontal scroll) */}
-             <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen overflow-x-hidden">
-               <div className="px-2 sm:px-4">
-                 <WeeklyPickupsGrid
-                   currentWeek={currentWeek}
-                   onMovePickup={(pickup) => {
-                     setSelectedPickupToMove(pickup);
-                     setMovePickupOpen(true);
-                   }}
-                 />
-               </div>
-             </div>
-           </div>
-          {/* Route Statistics */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <Truck className="h-5 w-5 text-brand-primary" />
-                  <div>
-                    <p className="text-2xl font-bold">{optimizedRoutes.length}</p>
-                    <p className="text-xs text-muted-foreground">Active Vehicles</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5 text-brand-recycling" />
-                  <div>
-                    <p className="text-2xl font-bold">{getTotalStops()}</p>
-                    <p className="text-xs text-muted-foreground">Total Stops</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-blue-600" />
-                  <div>
-                    <p className="text-2xl font-bold">{getAverageEfficiency()}%</p>
-                    <p className="text-xs text-muted-foreground">Avg Efficiency</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <Timer className="h-5 w-5 text-orange-600" />
-                  <div>
-                    <p className="text-2xl font-bold">8:30-4:30</p>
-                    <p className="text-xs text-muted-foreground">Work Hours</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          {/* Tabs for better organization */}
+          <Tabs defaultValue="today" className="w-full">
+            <TabsList className="grid w-full grid-cols-3 mb-6">
+              <TabsTrigger value="today">Today's Routes</TabsTrigger>
+              <TabsTrigger value="week">Week View</TabsTrigger>
+              <TabsTrigger value="stats">Statistics</TabsTrigger>
+            </TabsList>
 
-          {/* Pickups and Routes Section */}
-          {pickups.length === 0 && optimizedRoutes.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Route className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground text-lg">No pickups or routes scheduled for {format(activeDateLocal, 'EEEE, MMMM d')}</p>
-                <p className="text-sm text-muted-foreground mt-2">Pickups and routes will appear here once scheduled</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-6">
-              {/* Pickups Section */}
+            {/* Today's Routes Tab */}
+            <TabsContent value="today" className="space-y-6">
+              {/* Pickups and Routes Section */}
+              {pickups.length === 0 && optimizedRoutes.length === 0 ? (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <Route className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground text-lg">No pickups or routes scheduled for {format(activeDateLocal, 'EEEE, MMMM d')}</p>
+                    <p className="text-sm text-muted-foreground mt-2">Pickups and routes will appear here once scheduled</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-6">
+              {/* Scheduled Pickups */}
               {pickups.length > 0 && (
                 <Card>
                   <CardHeader>
@@ -602,7 +542,7 @@ export default function EnhancedRoutesToday() {
                 </Card>
               )}
               
-              {/* Optimized Routes Section */}
+              {/* Optimized Routes */}
               {optimizedRoutes.length > 0 && optimizedRoutes.map((route, routeIndex) => (
                 <motion.div
                   key={route.vehicleId}
@@ -726,6 +666,118 @@ export default function EnhancedRoutesToday() {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        {/* Week View Tab */}
+        <TabsContent value="week">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Week of {format(currentWeek, 'MMMM d, yyyy')}</h2>
+              <div className="text-sm text-muted-foreground">All pickups by day</div>
+            </div>
+            <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen overflow-x-hidden">
+              <div className="px-2 sm:px-4">
+                <WeeklyPickupsGrid
+                  currentWeek={currentWeek}
+                  onMovePickup={(pickup) => {
+                    setSelectedPickupToMove(pickup);
+                    setMovePickupOpen(true);
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Statistics Tab */}
+        <TabsContent value="stats">
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold">Route Statistics</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-brand-primary/10 rounded-lg">
+                      <Truck className="h-6 w-6 text-brand-primary" />
+                    </div>
+                    <div>
+                      <p className="text-3xl font-bold">{optimizedRoutes.length}</p>
+                      <p className="text-sm text-muted-foreground">Active Vehicles</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-brand-recycling/10 rounded-lg">
+                      <MapPin className="h-6 w-6 text-brand-recycling" />
+                    </div>
+                    <div>
+                      <p className="text-3xl font-bold">{getTotalStops()}</p>
+                      <p className="text-sm text-muted-foreground">Total Stops</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-blue-50 rounded-lg">
+                      <TrendingUp className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-3xl font-bold">{getAverageEfficiency()}%</p>
+                      <p className="text-sm text-muted-foreground">Avg Efficiency</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-orange-50 rounded-lg">
+                      <Timer className="h-6 w-6 text-orange-600" />
+                    </div>
+                    <div>
+                      <p className="text-3xl font-bold">8:30-4:30</p>
+                      <p className="text-sm text-muted-foreground">Work Hours</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            
+            {/* Additional stats could go here */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Daily Overview</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Total Distance</span>
+                    <span className="font-semibold">
+                      {optimizedRoutes.reduce((sum, route) => sum + route.totalDistance, 0).toFixed(1)} miles
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Scheduled Pickups</span>
+                    <span className="font-semibold">{pickups.length}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Completed Pickups</span>
+                    <span className="font-semibold">{pickups.filter(p => p.status === 'completed').length}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
           
           {/* Move Pickup Dialog */}
           {selectedPickupToMove && (
