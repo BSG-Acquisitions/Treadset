@@ -1154,11 +1154,13 @@ export type Database = {
           emailed_to: string[] | null
           finalized_by: string | null
           generator_signed_at: string | null
+          gross_weight_lbs: number | null
           hauler_id: string | null
           hauler_signed_at: string | null
           id: string
           location_id: string | null
           manifest_number: string
+          net_weight_lbs: number | null
           organization_id: string
           otr_count: number | null
           paid_amount: number | null
@@ -1185,6 +1187,7 @@ export type Database = {
           stripe_payment_intent_id: string | null
           subtotal: number | null
           surcharges: number | null
+          tare_weight_lbs: number | null
           total: number | null
           tractor_count: number | null
           updated_at: string
@@ -1209,11 +1212,13 @@ export type Database = {
           emailed_to?: string[] | null
           finalized_by?: string | null
           generator_signed_at?: string | null
+          gross_weight_lbs?: number | null
           hauler_id?: string | null
           hauler_signed_at?: string | null
           id?: string
           location_id?: string | null
           manifest_number: string
+          net_weight_lbs?: number | null
           organization_id: string
           otr_count?: number | null
           paid_amount?: number | null
@@ -1240,6 +1245,7 @@ export type Database = {
           stripe_payment_intent_id?: string | null
           subtotal?: number | null
           surcharges?: number | null
+          tare_weight_lbs?: number | null
           total?: number | null
           tractor_count?: number | null
           updated_at?: string
@@ -1264,11 +1270,13 @@ export type Database = {
           emailed_to?: string[] | null
           finalized_by?: string | null
           generator_signed_at?: string | null
+          gross_weight_lbs?: number | null
           hauler_id?: string | null
           hauler_signed_at?: string | null
           id?: string
           location_id?: string | null
           manifest_number?: string
+          net_weight_lbs?: number | null
           organization_id?: string
           otr_count?: number | null
           paid_amount?: number | null
@@ -1295,6 +1303,7 @@ export type Database = {
           stripe_payment_intent_id?: string | null
           subtotal?: number | null
           surcharges?: number | null
+          tare_weight_lbs?: number | null
           total?: number | null
           tractor_count?: number | null
           updated_at?: string
