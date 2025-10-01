@@ -80,15 +80,19 @@ export function DriverManifestCreationWizard({
   const [manualWeightOverride, setManualWeightOverride] = useState<boolean>(false);
   const [manifestCreated, setManifestCreated] = useState(false);
   const [createdManifestId, setCreatedManifestId] = useState<string | null>(null);
-  const [pteRate, setPteRate] = useState<string>("");
-  const [commercialRate, setCommercialRate] = useState<string>("");
+  const [pteOffRimRate, setPteOffRimRate] = useState<string>("");
+  const [pteOnRimRate, setPteOnRimRate] = useState<string>("");
+  const [commercialOffRimRate, setCommercialOffRimRate] = useState<string>("");
+  const [commercialOnRimRate, setCommercialOnRimRate] = useState<string>("");
   const [otrRate, setOtrRate] = useState<string>("");
   const [calculatedTotal, setCalculatedTotal] = useState(0);
   const [offlineMethod, setOfflineMethod] = useState<'CASH' | 'CHECK'>('CASH');
 
   const PRESET_RATES = {
-    passenger: ['2.50', '2.75', '3.00', '3.25'], // unchanged per your preference
-    commercial: ['10.00', '11.00', '12.00', '13.00', '14.00', '15.00', '16.00', '17.00', '18.00', '19.00', '20.00'],
+    passengerOffRim: ['2.50', '2.75', '3.00', '3.25', '3.50'],
+    passengerOnRim: ['3.00', '3.25', '3.50', '3.75', '4.00'],
+    commercialOffRim: ['10.00', '11.00', '12.00', '13.00', '14.00', '15.00', '16.00', '17.00', '18.00', '19.00', '20.00'],
+    commercialOnRim: ['12.00', '13.00', '14.00', '15.00', '16.00', '17.00', '18.00', '19.00', '20.00', '21.00', '22.00'],
     otr: ['50.00', '70.00', '90.00', '110.00', '130.00', '150.00']
   };
   
@@ -171,17 +175,21 @@ hauler_print_name: "",
   useEffect(() => {
     if (steps[step]?.key === "payment") {
       const formValues = form.getValues();
-      const passengerCount = formValues.pte_off_rim + formValues.pte_on_rim;
-      const commercialCount = formValues.commercial_17_5_19_5_off + formValues.commercial_17_5_19_5_on + 
-                             formValues.commercial_22_5_off + formValues.commercial_22_5_on;
-      const otrTotalCount = formValues.otr_count + formValues.tractor_count;
+      const pteOffRimCount = formValues.pte_off_rim || 0;
+      const pteOnRimCount = formValues.pte_on_rim || 0;
+      const commercialOffRimCount = (formValues.commercial_17_5_19_5_off || 0) + (formValues.commercial_22_5_off || 0);
+      const commercialOnRimCount = (formValues.commercial_17_5_19_5_on || 0) + (formValues.commercial_22_5_on || 0);
+      const otrTotalCount = (formValues.otr_count || 0) + (formValues.tractor_count || 0);
 
-      const pteAmount = passengerCount * (parseFloat(pteRate) || 0);
-      const commercialAmount = commercialCount * (parseFloat(commercialRate) || 0);
+      const pteOffRimAmount = pteOffRimCount * (parseFloat(pteOffRimRate) || 0);
+      const pteOnRimAmount = pteOnRimCount * (parseFloat(pteOnRimRate) || 0);
+      const commercialOffRimAmount = commercialOffRimCount * (parseFloat(commercialOffRimRate) || 0);
+      const commercialOnRimAmount = commercialOnRimCount * (parseFloat(commercialOnRimRate) || 0);
       const otrAmount = otrTotalCount * (parseFloat(otrRate) || 0);
-      setCalculatedTotal(pteAmount + commercialAmount + otrAmount);
+      
+      setCalculatedTotal(pteOffRimAmount + pteOnRimAmount + commercialOffRimAmount + commercialOnRimAmount + otrAmount);
     }
-  }, [pteRate, commercialRate, otrRate, step, form]);
+  }, [pteOffRimRate, pteOnRimRate, commercialOffRimRate, commercialOnRimRate, otrRate, step, form]);
 
   // Fetch pickup, assignment, and hauler data on mount
   useEffect(() => {
@@ -1095,10 +1103,11 @@ hauler_print_name: "",
 
       case "payment":
         const formValues = form.getValues();
-        const passengerCount = formValues.pte_off_rim + formValues.pte_on_rim;
-        const commercialCount = formValues.commercial_17_5_19_5_off + formValues.commercial_17_5_19_5_on + 
-                               formValues.commercial_22_5_off + formValues.commercial_22_5_on;
-        const otrTotalCount = formValues.otr_count + formValues.tractor_count;
+        const pteOffRimCount = formValues.pte_off_rim || 0;
+        const pteOnRimCount = formValues.pte_on_rim || 0;
+        const commercialOffRimCount = (formValues.commercial_17_5_19_5_off || 0) + (formValues.commercial_22_5_off || 0);
+        const commercialOnRimCount = (formValues.commercial_17_5_19_5_on || 0) + (formValues.commercial_22_5_on || 0);
+        const otrTotalCount = (formValues.otr_count || 0) + (formValues.tractor_count || 0);
 
         const handleCollectPayment = async () => {
           if (calculatedTotal <= 0) return;
@@ -1155,17 +1164,17 @@ hauler_print_name: "",
             </div>
 
             <div className="space-y-4">
-              {passengerCount > 0 && (
+              {pteOffRimCount > 0 && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium">
-                    Passenger Tire Rate ({passengerCount} tires)
+                    Passenger Off-Rim Rate ({pteOffRimCount} tires)
                   </label>
-                  <Select value={pteRate} onValueChange={setPteRate}>
+                  <Select value={pteOffRimRate} onValueChange={setPteOffRimRate}>
                     <SelectTrigger className="bg-background">
                       <SelectValue placeholder="Select rate" />
                     </SelectTrigger>
                     <SelectContent className="bg-background z-50">
-                      {PRESET_RATES.passenger.map((rate) => (
+                      {PRESET_RATES.passengerOffRim.map((rate) => (
                         <SelectItem key={rate} value={rate}>
                           ${rate} per tire
                         </SelectItem>
@@ -1179,25 +1188,25 @@ hauler_print_name: "",
                       step="0.01"
                       min="0"
                       placeholder="Enter custom rate"
-                      value={pteRate}
-                      onChange={(e) => setPteRate(e.target.value)}
+                      value={pteOffRimRate}
+                      onChange={(e) => setPteOffRimRate(e.target.value)}
                       className="text-sm"
                     />
                   </div>
                 </div>
               )}
 
-              {commercialCount > 0 && (
+              {pteOnRimCount > 0 && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium">
-                    Commercial Tire Rate ({commercialCount} tires)
+                    Passenger On-Rim Rate ({pteOnRimCount} tires)
                   </label>
-                  <Select value={commercialRate} onValueChange={setCommercialRate}>
+                  <Select value={pteOnRimRate} onValueChange={setPteOnRimRate}>
                     <SelectTrigger className="bg-background">
                       <SelectValue placeholder="Select rate" />
                     </SelectTrigger>
                     <SelectContent className="bg-background z-50">
-                      {PRESET_RATES.commercial.map((rate) => (
+                      {PRESET_RATES.passengerOnRim.map((rate) => (
                         <SelectItem key={rate} value={rate}>
                           ${rate} per tire
                         </SelectItem>
@@ -1211,8 +1220,72 @@ hauler_print_name: "",
                       step="0.01"
                       min="0"
                       placeholder="Enter custom rate"
-                      value={commercialRate}
-                      onChange={(e) => setCommercialRate(e.target.value)}
+                      value={pteOnRimRate}
+                      onChange={(e) => setPteOnRimRate(e.target.value)}
+                      className="text-sm"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {commercialOffRimCount > 0 && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Commercial Off-Rim Rate ({commercialOffRimCount} tires)
+                  </label>
+                  <Select value={commercialOffRimRate} onValueChange={setCommercialOffRimRate}>
+                    <SelectTrigger className="bg-background">
+                      <SelectValue placeholder="Select rate" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background z-50">
+                      {PRESET_RATES.commercialOffRim.map((rate) => (
+                        <SelectItem key={rate} value={rate}>
+                          ${rate} per tire
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">or</span>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="Enter custom rate"
+                      value={commercialOffRimRate}
+                      onChange={(e) => setCommercialOffRimRate(e.target.value)}
+                      className="text-sm"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {commercialOnRimCount > 0 && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Commercial On-Rim Rate ({commercialOnRimCount} tires)
+                  </label>
+                  <Select value={commercialOnRimRate} onValueChange={setCommercialOnRimRate}>
+                    <SelectTrigger className="bg-background">
+                      <SelectValue placeholder="Select rate" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background z-50">
+                      {PRESET_RATES.commercialOnRim.map((rate) => (
+                        <SelectItem key={rate} value={rate}>
+                          ${rate} per tire
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">or</span>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="Enter custom rate"
+                      value={commercialOnRimRate}
+                      onChange={(e) => setCommercialOnRimRate(e.target.value)}
                       className="text-sm"
                     />
                   </div>
