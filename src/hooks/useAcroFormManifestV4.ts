@@ -58,6 +58,29 @@ export const useGenerateAcroFormManifestV4 = () => {
         missingTemplateKeys.add(key);
       });
 
+      // Fallback: ensure signature fields are populated if present under alt keys
+      try {
+        const genField = (config.fieldMapping as any)['generator_signature'];
+        const haulField = (config.fieldMapping as any)['hauler_signature'];
+        const recvField = (config.fieldMapping as any)['receiver_signature'];
+        const anyData = params.manifestData as any;
+
+        if (genField && !templateFields[genField]) {
+          const v = anyData.generator_signature || anyData.customer_signature_png_path || anyData.customer_sig_path;
+          if (v) templateFields[genField] = String(v);
+        }
+        if (haulField && !templateFields[haulField]) {
+          const v = anyData.hauler_signature || anyData.driver_signature_png_path || anyData.driver_sig_path;
+          if (v) templateFields[haulField] = String(v);
+        }
+        if (recvField && !templateFields[recvField]) {
+          const v = anyData.receiver_signature || anyData.receiver_signature_png_path || anyData.receiver_sig_path;
+          if (v) templateFields[recvField] = String(v);
+        }
+      } catch (e) {
+        console.warn(`[PDF_TEMPLATE_V${config.version}] Signature fallback mapping failed:`, (e as any)?.message);
+      }
+
       const populatedFieldCount = Object.keys(templateFields).length;
       if (templateKeysSet.size === 0) {
         console.error(`[PDF_TEMPLATE_V${config.version}] [${corrId}] templateKeysSet is empty; aborting to avoid empty payload`);
