@@ -49,28 +49,69 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Download the AcroForm template from storage
-    console.log(`Downloading template from: templates bucket, file: ${body.templatePath}`);
+    // Download the AcroForm template from storage with fallbacks
+    async function fetchTemplateBytes(): Promise<ArrayBuffer | null> {
+      // 1) Try templates bucket at root
+      try {
+        console.log(`Attempt 1: templates bucket, path: ${body.templatePath}`);
+        const { data, error } = await supabase.storage.from('templates').download(body.templatePath);
+        if (!error && data) return await data.arrayBuffer();
+        console.warn('Attempt 1 failed:', error?.message);
+      } catch (e) {
+        console.warn('Attempt 1 exception:', (e as any)?.message);
+      }
+      // 2) Try manifests bucket under templates/
+      try {
+        const altPath = `templates/${body.templatePath}`;
+        console.log(`Attempt 2: manifests bucket, path: ${altPath}`);
+        const { data, error } = await supabase.storage.from('manifests').download(altPath);
+        if (!error && data) return await data.arrayBuffer();
+        console.warn('Attempt 2 failed:', error?.message);
+      } catch (e) {
+        console.warn('Attempt 2 exception:', (e as any)?.message);
+      }
+      // 3) Try manifests bucket at root
+      try {
+        console.log(`Attempt 3: manifests bucket, path: ${body.templatePath}`);
+        const { data, error } = await supabase.storage.from('manifests').download(body.templatePath);
+        if (!error && data) return await data.arrayBuffer();
+        console.warn('Attempt 3 failed:', error?.message);
+      } catch (e) {
+        console.warn('Attempt 3 exception:', (e as any)?.message);
+      }
+      // 4) Try signed URL from templates bucket as last resort
+      try {
+        console.log('Attempt 4: signed URL from templates bucket');
+        const { data: signed, error } = await supabase.storage.from('templates').createSignedUrl(body.templatePath, 300);
+        if (!error && signed?.signedUrl) {
+          const resp = await fetch(signed.signedUrl);
+          if (resp.ok) return await resp.arrayBuffer();
+          console.warn('Signed URL fetch failed:', resp.status);
+        } else {
+          console.warn('Create signed URL failed:', error?.message);
+        }
+      } catch (e) {
+        console.warn('Attempt 4 exception:', (e as any)?.message);
+      }
+      return null;
+    }
 
-    const { data: templateFile, error: downloadError } = await supabase.storage
-      .from('templates')
-      .download(body.templatePath);
-
-    if (downloadError) {
-      console.error('Error downloading template:', downloadError);
+    const templateBytes = await fetchTemplateBytes();
+    if (!templateBytes) {
       return new Response(
-        JSON.stringify({ 
-          error: 'Template not found', 
-          details: downloadError.message,
-          path: body.templatePath,
-          bucket: 'templates'
+        JSON.stringify({
+          error: 'Template not found in storage',
+          tried: [
+            'templates: ' + body.templatePath,
+            'manifests: templates/' + body.templatePath,
+            'manifests: ' + body.templatePath
+          ]
         }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     // Load the PDF template
-    const templateBytes = await templateFile.arrayBuffer();
     const pdfDoc = await PDFDocument.load(templateBytes);
     const form = pdfDoc.getForm();
 
