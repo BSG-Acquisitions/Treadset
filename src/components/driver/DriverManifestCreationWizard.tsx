@@ -346,36 +346,38 @@ hauler_print_name: "",
     setIsSubmitting(true);
 
     try {
-      // 1. Upload signatures to storage
-      const now = new Date();
-      const timestamp = now.toISOString().replace(/[:.]/g, '-');
-      
-      let generatorSigPath = '';
-      let haulerSigPath = '';
+      // 1. Use previously persisted signature paths from state (uploaded during Signatures step)
+      let generatorSigPath = genSigPath;
+      let haulerSigPath = haulSigPath;
 
-      if (generatorSigRef.current && !generatorSigRef.current.isEmpty()) {
-        const generatorBlob = await fetch(generatorSigRef.current.toDataURL()).then(r => r.blob());
-        const generatorFileName = `signatures/${timestamp}-generator.png`;
-        
-        const { error: genUploadError } = await supabase.storage
+      if (!generatorSigPath || !haulerSigPath) {
+        // As a fallback, try to grab from the manifest record if state is empty
+        const { data: manifestSigRow } = await supabase
           .from('manifests')
-          .upload(generatorFileName, generatorBlob, { contentType: 'image/png', upsert: true });
-        
-        if (genUploadError) throw genUploadError;
-        generatorSigPath = generatorFileName;
+          .select('customer_signature_png_path, driver_signature_png_path')
+          .eq('id', pickupData.manifest_id || '')
+          .maybeSingle();
+
+        if (manifestSigRow) {
+          if (!generatorSigPath && manifestSigRow.customer_signature_png_path) {
+            generatorSigPath = manifestSigRow.customer_signature_png_path as string;
+          }
+          if (!haulerSigPath && manifestSigRow.driver_signature_png_path) {
+            haulerSigPath = manifestSigRow.driver_signature_png_path as string;
+          }
+        }
       }
 
-      if (haulerSigRef.current && !haulerSigRef.current.isEmpty()) {
-        const haulerBlob = await fetch(haulerSigRef.current.toDataURL()).then(r => r.blob());
-        const haulerFileName = `signatures/${timestamp}-hauler.png`;
-        
-        const { error: haulUploadError } = await supabase.storage
-          .from('manifests')
-          .upload(haulerFileName, haulerBlob, { contentType: 'image/png', upsert: true });
-        
-        if (haulUploadError) throw haulUploadError;
-        haulerSigPath = haulerFileName;
+      if (!generatorSigPath || !haulerSigPath) {
+        toast({
+          title: 'Missing Signatures',
+          description: 'Please go back to the Signatures step and capture both signatures.',
+          variant: 'destructive',
+        });
+        setIsSubmitting(false);
+        return;
       }
+
 
       // 2. Create manifest with all data (including weights)
       const totalPteForPdf = computeTotalPTE(data);
@@ -451,6 +453,10 @@ hauler_print_name: "",
       if (updateError) throw updateError;
 
       // 4. Generate initial PDF with generator and hauler info only
+      console.log('[DRIVER_WIZARD] Using signature paths for PDF:', {
+        generatorSigPath,
+        haulerSigPath,
+      });
       await manifestIntegration.mutateAsync({
         manifestId: manifest.id,
         overrides: {
