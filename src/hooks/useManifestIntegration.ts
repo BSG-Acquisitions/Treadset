@@ -213,12 +213,22 @@ export const useManifestIntegration = () => {
         hasHauler: !!manifestData.hauler,
         clientCompany: manifestData.client?.company_name,
         manifestNumber: manifestData.manifest_number,
+        grossWeightRaw: (manifestData as any).gross_weight_lbs || (manifestData as any).gross_weight,
+        tareWeightRaw: (manifestData as any).tare_weight_lbs || (manifestData as any).tare_weight,
+        netWeightRaw: (manifestData as any).net_weight_lbs || (manifestData as any).net_weight,
         tireCounts: {
           pte_off_rim: manifestData.pte_off_rim,
           pte_on_rim: manifestData.pte_on_rim,
           otr_count: manifestData.otr_count,
           tractor_count: manifestData.tractor_count
         }
+      });
+      
+      // Verify gross weight is being mapped correctly to 'Gross' field
+      console.log('[MANIFEST_INTEGRATION] Weight mapping verification:', {
+        domainField_hauler_gross_weight: mergedData.hauler_gross_weight,
+        templateField_Gross: templateFields['Gross'],
+        mappingConfig: config.fieldMapping['hauler_gross_weight']
       });
       
       console.log('[MANIFEST_INTEGRATION] v4 field map stats:', {
