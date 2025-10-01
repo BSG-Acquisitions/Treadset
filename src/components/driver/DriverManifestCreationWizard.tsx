@@ -115,9 +115,9 @@ hauler_print_name: "",
     const passenger = ((vals.pte_off_rim || 0) + (vals.pte_on_rim || 0)) * MICHIGAN_CONVERSIONS.PASSENGER_TIRE_TO_PTE;
     const truckCount = (vals.commercial_17_5_19_5_off || 0) + (vals.commercial_17_5_19_5_on || 0) + (vals.commercial_22_5_off || 0) + (vals.commercial_22_5_on || 0);
     const truck = truckCount * MICHIGAN_CONVERSIONS.SEMI_TIRE_TO_PTE;
-    const oversizedCount = (vals.otr_count || 0) + (vals.tractor_count || 0);
-    const oversized = oversizedCount * MICHIGAN_CONVERSIONS.OTR_TIRE_TO_PTE;
-    return passenger + truck + oversized;
+    const tractor = (vals.tractor_count || 0) * MICHIGAN_CONVERSIONS.SEMI_TIRE_TO_PTE; // Tractor tires = semi tires (5 PTE)
+    const otr = (vals.otr_count || 0) * MICHIGAN_CONVERSIONS.OTR_TIRE_TO_PTE; // OTR tires = 15 PTE
+    return passenger + truck + tractor + otr;
   };
 
   const calcTonsFromPTE = () => {
