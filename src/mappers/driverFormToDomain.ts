@@ -52,7 +52,8 @@ export async function mapDriverFormToDomain(
 
   // Calculate derived values
   const pteValues = calculatePTEValues(tires);
-  const weightValues = calculateWeightValues(tires, input.tare_weight);
+  // Default tare weight to 0.0 unless manually provided
+  const weightValues = calculateWeightValues(tires, input.tare_weight || 0);
   
   // Generate timestamps
   const now = new Date().toISOString();
@@ -122,17 +123,17 @@ export async function mapDriverFormToDomain(
     // Tire Counts
     tires,
     
-    // Calculated Values (driver provides actual measurements)
+    // Calculated Values (driver provides actual measurements or calculated)
     calculated: {
       total_pte: pteValues.total_pte,
       passenger_car_total: tires.pte_off_rim + tires.pte_on_rim,
       truck_total: tires.commercial_17_5_19_5_off + tires.commercial_17_5_19_5_on + 
                   tires.commercial_22_5_off + tires.commercial_22_5_on,
       oversized_total: tires.otr_count + tires.tractor_count,
-      gross_weight_lbs: input.gross_weight,
-      tare_weight_lbs: input.tare_weight,
-      net_weight_lbs: input.gross_weight - input.tare_weight,
-      weight_tons: (input.gross_weight / 2000),
+      gross_weight_lbs: input.gross_weight || weightValues.gross_weight_lbs,
+      tare_weight_lbs: input.tare_weight || 0,
+      net_weight_lbs: weightValues.net_weight_lbs,
+      weight_tons: weightValues.weight_tons,
       volume_yards: input.volume_yards
     },
     

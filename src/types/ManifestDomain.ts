@@ -183,8 +183,8 @@ export interface DriverFormInput {
   // Measurements
   weight_tons?: number;
   volume_yards?: number;
-  gross_weight: number;
-  tare_weight: number;
+  gross_weight?: number; // Calculated automatically if not provided
+  tare_weight?: number; // Defaults to 0.0 unless manually entered
   
   // Entity selections
   generator_id: string;

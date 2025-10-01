@@ -5,6 +5,7 @@ import { useGenerateAcroFormManifestV4 } from "@/hooks/useAcroFormManifestV4";
 import { AcroFormManifestData } from "@/types/acroform-manifest";
 import { getCurrentTemplateConfig } from "@/lib/pdf/templateConfig";
 import { MICHIGAN_CONVERSIONS } from "@/lib/michigan-conversions";
+import { validateAcroFormData, sanitizeAcroFormData, logValidationResults } from "@/lib/manifestValidation";
 
 export interface ManifestIntegrationParams {
   manifestId: string;
@@ -97,7 +98,7 @@ export const convertManifestToAcroForm = (manifestData: any, receiverData?: any)
     hauler_date: manifestData.hauler_signed_at ? new Date(manifestData.hauler_signed_at).toISOString().split('T')[0] : (manifestData.signed_at ? new Date(manifestData.signed_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
     hauler_time: manifestData.hauler_signed_at ? new Date(manifestData.hauler_signed_at).toLocaleTimeString('en-US', { hour12: false }) : (manifestData.signed_at ? new Date(manifestData.signed_at).toLocaleTimeString('en-US', { hour12: false }) : new Date().toLocaleTimeString('en-US', { hour12: false })),
     hauler_gross_weight: (manifestData.gross_weight_lbs || manifestData.gross_weight || '').toString(),
-    hauler_tare_weight: (manifestData.tare_weight_lbs || manifestData.tare_weight || '').toString(), 
+    hauler_tare_weight: (manifestData.tare_weight_lbs || manifestData.tare_weight || 0).toString(), 
     hauler_net_weight: (manifestData.net_weight_lbs || manifestData.net_weight || '').toString(),
     hauler_total_pte: (() => {
       // Same total PTE calculation using Michigan conversion constants
@@ -167,7 +168,14 @@ export const useManifestIntegration = () => {
         .single();
 
       if (fetchError) throw fetchError;
+      
+      if (!manifestData) {
+        throw new Error('Manifest not found');
+      }
 
+      // Validate fetched data
+      console.log('[MANIFEST_INTEGRATION] Validating manifest data...');
+      
       // Debug: verify signature paths are present on the manifest record
       console.log('[MANIFEST_INTEGRATION] Signature fields on manifest row:', {
         manifestId,
@@ -179,12 +187,23 @@ export const useManifestIntegration = () => {
       // 3. Build AcroForm data from DB record
       const acroFormData = convertManifestToAcroForm(manifestData, undefined);
       const mergedData = { ...acroFormData, ...(overrides || {}) };
+      
+      // Validate AcroForm data before mapping
+      const validationResult = validateAcroFormData(mergedData as Partial<AcroFormManifestData>);
+      logValidationResults('useManifestIntegration', validationResult);
+      
+      if (!validationResult.isValid) {
+        throw new Error(`Manifest validation failed: ${validationResult.errors.join(', ')}`);
+      }
+      
+      // Sanitize data to ensure all fields have valid values
+      const sanitizedData = sanitizeAcroFormData(mergedData as Partial<AcroFormManifestData>);
 
       // Map domain field names to v4 template field names
       const config = getCurrentTemplateConfig();
       const templateFields: Record<string, string> = {};
       
-      Object.entries(mergedData).forEach(([key, value]) => {
+      Object.entries(sanitizedData).forEach(([key, value]) => {
         const templateField = config.fieldMapping[key];
         if (templateField && value !== null && value !== undefined && value !== '') {
           templateFields[templateField] = String(value);
@@ -197,16 +216,20 @@ export const useManifestIntegration = () => {
         manifestId,
         populatedFieldCount,
         templateVersion: config.version,
+        validationErrors: validationResult.errors.length,
+        validationWarnings: validationResult.warnings.length,
         sampleFields: {
-          hauler_name: mergedData.hauler_name,
-          hauler_gross_weight: mergedData.hauler_gross_weight,
-          receiver_name: mergedData.receiver_name,
-          generator_signature: mergedData.generator_signature,
-          hauler_signature: mergedData.hauler_signature,
+          hauler_name: sanitizedData.hauler_name,
+          hauler_gross_weight: sanitizedData.hauler_gross_weight,
+          hauler_tare_weight: sanitizedData.hauler_tare_weight,
+          receiver_name: sanitizedData.receiver_name,
+          generator_signature: sanitizedData.generator_signature,
+          hauler_signature: sanitizedData.hauler_signature,
           mappedGeneratorSignature: templateFields['Generator_Signature _es_:signer:signature'],
           mappedHaulerSignature: templateFields['Hauler_Signature _es_:signer:signature'],
           mappedHaulerName: templateFields['Hauler_Name'],
           mappedHaulerGross: templateFields['Gross'],
+          mappedHaulerTare: templateFields['Tare'],
           mappedReceiverName: templateFields['Receiver_Name']
         }
       });
@@ -260,8 +283,8 @@ export const useManifestIntegration = () => {
 
       // Generate the PDF using v4 template system with timestamps
       const acroFormResult = await generateAcroForm.mutateAsync({
-        // Pass domain-keyed data; the generator will map to template fields and also pick up meta (times)
-        manifestData: mergedData as unknown as AcroFormManifestData,
+        // Pass sanitized domain-keyed data; the generator will map to template fields and also pick up meta (times)
+        manifestData: sanitizedData as unknown as AcroFormManifestData,
         manifestId: manifestId,
         outputPath: `manifests/integrated-v4-${manifestId}-${Date.now()}.pdf`,
         meta: {
