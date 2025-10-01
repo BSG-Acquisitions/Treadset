@@ -168,6 +168,13 @@ export const useManifestIntegration = () => {
 
       if (fetchError) throw fetchError;
 
+      // Debug: verify signature paths are present on the manifest record
+      console.log('[MANIFEST_INTEGRATION] Signature fields on manifest row:', {
+        manifestId,
+        customer_signature_png_path: manifestData.customer_signature_png_path,
+        driver_signature_png_path: manifestData.driver_signature_png_path,
+      });
+
       // 2. Do not auto-select any receiver; receiver info must come from explicit overrides on receiver side
       // 3. Build AcroForm data from DB record
       const acroFormData = convertManifestToAcroForm(manifestData, undefined);
@@ -194,6 +201,10 @@ export const useManifestIntegration = () => {
           hauler_name: mergedData.hauler_name,
           hauler_gross_weight: mergedData.hauler_gross_weight,
           receiver_name: mergedData.receiver_name,
+          generator_signature: mergedData.generator_signature,
+          hauler_signature: mergedData.hauler_signature,
+          mappedGeneratorSignature: templateFields['Generator_Signature _es_:signer:signature'],
+          mappedHaulerSignature: templateFields['Hauler_Signature _es_:signer:signature'],
           mappedHaulerName: templateFields['Hauler_Name'],
           mappedHaulerGross: templateFields['Gross'],
           mappedReceiverName: templateFields['Receiver_Name']
