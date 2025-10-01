@@ -124,7 +124,14 @@ export default function DriverRoutes() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {assignments.map((assignment, index) => {
+                  {assignments
+                    .sort((a, b) => {
+                      // Sort: non-completed first, completed last
+                      if (a.status === 'completed' && b.status !== 'completed') return 1;
+                      if (a.status !== 'completed' && b.status === 'completed') return -1;
+                      return 0;
+                    })
+                    .map((assignment, index) => {
                     const StatusIcon = getStatusIcon(assignment.status);
                     return (
                       <div
