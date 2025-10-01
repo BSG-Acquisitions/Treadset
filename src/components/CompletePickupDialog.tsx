@@ -70,7 +70,7 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
       <DialogTrigger asChild>
         {trigger}
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-auto" hideClose>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden w-[95vw] sm:w-auto p-3 sm:p-6" hideClose>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5 text-brand-success flex-shrink-0" />
