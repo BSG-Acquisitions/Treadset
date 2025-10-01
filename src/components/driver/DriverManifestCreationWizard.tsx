@@ -236,6 +236,17 @@ hauler_print_name: "",
     }
   }, [step]);
 
+  // Ensure generator printed name starts blank on Signatures step
+  useEffect(() => {
+    if (steps[step]?.key === 'signatures') {
+      const current = form.getValues('generator_print_name');
+      // If accidentally prefilled with numeric like "89", clear it
+      if (current && /^\d+(?:\.\d+)?$/.test(current.trim())) {
+        form.setValue('generator_print_name', '', { shouldValidate: false, shouldDirty: false });
+      }
+    }
+  }, [step, form]);
+
   const handleNext = async () => {
     // Validate current step before proceeding
     if (currentStep.key === "tires") {
