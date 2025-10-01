@@ -118,7 +118,7 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
       // Regenerate AcroForm PDF with receiver signature and data
       const overrides = {
         receiver_signature: `signatures/${fileName}`,
-        receiver_print_name: printName,
+        receiver_print_name: `${printName} - ${new Date(timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}`,
         receiver_date: new Date(timestamp).toISOString().split('T')[0],
         receiver_time: new Date(timestamp).toLocaleTimeString('en-US', { hour12: false }),
         // Include selected receiver data
