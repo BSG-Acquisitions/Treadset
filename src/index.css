@@ -8,18 +8,18 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* BSG Tire Recycling Brand Design System - Matching Logo Green */
-    /* Primary brand colors - matching the logo's green palette */
-    --brand-primary: 103 45% 55%;      /* BSG Logo Green #7CB342 */
-    --brand-primary-hover: 103 50% 50%; /* Darker green on hover */
-    --brand-primary-dark: 103 55% 40%;  /* Deep green for depth */
-    --brand-primary-light: 103 35% 70%; /* Light green for accents */
-    --brand-tire-black: 0 0% 15%;      /* Pure tire black from logo */
-    --brand-recycling: 103 45% 55%;    /* Same as primary for consistency */
-    --brand-secondary: 103 20% 45%;    /* Muted green-gray */
+    /* TreadSet Brand Design System - Deep Green Theme */
+    /* Primary brand colors - TreadSet deep green #1A4314 */
+    --brand-primary: 112 54% 17%;      /* TreadSet Deep Green #1A4314 */
+    --brand-primary-hover: 112 54% 22%; /* Lighter on hover */
+    --brand-primary-dark: 112 54% 12%;  /* Darker green for depth */
+    --brand-primary-light: 112 54% 25%; /* Light green for accents */
+    --brand-tire-black: 0 0% 0%;       /* Pure black #000000 */
+    --brand-recycling: 112 40% 30%;    /* Muted green for recycling accent */
+    --brand-secondary: 112 20% 35%;    /* Muted green-gray */
     --brand-accent: 45 70% 55%;        /* Warm amber accent */
     --brand-warning: 38 75% 50%;       /* Professional amber warning */
-    --brand-success: 103 45% 55%;      /* Use brand green for success */
+    --brand-success: 112 54% 17%;      /* Use brand green for success */
     
     /* Enhanced professional palette */
     --background: 85 15% 97%;          /* Soft olive-tinted background */

@@ -83,11 +83,11 @@ export function BSGLogo({
       {showText && (
         <div className="hidden sm:block min-w-0 flex-shrink-0">
           <h1 className={`font-bold bg-gradient-to-r from-brand-primary to-brand-primary-dark bg-clip-text text-transparent ${textSizeClasses[size]} whitespace-nowrap`}>
-            BSG Tire Recycling
+            TreadSet
           </h1>
           {size !== "xs" && size !== "sm" && (
             <p className={`text-brand-tire-black/60 font-medium ${size === "md" ? "text-xs" : size === "lg" ? "text-sm" : "text-base"} whitespace-nowrap`}>
-              Industrial Waste Solutions
+              Old Tires= New Possibilities
             </p>
           )}
         </div>

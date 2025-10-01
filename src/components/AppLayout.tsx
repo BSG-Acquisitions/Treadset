@@ -27,7 +27,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                   <Menu className="h-5 w-5" />
                 </Button>
               </SidebarTrigger>
-              <h1 className="font-semibold text-lg text-foreground">BSG CRM</h1>
+              <h1 className="font-semibold text-lg text-foreground">TreadSet CRM</h1>
             </div>
             <div className="hidden xl:block">
               <TopNav />

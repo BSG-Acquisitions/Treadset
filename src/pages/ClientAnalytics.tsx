@@ -5,7 +5,7 @@ import { BSGLogo } from "@/components/BSGLogo";
 
 export default function ClientAnalytics() {
   useEffect(() => {
-    document.title = "Client Analytics – BSG Tire Recycling";
+    document.title = "Client Analytics – TreadSet";
   }, []);
 
   return (

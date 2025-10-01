@@ -1,5 +1,5 @@
 import { Recycle, RotateCcw, Zap } from "lucide-react";
-import { BSGLogoActual } from "@/components/BSGLogoActual";
+import { TreadSetLogo } from "@/components/TreadSetLogo";
 
 interface BrandHeaderProps {
   title?: string;
@@ -9,8 +9,8 @@ interface BrandHeaderProps {
 }
 
 export function BrandHeader({ 
-  title = "BSG Tire Recycling", 
-  subtitle = "Sustainable Solutions for Industrial Waste", 
+  title = "TreadSet", 
+  subtitle = "Old Tires= New Possibilities", 
   showLogo = true,
   className = ""
 }: BrandHeaderProps) {
@@ -24,7 +24,7 @@ export function BrandHeader({
         <div className="flex items-center gap-6">
           {showLogo && (
             <div className="flex-shrink-0">
-              <BSGLogoActual size="lg" className="drop-shadow-lg" />
+              <TreadSetLogo size="lg" className="drop-shadow-lg" />
             </div>
           )}
           

@@ -19,7 +19,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Link, useLocation } from 'react-router-dom';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-import { BSGLogoActual } from '@/components/BSGLogoActual';
+import { TreadSetLogo } from '@/components/TreadSetLogo';
 import { OrganizationSwitcher } from '@/components/auth/OrganizationSwitcher';
 import { useNotifications } from '@/hooks/useNotifications';
 import { formatDistanceToNow } from 'date-fns';
@@ -83,7 +83,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
           )}
           
           <Link to="/" className="hover:opacity-80 transition-all duration-300 flex-shrink-0">
-            <BSGLogoActual 
+            <TreadSetLogo 
               size="sm" 
               className="flex-shrink-0"
             />

@@ -1,4 +1,4 @@
-interface BSGLogoActualProps {
+interface TreadSetLogoProps {
   size?: "xs" | "sm" | "md" | "lg" | "xl";
   className?: string;
 }
@@ -11,15 +11,15 @@ const sizeClasses = {
   xl: "h-24"
 };
 
-export function BSGLogoActual({ 
+export function TreadSetLogo({ 
   size = "md", 
   className = "" 
-}: BSGLogoActualProps) {
+}: TreadSetLogoProps) {
   return (
     <div className={`flex items-center ${className}`}>
       <img 
-        src="/lovable-uploads/0ff7d5f4-66bb-4f5c-89ec-851bc6c4a2df.png" 
-        alt="BSG Tire Recycling" 
+        src="/treadset-logo.png" 
+        alt="TreadSet - Old Tires= New Possibilities" 
         className={`${sizeClasses[size]} w-auto object-contain`}
       />
     </div>

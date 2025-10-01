@@ -32,7 +32,7 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { BSGLogoActual } from "@/components/BSGLogoActual";
+import { TreadSetLogo } from "@/components/TreadSetLogo";
 import { Button } from "@/components/ui/button";
 
 export function AppSidebar() {
@@ -94,7 +94,7 @@ export function AppSidebar() {
     >
       <SidebarHeader className="border-b border-border/20 p-4">
         <div className="flex items-center gap-3">
-          <BSGLogoActual size="sm" />
+          <TreadSetLogo size="sm" />
           {!isCollapsed && (
             <div className="text-sm">
               <p className="font-semibold text-foreground truncate">
