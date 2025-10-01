@@ -236,14 +236,12 @@ hauler_print_name: "",
     }
   }, [step]);
 
-  // Ensure generator printed name starts blank on Signatures step
+  // Ensure generator printed name starts blank on first visit to Signatures step
+  const clearedGeneratorNameRef = useRef(false);
   useEffect(() => {
-    if (steps[step]?.key === 'signatures') {
-      const current = form.getValues('generator_print_name');
-      // If accidentally prefilled with numeric like "89", clear it
-      if (current && /^\d+(?:\.\d+)?$/.test(current.trim())) {
-        form.setValue('generator_print_name', '', { shouldValidate: false, shouldDirty: false });
-      }
+    if (steps[step]?.key === 'signatures' && !clearedGeneratorNameRef.current) {
+      form.setValue('generator_print_name', '', { shouldValidate: false, shouldDirty: false });
+      clearedGeneratorNameRef.current = true;
     }
   }, [step, form]);
 
@@ -863,6 +861,10 @@ hauler_print_name: "",
                           value={field.value || ""} 
                           placeholder="Full name"
                           type="text"
+                          autoComplete="off"
+                          autoCorrect="off"
+                          spellCheck={false}
+                          inputMode="text"
                         />
                       </FormControl>
                       <FormMessage />
