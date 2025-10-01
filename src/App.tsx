@@ -45,6 +45,8 @@ import Dropoffs from './pages/Dropoffs';
 import DriverSchedulePickup from "./pages/DriverSchedulePickup";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCancelled from "./pages/PaymentCancelled";
+import DriverPaymentSuccess from "./pages/driver/PaymentSuccess";
+import DriverPaymentCancelled from "./pages/driver/PaymentCancelled";
 
 const queryClient = new QueryClient();
 
@@ -220,6 +222,16 @@ const App = () => (
                 <AppLayout>
                   <DriverAssignmentView />
                 </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/driver/payment-success" element={
+              <ProtectedRoute roles={['driver', 'admin']}>
+                <DriverPaymentSuccess />
+              </ProtectedRoute>
+            } />
+            <Route path="/driver/payment-cancelled" element={
+              <ProtectedRoute roles={['driver', 'admin']}>
+                <DriverPaymentCancelled />
               </ProtectedRoute>
             } />
             <Route path="/receiver-signatures" element={

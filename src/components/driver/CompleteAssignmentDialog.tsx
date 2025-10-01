@@ -9,7 +9,7 @@ import { NumericInput } from "@/components/ui/numeric-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useUpdateAssignmentStatus } from "@/hooks/useDriverWorkflow";
-import { PaymentDialog } from "@/components/PaymentDialog";
+import { CollectPaymentDialog } from "@/components/driver/CollectPaymentDialog";
 import { Upload, Camera, CreditCard } from "lucide-react";
 
 const completeAssignmentSchema = z.object({
@@ -35,6 +35,8 @@ export function CompleteAssignmentDialog({
   assignment 
 }: CompleteAssignmentDialogProps) {
   const [photos, setPhotos] = useState<File[]>([]);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [isPickupCompleted, setIsPickupCompleted] = useState(false);
   const updateStatus = useUpdateAssignmentStatus();
 
   // Simplified weight calculations: 1 PTE = 22.47 lbs, 1 Truck = 5 PTE, 1 OTR = 15 PTE, 1 Tractor = 15 PTE
@@ -92,9 +94,8 @@ export function CompleteAssignmentDialog({
           photos: photos.length > 0 ? photos : null,
         }
       });
-      onOpenChange(false);
-      form.reset();
-      setPhotos([]);
+      setIsPickupCompleted(true);
+      // Don't close dialog yet - allow payment collection
     } catch (error) {
       console.error('Error completing assignment:', error);
     }
@@ -283,22 +284,24 @@ export function CompleteAssignmentDialog({
               </Button>
             </div>
             
-            {/* Payment Collection Section */}
-            <div className="border-t pt-4">
-              <h4 className="font-medium mb-2">Payment Collection (Optional)</h4>
-              <PaymentDialog
-                defaultClientId={assignment?.pickup?.client_id}
-                defaultPickupId={assignment?.pickup?.id}
-                defaultManifestId={assignment?.pickup?.manifest_id}
-                defaultDescription={`Pickup payment for ${assignment?.pickup?.client?.company_name || 'client'}`}
-                trigger={
-                  <Button type="button" variant="outline" className="w-full">
-                    <CreditCard className="h-4 w-4 mr-2" />
-                    Accept Payment
-                  </Button>
-                }
-              />
-            </div>
+            {/* Payment Collection Section - Show after pickup is completed */}
+            {isPickupCompleted && assignment?.pickup?.computed_revenue > 0 && (
+              <div className="border-t pt-4">
+                <h4 className="font-medium mb-3">Payment Collection (Optional)</h4>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Collect payment from customer for this completed pickup
+                </p>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => setShowPaymentDialog(true)}
+                >
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Collect Payment ({assignment.pickup.computed_revenue ? `$${assignment.pickup.computed_revenue.toFixed(2)}` : '$0.00'})
+                </Button>
+              </div>
+            )}
 
             {/* Auto-actions info */}
             <div className="text-xs text-muted-foreground bg-secondary/20 p-3 rounded-lg">
@@ -312,6 +315,26 @@ export function CompleteAssignmentDialog({
           </form>
         </Form>
       </DialogContent>
+
+      {/* Payment Collection Dialog */}
+      {assignment?.pickup && (
+        <CollectPaymentDialog
+          open={showPaymentDialog}
+          onOpenChange={(open) => {
+            setShowPaymentDialog(open);
+            if (!open && isPickupCompleted) {
+              // Close main dialog after payment flow
+              onOpenChange(false);
+              form.reset();
+              setPhotos([]);
+              setIsPickupCompleted(false);
+            }
+          }}
+          pickupId={assignment.pickup.id}
+          amount={assignment.pickup.computed_revenue || 0}
+          clientName={assignment.pickup.client?.company_name || 'Customer'}
+        />
+      )}
     </Dialog>
   );
 }
