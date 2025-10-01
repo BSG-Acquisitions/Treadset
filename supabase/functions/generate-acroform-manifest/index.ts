@@ -266,19 +266,21 @@ const handler = async (req: Request): Promise<Response> => {
               );
               console.log('Found signature-related fields:', signatureFields);
               
-              // Try to match based on the signature type
-              let matchedFieldName = null;
-              if (fieldName === 'Generator_Signature') {
+              // Try to match based on the signature role inferred from fieldName
+              const role = getSignatureRole(fieldName);
+              let matchedFieldName = null as string | null;
+              if (role === 'generator') {
                 matchedFieldName = signatureFields.find(name => 
                   name.toLowerCase().includes('generator') || 
                   name.toLowerCase().includes('gen')
-                );
-              } else if (fieldName === 'Hauler_Signature') {
+                ) || signatureFields.find(name => name.toLowerCase().includes('processor') === false && name.toLowerCase().includes('hauler') === false);
+              } else if (role === 'hauler') {
                 matchedFieldName = signatureFields.find(name => 
                   name.toLowerCase().includes('hauler') || 
                   name.toLowerCase().includes('haul')
                 );
-              } else if (fieldName === 'Receiver_Signature') {
+              } else {
+                // receiver / processor
                 matchedFieldName = signatureFields.find(name => 
                   name.toLowerCase().includes('receiver') || 
                   name.toLowerCase().includes('processor') ||
@@ -286,11 +288,11 @@ const handler = async (req: Request): Promise<Response> => {
                 );
               }
               
-              // If no specific match found, try to get fields in order
+              // If no specific match found, fall back to ordering
               if (!matchedFieldName && signatureFields.length > 0) {
-                if (fieldName === 'Generator_Signature') matchedFieldName = signatureFields[0];
-                else if (fieldName === 'Hauler_Signature') matchedFieldName = signatureFields[1];
-                else if (fieldName === 'Receiver_Signature') matchedFieldName = signatureFields[2];
+                if (role === 'generator') matchedFieldName = signatureFields[0];
+                else if (role === 'hauler') matchedFieldName = signatureFields[1] ?? signatureFields[0];
+                else matchedFieldName = signatureFields[2] ?? signatureFields[signatureFields.length - 1];
               }
               
               if (matchedFieldName) {
@@ -360,10 +362,10 @@ const handler = async (req: Request): Promise<Response> => {
                 const firstPage = pages[0];
                 const signatureSize = { width: 110, height: 45 };
                 let yPosition = 300;
-                
-                if (fieldName === 'Generator_Signature') yPosition = 400;
-                else if (fieldName === 'Hauler_Signature') yPosition = 300;
-                else if (fieldName === 'Receiver_Signature') yPosition = 200;
+                const role = getSignatureRole(fieldName);
+                if (role === 'generator') yPosition = 400;
+                else if (role === 'hauler') yPosition = 300;
+                else if (role === 'receiver') yPosition = 200;
                 
                 firstPage.drawImage(signatureImage, {
                   x: 440,
@@ -374,11 +376,12 @@ const handler = async (req: Request): Promise<Response> => {
                 // Draw timestamp with signature
                 try {
                   let timestampText = "";
-                  if (fieldName === 'Generator_Signature' && body.meta?.generator_signature_timestamp) {
+                  const roleTs = getSignatureRole(fieldName);
+                  if (roleTs === 'generator' && body.meta?.generator_signature_timestamp) {
                     timestampText = `Signed: ${body.meta.generator_signature_timestamp}`;
-                  } else if (fieldName === 'Hauler_Signature' && body.meta?.hauler_signature_timestamp) {
+                  } else if (roleTs === 'hauler' && body.meta?.hauler_signature_timestamp) {
                     timestampText = `Signed: ${body.meta.hauler_signature_timestamp}`;
-                  } else if (fieldName === 'Receiver_Signature' && body.meta?.receiver_signature_timestamp) {
+                  } else if (roleTs === 'receiver' && body.meta?.receiver_signature_timestamp) {
                     timestampText = `Signed: ${body.meta.receiver_signature_timestamp}`;
                   }
                   
