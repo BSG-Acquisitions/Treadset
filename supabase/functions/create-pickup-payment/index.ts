@@ -102,37 +102,26 @@ serve(async (req) => {
       }
     }
 
-    // Create Stripe checkout session
-    const origin = req.headers.get('origin') || 'https://9afe9a8a-0280-4803-b6c2-3c5497b7f0eb.lovableproject.com';
-    const session = await stripe.checkout.sessions.create({
+    // Create Payment Intent for manual card entry
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(amount * 100), // Convert to cents
+      currency: 'usd',
       customer: customerId,
-      customer_email: customerId ? undefined : pickup.client?.email,
-      line_items: [
-        {
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: `Tire Pickup - ${pickup.client?.company_name || 'Customer'}`,
-              description: `Pickup on ${new Date(pickup.pickup_date).toLocaleDateString()} - ${pickup.pte_count || 0} PTEs, ${pickup.otr_count || 0} OTR, ${pickup.tractor_count || 0} Tractor`,
-            },
-            unit_amount: Math.round(amount * 100), // Convert to cents
-          },
-          quantity: 1,
-        },
-      ],
-      mode: 'payment',
-      success_url: `${origin}/driver/payment-success?session_id={CHECKOUT_SESSION_ID}&pickup_id=${pickup_id}`,
-      cancel_url: `${origin}/driver/payment-cancelled?pickup_id=${pickup_id}`,
-      payment_method_types: ['card'],
-      payment_intent_data: {
-        metadata: {
-          pickup_id: pickup_id,
-          organization_id: pickup.organization_id,
-        }
-      }
+      description: `Tire Pickup - ${pickup.client?.company_name || 'Customer'} - ${new Date(pickup.pickup_date).toLocaleDateString()}`,
+      metadata: {
+        pickup_id: pickup_id,
+        organization_id: pickup.organization_id,
+        pte_count: pickup.pte_count?.toString() || '0',
+        otr_count: pickup.otr_count?.toString() || '0',
+        tractor_count: pickup.tractor_count?.toString() || '0',
+        pickup_date: pickup.pickup_date
+      },
+      automatic_payment_methods: {
+        enabled: true,
+      },
     });
 
-    console.log('[CREATE-PICKUP-PAYMENT] Checkout session created:', session.id);
+    console.log('[CREATE-PICKUP-PAYMENT] Payment Intent created:', paymentIntent.id);
 
     // Record payment intent in database
     const { error: paymentError } = await supabaseClient
@@ -145,7 +134,7 @@ serve(async (req) => {
         amount: Math.round(amount * 100), // Store in cents
         currency: 'usd',
         status: 'pending',
-        stripe_session_id: session.id,
+        stripe_payment_intent_id: paymentIntent.id,
         customer_email: pickup.client?.email,
         customer_name: pickup.client?.company_name,
         description: `Pickup payment - ${new Date(pickup.pickup_date).toLocaleDateString()}`,
@@ -163,8 +152,8 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ 
-        url: session.url,
-        session_id: session.id,
+        clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id,
         amount: amount
       }),
       {

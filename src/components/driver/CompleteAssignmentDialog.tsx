@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useUpdateAssignmentStatus } from "@/hooks/useDriverWorkflow";
-import { CollectPaymentDialog } from "@/components/driver/CollectPaymentDialog";
+import { CollectPaymentWithCard } from "@/components/driver/CollectPaymentWithCard";
 import { Upload, Camera, CreditCard, Check, DollarSign } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -498,7 +498,7 @@ export function CompleteAssignmentDialog({
 
       {/* Payment Collection Dialog */}
       {assignment?.pickup && (
-        <CollectPaymentDialog
+        <CollectPaymentWithCard
           open={showPaymentDialog}
           onOpenChange={(open) => {
             setShowPaymentDialog(open);
@@ -516,7 +516,18 @@ export function CompleteAssignmentDialog({
           }}
           pickupId={assignment.pickup_id}
           amount={calculatedTotal}
-          clientName={assignment.pickup?.clients?.company_name || 'Customer'}
+          onSuccess={() => {
+            // Close both dialogs
+            setShowPaymentDialog(false);
+            onOpenChange(false);
+            form.reset();
+            setPhotos([]);
+            setIsPickupCompleted(false);
+            setShowRateSelector(false);
+            setPteRate("");
+            setCommercialRate("");
+            setOtrRate("");
+          }}
         />
       )}
     </Dialog>
