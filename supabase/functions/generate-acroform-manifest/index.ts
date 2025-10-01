@@ -49,13 +49,12 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Download the AcroForm template from storage - user confirmed it's in manifests bucket
-    const templatePath = `templates/${body.templatePath}`;
-    console.log(`Downloading template from: manifests bucket, path: ${templatePath}`);
+    // Download the AcroForm template from storage
+    console.log(`Downloading template from: templates bucket, file: ${body.templatePath}`);
 
     const { data: templateFile, error: downloadError } = await supabase.storage
-      .from('manifests')
-      .download(templatePath);
+      .from('templates')
+      .download(body.templatePath);
 
     if (downloadError) {
       console.error('Error downloading template:', downloadError);
@@ -63,8 +62,8 @@ const handler = async (req: Request): Promise<Response> => {
         JSON.stringify({ 
           error: 'Template not found', 
           details: downloadError.message,
-          path: templatePath,
-          bucket: 'manifests'
+          path: body.templatePath,
+          bucket: 'templates'
         }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
