@@ -51,10 +51,6 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
 
   const handleComplete = () => {
     setOpen(false);
-    toast({
-      title: "Success",
-      description: "Manifest created successfully",
-    });
     if (onSuccess) {
       onSuccess("", "");
     }

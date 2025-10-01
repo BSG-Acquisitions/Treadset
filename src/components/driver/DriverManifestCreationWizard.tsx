@@ -80,7 +80,7 @@ export function DriverManifestCreationWizard({
   const { user } = useAuth();
   const navigate = useNavigate();
   
-  const createManifest = useCreateManifest();
+  const createManifest = useCreateManifest({ toastOnSuccess: false });
   const updateManifest = useUpdateManifest();
   const manifestIntegration = useManifestIntegration();
   const sendEmail = useSendManifestEmail();

@@ -113,9 +113,13 @@ export const useGenerateAcroFormManifestV4 = () => {
     },
     onError: (err: any) => {
       const config = getCurrentTemplateConfig();
+      const raw = err?.message || "Failed to generate PDF";
+      const friendly = /non-?2xx|status code/i.test(raw)
+        ? "PDF generation failed: template missing or storage access denied. Please retry or contact support."
+        : raw;
       toast({
         title: "Generation Failed",
-        description: err?.message ?? `Failed to generate v${config.version} AcroForm manifest PDF.`,
+        description: friendly || `Failed to generate v${config.version} AcroForm manifest PDF.`,
         variant: "destructive",
       });
     },

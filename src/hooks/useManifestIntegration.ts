@@ -285,9 +285,13 @@ export const useManifestIntegration = () => {
       });
     },
     onError: (error: any) => {
+      const raw = error?.message || "Failed to generate manifest PDF.";
+      const friendly = /non-?2xx|status code/i.test(raw)
+        ? "PDF generation failed: template missing or storage access issue."
+        : raw;
       toast({
         title: "Generation Failed",
-        description: error?.message || "Failed to generate manifest PDF.",
+        description: friendly,
         variant: "destructive"
       });
     }
