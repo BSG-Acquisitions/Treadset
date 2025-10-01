@@ -204,10 +204,7 @@ hauler_print_name: "",
           }
         }
 
-        // Pre-fill generator printed name with client contact
-        if (client?.contact_name) {
-          form.setValue('generator_print_name', client.contact_name);
-        }
+        // Don't pre-fill generator_print_name - let driver enter it manually
       } catch (error) {
         console.error('Error fetching data:', error);
         toast({
@@ -230,6 +227,14 @@ hauler_print_name: "",
 
   const currentStep = steps[step];
   const progress = ((step + 1) / steps.length) * 100;
+
+  // Scroll to top when step changes
+  useEffect(() => {
+    const scrollContainer = document.querySelector('.max-h-\\[50vh\\]');
+    if (scrollContainer) {
+      scrollContainer.scrollTop = 0;
+    }
+  }, [step]);
 
   const handleNext = async () => {
     // Validate current step before proceeding
