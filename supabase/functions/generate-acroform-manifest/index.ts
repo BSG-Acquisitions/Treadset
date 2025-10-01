@@ -138,7 +138,9 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const templateBytes = await fetchTemplateBytes();
-  // Diagnostics: list available templates to help pinpoint mismatched filenames
+    
+    if (!templateBytes) {
+      // Diagnostics: list available templates to help pinpoint mismatched filenames
       const { data: list, error: listErr } = await supabase.storage
         .from('manifests')
         .list('templates', { limit: 200 });
@@ -159,6 +161,7 @@ const handler = async (req: Request): Promise<Response> => {
         }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
 
     // Load the PDF template
     const pdfDoc = await PDFDocument.load(templateBytes);
