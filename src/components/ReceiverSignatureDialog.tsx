@@ -11,6 +11,7 @@ import { useManifest } from "@/hooks/useManifests";
 import { ManifestPDFControls } from "@/components/ManifestPDFControls";
 import { Mail, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { createPrintNameWithTimestamp } from "@/lib/manifestTimestamps";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useReceivers } from "@/hooks/useReceivers";
@@ -116,9 +117,10 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
       if (updateError) throw updateError;
 
       // Regenerate AcroForm PDF with receiver signature and data
+      const manifestData = manifest as any;
       const overrides: Record<string, any> = {
         receiver_signature: `signatures/${fileName}`,
-        receiver_print_name: `${printName} - ${new Date(timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}`,
+        receiver_print_name: createPrintNameWithTimestamp(printName, timestamp, 'Processor Representative'),
         receiver_date: new Date(timestamp).toISOString().split('T')[0],
         receiver_time: new Date(timestamp).toLocaleTimeString('en-US', { hour12: false }),
         // Include selected receiver data
@@ -127,35 +129,19 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
         receiver_city: selectedReceiver.receiver_city || '',
         receiver_state: selectedReceiver.receiver_state || '',
         receiver_zip: selectedReceiver.receiver_zip || '',
-        receiver_phone: selectedReceiver.receiver_phone || ''
+        receiver_phone: selectedReceiver.receiver_phone || '',
+        // CRITICAL: Preserve existing generator and hauler timestamps with seconds
+        generator_print_name: createPrintNameWithTimestamp(
+          manifestData?.signed_by_name,
+          manifestData?.generator_signed_at,
+          'Generator Representative'
+        ),
+        hauler_print_name: createPrintNameWithTimestamp(
+          manifestData?.signed_by_name,
+          manifestData?.hauler_signed_at,
+          'Hauler Representative'
+        )
       };
-
-      // Preserve generator signature timestamp formatting
-      const manifestData = manifest as any;
-      if (manifestData?.generator_signed_at) {
-        const genTime = new Date(manifestData.generator_signed_at).toLocaleTimeString('en-US', { 
-          hour: 'numeric', 
-          minute: '2-digit', 
-          second: '2-digit', 
-          hour12: true 
-        });
-        const genNameBase = manifestData?.signed_by_name || 'Generator Representative';
-        overrides.generator_print_name = `${genNameBase} - ${genTime}`;
-        overrides.generator_print_name_with_time = overrides.generator_print_name;
-      }
-
-      // Preserve hauler signature timestamp formatting
-      if (manifestData?.hauler_signed_at) {
-        const haulerTime = new Date(manifestData.hauler_signed_at).toLocaleTimeString('en-US', { 
-          hour: 'numeric', 
-          minute: '2-digit', 
-          second: '2-digit', 
-          hour12: true 
-        });
-        const haulerNameBase = manifestData?.signed_by_name || 'Hauler Representative';
-        overrides.hauler_print_name = `${haulerNameBase} - ${haulerTime}`;
-        overrides.hauler_print_name_with_time = overrides.hauler_print_name;
-      }
 
       const pdfResult = await manifestIntegration.mutateAsync({ 
         manifestId, 

@@ -6,6 +6,7 @@ import { AcroFormManifestData } from "@/types/acroform-manifest";
 import { getCurrentTemplateConfig } from "@/lib/pdf/templateConfig";
 import { MICHIGAN_CONVERSIONS } from "@/lib/michigan-conversions";
 import { validateAcroFormData, sanitizeAcroFormData, logValidationResults } from "@/lib/manifestValidation";
+import { createPrintNameWithTimestamp } from "@/lib/manifestTimestamps";
 
 export interface ManifestIntegrationParams {
   manifestId: string;
@@ -72,11 +73,11 @@ export const convertManifestToAcroForm = (manifestData: any, receiverData?: any)
                  ((manifestData.commercial_22_5_off || 0) + (manifestData.commercial_22_5_on || 0))).toString(),
     oversized_count: ((manifestData.otr_count || 0) + (manifestData.tractor_count || 0)).toString(),
     generator_date_processed: new Date().toISOString().split('T')[0],
-    generator_print_name: (() => {
-      const name = manifestData.signed_by_name || manifestData.client?.contact_name || 'Generator Representative';
-      const time = manifestData.generator_signed_at ? new Date(manifestData.generator_signed_at).toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit', second: '2-digit' }) : (manifestData.signed_at ? new Date(manifestData.signed_at).toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit', second: '2-digit' }) : new Date().toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit', second: '2-digit' }));
-      return `${name} - ${time}`;
-    })(),
+    generator_print_name: createPrintNameWithTimestamp(
+      manifestData.signed_by_name || manifestData.client?.contact_name,
+      manifestData.generator_signed_at || manifestData.signed_at,
+      'Generator Representative'
+    ),
     generator_date: manifestData.generator_signed_at ? new Date(manifestData.generator_signed_at).toISOString().split('T')[0] : (manifestData.signed_at ? new Date(manifestData.signed_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
     generator_time: manifestData.generator_signed_at ? new Date(manifestData.generator_signed_at).toLocaleTimeString('en-US', { hour12: false }) : (manifestData.signed_at ? new Date(manifestData.signed_at).toLocaleTimeString('en-US', { hour12: false }) : new Date().toLocaleTimeString('en-US', { hour12: false })),
     generator_signature: manifestData.customer_signature_png_path || '',
@@ -90,11 +91,11 @@ export const convertManifestToAcroForm = (manifestData: any, receiverData?: any)
     hauler_state: manifestData.hauler?.hauler_state || '',
     hauler_zip: manifestData.hauler?.hauler_zip || '',
     hauler_phone: manifestData.hauler?.hauler_phone || '',
-    hauler_print_name: (() => {
-      const name = manifestData.signed_by_name || 'Hauler Representative';
-      const time = manifestData.hauler_signed_at ? new Date(manifestData.hauler_signed_at).toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit', second: '2-digit' }) : (manifestData.signed_at ? new Date(manifestData.signed_at).toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit', second: '2-digit' }) : new Date().toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit', second: '2-digit' }));
-      return `${name} - ${time}`;
-    })(),
+    hauler_print_name: createPrintNameWithTimestamp(
+      manifestData.signed_by_name,
+      manifestData.hauler_signed_at || manifestData.signed_at,
+      'Hauler Representative'
+    ),
     hauler_date: manifestData.hauler_signed_at ? new Date(manifestData.hauler_signed_at).toISOString().split('T')[0] : (manifestData.signed_at ? new Date(manifestData.signed_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
     hauler_time: manifestData.hauler_signed_at ? new Date(manifestData.hauler_signed_at).toLocaleTimeString('en-US', { hour12: false }) : (manifestData.signed_at ? new Date(manifestData.signed_at).toLocaleTimeString('en-US', { hour12: false }) : new Date().toLocaleTimeString('en-US', { hour12: false })),
     hauler_gross_weight: (manifestData.gross_weight_lbs || manifestData.gross_weight || '').toString(),
