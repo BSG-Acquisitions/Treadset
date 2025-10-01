@@ -102,11 +102,10 @@ serve(async (req) => {
       }
     }
 
-    // Create Payment Intent for manual card entry
+    // Create Payment Intent for manual card entry (card-only, no Link)
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amount * 100), // Convert to cents
       currency: 'usd',
-      customer: customerId,
       description: `Tire Pickup - ${pickup.client?.company_name || 'Customer'} - ${new Date(pickup.pickup_date).toLocaleDateString()}`,
       metadata: {
         pickup_id: pickup_id,
@@ -116,9 +115,8 @@ serve(async (req) => {
         tractor_count: pickup.tractor_count?.toString() || '0',
         pickup_date: pickup.pickup_date
       },
-      automatic_payment_methods: {
-        enabled: true,
-      },
+      payment_method_types: ['card'], // force card form
+      automatic_payment_methods: { enabled: false }, // disable Link/saved wallets
     });
 
     console.log('[CREATE-PICKUP-PAYMENT] Payment Intent created:', paymentIntent.id);
