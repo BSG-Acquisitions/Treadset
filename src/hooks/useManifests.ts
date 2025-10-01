@@ -172,9 +172,10 @@ export const useManifest = (id: string) => {
   });
 };
 
-export const useCreateManifest = () => {
+export const useCreateManifest = (opts?: { toastOnSuccess?: boolean }) => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const toastOnSuccess = opts?.toastOnSuccess ?? true;
 
   return useMutation({
     mutationFn: async (data: CreateManifestData) => {
@@ -211,10 +212,12 @@ export const useCreateManifest = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['manifests'] });
-      toast({ 
-        title: "Manifest Created", 
-        description: "Digital manifest has been created successfully" 
-      });
+      if (toastOnSuccess) {
+        toast({ 
+          title: "Manifest Created", 
+          description: "Digital manifest has been created successfully" 
+        });
+      }
     },
     onError: (error) => {
       toast({ 
