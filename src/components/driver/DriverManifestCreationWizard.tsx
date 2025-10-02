@@ -491,6 +491,7 @@ hauler_print_name: "",
           generator_signed_at: generatorSignedAt,
           hauler_signed_at: haulerSignedAt,
           signed_by_name: data.generator_print_name,
+          signed_by_title: data.hauler_print_name, // Store hauler's print name in title field
         })
         .eq('id', manifest.id);
 

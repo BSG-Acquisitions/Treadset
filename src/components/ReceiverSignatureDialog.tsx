@@ -137,7 +137,7 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
           'Generator Representative'
         ),
         hauler_print_name: createPrintNameWithTimestamp(
-          manifestData?.signed_by_name,
+          manifestData?.signed_by_title, // Use signed_by_title field which stores hauler's name
           manifestData?.hauler_signed_at,
           'Hauler Representative'
         )
