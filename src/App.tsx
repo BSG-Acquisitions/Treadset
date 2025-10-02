@@ -43,6 +43,7 @@ import MichiganReports from './pages/MichiganReports';
 import Dropoffs from './pages/Dropoffs';
 import IndependentHaulers from './pages/IndependentHaulers';
 import HaulerDashboard from './pages/HaulerDashboard';
+import HaulerCustomers from './pages/HaulerCustomers';
 import DriverSchedulePickup from "./pages/DriverSchedulePickup";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCancelled from "./pages/PaymentCancelled";
@@ -273,6 +274,8 @@ const App = () => (
                 </AppLayout>
               </ProtectedRoute>
             } />
+            <Route path="/hauler-dashboard" element={<ProtectedRoute><HaulerDashboard /></ProtectedRoute>} />
+            <Route path="/hauler-customers" element={<ProtectedRoute><HaulerCustomers /></ProtectedRoute>} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
             <Route path="/payment-cancelled" element={<PaymentCancelled />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

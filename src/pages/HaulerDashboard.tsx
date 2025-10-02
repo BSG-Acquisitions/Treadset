@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import {
   Card,
@@ -12,6 +13,7 @@ import { useHaulerProfile } from "@/hooks/useIndependentHaulers";
 import { Button } from "@/components/ui/button";
 
 export default function HaulerDashboard() {
+  const navigate = useNavigate();
   const { data: profile, isLoading } = useHaulerProfile();
 
   if (isLoading) {
@@ -184,8 +186,10 @@ export default function HaulerDashboard() {
             <CardDescription>Common tasks for haulers</CardDescription>
           </CardHeader>
           <CardContent className="flex gap-4">
-            <Button>Create Manifest</Button>
-            <Button variant="outline">Manage Customers</Button>
+            <Button onClick={() => navigate("/hauler-customers")}>
+              Manage Customers
+            </Button>
+            <Button variant="outline">Create Manifest</Button>
             <Button variant="outline">View Transactions</Button>
           </CardContent>
         </Card>
