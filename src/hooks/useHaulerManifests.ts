@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useManifestIntegration } from "@/hooks/useManifestIntegration";
+import { useSendManifestEmail } from "@/hooks/useSendManifestEmail";
+import { MICHIGAN_CONVERSIONS } from "@/lib/michigan-conversions";
 
 interface CreateHaulerManifestData {
   hauler_customer_id: string;
@@ -28,6 +30,7 @@ export const useHaulerManifests = (haulerId?: string) => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const manifestIntegration = useManifestIntegration();
+  const sendEmail = useSendManifestEmail();
 
   // Fetch manifests created by this hauler
   const { data: manifests, isLoading } = useQuery({
@@ -140,7 +143,18 @@ export const useHaulerManifests = (haulerId?: string) => {
         clientId = newClient.id;
       }
 
-      // 6. Create manifest
+      // 6. Create manifest with timestamps (to-the-second precision)
+      const generatorSignedAt = new Date().toISOString();
+      const haulerSignedAt = new Date().toISOString();
+      
+      // Calculate total PTE for the manifest
+      const totalPTE = 
+        ((data.pte_off_rim || 0) + (data.pte_on_rim || 0)) * MICHIGAN_CONVERSIONS.PASSENGER_TIRE_TO_PTE +
+        ((data.commercial_17_5_19_5_off || 0) + (data.commercial_17_5_19_5_on || 0) + 
+         (data.commercial_22_5_off || 0) + (data.commercial_22_5_on || 0)) * MICHIGAN_CONVERSIONS.SEMI_TIRE_TO_PTE +
+        (data.tractor_count || 0) * MICHIGAN_CONVERSIONS.SEMI_TIRE_TO_PTE +
+        (data.otr_count || 0) * MICHIGAN_CONVERSIONS.OTR_TIRE_TO_PTE;
+      
       const manifestData = {
         manifest_number: manifestNumber as string,
         organization_id: orgId,
@@ -157,6 +171,7 @@ export const useHaulerManifests = (haulerId?: string) => {
         gross_weight_lbs: data.gross_weight_lbs || 0,
         tare_weight_lbs: data.tare_weight_lbs || 0,
         net_weight_lbs: (data.gross_weight_lbs || 0) - (data.tare_weight_lbs || 0),
+        weight_tons: totalPTE / 89, // Michigan conversion: 89 PTE = 1 ton
         payment_method: data.payment_method,
         payment_status: 'SUCCEEDED',
         paid_amount: data.payment_amount,
@@ -164,11 +179,11 @@ export const useHaulerManifests = (haulerId?: string) => {
         total: data.payment_amount,
         notes: data.notes,
         signed_by_name: data.generator_print_name,
-        signed_at: timestamp,
-        generator_signed_at: timestamp,
-        hauler_signed_at: timestamp,
-        sig_path: `signatures/${genSigFileName}`,
-        hauler_sig_path: `signatures/${haulSigFileName}`,
+        signed_at: generatorSignedAt,
+        generator_signed_at: generatorSignedAt,
+        hauler_signed_at: haulerSignedAt,
+        customer_signature_png_path: `signatures/${genSigFileName}`,
+        driver_signature_png_path: `signatures/${haulSigFileName}`,
         status: 'AWAITING_RECEIVER_SIGNATURE' as const
       };
 
@@ -180,41 +195,70 @@ export const useHaulerManifests = (haulerId?: string) => {
 
       if (manifestError) throw manifestError;
 
-      // 7. Generate PDF with hauler and generator info
+      // 7. Generate PDF with hauler and generator info (matching driver wizard exactly)
       const pteTotal = (data.pte_off_rim || 0) + (data.pte_on_rim || 0);
       const commercialTotal = (data.commercial_17_5_19_5_off || 0) + (data.commercial_17_5_19_5_on || 0) + 
                              (data.commercial_22_5_off || 0) + (data.commercial_22_5_on || 0);
       const oversizedTotal = (data.otr_count || 0) + (data.tractor_count || 0);
       
-      const pdfResult = await manifestIntegration.mutateAsync({
+      const grossWeight = data.gross_weight_lbs || 0;
+      const tareWeight = data.tare_weight_lbs || 0;
+      const netWeight = Math.max(0, grossWeight - tareWeight);
+      
+      await manifestIntegration.mutateAsync({
         manifestId: manifest.id,
         overrides: {
+          // Generator info
           generator_name: customer.company_name || customer.contact_name,
-          generator_print_name: data.generator_print_name,
-          generator_signature: `signatures/${genSigFileName}`,
-          generator_phone: customer.phone || '',
           generator_mail_address: customer.address || '',
           generator_city: customer.city || '',
           generator_state: customer.state || '',
           generator_zip: customer.zip || '',
+          generator_county: '',
+          generator_phone: customer.phone || '',
+          generator_signature: `signatures/${genSigFileName}`,
+          generator_print_name: `${data.generator_print_name} - ${new Date(generatorSignedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}`,
+          generator_date: new Date(generatorSignedAt).toLocaleDateString('en-US'),
+          generator_time: new Date(generatorSignedAt).toLocaleTimeString('en-US', { hour12: false }),
+          generator_volume_weight: String(totalPTE),
+          
+          // Tire counts for PDF
+          passenger_car_count: String(pteTotal),
+          truck_count: String(commercialTotal),
+          oversized_count: String(oversizedTotal),
+          
+          // Hauler info
           hauler_name: hauler.company_name,
-          hauler_print_name: data.hauler_print_name,
-          hauler_signature: `signatures/${haulSigFileName}`,
-          hauler_phone: hauler.phone || '',
           hauler_mail_address: hauler.mailing_address || '',
           hauler_city: hauler.city || '',
           hauler_state: hauler.state || '',
           hauler_zip: hauler.zip || '',
-          passenger_car_count: pteTotal.toString(),
-          truck_count: commercialTotal.toString(),
-          oversized_count: oversizedTotal.toString(),
-          hauler_gross_weight: (data.gross_weight_lbs || 0).toFixed(1),
-          hauler_tare_weight: (data.tare_weight_lbs || 0).toFixed(1),
-          hauler_net_weight: ((data.gross_weight_lbs || 0) - (data.tare_weight_lbs || 0)).toFixed(1),
+          hauler_phone: hauler.phone || '',
+          hauler_mi_reg: hauler.hauler_mi_reg || '',
+          hauler_signature: `signatures/${haulSigFileName}`,
+          hauler_print_name: `${data.hauler_print_name} - ${new Date(haulerSignedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}`,
+          hauler_date: new Date(haulerSignedAt).toLocaleDateString('en-US'),
+          hauler_time: new Date(haulerSignedAt).toLocaleTimeString('en-US', { hour12: false }),
+          hauler_total_pte: String(totalPTE),
+          
+          // Weight fields
+          hauler_gross_weight: grossWeight > 0 ? grossWeight.toFixed(1) : '0.0',
+          hauler_tare_weight: tareWeight > 0 ? tareWeight.toFixed(1) : '0.0',
+          hauler_net_weight: netWeight > 0 ? netWeight.toFixed(1) : '0.0',
         }
       });
 
-      return { manifest, pdfResult };
+      // 8. Send email to customer with initial manifest
+      if (customer.email) {
+        await sendEmail.mutateAsync({
+          manifestId: manifest.id,
+          to: customer.email,
+          subject: `Tire Manifest - ${customer.company_name || customer.contact_name}`,
+          messageHtml: `<p>Your tire pickup manifest is attached. This is the initial manifest with generator and hauler signatures. A final version will be sent once the receiver has signed.</p>`,
+        });
+      }
+
+      return { manifest };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hauler-manifests', haulerId] });
