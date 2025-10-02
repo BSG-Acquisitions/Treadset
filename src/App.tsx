@@ -46,6 +46,7 @@ import HaulerDashboard from './pages/HaulerDashboard';
 import HaulerCustomers from './pages/HaulerCustomers';
 import HaulerRates from './pages/HaulerRates';
 import HaulerManifests from './pages/HaulerManifests';
+import HaulerManifestCreate from './pages/HaulerManifestCreate';
 import DriverSchedulePickup from "./pages/DriverSchedulePickup";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCancelled from "./pages/PaymentCancelled";
@@ -279,6 +280,7 @@ const App = () => (
             <Route path="/hauler-dashboard" element={<ProtectedRoute><HaulerDashboard /></ProtectedRoute>} />
             <Route path="/hauler-customers" element={<ProtectedRoute><HaulerCustomers /></ProtectedRoute>} />
             <Route path="/hauler-manifests" element={<ProtectedRoute><HaulerManifests /></ProtectedRoute>} />
+            <Route path="/hauler-manifest-create" element={<ProtectedRoute><HaulerManifestCreate /></ProtectedRoute>} />
             <Route path="/hauler-rates" element={<ProtectedRoute roles={['admin', 'ops_manager']}><HaulerRates /></ProtectedRoute>} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
             <Route path="/payment-cancelled" element={<PaymentCancelled />} />

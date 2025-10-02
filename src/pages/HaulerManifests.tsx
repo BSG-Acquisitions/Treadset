@@ -1,59 +1,35 @@
-import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Eye } from "lucide-react";
-import { useDropoffs } from "@/hooks/useDropoffs";
+import { Plus, FileText, Loader2 } from "lucide-react";
 import { useHaulerProfile } from "@/hooks/useIndependentHaulers";
-import { useHaulerCustomers } from "@/hooks/useHaulerCustomers";
-import { CreateHaulerManifestDialog } from "@/components/hauler/CreateHaulerManifestDialog";
+import { useHaulerManifests } from "@/hooks/useHaulerManifests";
+import { ManifestPDFControls } from "@/components/ManifestPDFControls";
 import { format } from "date-fns";
+import { useNavigate } from "react-router-dom";
 
 export default function HaulerManifests() {
-  const [createOpen, setCreateOpen] = useState(false);
+  const navigate = useNavigate();
   const { data: haulerProfile, isLoading: profileLoading } = useHaulerProfile();
-  const { data: customers } = useHaulerCustomers(haulerProfile?.id);
-  const { data: dropoffs, isLoading: dropoffsLoading, refetch } = useDropoffs();
-
-  // Filter dropoffs to show only this hauler's deliveries
-  const haulerDropoffs = dropoffs?.filter((d: any) =>
-    d.hauler_id === haulerProfile?.id
-  );
-
-  const getCustomerName = (customerId: string) => {
-    const customer = customers?.find((c) => c.id === customerId);
-    return customer?.company_name || "Unknown";
-  };
+  const { manifests, isLoading: manifestsLoading } = useHaulerManifests(haulerProfile?.id);
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "outline"> = {
-      pending: "outline",
-      completed: "default",
-      processing: "secondary",
+    const statusConfig: Record<string, { variant: "default" | "secondary" | "outline" | "destructive", label: string }> = {
+      'AWAITING_RECEIVER_SIGNATURE': { variant: 'secondary', label: 'Awaiting Facility' },
+      'COMPLETED': { variant: 'default', label: 'Completed' },
+      'DRAFT': { variant: 'outline', label: 'Draft' }
     };
-    return <Badge variant={variants[status] || "outline"}>{status}</Badge>;
+    const config = statusConfig[status] || { variant: 'outline' as const, label: status };
+    return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
-  if (profileLoading) {
+  if (profileLoading || manifestsLoading) {
     return (
       <AppLayout>
-        <div className="flex items-center justify-center h-full">
-          <p className="text-muted-foreground">Loading...</p>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin" />
         </div>
       </AppLayout>
     );
@@ -62,10 +38,13 @@ export default function HaulerManifests() {
   if (!haulerProfile) {
     return (
       <AppLayout>
-        <div className="flex items-center justify-center h-full">
-          <p className="text-muted-foreground">
-            No hauler profile found. Please contact support.
-          </p>
+        <div className="p-6">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold text-destructive">Access Denied</h2>
+            <p className="text-muted-foreground mt-2">
+              You need to be registered as a hauler to access this page.
+            </p>
+          </div>
         </div>
       </AppLayout>
     );
@@ -73,70 +52,84 @@ export default function HaulerManifests() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
+      <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">
-              My Deliveries
-            </h1>
-            <p className="text-muted-foreground">
-              Track your tire delivery records
-            </p>
+            <h1 className="text-3xl font-bold">My Manifests</h1>
+            <p className="text-muted-foreground">Track your tire delivery manifests</p>
           </div>
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Record Delivery
+          <Button onClick={() => navigate('/hauler-manifest-create')}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create Manifest
           </Button>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Delivery History</CardTitle>
-            <CardDescription>
-              All deliveries recorded for your customers
-            </CardDescription>
+            <CardTitle>Manifest History</CardTitle>
           </CardHeader>
           <CardContent>
-            {dropoffsLoading ? (
-              <div className="text-center py-8 text-muted-foreground">
-                Loading deliveries...
-              </div>
-            ) : !haulerDropoffs || haulerDropoffs.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No deliveries yet. Record your first delivery to get started.
+            {!manifests?.length ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="font-medium">No manifests yet</p>
+                <p className="text-sm mt-1">Create your first manifest to get started</p>
+                <Button 
+                  className="mt-4"
+                  onClick={() => navigate('/hauler-manifest-create')}
+                >
+                  Create Manifest
+                </Button>
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Date</TableHead>
+                    <TableHead>Manifest #</TableHead>
                     <TableHead>Customer</TableHead>
-                    <TableHead>PTE</TableHead>
-                    <TableHead>OTR</TableHead>
-                    <TableHead>Tractor</TableHead>
-                    <TableHead>Total</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Tires</TableHead>
+                    <TableHead>Amount</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {haulerDropoffs.map((dropoff) => {
-                    const total =
-                      (dropoff.pte_count || 0) +
-                      (dropoff.otr_count || 0) +
-                      (dropoff.tractor_count || 0);
+                  {manifests.map((manifest) => {
+                    const totalTires = (manifest.pte_off_rim || 0) + 
+                                     (manifest.pte_on_rim || 0) + 
+                                     (manifest.otr_count || 0) + 
+                                     (manifest.tractor_count || 0);
+                    
+                    // Get customer name from hauler_customers relation
+                    const customerName = manifest.hauler_customers?.dropoff_customers?.company_name || 
+                                       manifest.hauler_customers?.dropoff_customers?.contact_name ||
+                                       'Unknown Customer';
+
                     return (
-                      <TableRow key={dropoff.id}>
+                      <TableRow key={manifest.id}>
                         <TableCell>
-                          {format(new Date(dropoff.dropoff_date), "MMM d, yyyy")}
+                          <Badge variant="outline">{manifest.manifest_number}</Badge>
                         </TableCell>
+                        <TableCell className="font-medium">{customerName}</TableCell>
+                        <TableCell>
+                          {manifest.created_at ? format(new Date(manifest.created_at), 'MMM d, yyyy') : 'N/A'}
+                        </TableCell>
+                        <TableCell>{totalTires}</TableCell>
                         <TableCell className="font-medium">
-                          {getCustomerName(dropoff.dropoff_customer_id)}
+                          ${manifest.paid_amount?.toFixed(2) || '0.00'}
                         </TableCell>
-                        <TableCell>{dropoff.pte_count || 0}</TableCell>
-                        <TableCell>{dropoff.otr_count || 0}</TableCell>
-                        <TableCell>{dropoff.tractor_count || 0}</TableCell>
-                        <TableCell className="font-medium">{total}</TableCell>
-                        <TableCell>{getStatusBadge(dropoff.status)}</TableCell>
+                        <TableCell>{getStatusBadge(manifest.status)}</TableCell>
+                        <TableCell className="text-right">
+                          {manifest.acroform_pdf_path && (
+                            <ManifestPDFControls
+                              manifestId={manifest.id}
+                              acroformPdfPath={manifest.acroform_pdf_path}
+                              clientEmails={[]}
+                              className="inline-flex"
+                            />
+                          )}
+                        </TableCell>
                       </TableRow>
                     );
                   })}
@@ -146,12 +139,6 @@ export default function HaulerManifests() {
           </CardContent>
         </Card>
       </div>
-
-      <CreateHaulerManifestDialog
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        onSuccess={refetch}
-      />
     </AppLayout>
   );
 }

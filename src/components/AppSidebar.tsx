@@ -14,7 +14,9 @@ import {
   Truck,
   Building,
   Recycle,
-  LogOut
+  LogOut,
+  Plus,
+  LayoutDashboard
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -68,7 +70,8 @@ export function AppSidebar() {
     { id: 'independent-haulers', label: 'Independent Haulers', icon: Truck, path: '/haulers', roles: ['admin', 'ops_manager'] as const },
     { id: 'hauler-dashboard', label: 'Hauler Dashboard', icon: Home, path: '/hauler-dashboard', roles: ['hauler'] as const },
     { id: 'hauler-customers', label: 'My Customers', icon: Users, path: '/hauler-customers', roles: ['hauler'] as const },
-    { id: 'hauler-manifests', label: 'My Deliveries', icon: FileText, path: '/hauler-manifests', roles: ['hauler'] as const },
+    { id: 'hauler-manifests', label: 'My Manifests', icon: FileText, path: '/hauler-manifests', roles: ['hauler'] as const },
+    { id: 'hauler-manifest-create', label: 'Create Manifest', icon: Plus, path: '/hauler-manifest-create', roles: ['hauler'] as const },
     { id: 'hauler-rates', label: 'Hauler Rates', icon: DollarSign, path: '/hauler-rates', roles: ['admin', 'ops_manager'] as const },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics', roles: ['admin', 'ops_manager'] as const },
     { id: 'reports', label: 'Reports', icon: FileText, path: '/reports', roles: ['admin', 'ops_manager'] as const },
