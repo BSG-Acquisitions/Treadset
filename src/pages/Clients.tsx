@@ -74,6 +74,16 @@ export default function Clients() {
       )
     },
     {
+      key: 'phone',
+      title: 'Phone',
+      sortable: true,
+      render: (value) => (
+        <span className="text-sm">
+          {value || '—'}
+        </span>
+      )
+    },
+    {
       key: 'locations',
       title: 'Address',
       sortable: false,
@@ -94,26 +104,6 @@ export default function Clients() {
           <span className="text-muted-foreground text-sm">No address</span>
         );
       }
-    },
-    {
-      key: 'lifetime_revenue',
-      title: 'Revenue',
-      sortable: true,
-      render: (value) => (
-        <span className="font-medium text-sm">
-          ${(value || 0).toFixed(0)}
-        </span>
-      )
-    },
-    {
-      key: 'open_balance',
-      title: 'Balance',
-      sortable: true,
-      render: (value) => (
-        <span className={`font-medium text-sm ${(value || 0) > 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
-          ${(value || 0).toFixed(0)}
-        </span>
-      )
     },
     {
       key: 'is_active',
