@@ -30,58 +30,52 @@ export function EditClientDialog({ client, trigger }: EditClientDialogProps) {
   const updateLocation = useUpdateLocation();
 
   const handleSubmit = async (data: ClientFormData & { address?: string; access_notes?: string }) => {
-    try {
-      // Update client with ALL form data including address fields
-      await updateClient.mutateAsync({
-        id: client.id,
-        updates: {
-          company_name: data.company_name,
-          contact_name: data.contact_name || null,
-          email: data.email || null,
-          phone: data.phone || null,
-          notes: data.notes || null,
-          // Remove type field since it no longer exists
-          tags: data.tags || null,
-          sla_weeks: data.sla_weeks || null,
-          pricing_tier_id: data.pricing_tier_id || null,
-          // CRITICAL FIX: Save all address fields that were missing
-          mailing_address: data.mailing_address || null,
-          city: data.city || null,
-          state: data.state || null,
-          zip: data.zip || null,
-          county: data.county || null,
-        }
-      });
+    // Update client with ALL form data including address fields
+    await updateClient.mutateAsync({
+      id: client.id,
+      updates: {
+        company_name: data.company_name,
+        contact_name: data.contact_name || null,
+        email: data.email || null,
+        phone: data.phone || null,
+        notes: data.notes || null,
+        tags: data.tags || null,
+        sla_weeks: data.sla_weeks || null,
+        pricing_tier_id: data.pricing_tier_id || null,
+        mailing_address: data.mailing_address || null,
+        city: data.city || null,
+        state: data.state || null,
+        zip: data.zip || null,
+        county: data.county || null,
+      }
+    });
 
-      // Handle location (address) update or creation
-      if (data.address) {
-        const primaryLocation = locations[0];
-        
-        if (primaryLocation) {
-          // Update existing location
-          await updateLocation.mutateAsync({
-            id: primaryLocation.id,
-            updates: {
-              address: data.address,
-              access_notes: data.access_notes || null,
-            }
-          });
-        } else {
-          // Create new location
-          await createLocation.mutateAsync({
-            client_id: client.id,
+    // Handle location (address) update or creation
+    if (data.address) {
+      const primaryLocation = locations[0];
+      
+      if (primaryLocation) {
+        // Update existing location
+        await updateLocation.mutateAsync({
+          id: primaryLocation.id,
+          updates: {
             address: data.address,
             access_notes: data.access_notes || null,
-            name: data.address, // Use address as name for primary location
-            organization_id: client.organization_id,
-          });
-        }
+          }
+        });
+      } else {
+        // Create new location
+        await createLocation.mutateAsync({
+          client_id: client.id,
+          address: data.address,
+          access_notes: data.access_notes || null,
+          name: data.address,
+          organization_id: client.organization_id,
+        });
       }
-      
-      setIsOpen(false);
-    } catch (error) {
-      console.error('Error updating client:', error);
     }
+    
+    setIsOpen(false);
   };
 
   return (
