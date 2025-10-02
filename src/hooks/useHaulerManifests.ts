@@ -5,9 +5,16 @@ import { useManifestIntegration } from "@/hooks/useManifestIntegration";
 
 interface CreateHaulerManifestData {
   hauler_customer_id: string;
-  pte_count: number;
-  otr_count: number;
-  tractor_count: number;
+  pte_off_rim?: number;
+  pte_on_rim?: number;
+  commercial_17_5_19_5_off?: number;
+  commercial_17_5_19_5_on?: number;
+  commercial_22_5_off?: number;
+  commercial_22_5_on?: number;
+  otr_count?: number;
+  tractor_count?: number;
+  gross_weight_lbs?: number;
+  tare_weight_lbs?: number;
   payment_method: 'CASH' | 'CHECK' | 'CARD';
   payment_amount: number;
   notes?: string;
@@ -139,14 +146,17 @@ export const useHaulerManifests = (haulerId?: string) => {
         organization_id: orgId,
         client_id: clientId,
         hauler_id: haulerId,
-        pte_off_rim: data.pte_count,
-        pte_on_rim: 0,
-        commercial_17_5_19_5_off: 0,
-        commercial_17_5_19_5_on: 0,
-        commercial_22_5_off: 0,
-        commercial_22_5_on: 0,
-        otr_count: data.otr_count,
-        tractor_count: data.tractor_count,
+        pte_off_rim: data.pte_off_rim || 0,
+        pte_on_rim: data.pte_on_rim || 0,
+        commercial_17_5_19_5_off: data.commercial_17_5_19_5_off || 0,
+        commercial_17_5_19_5_on: data.commercial_17_5_19_5_on || 0,
+        commercial_22_5_off: data.commercial_22_5_off || 0,
+        commercial_22_5_on: data.commercial_22_5_on || 0,
+        otr_count: data.otr_count || 0,
+        tractor_count: data.tractor_count || 0,
+        gross_weight_lbs: data.gross_weight_lbs || 0,
+        tare_weight_lbs: data.tare_weight_lbs || 0,
+        net_weight_lbs: (data.gross_weight_lbs || 0) - (data.tare_weight_lbs || 0),
         payment_method: data.payment_method,
         payment_status: 'SUCCEEDED',
         paid_amount: data.payment_amount,
@@ -171,6 +181,11 @@ export const useHaulerManifests = (haulerId?: string) => {
       if (manifestError) throw manifestError;
 
       // 7. Generate PDF with hauler and generator info
+      const pteTotal = (data.pte_off_rim || 0) + (data.pte_on_rim || 0);
+      const commercialTotal = (data.commercial_17_5_19_5_off || 0) + (data.commercial_17_5_19_5_on || 0) + 
+                             (data.commercial_22_5_off || 0) + (data.commercial_22_5_on || 0);
+      const oversizedTotal = (data.otr_count || 0) + (data.tractor_count || 0);
+      
       const pdfResult = await manifestIntegration.mutateAsync({
         manifestId: manifest.id,
         overrides: {
@@ -190,9 +205,12 @@ export const useHaulerManifests = (haulerId?: string) => {
           hauler_city: hauler.city || '',
           hauler_state: hauler.state || '',
           hauler_zip: hauler.zip || '',
-          passenger_car_count: data.pte_count.toString(),
-          truck_count: '0',
-          oversized_count: (data.otr_count + data.tractor_count).toString(),
+          passenger_car_count: pteTotal.toString(),
+          truck_count: commercialTotal.toString(),
+          oversized_count: oversizedTotal.toString(),
+          hauler_gross_weight: (data.gross_weight_lbs || 0).toFixed(1),
+          hauler_tare_weight: (data.tare_weight_lbs || 0).toFixed(1),
+          hauler_net_weight: ((data.gross_weight_lbs || 0) - (data.tare_weight_lbs || 0)).toFixed(1),
         }
       });
 
