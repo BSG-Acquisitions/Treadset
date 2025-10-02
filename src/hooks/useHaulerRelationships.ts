@@ -110,29 +110,41 @@ export const useInviteHauler = () => {
         .select()
         .single();
 
-      if (createUserError) throw createUserError;
+      if (createUserError) {
+        console.error("Error creating user:", createUserError);
+        throw new Error(`Failed to create user account: ${createUserError.message}`);
+      }
 
-      // Create hauler profile
+      // Create hauler profile with all required fields
       const { data: hauler, error: haulerError } = await (supabase as any)
         .from("haulers")
         .insert({
           user_id: newUserData.id,
           company_name,
+          hauler_name: company_name, // Legacy field
           email,
           phone,
+          hauler_phone: phone, // Legacy field
           dot_number,
           license_number,
           mailing_address,
+          hauler_mailing_address: mailing_address, // Legacy field
           city,
+          hauler_city: city, // Legacy field
           state,
+          hauler_state: state, // Legacy field
           zip,
+          hauler_zip: zip, // Legacy field
           is_approved: true,
           is_active: true,
         })
         .select()
         .single();
 
-      if (haulerError) throw haulerError;
+      if (haulerError) {
+        console.error("Error creating hauler:", haulerError);
+        throw new Error(`Failed to create hauler profile: ${haulerError.message}`);
+      }
 
       // Assign independent_hauler role
       const { error: roleError } = await (supabase as any)
@@ -143,7 +155,10 @@ export const useInviteHauler = () => {
           role: "independent_hauler",
         });
 
-      if (roleError) throw roleError;
+      if (roleError) {
+        console.error("Error assigning role:", roleError);
+        throw new Error(`Failed to assign hauler role: ${roleError.message}`);
+      }
 
       // Create relationship
       const { data: relationship, error: relError } = await (supabase as any)
@@ -156,7 +171,10 @@ export const useInviteHauler = () => {
         .select()
         .single();
 
-      if (relError) throw relError;
+      if (relError) {
+        console.error("Error creating relationship:", relError);
+        throw new Error(`Failed to create hauler relationship: ${relError.message}`);
+      }
 
       return { hauler, relationship };
     },
@@ -165,9 +183,10 @@ export const useInviteHauler = () => {
       queryClient.invalidateQueries({ queryKey: ["independent-haulers"] });
       toast.success("Hauler invited successfully");
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("Error inviting hauler:", error);
-      toast.error("Failed to invite hauler");
+      const message = error?.message || "Failed to invite hauler. Please try again.";
+      toast.error(message);
     },
   });
 };

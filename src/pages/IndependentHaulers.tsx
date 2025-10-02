@@ -22,6 +22,7 @@ import { useHaulers } from "@/hooks/useHaulers";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+import { InviteHaulerDialog } from "@/components/hauler/InviteHaulerDialog";
 
 export default function IndependentHaulers() {
   const { user } = useAuth();
@@ -136,6 +137,7 @@ export default function IndependentHaulers() {
         </Card>
       </div>
 
+      <InviteHaulerDialog open={inviteOpen} onOpenChange={setInviteOpen} />
     </AppLayout>
   );
 }
