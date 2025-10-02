@@ -92,7 +92,7 @@ export const convertManifestToAcroForm = (manifestData: any, receiverData?: any)
     hauler_zip: manifestData.hauler?.hauler_zip || '',
     hauler_phone: manifestData.hauler?.hauler_phone || '',
     hauler_print_name: createPrintNameWithTimestamp(
-      manifestData.signed_by_name,
+      manifestData.signed_by_title, // Use hauler's name from signed_by_title field
       manifestData.hauler_signed_at || manifestData.signed_at,
       'Hauler Representative'
     ),

@@ -17,6 +17,8 @@ export interface Manifest {
   signed_by_name?: string;
   signed_by_title?: string;
   signed_by_email?: string;
+  generator_signed_at?: string;
+  hauler_signed_at?: string;
   receiver_signed_at?: string;
   receiver_signed_by?: string;
   sign_ip?: string;
