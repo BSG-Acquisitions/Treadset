@@ -93,8 +93,8 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
     ...(haulers?.map(h => ({
       id: `hauler-${h.id}`,
       type: 'hauler' as const,
-      name: h.hauler_name,
-      details: [h.hauler_mi_reg && `Reg: ${h.hauler_mi_reg}`, h.hauler_phone && `Phone: ${h.hauler_phone}`].filter(Boolean).join(' • '),
+      name: h.company_name,
+      details: [h.hauler_mi_reg && `Reg: ${h.hauler_mi_reg}`, h.phone && `Phone: ${h.phone}`].filter(Boolean).join(' • '),
       driverInfo: 'External Hauler',
       haulerId: h.id,
     })) || []),

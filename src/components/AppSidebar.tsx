@@ -65,7 +65,7 @@ export function AppSidebar() {
     { id: 'add-pickup', label: 'Add Pickup', icon: PackageOpen, path: '/book', roles: ['driver'] as const },
     { id: 'employees', label: 'Employees', icon: UserCheck, path: '/employees', roles: ['admin'] as const },
     { id: 'dropoffs', label: 'Drop-offs', icon: PackageOpen, path: '/dropoffs', roles: ['admin', 'ops_manager', 'sales'] as const },
-    { id: 'independent-haulers', label: 'Independent Haulers', icon: Truck, path: '/independent-haulers', roles: ['admin', 'ops_manager'] as const },
+    { id: 'independent-haulers', label: 'Independent Haulers', icon: Truck, path: '/haulers', roles: ['admin', 'ops_manager'] as const },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics', roles: ['admin', 'ops_manager'] as const },
     { id: 'reports', label: 'Reports', icon: FileText, path: '/reports', roles: ['admin', 'ops_manager'] as const },
     { id: 'michigan-reports', label: 'Michigan Reports', icon: Recycle, path: '/michigan-reports', roles: ['admin', 'ops_manager'] as const },

@@ -227,8 +227,8 @@ hauler_print_name: "",
           .select(`
             *,
             hauler:haulers(
-              id, hauler_name, hauler_mailing_address,
-              hauler_city, hauler_state, hauler_zip, hauler_phone, hauler_mi_reg
+              id, company_name, mailing_address,
+              city, state, zip, phone, hauler_mi_reg
             ),
             vehicle:vehicles(id, name, license_plate)
           `)
@@ -527,12 +527,12 @@ hauler_print_name: "",
           oversized_count: String((data.otr_count || 0) + (data.tractor_count || 0)),
           
           // Hauler info from assignment
-          hauler_name: haulerData.hauler_name,
-          hauler_mail_address: haulerData.hauler_mailing_address || '',
-          hauler_city: haulerData.hauler_city || '',
-          hauler_state: haulerData.hauler_state || '',
-          hauler_zip: haulerData.hauler_zip || '',
-          hauler_phone: haulerData.hauler_phone || '',
+          hauler_name: haulerData.company_name,
+          hauler_mail_address: haulerData.mailing_address || '',
+          hauler_city: haulerData.city || '',
+          hauler_state: haulerData.state || '',
+          hauler_zip: haulerData.zip || '',
+          hauler_phone: haulerData.phone || '',
           hauler_mi_reg: haulerData.hauler_mi_reg || '',
           hauler_signature: haulerSigPath,
           
@@ -620,10 +620,10 @@ hauler_print_name: "",
               <CardContent className="space-y-3 text-sm">
                 {haulerData ? (
                   <div className="space-y-2">
-                    <div><strong>Company:</strong> {haulerData?.hauler_name || 'N/A'}</div>
-                    <div><strong>Address:</strong> {haulerData?.hauler_mailing_address || 'N/A'}</div>
-                    <div><strong>City, State ZIP:</strong> {haulerData?.hauler_city}, {haulerData?.hauler_state} {haulerData?.hauler_zip}</div>
-                    <div><strong>Phone:</strong> {haulerData?.hauler_phone || 'N/A'}</div>
+                    <div><strong>Company:</strong> {haulerData?.company_name || 'N/A'}</div>
+                    <div><strong>Address:</strong> {haulerData?.mailing_address || 'N/A'}</div>
+                    <div><strong>City, State ZIP:</strong> {haulerData?.city}, {haulerData?.state} {haulerData?.zip}</div>
+                    <div><strong>Phone:</strong> {haulerData?.phone || 'N/A'}</div>
                     <div><strong>MI Registration:</strong> {haulerData?.hauler_mi_reg || 'N/A'}</div>
                   </div>
                 ) : (
@@ -638,7 +638,7 @@ hauler_print_name: "",
                       </SelectTrigger>
                       <SelectContent>
                         {haulers.map((h) => (
-                          <SelectItem key={h.id} value={h.id}>{h.hauler_name}</SelectItem>
+                          <SelectItem key={h.id} value={h.id}>{h.company_name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>

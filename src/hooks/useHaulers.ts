@@ -2,38 +2,44 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+// Legacy interface for backward compatibility
 export interface Hauler {
   id: string;
-  hauler_name: string;
-  hauler_mailing_address?: string;
-  hauler_city?: string;
-  hauler_state?: string;
-  hauler_zip?: string;
-  hauler_phone?: string;
+  company_name: string;
+  mailing_address?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  phone?: string;
   hauler_mi_reg?: string;
   is_active: boolean;
   created_at: string;
+  user_id?: string;
+  email?: string;
+  dot_number?: string;
+  license_number?: string;
 }
 
 export interface CreateHaulerData {
-  hauler_name: string;
-  hauler_mailing_address?: string;
-  hauler_city?: string;
-  hauler_state?: string;
-  hauler_zip?: string;
-  hauler_phone?: string;
+  company_name: string;
+  mailing_address?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  phone?: string;
   hauler_mi_reg?: string;
+  email?: string;
 }
 
 export const useHaulers = () => {
   return useQuery({
     queryKey: ["haulers"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("haulers")
         .select("*")
         .eq("is_active", true)
-        .order("hauler_name");
+        .order("company_name");
 
       if (error) throw error;
       return data as Hauler[];
@@ -46,10 +52,19 @@ export const useCreateHauler = () => {
 
   return useMutation({
     mutationFn: async (data: CreateHaulerData) => {
-      const { data: hauler, error } = await supabase
+      // Create simple hauler (no user account) - used for Michigan manifests
+      const { data: hauler, error } = await (supabase as any)
         .from("haulers")
         .insert({
-          ...data,
+          company_name: data.company_name,
+          mailing_address: data.mailing_address,
+          city: data.city,
+          state: data.state,
+          zip: data.zip,
+          phone: data.phone,
+          hauler_mi_reg: data.hauler_mi_reg,
+          email: data.email || `${data.company_name.toLowerCase().replace(/\s+/g, '-')}@temp.hauler`,
+          user_id: null, // No user account for simple haulers
           is_active: true,
         })
         .select()
@@ -74,9 +89,17 @@ export const useUpdateHauler = () => {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<CreateHaulerData> }) => {
-      const { data: hauler, error } = await supabase
+      const { data: hauler, error } = await (supabase as any)
         .from("haulers")
-        .update(data)
+        .update({
+          company_name: data.company_name,
+          mailing_address: data.mailing_address,
+          city: data.city,
+          state: data.state,
+          zip: data.zip,
+          phone: data.phone,
+          hauler_mi_reg: data.hauler_mi_reg,
+        })
         .eq("id", id)
         .select()
         .single();
@@ -100,7 +123,7 @@ export const useDeleteHauler = () => {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("haulers")
         .update({ is_active: false })
         .eq("id", id);

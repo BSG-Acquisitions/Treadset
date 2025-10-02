@@ -37,7 +37,6 @@ import ManifestExample from '@/pages/ManifestExample';
 import AcroFormDemo from '@/pages/AcroFormDemo';
 import ManifestViewer from './pages/ManifestViewer';
 import ReceiverSignatures from './pages/ReceiverSignatures';
-import HaulerManagement from './pages/HaulerManagement';
 import ReceiverManagement from './pages/ReceiverManagement';
 import Reports from './pages/Reports';
 import MichiganReports from './pages/MichiganReports';
@@ -243,9 +242,7 @@ const App = () => (
             } />
             <Route path="/haulers" element={
               <ProtectedRoute roles={['admin', 'ops_manager']}>
-                <AppLayout>
-                  <HaulerManagement />
-                </AppLayout>
+                <IndependentHaulers />
               </ProtectedRoute>
             } />
             <Route path="/receivers" element={
@@ -274,16 +271,6 @@ const App = () => (
                 <AppLayout>
                   <Dropoffs />
                 </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/independent-haulers" element={
-              <ProtectedRoute roles={['admin', 'ops_manager']}>
-                <IndependentHaulers />
-              </ProtectedRoute>
-            } />
-            <Route path="/hauler-dashboard" element={
-              <ProtectedRoute roles={['admin' as any]}>
-                <HaulerDashboard />
               </ProtectedRoute>
             } />
             <Route path="/payment-success" element={<PaymentSuccess />} />
