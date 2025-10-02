@@ -18,10 +18,15 @@ export const useClientsWithTable = ({ tableState }: UseClientsWithTableOptions) 
   return useQuery({
     queryKey: ['clients-table', JSON.stringify(tableState)],
     queryFn: async () => {
-      // Build base query with count
+      // Build base query with count and include locations
       let query = supabase
         .from('clients')
-        .select('*', { count: 'exact' });
+        .select(`
+          *,
+          pricing_tier:pricing_tier_id(name, rate),
+          locations(id, address, access_notes),
+          pickups(count)
+        `, { count: 'exact' });
 
       // Apply search across key fields
       const search = (tableState.search || '').trim();

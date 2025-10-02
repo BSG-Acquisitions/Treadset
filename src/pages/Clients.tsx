@@ -79,9 +79,16 @@ export default function Clients() {
       sortable: false,
       render: (value, row) => {
         const location = row.locations?.[0];
-        return location?.address ? (
+        const locationAddress = location?.address;
+        const clientAddress = row.mailing_address 
+          ? `${row.mailing_address}${row.city ? ', ' + row.city : ''}${row.state ? ', ' + row.state : ''}`
+          : null;
+        
+        const displayAddress = locationAddress || clientAddress;
+        
+        return displayAddress ? (
           <div className="text-sm min-w-0">
-            <div className="font-medium truncate">{location.address}</div>
+            <div className="font-medium truncate">{displayAddress}</div>
           </div>
         ) : (
           <span className="text-muted-foreground text-sm">No address</span>
