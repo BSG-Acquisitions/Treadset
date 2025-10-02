@@ -611,6 +611,7 @@ export type Database = {
           dropoff_customer_id: string
           dropoff_date: string
           dropoff_time: string | null
+          hauler_id: string | null
           id: string
           manifest_id: string | null
           manifest_pdf_path: string | null
@@ -637,6 +638,7 @@ export type Database = {
           dropoff_customer_id: string
           dropoff_date?: string
           dropoff_time?: string | null
+          hauler_id?: string | null
           id?: string
           manifest_id?: string | null
           manifest_pdf_path?: string | null
@@ -663,6 +665,7 @@ export type Database = {
           dropoff_customer_id?: string
           dropoff_date?: string
           dropoff_time?: string | null
+          hauler_id?: string | null
           id?: string
           manifest_id?: string | null
           manifest_pdf_path?: string | null
@@ -684,6 +687,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "dropoffs_hauler_id_fkey"
+            columns: ["hauler_id"]
+            isOneToOne: false
+            referencedRelation: "hauler_overlay_view"
+            referencedColumns: ["hauler_id"]
+          },
+          {
+            foreignKeyName: "dropoffs_hauler_id_fkey"
+            columns: ["hauler_id"]
+            isOneToOne: false
+            referencedRelation: "haulers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "fk_dropoffs_dropoff_customer"
             columns: ["dropoff_customer_id"]
@@ -789,6 +806,70 @@ export type Database = {
           },
         ]
       }
+      facility_hauler_rates: {
+        Row: {
+          created_at: string
+          effective_from: string
+          effective_to: string | null
+          hauler_id: string
+          id: string
+          notes: string | null
+          organization_id: string
+          otr_rate: number
+          pte_rate: number
+          tractor_rate: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          effective_from?: string
+          effective_to?: string | null
+          hauler_id: string
+          id?: string
+          notes?: string | null
+          organization_id: string
+          otr_rate?: number
+          pte_rate?: number
+          tractor_rate?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          effective_from?: string
+          effective_to?: string | null
+          hauler_id?: string
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          otr_rate?: number
+          pte_rate?: number
+          tractor_rate?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facility_hauler_rates_hauler_id_fkey"
+            columns: ["hauler_id"]
+            isOneToOne: false
+            referencedRelation: "hauler_overlay_view"
+            referencedColumns: ["hauler_id"]
+          },
+          {
+            foreignKeyName: "facility_hauler_rates_hauler_id_fkey"
+            columns: ["hauler_id"]
+            isOneToOne: false
+            referencedRelation: "haulers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facility_hauler_rates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       generators: {
         Row: {
           created_at: string | null
@@ -840,9 +921,80 @@ export type Database = {
         }
         Relationships: []
       }
+      hauler_customers: {
+        Row: {
+          address: string | null
+          city: string | null
+          company_name: string
+          contact_name: string | null
+          created_at: string
+          email: string | null
+          hauler_id: string
+          id: string
+          is_active: boolean | null
+          notes: string | null
+          phone: string | null
+          state: string | null
+          updated_at: string
+          zip: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          company_name: string
+          contact_name?: string | null
+          created_at?: string
+          email?: string | null
+          hauler_id: string
+          id?: string
+          is_active?: boolean | null
+          notes?: string | null
+          phone?: string | null
+          state?: string | null
+          updated_at?: string
+          zip?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          company_name?: string
+          contact_name?: string | null
+          created_at?: string
+          email?: string | null
+          hauler_id?: string
+          id?: string
+          is_active?: boolean | null
+          notes?: string | null
+          phone?: string | null
+          state?: string | null
+          updated_at?: string
+          zip?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hauler_customers_hauler_id_fkey"
+            columns: ["hauler_id"]
+            isOneToOne: false
+            referencedRelation: "hauler_overlay_view"
+            referencedColumns: ["hauler_id"]
+          },
+          {
+            foreignKeyName: "hauler_customers_hauler_id_fkey"
+            columns: ["hauler_id"]
+            isOneToOne: false
+            referencedRelation: "haulers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       haulers: {
         Row: {
+          city: string | null
+          company_name: string | null
           created_at: string | null
+          dot_document_path: string | null
+          dot_number: string | null
+          email: string | null
           hauler_city: string | null
           hauler_mailing_address: string | null
           hauler_mi_reg: string | null
@@ -852,9 +1004,23 @@ export type Database = {
           hauler_zip: string | null
           id: string
           is_active: boolean | null
+          is_approved: boolean | null
+          license_document_path: string | null
+          license_number: string | null
+          mailing_address: string | null
+          phone: string | null
+          state: string | null
+          updated_at: string | null
+          user_id: string | null
+          zip: string | null
         }
         Insert: {
+          city?: string | null
+          company_name?: string | null
           created_at?: string | null
+          dot_document_path?: string | null
+          dot_number?: string | null
+          email?: string | null
           hauler_city?: string | null
           hauler_mailing_address?: string | null
           hauler_mi_reg?: string | null
@@ -864,9 +1030,23 @@ export type Database = {
           hauler_zip?: string | null
           id?: string
           is_active?: boolean | null
+          is_approved?: boolean | null
+          license_document_path?: string | null
+          license_number?: string | null
+          mailing_address?: string | null
+          phone?: string | null
+          state?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          zip?: string | null
         }
         Update: {
+          city?: string | null
+          company_name?: string | null
           created_at?: string | null
+          dot_document_path?: string | null
+          dot_number?: string | null
+          email?: string | null
           hauler_city?: string | null
           hauler_mailing_address?: string | null
           hauler_mi_reg?: string | null
@@ -876,8 +1056,25 @@ export type Database = {
           hauler_zip?: string | null
           id?: string
           is_active?: boolean | null
+          is_approved?: boolean | null
+          license_document_path?: string | null
+          license_number?: string | null
+          mailing_address?: string | null
+          phone?: string | null
+          state?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          zip?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "haulers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       invoice_items: {
         Row: {
@@ -3093,6 +3290,7 @@ export type Database = {
         | "driver"
         | "sales"
         | "client"
+        | "hauler"
       direction: "inbound" | "outbound" | "internal"
       end_use:
         | "reuse"
@@ -3289,6 +3487,7 @@ export const Constants = {
         "driver",
         "sales",
         "client",
+        "hauler",
       ],
       direction: ["inbound", "outbound", "internal"],
       end_use: [
