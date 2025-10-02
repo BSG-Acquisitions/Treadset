@@ -281,6 +281,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  // Check if user needs onboarding
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      if (!user?.id || loading) return;
+
+      try {
+        // Check if user has an organization with a real name (not placeholder)
+        const { data: orgData } = await supabase
+          .from('user_organization_roles')
+          .select('organization_id, organizations(name)')
+          .eq('user_id', user.id)
+          .single();
+
+        // If org name is still "New Company", redirect to onboarding
+        if (orgData?.organizations?.name === 'New Company') {
+          const currentPath = window.location.pathname;
+          if (currentPath !== '/onboarding' && currentPath !== '/auth') {
+            window.location.href = '/onboarding';
+          }
+        }
+      } catch (error) {
+        console.error('Error checking onboarding status:', error);
+      }
+    };
+
+    checkOnboarding();
+  }, [user, loading]);
+
   const signIn = async (email: string, password: string) => {
     console.log('signIn called with email:', email);
     
