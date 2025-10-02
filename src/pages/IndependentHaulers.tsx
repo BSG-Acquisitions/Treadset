@@ -23,17 +23,20 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { InviteHaulerDialog } from "@/components/hauler/InviteHaulerDialog";
+import { EditHaulerDialog } from "@/components/hauler/EditHaulerDialog";
 
 export default function IndependentHaulers() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [selectedHauler, setSelectedHauler] = useState<any>(null);
 
   const { data: haulers, isLoading } = useHaulers();
 
-  const handleViewDetails = (hauler: any) => {
+  const handleEditHauler = (hauler: any) => {
     setSelectedHauler(hauler);
+    setEditOpen(true);
   };
 
   return (
@@ -123,7 +126,7 @@ export default function IndependentHaulers() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleViewDetails(hauler)}
+                          onClick={() => handleEditHauler(hauler)}
                         >
                           <Settings className="h-4 w-4" />
                         </Button>
@@ -138,6 +141,11 @@ export default function IndependentHaulers() {
       </div>
 
       <InviteHaulerDialog open={inviteOpen} onOpenChange={setInviteOpen} />
+      <EditHaulerDialog 
+        open={editOpen} 
+        onOpenChange={setEditOpen} 
+        hauler={selectedHauler} 
+      />
     </AppLayout>
   );
 }
