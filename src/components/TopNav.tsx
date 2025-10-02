@@ -40,7 +40,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
     if (location.pathname.startsWith('/clients')) return 'clients';
     if (location.pathname.startsWith('/routes')) return 'routes';
     if (location.pathname.startsWith('/driver')) return 'driver';
-    
+    if (location.pathname === '/independent-haulers') return 'haulers';
     if (location.pathname === '/employees') return 'employees';
     if (location.pathname === '/analytics') return 'analytics';
     if (location.pathname === '/pricing') return 'pricing';

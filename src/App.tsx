@@ -42,6 +42,8 @@ import ReceiverManagement from './pages/ReceiverManagement';
 import Reports from './pages/Reports';
 import MichiganReports from './pages/MichiganReports';
 import Dropoffs from './pages/Dropoffs';
+import IndependentHaulers from './pages/IndependentHaulers';
+import HaulerDashboard from './pages/HaulerDashboard';
 import DriverSchedulePickup from "./pages/DriverSchedulePickup";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCancelled from "./pages/PaymentCancelled";
@@ -272,6 +274,16 @@ const App = () => (
                 <AppLayout>
                   <Dropoffs />
                 </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/independent-haulers" element={
+              <ProtectedRoute roles={['admin', 'ops_manager']}>
+                <IndependentHaulers />
+              </ProtectedRoute>
+            } />
+            <Route path="/hauler-dashboard" element={
+              <ProtectedRoute roles={['admin' as any]}>
+                <HaulerDashboard />
               </ProtectedRoute>
             } />
             <Route path="/payment-success" element={<PaymentSuccess />} />
