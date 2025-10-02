@@ -180,19 +180,41 @@ export default function HaulerDashboard() {
           </Card>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Common tasks for haulers</CardDescription>
-          </CardHeader>
-          <CardContent className="flex gap-4">
-            <Button onClick={() => navigate("/hauler-customers")}>
-              Manage Customers
-            </Button>
-            <Button variant="outline">Create Manifest</Button>
-            <Button variant="outline">View Transactions</Button>
-          </CardContent>
-        </Card>
+        <div className="grid gap-6 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Manage Customers
+              </CardTitle>
+              <CardDescription>
+                View and manage your tire generator customers
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={() => navigate("/hauler-customers")}>
+                Go to Customers
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                My Deliveries
+              </CardTitle>
+              <CardDescription>
+                Record and track tire deliveries
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={() => navigate("/hauler-manifests")}>
+                View Deliveries
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </AppLayout>
   );
