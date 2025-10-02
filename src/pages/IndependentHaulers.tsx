@@ -20,10 +20,12 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Settings, FileText, DollarSign } from "lucide-react";
 import { useHaulers } from "@/hooks/useHaulers";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 
 export default function IndependentHaulers() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [selectedHauler, setSelectedHauler] = useState<any>(null);
 
@@ -45,10 +47,16 @@ export default function IndependentHaulers() {
               Manage independent haulers who bring tires to your facility
             </p>
           </div>
-          <Button onClick={() => setInviteOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Hauler
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate("/hauler-rates")}>
+              <DollarSign className="h-4 w-4 mr-2" />
+              Manage Rates
+            </Button>
+            <Button onClick={() => setInviteOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Hauler
+            </Button>
+          </div>
         </div>
 
         <Card>
