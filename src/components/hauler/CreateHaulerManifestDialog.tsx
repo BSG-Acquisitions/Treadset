@@ -78,6 +78,7 @@ export function CreateHaulerManifestDialog({
     try {
       const { error } = await supabase.from("dropoffs").insert({
         organization_id: user.currentOrganization.id,
+        hauler_id: haulerProfile.id,
         dropoff_customer_id: values.customer_id,
         dropoff_date: new Date().toISOString().split("T")[0],
         dropoff_time: new Date().toTimeString().split(" ")[0],

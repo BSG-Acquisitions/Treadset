@@ -30,9 +30,9 @@ export default function HaulerManifests() {
   const { data: customers } = useHaulerCustomers(haulerProfile?.id);
   const { data: dropoffs, isLoading: dropoffsLoading, refetch } = useDropoffs();
 
-  // Filter dropoffs for this hauler's customers
-  const haulerDropoffs = dropoffs?.filter((d) =>
-    customers?.some((c) => c.id === d.dropoff_customer_id)
+  // Filter dropoffs to show only this hauler's deliveries
+  const haulerDropoffs = dropoffs?.filter((d: any) =>
+    d.hauler_id === haulerProfile?.id
   );
 
   const getCustomerName = (customerId: string) => {
