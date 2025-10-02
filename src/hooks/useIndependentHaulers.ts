@@ -96,7 +96,16 @@ export const useHaulerProfile = () => {
         .single();
 
       if (error) throw error;
-      return data;
+      
+      // Extract organization_id from first active relationship
+      const activeRelationship = data?.relationships?.find((r: any) => r.is_active);
+      const organizationId = activeRelationship?.organization_id;
+      
+      return {
+        ...data,
+        organization_id: organizationId,
+        organization: activeRelationship?.organization,
+      };
     },
   });
 };
