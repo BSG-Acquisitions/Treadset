@@ -18,25 +18,19 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Settings, FileText, DollarSign } from "lucide-react";
-import { useHaulerRelationships } from "@/hooks/useHaulerRelationships";
+import { useHaulers } from "@/hooks/useHaulers";
 import { useAuth } from "@/contexts/AuthContext";
-import { InviteHaulerDialog } from "@/components/hauler/InviteHaulerDialog";
-import { SetHaulerRatesDialog } from "@/components/hauler/SetHaulerRatesDialog";
 import { format } from "date-fns";
 
 export default function IndependentHaulers() {
   const { user } = useAuth();
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [ratesOpen, setRatesOpen] = useState(false);
   const [selectedHauler, setSelectedHauler] = useState<any>(null);
 
-  const { data: relationships, isLoading } = useHaulerRelationships(
-    user?.currentOrganization?.id
-  );
+  const { data: haulers, isLoading } = useHaulers();
 
-  const handleSetRates = (relationship: any) => {
-    setSelectedHauler(relationship.hauler);
-    setRatesOpen(true);
+  const handleViewDetails = (hauler: any) => {
+    setSelectedHauler(hauler);
   };
 
   return (
@@ -53,15 +47,15 @@ export default function IndependentHaulers() {
           </div>
           <Button onClick={() => setInviteOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            Invite Hauler
+            Add Hauler
           </Button>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Active Haulers</CardTitle>
+            <CardTitle>Haulers</CardTitle>
             <CardDescription>
-              Licensed haulers who can drop off tires at your facility
+              Licensed haulers in your system
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -69,9 +63,9 @@ export default function IndependentHaulers() {
               <div className="text-center py-8 text-muted-foreground">
                 Loading haulers...
               </div>
-            ) : !relationships || relationships.length === 0 ? (
+            ) : !haulers || haulers.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                No haulers yet. Invite your first hauler to get started.
+                No haulers yet. Add your first hauler to get started.
               </div>
             ) : (
               <Table>
@@ -79,65 +73,51 @@ export default function IndependentHaulers() {
                   <TableRow>
                     <TableHead>Company</TableHead>
                     <TableHead>Contact</TableHead>
-                    <TableHead>DOT/License</TableHead>
+                    <TableHead>Michigan Registration</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Invited</TableHead>
+                    <TableHead>Created</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {relationships.map((rel: any) => (
-                    <TableRow key={rel.id}>
+                  {haulers.map((hauler: any) => (
+                    <TableRow key={hauler.id}>
                       <TableCell className="font-medium">
-                        {rel.hauler?.company_name || "N/A"}
+                        {hauler.company_name || "N/A"}
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
-                          <div className="text-sm">{rel.hauler?.email}</div>
-                          {rel.hauler?.phone && (
+                          {hauler.email && (
+                            <div className="text-sm">{hauler.email}</div>
+                          )}
+                          {hauler.phone && (
                             <div className="text-sm text-muted-foreground">
-                              {rel.hauler.phone}
+                              {hauler.phone}
                             </div>
                           )}
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="space-y-1">
-                          {rel.hauler?.dot_number && (
-                            <div className="text-sm">
-                              DOT: {rel.hauler.dot_number}
-                            </div>
-                          )}
-                          {rel.hauler?.license_number && (
-                            <div className="text-sm text-muted-foreground">
-                              License: {rel.hauler.license_number}
-                            </div>
-                          )}
-                        </div>
+                        {hauler.hauler_mi_reg || "N/A"}
                       </TableCell>
                       <TableCell>
-                        {rel.is_active ? (
+                        {hauler.is_active ? (
                           <Badge variant="default">Active</Badge>
                         ) : (
                           <Badge variant="secondary">Inactive</Badge>
                         )}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {format(new Date(rel.invited_at), "MMM d, yyyy")}
+                        {format(new Date(hauler.created_at), "MMM d, yyyy")}
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleSetRates(rel)}
-                          >
-                            <DollarSign className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Settings className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewDetails(hauler)}
+                        >
+                          <Settings className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -148,14 +128,6 @@ export default function IndependentHaulers() {
         </Card>
       </div>
 
-      <InviteHaulerDialog open={inviteOpen} onOpenChange={setInviteOpen} />
-      {selectedHauler && (
-        <SetHaulerRatesDialog
-          open={ratesOpen}
-          onOpenChange={setRatesOpen}
-          hauler={selectedHauler}
-        />
-      )}
     </AppLayout>
   );
 }
