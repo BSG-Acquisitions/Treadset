@@ -106,14 +106,36 @@ export default function Clients() {
       }
     },
     {
-      key: 'is_active',
+      key: 'last_pickup_at',
       title: 'Status',
       sortable: true,
-      render: (value) => (
-        <Badge variant={value ? 'default' : 'secondary'} className="text-xs">
-          {value ? 'Active' : 'Inactive'}
-        </Badge>
-      )
+      render: (value) => {
+        if (!value) {
+          return (
+            <Badge variant="destructive" className="text-xs">
+              No Service
+            </Badge>
+          );
+        }
+        
+        const lastPickup = new Date(value);
+        const now = new Date();
+        const daysSincePickup = Math.floor((now.getTime() - lastPickup.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (daysSincePickup <= 30) {
+          return (
+            <Badge variant="default" className="text-xs bg-green-600 hover:bg-green-700">
+              Active
+            </Badge>
+          );
+        } else {
+          return (
+            <Badge variant="destructive" className="text-xs">
+              Over 30 Days
+            </Badge>
+          );
+        }
+      }
     },
     {
       key: 'actions',
