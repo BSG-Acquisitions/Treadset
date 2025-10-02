@@ -15,12 +15,12 @@ import { Input } from "@/components/ui/input";
 import { CreateHaulerData, Hauler } from "@/hooks/useHaulers";
 
 const haulerSchema = z.object({
-  company_name: z.string().min(1, "Company name is required"),
-  mailing_address: z.string().optional(),
-  city: z.string().optional(),
-  state: z.string().optional(),
-  zip: z.string().optional(),
-  phone: z.string().optional(),
+  hauler_name: z.string().min(1, "Company name is required"),
+  hauler_mailing_address: z.string().optional(),
+  hauler_city: z.string().optional(),
+  hauler_state: z.string().optional(),
+  hauler_zip: z.string().optional(),
+  hauler_phone: z.string().optional(),
   hauler_mi_reg: z.string().optional(),
   email: z.string().email().optional().or(z.literal("")),
 });
@@ -36,12 +36,12 @@ export function HaulerForm({ initialData, onSubmit, onCancel, isLoading }: Haule
   const form = useForm<CreateHaulerData>({
     resolver: zodResolver(haulerSchema),
     defaultValues: {
-      company_name: initialData?.company_name || "",
-      mailing_address: initialData?.mailing_address || "",
-      city: initialData?.city || "",
-      state: initialData?.state || "",
-      zip: initialData?.zip || "",
-      phone: initialData?.phone || "",
+      hauler_name: initialData?.hauler_name || initialData?.company_name || "",
+      hauler_mailing_address: initialData?.hauler_mailing_address || initialData?.mailing_address || "",
+      hauler_city: initialData?.hauler_city || initialData?.city || "",
+      hauler_state: initialData?.hauler_state || initialData?.state || "",
+      hauler_zip: initialData?.hauler_zip || initialData?.zip || "",
+      hauler_phone: initialData?.hauler_phone || initialData?.phone || "",
       hauler_mi_reg: initialData?.hauler_mi_reg || "",
       email: initialData?.email || "",
     },
@@ -51,12 +51,12 @@ export function HaulerForm({ initialData, onSubmit, onCancel, isLoading }: Haule
   useEffect(() => {
     if (initialData) {
       form.reset({
-        company_name: initialData.company_name || "",
-        mailing_address: initialData.mailing_address || "",
-        city: initialData.city || "",
-        state: initialData.state || "",
-        zip: initialData.zip || "",
-        phone: initialData.phone || "",
+        hauler_name: initialData.hauler_name || initialData.company_name || "",
+        hauler_mailing_address: initialData.hauler_mailing_address || initialData.mailing_address || "",
+        hauler_city: initialData.hauler_city || initialData.city || "",
+        hauler_state: initialData.hauler_state || initialData.state || "",
+        hauler_zip: initialData.hauler_zip || initialData.zip || "",
+        hauler_phone: initialData.hauler_phone || initialData.phone || "",
         hauler_mi_reg: initialData.hauler_mi_reg || "",
         email: initialData.email || "",
       });
@@ -68,7 +68,7 @@ export function HaulerForm({ initialData, onSubmit, onCancel, isLoading }: Haule
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
           control={form.control}
-          name="company_name"
+          name="hauler_name"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Company Name *</FormLabel>
@@ -82,7 +82,7 @@ export function HaulerForm({ initialData, onSubmit, onCancel, isLoading }: Haule
 
         <FormField
           control={form.control}
-          name="mailing_address"
+          name="hauler_mailing_address"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Mailing Address</FormLabel>
@@ -97,7 +97,7 @@ export function HaulerForm({ initialData, onSubmit, onCancel, isLoading }: Haule
         <div className="grid grid-cols-3 gap-4">
           <FormField
             control={form.control}
-            name="city"
+            name="hauler_city"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>City</FormLabel>
@@ -111,7 +111,7 @@ export function HaulerForm({ initialData, onSubmit, onCancel, isLoading }: Haule
 
           <FormField
             control={form.control}
-            name="state"
+            name="hauler_state"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>State</FormLabel>
@@ -125,7 +125,7 @@ export function HaulerForm({ initialData, onSubmit, onCancel, isLoading }: Haule
 
           <FormField
             control={form.control}
-            name="zip"
+            name="hauler_zip"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>ZIP</FormLabel>
@@ -140,7 +140,7 @@ export function HaulerForm({ initialData, onSubmit, onCancel, isLoading }: Haule
 
         <FormField
           control={form.control}
-          name="phone"
+          name="hauler_phone"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Phone</FormLabel>

@@ -2,31 +2,39 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-// Legacy interface for backward compatibility
+// Interface matching the ACTUAL current database schema
 export interface Hauler {
   id: string;
-  company_name: string;
-  mailing_address?: string;
-  city?: string;
-  state?: string;
-  zip?: string;
-  phone?: string;
+  hauler_name: string;
+  hauler_mailing_address?: string;
+  hauler_city?: string;
+  hauler_state?: string;
+  hauler_zip?: string;
+  hauler_phone?: string;
   hauler_mi_reg?: string;
   is_active: boolean;
   created_at: string;
+  // New fields for future use
   user_id?: string;
   email?: string;
   dot_number?: string;
   license_number?: string;
+  // Computed fields for display
+  company_name?: string; // Will be mapped from hauler_name
+  phone?: string; // Will be mapped from hauler_phone
+  mailing_address?: string; // Will be mapped from hauler_mailing_address
+  city?: string; // Will be mapped from hauler_city
+  state?: string; // Will be mapped from hauler_state
+  zip?: string; // Will be mapped from hauler_zip
 }
 
 export interface CreateHaulerData {
-  company_name: string;
-  mailing_address?: string;
-  city?: string;
-  state?: string;
-  zip?: string;
-  phone?: string;
+  hauler_name: string; // Using actual DB column name
+  hauler_mailing_address?: string;
+  hauler_city?: string;
+  hauler_state?: string;
+  hauler_zip?: string;
+  hauler_phone?: string;
   hauler_mi_reg?: string;
   email?: string;
 }
@@ -39,10 +47,20 @@ export const useHaulers = () => {
         .from("haulers")
         .select("*")
         .eq("is_active", true)
-        .order("company_name");
+        .order("hauler_name");
 
       if (error) throw error;
-      return data as Hauler[];
+      
+      // Map old schema to include both old and new field names for compatibility
+      return (data as any[]).map(hauler => ({
+        ...hauler,
+        company_name: hauler.hauler_name,
+        phone: hauler.hauler_phone,
+        mailing_address: hauler.hauler_mailing_address,
+        city: hauler.hauler_city,
+        state: hauler.hauler_state,
+        zip: hauler.hauler_zip,
+      })) as Hauler[];
     },
   });
 };
@@ -56,15 +74,13 @@ export const useCreateHauler = () => {
       const { data: hauler, error } = await (supabase as any)
         .from("haulers")
         .insert({
-          company_name: data.company_name,
-          mailing_address: data.mailing_address,
-          city: data.city,
-          state: data.state,
-          zip: data.zip,
-          phone: data.phone,
+          hauler_name: data.hauler_name,
+          hauler_mailing_address: data.hauler_mailing_address,
+          hauler_city: data.hauler_city,
+          hauler_state: data.hauler_state,
+          hauler_zip: data.hauler_zip,
+          hauler_phone: data.hauler_phone,
           hauler_mi_reg: data.hauler_mi_reg,
-          email: data.email || `${data.company_name.toLowerCase().replace(/\s+/g, '-')}@temp.hauler`,
-          user_id: null, // No user account for simple haulers
           is_active: true,
         })
         .select()
@@ -92,12 +108,12 @@ export const useUpdateHauler = () => {
       const { data: hauler, error } = await (supabase as any)
         .from("haulers")
         .update({
-          company_name: data.company_name,
-          mailing_address: data.mailing_address,
-          city: data.city,
-          state: data.state,
-          zip: data.zip,
-          phone: data.phone,
+          hauler_name: data.hauler_name,
+          hauler_mailing_address: data.hauler_mailing_address,
+          hauler_city: data.hauler_city,
+          hauler_state: data.hauler_state,
+          hauler_zip: data.hauler_zip,
+          hauler_phone: data.hauler_phone,
           hauler_mi_reg: data.hauler_mi_reg,
         })
         .eq("id", id)
