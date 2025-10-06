@@ -17,26 +17,58 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Settings, FileText, DollarSign } from "lucide-react";
+import { Plus, Settings, FileText, DollarSign, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { useHaulers } from "@/hooks/useHaulers";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { InviteHaulerDialog } from "@/components/hauler/InviteHaulerDialog";
 import { EditHaulerDialog } from "@/components/hauler/EditHaulerDialog";
+import { useDeleteHauler } from "@/hooks/useIndependentHaulers";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function IndependentHaulers() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [selectedHauler, setSelectedHauler] = useState<any>(null);
 
   const { data: haulers, isLoading } = useHaulers();
+  const deleteHauler = useDeleteHauler();
 
   const handleEditHauler = (hauler: any) => {
     setSelectedHauler(hauler);
     setEditOpen(true);
+  };
+
+  const handleDeleteClick = (hauler: any) => {
+    setSelectedHauler(hauler);
+    setDeleteOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (selectedHauler) {
+      await deleteHauler.mutateAsync(selectedHauler.id);
+      setDeleteOpen(false);
+      setSelectedHauler(null);
+    }
   };
 
   return (
@@ -123,13 +155,26 @@ export default function IndependentHaulers() {
                         {format(new Date(hauler.created_at), "MMM d, yyyy")}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditHauler(hauler)}
-                        >
-                          <Settings className="h-4 w-4" />
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditHauler(hauler)}>
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleDeleteClick(hauler)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -146,6 +191,23 @@ export default function IndependentHaulers() {
         onOpenChange={setEditOpen} 
         hauler={selectedHauler} 
       />
+      
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Hauler</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {selectedHauler?.company_name}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 }

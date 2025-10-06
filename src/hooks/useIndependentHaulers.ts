@@ -183,3 +183,27 @@ export const useUploadHaulerDocument = () => {
     },
   });
 };
+
+// Delete hauler
+export const useDeleteHauler = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await (supabase as any)
+        .from("haulers")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["independent-haulers"] });
+      toast.success("Hauler deleted successfully");
+    },
+    onError: (error) => {
+      console.error("Error deleting hauler:", error);
+      toast.error("Failed to delete hauler");
+    },
+  });
+};
