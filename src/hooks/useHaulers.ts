@@ -54,12 +54,13 @@ export const useHaulers = () => {
       // Map old schema to include both old and new field names for compatibility
       return (data as any[]).map(hauler => ({
         ...hauler,
-        company_name: hauler.hauler_name,
-        phone: hauler.hauler_phone,
-        mailing_address: hauler.hauler_mailing_address,
-        city: hauler.hauler_city,
-        state: hauler.hauler_state,
-        zip: hauler.hauler_zip,
+        // Prefer explicit columns if present, fallback to legacy ones
+        company_name: hauler.company_name || hauler.hauler_name,
+        phone: hauler.phone || hauler.hauler_phone,
+        mailing_address: hauler.mailing_address || hauler.hauler_mailing_address,
+        city: hauler.city || hauler.hauler_city,
+        state: hauler.state || hauler.hauler_state,
+        zip: hauler.zip || hauler.hauler_zip,
       })) as Hauler[];
     },
   });
@@ -107,7 +108,10 @@ export const useUpdateHauler = () => {
     mutationFn: async ({ id, data }: { id: string; data: Partial<CreateHaulerData> }) => {
       // Build update object with only defined values
       const updateData: any = {};
-      if (data.hauler_name !== undefined) updateData.hauler_name = data.hauler_name;
+      if (data.hauler_name !== undefined) { 
+        updateData.hauler_name = data.hauler_name;
+        updateData.company_name = data.hauler_name; // keep legacy and new columns in sync
+      }
       if (data.hauler_mailing_address !== undefined) updateData.hauler_mailing_address = data.hauler_mailing_address;
       if (data.hauler_city !== undefined) updateData.hauler_city = data.hauler_city;
       if (data.hauler_state !== undefined) updateData.hauler_state = data.hauler_state;

@@ -158,7 +158,7 @@ export default function IndependentHaulers() {
                   {haulers.map((hauler: any) => (
                     <TableRow key={hauler.id}>
                       <TableCell className="font-medium">
-                        {hauler.company_name || "N/A"}
+                        {hauler.company_name || hauler.hauler_name || "N/A"}
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
