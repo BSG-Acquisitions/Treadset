@@ -53,17 +53,33 @@ Deno.serve(async (req) => {
     console.log('Deleting manifests for hauler:', targetHaulerId);
 
     // Best-effort cleanup of dependent records that may reference the hauler
-    // 1) Delete manifests for this hauler
+    // 1) First, get all manifest IDs for this hauler
+    const { data: manifestsData } = await supabase
+      .from('manifests')
+      .select('id')
+      .eq('hauler_id', targetHaulerId);
+    
+    const manifestIds = manifestsData?.map(m => m.id) || [];
+
+    // 2) Delete or nullify pickups that reference these manifests
+    if (manifestIds.length > 0) {
+      await supabase
+        .from('pickups')
+        .update({ manifest_id: null })
+        .in('manifest_id', manifestIds);
+    }
+
+    // 3) Delete manifests for this hauler
     const { error: delManifestsErr } = await supabase
       .from('manifests')
       .delete()
       .eq('hauler_id', targetHaulerId);
     if (delManifestsErr) throw delManifestsErr;
 
-    // 2) Optional: clear assignments with this hauler (if any)
+    // 4) Optional: clear assignments with this hauler (if any)
     await supabase.from('assignments').delete().eq('hauler_id', targetHaulerId);
 
-    // 3) Now delete the hauler
+    // 5) Now delete the hauler
     const { error: delHaulerErr } = await supabase
       .from('haulers')
       .delete()
