@@ -769,13 +769,14 @@ export default function EnhancedRoutesToday() {
       </Tabs>
           
           {/* Move Pickup Dialog */}
-          {selectedPickupToMove && (
-            <MovePickupDialog
-              open={movePickupOpen}
-              onOpenChange={setMovePickupOpen}
-              pickup={selectedPickupToMove}
-            />
-          )}
+        {selectedPickupToMove && (
+          <MovePickupDialog
+            open={movePickupOpen}
+            onOpenChange={setMovePickupOpen}
+            pickup={selectedPickupToMove}
+            currentWeek={currentWeek}
+          />
+        )}
         </div>
       </main>
     </div>

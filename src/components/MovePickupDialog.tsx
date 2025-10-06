@@ -6,7 +6,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useMovePickup } from "@/hooks/useMovePickup";
 import { CalendarIcon, Clock, MapPin } from "lucide-react";
-import { format } from "date-fns";
+import { format, startOfWeek, addDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { formatLocalDateString } from "@/lib/formatters";
 
@@ -19,11 +19,17 @@ interface MovePickupDialogProps {
     client?: { company_name: string };
     location?: { address: string };
   };
+  currentWeek?: Date; // Optional: if provided, show week view with quick day selection
 }
 
-export function MovePickupDialog({ open, onOpenChange, pickup }: MovePickupDialogProps) {
+export function MovePickupDialog({ open, onOpenChange, pickup, currentWeek }: MovePickupDialogProps) {
   const [newDate, setNewDate] = useState<Date>();
   const movePickup = useMovePickup();
+
+  // Generate week days if currentWeek is provided
+  const weekDays = currentWeek 
+    ? Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(currentWeek, { weekStartsOn: 0 }), i))
+    : [];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,6 +46,13 @@ export function MovePickupDialog({ open, onOpenChange, pickup }: MovePickupDialo
       }
     );
   };
+
+  const handleQuickDaySelect = (date: Date) => {
+    setNewDate(date);
+  };
+
+  const today = new Date();
+  const todayDateString = formatLocalDateString(today);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -77,8 +90,49 @@ export function MovePickupDialog({ open, onOpenChange, pickup }: MovePickupDialo
             </div>
           )}
 
+          {/* Quick Week Day Selection (if in week view) */}
+          {weekDays.length > 0 && (
+            <div className="space-y-2">
+              <Label>Quick Select Day</Label>
+              <div className="grid grid-cols-7 gap-2">
+                {weekDays.map((day, index) => {
+                  const dayDateString = formatLocalDateString(day);
+                  const isToday = dayDateString === todayDateString;
+                  const isSelected = newDate && formatLocalDateString(newDate) === dayDateString;
+                  const isCurrentPickupDate = formatLocalDateString(new Date(pickup.pickup_date)) === dayDateString;
+                  
+                  return (
+                    <Button
+                      key={index}
+                      type="button"
+                      variant={isSelected ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handleQuickDaySelect(day)}
+                      disabled={isCurrentPickupDate}
+                      className={cn(
+                        "flex flex-col items-center py-2 h-auto",
+                        isToday && !isSelected && "border-primary border-2",
+                        isCurrentPickupDate && "opacity-50 cursor-not-allowed"
+                      )}
+                    >
+                      <span className="text-xs font-medium">
+                        {format(day, "EEE")}
+                      </span>
+                      <span className="text-sm font-bold">
+                        {format(day, "d")}
+                      </span>
+                    </Button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Click a day to quickly move the pickup within this week
+              </p>
+            </div>
+          )}
+
           <div className="space-y-2">
-            <Label>Select New Date *</Label>
+            <Label>{weekDays.length > 0 ? "Or Select Different Week" : "Select New Date *"}</Label>
             <Popover modal={true}>
               <PopoverTrigger asChild>
                 <Button
