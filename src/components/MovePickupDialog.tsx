@@ -152,6 +152,7 @@ export function MovePickupDialog({ open, onOpenChange, pickup, currentWeek }: Mo
                   selected={newDate}
                   onSelect={setNewDate}
                   initialFocus
+                  className="pointer-events-auto"
                 />
               </PopoverContent>
             </Popover>
