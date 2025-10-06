@@ -130,17 +130,7 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
         receiver_state: selectedReceiver.receiver_state || '',
         receiver_zip: selectedReceiver.receiver_zip || '',
         receiver_phone: selectedReceiver.receiver_phone || '',
-        // CRITICAL: Preserve existing generator and hauler timestamps with seconds
-        generator_print_name: createPrintNameWithTimestamp(
-          manifestData?.signed_by_name,
-          manifestData?.generator_signed_at,
-          'Generator Representative'
-        ),
-        hauler_print_name: createPrintNameWithTimestamp(
-          manifestData?.signed_by_title, // Use signed_by_title field which stores hauler's name
-          manifestData?.hauler_signed_at,
-          'Hauler Representative'
-        )
+        receiver_mi_reg: selectedReceiver.collection_site_reg || ''
       };
 
       const pdfResult = await manifestIntegration.mutateAsync({ 
@@ -304,6 +294,10 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
                     <div>
                       <span className="font-medium text-muted-foreground">Phone:</span>
                       <p className="mt-1">{selectedReceiver.receiver_phone || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-muted-foreground">MI Site Reg #:</span>
+                      <p className="mt-1">{selectedReceiver.collection_site_reg || 'Not provided'}</p>
                     </div>
                     <div className="sm:col-span-2">
                       <span className="font-medium text-muted-foreground">Address:</span>
