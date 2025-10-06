@@ -199,6 +199,7 @@ export const useDeleteHauler = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["independent-haulers"] });
+      queryClient.invalidateQueries({ queryKey: ["haulers"] });
       toast.success("Hauler deleted successfully");
     },
     onError: (error: any) => {
