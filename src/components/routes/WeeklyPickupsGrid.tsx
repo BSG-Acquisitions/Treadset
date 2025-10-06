@@ -109,7 +109,8 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
                   {(vehiclePickups as any[]).map((pickup: any) => (
                     <div
                       key={pickup.id}
-                      className="bg-white rounded border border-gray-300 p-3 hover:shadow-md transition-shadow relative"
+                      className="bg-white rounded border border-gray-300 p-3 hover:shadow-md hover:border-primary transition-all relative cursor-pointer group"
+                      onClick={() => onMovePickup?.(pickup)}
                     >
                       {/* Vehicle/Driver Header */}
                       <div className="flex items-center justify-between gap-1.5 mb-2.5">
@@ -119,32 +120,35 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
                             {vehicle?.name || 'Truck'} - {driver ? (`${driver.first_name || ''} ${driver.last_name || ''}`.trim() || driver.email) : 'Unassigned'}
                           </span>
                         </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={(e) => {
-                              e.stopPropagation();
-                              onMovePickup?.(pickup);
-                            }}>
-                              <Calendar className="h-4 w-4 mr-2" />
-                              Move Pickup
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={(e) => {
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={(e) => {
                                 e.stopPropagation();
-                                setPickupToDelete(pickup);
-                              }}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Remove from Route
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                                onMovePickup?.(pickup);
+                              }}>
+                                <Calendar className="h-4 w-4 mr-2" />
+                                Move Pickup
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setPickupToDelete(pickup);
+                                }}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Remove from Route
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
 
                       {/* Client Name */}
@@ -161,6 +165,11 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
                            pickup.client?.zip,
                          ].filter(Boolean).join(' ') || 
                          'No address'}
+                      </div>
+                      
+                      {/* Hover hint */}
+                      <div className="absolute bottom-1 right-2 text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                        Click to move
                       </div>
                     </div>
                   ))}
