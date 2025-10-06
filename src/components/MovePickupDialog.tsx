@@ -97,7 +97,6 @@ export function MovePickupDialog({ open, onOpenChange, pickup }: MovePickupDialo
                   mode="single"
                   selected={newDate}
                   onSelect={setNewDate}
-                  disabled={(date) => date < new Date()}
                   initialFocus
                 />
               </PopoverContent>
