@@ -21,6 +21,7 @@ const receiverSchema = z.object({
   receiver_state: z.string().optional(),
   receiver_zip: z.string().optional(),
   receiver_phone: z.string().optional(),
+  collection_site_reg: z.string().optional(),
 });
 
 interface ReceiverFormProps {
@@ -40,6 +41,7 @@ export function ReceiverForm({ initialData, onSubmit, onCancel, isLoading }: Rec
       receiver_state: initialData?.receiver_state || "",
       receiver_zip: initialData?.receiver_zip || "",
       receiver_phone: initialData?.receiver_phone || "",
+      collection_site_reg: initialData?.collection_site_reg || "",
     },
   });
 
@@ -53,6 +55,7 @@ export function ReceiverForm({ initialData, onSubmit, onCancel, isLoading }: Rec
         receiver_state: initialData.receiver_state || "",
         receiver_zip: initialData.receiver_zip || "",
         receiver_phone: initialData.receiver_phone || "",
+        collection_site_reg: initialData.collection_site_reg || "",
       });
     }
   }, [initialData, form]);
@@ -147,6 +150,20 @@ export function ReceiverForm({ initialData, onSubmit, onCancel, isLoading }: Rec
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="collection_site_reg"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>MI Scrap Tire Collection Site Reg. #</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter collection site registration number" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <div className="flex gap-2 justify-end">
           <Button type="button" variant="outline" onClick={onCancel}>

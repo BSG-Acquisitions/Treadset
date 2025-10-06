@@ -10,6 +10,7 @@ export interface Receiver {
   receiver_state?: string;
   receiver_zip?: string;
   receiver_phone?: string;
+  collection_site_reg?: string;
   is_active: boolean;
   created_at: string;
 }
@@ -21,6 +22,7 @@ export interface CreateReceiverData {
   receiver_state?: string;
   receiver_zip?: string;
   receiver_phone?: string;
+  collection_site_reg?: string;
 }
 
 export const useReceivers = () => {

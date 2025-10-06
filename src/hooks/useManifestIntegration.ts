@@ -117,7 +117,7 @@ export const convertManifestToAcroForm = (manifestData: any, receiverData?: any)
     hauler_signature: manifestData.driver_signature_png_path || '',
 
     // Receiver information - prefer overrides; leave blank if not provided
-    receiver_mi_reg: receiverData?.receiver_mi_reg || '',
+    receiver_mi_reg: receiverData?.collection_site_reg || '',
     receiver_name: receiverData?.receiver_name || '',
     receiver_physical_address: receiverData?.receiver_mailing_address || '',
     receiver_city: receiverData?.receiver_city || '',

@@ -2248,6 +2248,7 @@ export type Database = {
       }
       receivers: {
         Row: {
+          collection_site_reg: string | null
           created_at: string | null
           id: string
           is_active: boolean | null
@@ -2259,6 +2260,7 @@ export type Database = {
           receiver_zip: string | null
         }
         Insert: {
+          collection_site_reg?: string | null
           created_at?: string | null
           id?: string
           is_active?: boolean | null
@@ -2270,6 +2272,7 @@ export type Database = {
           receiver_zip?: string | null
         }
         Update: {
+          collection_site_reg?: string | null
           created_at?: string | null
           id?: string
           is_active?: boolean | null

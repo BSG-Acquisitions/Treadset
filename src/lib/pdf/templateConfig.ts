@@ -115,6 +115,7 @@ export const TEMPLATE_CONFIGS: Record<string, PDFTemplateConfig> = {
       'hauler_other_id': 'Collection_Site_Reg_#',
       
       // Receiver/Processor fields - corrected spelling
+      'receiver_mi_reg': 'Collection_Site_Reg_#',
       'receiver_name': 'Receiver_Name',
       'receiver_physical_address': 'Receiver_Address',
       'receiver_city': 'Receiver_City',
