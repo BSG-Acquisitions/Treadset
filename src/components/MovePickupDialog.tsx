@@ -99,7 +99,7 @@ export function MovePickupDialog({ open, onOpenChange, pickup, currentWeek }: Mo
                   const dayDateString = formatLocalDateString(day);
                   const isToday = dayDateString === todayDateString;
                   const isSelected = newDate && formatLocalDateString(newDate) === dayDateString;
-                  const isCurrentPickupDate = formatLocalDateString(new Date(pickup.pickup_date)) === dayDateString;
+                  const isCurrentPickupDate = pickup.pickup_date === dayDateString;
                   
                   return (
                     <Button
