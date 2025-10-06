@@ -105,31 +105,36 @@ export const useUpdateHauler = () => {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<CreateHaulerData> }) => {
+      // Build update object with only defined values
+      const updateData: any = {};
+      if (data.hauler_name !== undefined) updateData.hauler_name = data.hauler_name;
+      if (data.hauler_mailing_address !== undefined) updateData.hauler_mailing_address = data.hauler_mailing_address;
+      if (data.hauler_city !== undefined) updateData.hauler_city = data.hauler_city;
+      if (data.hauler_state !== undefined) updateData.hauler_state = data.hauler_state;
+      if (data.hauler_zip !== undefined) updateData.hauler_zip = data.hauler_zip;
+      if (data.hauler_phone !== undefined) updateData.hauler_phone = data.hauler_phone;
+      if (data.hauler_mi_reg !== undefined) updateData.hauler_mi_reg = data.hauler_mi_reg;
+      if (data.email !== undefined) updateData.email = data.email;
+
       const { data: hauler, error } = await (supabase as any)
         .from("haulers")
-        .update({
-          hauler_name: data.hauler_name,
-          hauler_mailing_address: data.hauler_mailing_address,
-          hauler_city: data.hauler_city,
-          hauler_state: data.hauler_state,
-          hauler_zip: data.hauler_zip,
-          hauler_phone: data.hauler_phone,
-          hauler_mi_reg: data.hauler_mi_reg,
-        })
+        .update(updateData)
         .eq("id", id)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      if (!hauler) throw new Error("Hauler not found");
       return hauler;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["haulers"] });
+      queryClient.invalidateQueries({ queryKey: ["independent-haulers"] });
       toast.success("Hauler updated successfully");
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("Error updating hauler:", error);
-      toast.error("Failed to update hauler");
+      toast.error(error.message || "Failed to update hauler");
     },
   });
 };
