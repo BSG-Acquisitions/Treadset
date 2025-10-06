@@ -201,9 +201,16 @@ export const useDeleteHauler = () => {
       queryClient.invalidateQueries({ queryKey: ["independent-haulers"] });
       toast.success("Hauler deleted successfully");
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("Error deleting hauler:", error);
-      toast.error("Failed to delete hauler");
+      
+      // Check if it's a foreign key constraint error
+      if (error?.message?.includes("violates foreign key constraint") || 
+          error?.code === "23503") {
+        toast.error("Cannot delete hauler - they have existing manifests in the system");
+      } else {
+        toast.error("Failed to delete hauler");
+      }
     },
   });
 };
