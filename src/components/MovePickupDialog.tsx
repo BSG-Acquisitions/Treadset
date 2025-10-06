@@ -43,7 +43,7 @@ export function MovePickupDialog({ open, onOpenChange, pickup }: MovePickupDialo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md bg-background border z-50">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CalendarIcon className="h-5 w-5" />
@@ -79,7 +79,7 @@ export function MovePickupDialog({ open, onOpenChange, pickup }: MovePickupDialo
 
           <div className="space-y-2">
             <Label>Select New Date *</Label>
-            <Popover>
+            <Popover modal={true}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -92,14 +92,13 @@ export function MovePickupDialog({ open, onOpenChange, pickup }: MovePickupDialo
                   {newDate ? format(newDate, "EEEE, MMMM d, yyyy") : <span>Pick a new date</span>}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 bg-background border z-50" align="start">
+              <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
                   mode="single"
                   selected={newDate}
                   onSelect={setNewDate}
                   disabled={(date) => date < new Date()}
                   initialFocus
-                  className={cn("p-3 pointer-events-auto")}
                 />
               </PopoverContent>
             </Popover>

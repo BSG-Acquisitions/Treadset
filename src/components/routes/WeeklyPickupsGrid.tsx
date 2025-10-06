@@ -1,7 +1,14 @@
 import { addDays, format } from "date-fns";
 import { usePickups } from "@/hooks/usePickups";
 import { useVehicles } from "@/hooks/useVehicles";
-import React from "react";
+import React, { useState } from "react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { MoreVertical, Calendar, Trash2 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 
 export type WeeklyPickupsGridProps = {
   currentWeek: Date;
@@ -16,6 +23,46 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
 
   const { data: pickups = [] } = usePickups(dateStr);
   const { data: vehicles = [] } = useVehicles();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [pickupToDelete, setPickupToDelete] = useState<any>(null);
+
+  const handleRemovePickup = async (pickup: any) => {
+    try {
+      // Delete any assignments first
+      const { error: assignmentError } = await supabase
+        .from('assignments')
+        .delete()
+        .eq('pickup_id', pickup.id);
+
+      if (assignmentError) throw assignmentError;
+
+      // Delete the pickup
+      const { error: pickupError } = await supabase
+        .from('pickups')
+        .delete()
+        .eq('id', pickup.id);
+
+      if (pickupError) throw pickupError;
+
+      // Refresh data
+      queryClient.invalidateQueries({ queryKey: ['pickups'] });
+      queryClient.invalidateQueries({ queryKey: ['assignments'] });
+
+      toast({
+        title: "Pickup Removed",
+        description: `${pickup.client?.company_name || 'Pickup'} has been removed from the route`,
+      });
+
+      setPickupToDelete(null);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove pickup",
+        variant: "destructive",
+      });
+    }
+  };
 
   const today = new Date();
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(
@@ -58,19 +105,46 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
               const driver = vehiclePickups[0]?.daily_assignments?.[0]?.assigned_driver;
               
               return (
-                <div key={vehicleId} className="space-y-3">
+                  <div key={vehicleId} className="space-y-3">
                   {(vehiclePickups as any[]).map((pickup: any) => (
                     <div
                       key={pickup.id}
-                      className="bg-white rounded border border-gray-300 p-3 hover:shadow-md transition-shadow cursor-pointer"
-                      onClick={() => onMovePickup?.(pickup)}
+                      className="bg-white rounded border border-gray-300 p-3 hover:shadow-md transition-shadow relative"
                     >
                       {/* Vehicle/Driver Header */}
-                      <div className="flex items-center gap-1.5 mb-2.5">
-                        <span className="text-base">🚚</span>
-                        <span className="text-sm font-medium text-gray-700">
-                          {vehicle?.name || 'Truck'} - {driver ? (`${driver.first_name || ''} ${driver.last_name || ''}`.trim() || driver.email) : 'Unassigned'}
-                        </span>
+                      <div className="flex items-center justify-between gap-1.5 mb-2.5">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-base">🚚</span>
+                          <span className="text-sm font-medium text-gray-700">
+                            {vehicle?.name || 'Truck'} - {driver ? (`${driver.first_name || ''} ${driver.last_name || ''}`.trim() || driver.email) : 'Unassigned'}
+                          </span>
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={(e) => {
+                              e.stopPropagation();
+                              onMovePickup?.(pickup);
+                            }}>
+                              <Calendar className="h-4 w-4 mr-2" />
+                              Move Pickup
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPickupToDelete(pickup);
+                              }}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Remove from Route
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
 
                       {/* Client Name */}
@@ -96,6 +170,26 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
           </div>
         )}
       </div>
+
+      <AlertDialog open={!!pickupToDelete} onOpenChange={() => setPickupToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Pickup from Route</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove {pickupToDelete?.client?.company_name || 'this pickup'} from the route? This will delete the pickup and any associated assignments.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => handleRemovePickup(pickupToDelete)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Remove Pickup
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
