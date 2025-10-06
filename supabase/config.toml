@@ -104,3 +104,6 @@ verify_jwt = false
 
 [functions.delete-all-manifests]
 verify_jwt = true
+
+[functions.delete-hauler-and-manifests]
+verify_jwt = true

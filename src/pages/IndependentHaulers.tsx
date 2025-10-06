@@ -25,6 +25,7 @@ import { format } from "date-fns";
 import { InviteHaulerDialog } from "@/components/hauler/InviteHaulerDialog";
 import { EditHaulerDialog } from "@/components/hauler/EditHaulerDialog";
 import { useDeleteHauler } from "@/hooks/useIndependentHaulers";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,9 +48,11 @@ import { toast } from "sonner";
 export default function IndependentHaulers() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteCascadeOpen, setDeleteCascadeOpen] = useState(false);
   const [deleteAllOpen, setDeleteAllOpen] = useState(false);
   const [selectedHauler, setSelectedHauler] = useState<any>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -62,10 +65,15 @@ export default function IndependentHaulers() {
     setEditOpen(true);
   };
 
-  const handleDeleteClick = (hauler: any) => {
-    setSelectedHauler(hauler);
-    setDeleteOpen(true);
-  };
+const handleDeleteClick = (hauler: any) => {
+  setSelectedHauler(hauler);
+  setDeleteOpen(true);
+};
+
+const handleDeleteCascadeClick = (hauler: any) => {
+  setSelectedHauler(hauler);
+  setDeleteCascadeOpen(true);
+};
 
   const handleConfirmDelete = async () => {
     if (selectedHauler) {
@@ -75,24 +83,47 @@ export default function IndependentHaulers() {
     }
   };
 
-  const handleDeleteAllManifests = async () => {
-    setIsDeleting(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('delete-all-manifests', {
-        method: 'POST',
-      });
+const handleDeleteAllManifests = async () => {
+  setIsDeleting(true);
+  try {
+    const { data, error } = await supabase.functions.invoke('delete-all-manifests', {
+      method: 'POST',
+    });
 
-      if (error) throw error;
+    if (error) throw error;
 
-      toast.success('All manifests deleted successfully');
-      setDeleteAllOpen(false);
-    } catch (error: any) {
-      console.error('Error deleting manifests:', error);
-      toast.error(error.message || 'Failed to delete manifests');
-    } finally {
-      setIsDeleting(false);
-    }
-  };
+    toast.success('All manifests deleted successfully');
+    setDeleteAllOpen(false);
+    queryClient.invalidateQueries({ queryKey: ['haulers'] });
+  } catch (error: any) {
+    console.error('Error deleting manifests:', error);
+    toast.error(error.message || 'Failed to delete manifests');
+  } finally {
+    setIsDeleting(false);
+  }
+};
+
+const handleConfirmDeleteCascade = async () => {
+  if (!selectedHauler) return;
+  setIsDeleting(true);
+  try {
+    const { data, error } = await supabase.functions.invoke('delete-hauler-and-manifests', {
+      method: 'POST',
+      body: { haulerId: selectedHauler.id },
+    });
+    if (error) throw error;
+
+    toast.success('Hauler and related manifests deleted');
+    setDeleteCascadeOpen(false);
+    setSelectedHauler(null);
+    queryClient.invalidateQueries({ queryKey: ['haulers'] });
+  } catch (error: any) {
+    console.error('Error deleting hauler + manifests:', error);
+    toast.error(error.message || 'Failed to delete hauler + manifests');
+  } finally {
+    setIsDeleting(false);
+  }
+};
 
   return (
     <AppLayout>
@@ -199,10 +230,16 @@ export default function IndependentHaulers() {
                             </DropdownMenuItem>
                             <DropdownMenuItem 
                               onClick={() => handleDeleteClick(hauler)}
-                              className="text-destructive"
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
                               Delete
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleDeleteCascadeClick(hauler)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete hauler + manifests
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -235,6 +272,27 @@ export default function IndependentHaulers() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteCascadeOpen} onOpenChange={setDeleteCascadeOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Hauler + Manifests</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete {selectedHauler?.company_name || selectedHauler?.hauler_name} and ALL manifests associated with this hauler. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmDeleteCascade} 
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete Hauler + Manifests'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
