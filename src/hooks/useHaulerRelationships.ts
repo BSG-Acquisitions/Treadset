@@ -146,13 +146,13 @@ export const useInviteHauler = () => {
         throw new Error(`Failed to create hauler profile: ${haulerError.message}`);
       }
 
-      // Assign independent_hauler role
+      // Assign hauler role
       const { error: roleError } = await (supabase as any)
         .from("user_organization_roles")
         .insert({
           user_id: newUserData.id,
           organization_id: organization_id,
-          role: "independent_hauler",
+          role: "hauler",
         });
 
       if (roleError) {
