@@ -9,12 +9,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import SignatureCanvas from "react-signature-canvas";
 import { useHaulerCustomers, useCreateHaulerCustomer, type CreateHaulerCustomerData } from "@/hooks/useHaulerCustomers";
 import { useHaulerManifests } from "@/hooks/useHaulerManifests";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { CheckCircle, ChevronLeft, ChevronRight, Building, Package, PenTool, DollarSign, Plus, X } from "lucide-react";
 import { pteToTons, MICHIGAN_CONVERSIONS } from "@/lib/michigan-conversions";
 
@@ -65,6 +67,7 @@ interface HaulerManifestWizardProps {
 export const HaulerManifestWizard = ({ haulerId, haulerName }: HaulerManifestWizardProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [step, setStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [manifestCreated, setManifestCreated] = useState(false);
@@ -794,7 +797,7 @@ export const HaulerManifestWizard = ({ haulerId, haulerName }: HaulerManifestWiz
                       ref={generatorSigRef}
                       canvasProps={{ 
                         className: "w-full h-32 touch-none",
-                        style: { width: '100%', height: '128px' }
+                        style: { width: '100%', height: '128px', touchAction: 'none' }
                       }}
                     />
                   </div>
@@ -838,7 +841,7 @@ export const HaulerManifestWizard = ({ haulerId, haulerName }: HaulerManifestWiz
                       ref={haulerSigRef}
                       canvasProps={{ 
                         className: "w-full h-32 touch-none",
-                        style: { width: '100%', height: '128px' }
+                        style: { width: '100%', height: '128px', touchAction: 'none' }
                       }}
                     />
                   </div>
@@ -1117,6 +1120,52 @@ export const HaulerManifestWizard = ({ haulerId, haulerName }: HaulerManifestWiz
     }
   };
 
+  // Mobile full-screen view
+  if (isMobile) {
+    return (
+      <div className="fixed inset-0 bg-background z-50 flex flex-col">
+        <div className="flex-none p-4 border-b bg-background">
+          <div className="mb-2">
+            <Progress value={progress} className="h-2" />
+            <div className="flex justify-between mt-2 text-sm text-muted-foreground">
+              <span>Step {step + 1} of {steps.length}</span>
+              <span>{currentStep.title}</span>
+            </div>
+          </div>
+        </div>
+
+        <ScrollArea className="flex-1">
+          <div className="p-4 pb-24">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(handleSubmit)}>
+                {renderStepContent()}
+                
+                <div className="flex justify-between mt-6 pt-6 border-t">
+                  {step > 0 && (
+                    <Button type="button" variant="outline" onClick={handleBack}>
+                      <ChevronLeft className="mr-2 h-4 w-4" /> Back
+                    </Button>
+                  )}
+                  
+                  {step < steps.length - 1 ? (
+                    <Button type="button" onClick={handleNext} className="ml-auto">
+                      Next <ChevronRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <Button type="submit" disabled={isSubmitting} className="ml-auto">
+                      {isSubmitting ? "Creating..." : "Create Manifest"}
+                    </Button>
+                  )}
+                </div>
+              </form>
+            </Form>
+          </div>
+        </ScrollArea>
+      </div>
+    );
+  }
+
+  // Desktop view
   return (
     <div className="max-w-4xl mx-auto py-8">
       <div className="mb-6">

@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { Camera, CheckCircle, Clock, FileText, PenTool } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import { supabase } from '@/integrations/supabase/client';
@@ -388,13 +389,15 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
               <SignatureCanvas
                 ref={customerSigRef}
                 canvasProps={{
-                  className: 'w-full h-32 border border-border rounded',
+                  className: 'w-full h-40 border border-border rounded touch-none',
+                  style: { touchAction: 'none' }
                 }}
               />
             </div>
             
             <div className="flex gap-2">
               <Button 
+                type="button"
                 variant="outline"
                 onClick={() => customerSigRef.current?.clear()}
                 className="flex-1"
@@ -402,6 +405,7 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
                 Clear
               </Button>
               <Button 
+                type="button"
                 onClick={() => saveSignature('customer', customerSigRef)}
                 disabled={loading || data.customerSigned}
                 className="flex-1"
@@ -420,13 +424,15 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
                   <SignatureCanvas
                     ref={driverSigRef}
                     canvasProps={{
-                      className: 'w-full h-32 border border-border rounded',
+                      className: 'w-full h-40 border border-border rounded touch-none',
+                      style: { touchAction: 'none' }
                     }}
                   />
                 </div>
                 
                 <div className="flex gap-2">
                   <Button 
+                    type="button"
                     variant="outline"
                     onClick={() => driverSigRef.current?.clear()}
                     className="flex-1"
@@ -434,6 +440,7 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
                     Clear
                   </Button>
                   <Button 
+                    type="button"
                     onClick={async () => {
                       const saved = await saveSignature('driver', driverSigRef);
                       if (saved) handleNext();
@@ -542,8 +549,48 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
     }
   };
 
+  // Mobile full-screen view
+  if (isMobile) {
+    return (
+      <div className="fixed inset-0 bg-background z-50 flex flex-col">
+        <div className="flex-none p-4 border-b bg-background">
+          <div className="flex items-center justify-between mb-2">
+            <span className="font-semibold">Complete Manifest</span>
+            <span className="text-sm text-muted-foreground">
+              Step {currentStepIndex + 1} of {steps.length}
+            </span>
+          </div>
+          <Progress value={progress} className="mb-3" />
+          
+          {/* Step indicators */}
+          <div className="flex justify-between">
+            {steps.map((s, i) => (
+              <div 
+                key={s.key}
+                className={`flex flex-col items-center gap-1 ${
+                  i === currentStepIndex ? 'text-primary' : 
+                  i < currentStepIndex ? 'text-green-600' : 'text-muted-foreground'
+                }`}
+              >
+                {s.icon}
+                <span className="text-xs">{s.title}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        <ScrollArea className="flex-1" ref={contentRef}>
+          <div className="p-4 pb-24">
+            {renderStepContent()}
+          </div>
+        </ScrollArea>
+      </div>
+    );
+  }
+
+  // Desktop card view
   return (
-    <Card className={`w-full max-w-md mx-auto ${isMobile ? 'h-[calc(100vh-2rem)] flex flex-col' : ''}`}>
+    <Card className="w-full max-w-md mx-auto">
       <CardHeader className="flex-shrink-0">
         <CardTitle className="flex items-center justify-between">
           <span>Manifest {manifestId.slice(-8)}</span>
@@ -559,18 +606,10 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
           ))}
         </div>
       </CardHeader>
-      <CardContent className={isMobile ? 'flex-1 overflow-hidden p-0' : ''}>
-        {isMobile ? (
-          <ScrollArea className="h-full">
-            <div ref={contentRef} className="p-6 pb-32">
-              {renderStepContent()}
-            </div>
-          </ScrollArea>
-        ) : (
-          <div ref={contentRef}>
-            {renderStepContent()}
-          </div>
-        )}
+      <CardContent>
+        <div ref={contentRef}>
+          {renderStepContent()}
+        </div>
       </CardContent>
     </Card>
   );
