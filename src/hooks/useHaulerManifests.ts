@@ -177,7 +177,6 @@ export const useHaulerManifests = (haulerId?: string) => {
         paid_amount: data.payment_amount,
         subtotal: data.payment_amount,
         total: data.payment_amount,
-        notes: data.notes,
         signed_by_name: data.generator_print_name,
         signed_at: generatorSignedAt,
         generator_signed_at: generatorSignedAt,
