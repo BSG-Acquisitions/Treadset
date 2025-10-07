@@ -81,31 +81,13 @@ export const useHaulerProfile = () => {
 
       const { data, error } = await (supabase as any)
         .from("haulers")
-        .select(`
-          *,
-          relationships:hauler_facility_relationships(
-            id,
-            organization_id,
-            is_active,
-            notes,
-            invited_at,
-            organization:organizations(id, name, slug)
-          )
-        `)
+        .select("*")
         .eq("user_id", userData.id)
         .single();
 
       if (error) throw error;
-      
-      // Extract organization_id from first active relationship
-      const activeRelationship = data?.relationships?.find((r: any) => r.is_active);
-      const organizationId = activeRelationship?.organization_id;
-      
-      return {
-        ...data,
-        organization_id: organizationId,
-        organization: activeRelationship?.organization,
-      };
+
+      return data;
     },
   });
 };
