@@ -89,6 +89,10 @@ export const HaulerManifestWizard = ({ haulerId, haulerName }: HaulerManifestWiz
   const [commercialOnRimRate, setCommercialOnRimRate] = useState<string>("");
   const [otrRate, setOtrRate] = useState<string>("");
   const [calculatedTotal, setCalculatedTotal] = useState(0);
+
+  // Persist signatures after leaving the signatures step
+  const [generatorSignature, setGeneratorSignature] = useState<string | null>(null);
+  const [haulerSignature, setHaulerSignature] = useState<string | null>(null);
   
   const { data: customers } = useHaulerCustomers(haulerId);
   const { createManifest } = useHaulerManifests(haulerId);
@@ -215,6 +219,10 @@ export const HaulerManifestWizard = ({ haulerId, haulerName }: HaulerManifestWiz
 
       const valid = await form.trigger(['generator_print_name', 'hauler_print_name']);
       if (!valid) return;
+
+      // Persist signatures before leaving the step
+      setGeneratorSignature(generatorSigRef.current!.toDataURL());
+      setHaulerSignature(haulerSigRef.current!.toDataURL());
     }
 
     if (step < steps.length - 1) {
@@ -227,8 +235,15 @@ export const HaulerManifestWizard = ({ haulerId, haulerName }: HaulerManifestWiz
   };
 
   const handleSubmit = async () => {
-    if (!generatorSigRef.current || generatorSigRef.current.isEmpty()) return;
-    if (!haulerSigRef.current || haulerSigRef.current.isEmpty()) return;
+    if (!generatorSignature || !haulerSignature) {
+      toast({
+        title: "Missing Signatures",
+        description: "Please complete and confirm both signatures before submitting.",
+        variant: "destructive",
+      });
+      setStep(steps.findIndex(s => s.key === "signatures"));
+      return;
+    }
 
     setIsSubmitting(true);
 
@@ -249,9 +264,9 @@ export const HaulerManifestWizard = ({ haulerId, haulerName }: HaulerManifestWiz
         payment_method: data.payment_method,
         payment_amount: calculatedTotal || data.payment_amount,
         notes: data.notes,
-        generator_signature: generatorSigRef.current.toDataURL(),
+        generator_signature: generatorSignature,
         generator_print_name: data.generator_print_name,
-        hauler_signature: haulerSigRef.current.toDataURL(),
+        hauler_signature: haulerSignature,
         hauler_print_name: data.hauler_print_name
       });
 
@@ -263,6 +278,7 @@ export const HaulerManifestWizard = ({ haulerId, haulerName }: HaulerManifestWiz
       setIsSubmitting(false);
     }
   };
+
 
   if (manifestCreated) {
     return (
@@ -284,6 +300,8 @@ export const HaulerManifestWizard = ({ haulerId, haulerName }: HaulerManifestWiz
                   setManifestCreated(false);
                   setStep(0);
                   form.reset();
+                  setGeneratorSignature(null);
+                  setHaulerSignature(null);
                   generatorSigRef.current?.clear();
                   haulerSigRef.current?.clear();
                 }}>
