@@ -1,13 +1,10 @@
 import { AppLayout } from "@/components/AppLayout";
 import { HaulerManifestWizard } from "@/components/hauler/HaulerManifestWizard";
 import { useHaulerProfile } from "@/hooks/useIndependentHaulers";
-import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
 
 export default function HaulerManifestCreate() {
-  const { user } = useAuth();
   const { data: haulerProfile, isLoading } = useHaulerProfile();
-  const isSuperAdmin = user?.email === 'zachdevon@bsgtires.com';
 
   if (isLoading) {
     return (
@@ -19,8 +16,7 @@ export default function HaulerManifestCreate() {
     );
   }
 
-  // Super admin can access without hauler profile for testing
-  if (!haulerProfile && !isSuperAdmin) {
+  if (!haulerProfile) {
     return (
       <AppLayout>
         <div className="p-6">
@@ -35,9 +31,8 @@ export default function HaulerManifestCreate() {
     );
   }
 
-  // Use hauler profile data or super admin test data
-  const haulerId = haulerProfile?.id || 'super-admin-test';
-  const haulerName = haulerProfile?.company_name || 'TreadSet Admin (Testing)';
+  const haulerId = haulerProfile.id;
+  const haulerName = haulerProfile.company_name;
 
   return (
     <AppLayout>
@@ -47,11 +42,6 @@ export default function HaulerManifestCreate() {
           <p className="text-muted-foreground">
             Document your tire delivery with generator and hauler signatures
           </p>
-          {isSuperAdmin && !haulerProfile && (
-            <p className="text-sm text-warning mt-2">
-              ⚠️ Testing mode - You're accessing as super admin without a hauler profile
-            </p>
-          )}
         </div>
         
         <HaulerManifestWizard
