@@ -182,7 +182,7 @@ export function ClientForm({ initialData, onSubmit, onCancel, isLoading }: Clien
                 <FormItem className="md:col-span-2">
                   <FormLabel>Street Address</FormLabel>
                   <FormControl>
-                    <Input placeholder="123 Main Street" {...field} />
+                    <Input placeholder="Enter street address" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -196,7 +196,7 @@ export function ClientForm({ initialData, onSubmit, onCancel, isLoading }: Clien
                 <FormItem>
                   <FormLabel>City</FormLabel>
                   <FormControl>
-                    <Input placeholder="Detroit" {...field} />
+                    <Input placeholder="Enter city" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -210,7 +210,7 @@ export function ClientForm({ initialData, onSubmit, onCancel, isLoading }: Clien
                 <FormItem>
                   <FormLabel>State</FormLabel>
                   <FormControl>
-                    <Input placeholder="MI" maxLength={2} {...field} />
+                    <Input placeholder="Enter state" maxLength={2} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -224,7 +224,7 @@ export function ClientForm({ initialData, onSubmit, onCancel, isLoading }: Clien
                 <FormItem>
                   <FormLabel>ZIP Code</FormLabel>
                   <FormControl>
-                    <Input placeholder="48207" {...field} />
+                    <Input placeholder="Enter ZIP" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -238,7 +238,7 @@ export function ClientForm({ initialData, onSubmit, onCancel, isLoading }: Clien
                 <FormItem>
                   <FormLabel>County</FormLabel>
                   <FormControl>
-                    <Input placeholder="Wayne" {...field} />
+                    <Input placeholder="Enter county" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
