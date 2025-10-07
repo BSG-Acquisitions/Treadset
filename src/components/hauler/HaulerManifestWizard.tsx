@@ -1127,7 +1127,7 @@ export const HaulerManifestWizard = ({ haulerId, haulerName }: HaulerManifestWiz
                     Next <ChevronRight className="ml-2 h-4 w-4" />
                   </Button>
                 ) : (
-                  <Button type="button" onClick={handleSubmit} disabled={isSubmitting} className="ml-auto">
+                  <Button type="submit" disabled={isSubmitting} className="ml-auto">
                     {isSubmitting ? "Creating..." : "Create Manifest"}
                   </Button>
                 )}
