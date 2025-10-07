@@ -60,7 +60,7 @@ export function AppSidebar() {
       : "hover:bg-muted/50 text-muted-foreground hover:text-foreground";
 
   const navigationItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/', roles: [] as const },
+    { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/', roles: ['admin', 'ops_manager', 'dispatcher', 'sales'] as const },
     { id: 'clients', label: 'Clients', icon: Users, path: '/clients', roles: ['admin', 'ops_manager', 'sales'] as const },
     { id: 'routes', label: 'Routes', icon: MapPin, path: '/routes/today', roles: ['admin', 'ops_manager', 'dispatcher'] as const },
     { id: 'driver-dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/driver/dashboard', roles: ['driver'] as const },

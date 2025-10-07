@@ -97,7 +97,7 @@ export const AcroFormLivePreview: React.FC<AcroFormLivePreviewProps> = ({ manife
 
         const pdfBytes = await pdfDoc.save();
         if (revokedUrl) URL.revokeObjectURL(revokedUrl);
-        const url = URL.createObjectURL(new Blob([pdfBytes], { type: 'application/pdf' }));
+        const url = URL.createObjectURL(new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' }));
         revokedUrl = url;
         setPdfUrl(url);
       } catch (e: any) {
