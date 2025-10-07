@@ -927,6 +927,7 @@ export type Database = {
           city: string | null
           company_name: string
           contact_name: string | null
+          county: string | null
           created_at: string
           email: string | null
           hauler_id: string
@@ -943,6 +944,7 @@ export type Database = {
           city?: string | null
           company_name: string
           contact_name?: string | null
+          county?: string | null
           created_at?: string
           email?: string | null
           hauler_id: string
@@ -959,6 +961,7 @@ export type Database = {
           city?: string | null
           company_name?: string
           contact_name?: string | null
+          county?: string | null
           created_at?: string
           email?: string | null
           hauler_id?: string

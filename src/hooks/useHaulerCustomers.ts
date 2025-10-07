@@ -13,6 +13,7 @@ export interface HaulerCustomer {
   city?: string;
   state?: string;
   zip?: string;
+  county?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -27,6 +28,7 @@ export interface CreateHaulerCustomerData {
   city?: string;
   state?: string;
   zip?: string;
+  county?: string;
 }
 
 // Get customers for a hauler

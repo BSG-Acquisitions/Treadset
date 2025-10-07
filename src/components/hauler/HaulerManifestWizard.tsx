@@ -79,6 +79,7 @@ export const HaulerManifestWizard = ({ haulerId, haulerName }: HaulerManifestWiz
     city: "",
     state: "MI",
     zip: "",
+    county: "",
   });
   
   // Rate states for payment step
@@ -340,6 +341,7 @@ export const HaulerManifestWizard = ({ haulerId, haulerName }: HaulerManifestWiz
                           city: "",
                           state: "MI",
                           zip: "",
+                          county: "",
                         });
                       }}
                     >
@@ -400,6 +402,14 @@ export const HaulerManifestWizard = ({ haulerId, haulerName }: HaulerManifestWiz
                       />
                     </div>
                     <div>
+                      <Label>County</Label>
+                      <Input
+                        value={newCustomerData.county}
+                        onChange={(e) => setNewCustomerData({ ...newCustomerData, county: e.target.value })}
+                        placeholder="Wayne"
+                      />
+                    </div>
+                    <div>
                       <Label>State</Label>
                       <Input
                         value={newCustomerData.state}
@@ -440,6 +450,7 @@ export const HaulerManifestWizard = ({ haulerId, haulerName }: HaulerManifestWiz
                           city: "",
                           state: "MI",
                           zip: "",
+                          county: "",
                         });
                       } catch (error) {
                         console.error("Failed to create customer:", error);
