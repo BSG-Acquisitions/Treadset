@@ -59,6 +59,47 @@ export function AppSidebar() {
       ? "bg-brand-primary/10 text-brand-primary font-medium border-r-2 border-brand-primary" 
       : "hover:bg-muted/50 text-muted-foreground hover:text-foreground";
 
+  // Organized navigation for super admin
+  const superAdminNavigation = {
+    overview: [
+      { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/', roles: ['admin', 'ops_manager', 'dispatcher', 'sales'] as const },
+    ],
+    scheduling: [
+      { id: 'clients', label: 'Clients', icon: Users, path: '/clients', roles: ['admin', 'ops_manager', 'sales'] as const },
+      { id: 'routes', label: 'Routes', icon: MapPin, path: '/routes/today', roles: ['admin', 'ops_manager', 'dispatcher'] as const },
+      { id: 'employees', label: 'Employees', icon: UserCheck, path: '/employees', roles: ['admin'] as const },
+    ],
+    driverPortal: [
+      { id: 'driver-dashboard', label: 'Driver Dashboard', icon: LayoutDashboard, path: '/driver/dashboard', roles: ['driver'] as const },
+      { id: 'driver', label: 'My Routes', icon: UserCheck, path: '/routes/driver', roles: ['driver'] as const },
+      { id: 'add-pickup', label: 'Add Pickup', icon: PackageOpen, path: '/book', roles: ['driver'] as const },
+    ],
+    haulerPortal: [
+      { id: 'hauler-dashboard', label: 'Hauler Dashboard', icon: Home, path: '/hauler-dashboard', roles: ['hauler'] as const },
+      { id: 'hauler-customers', label: 'My Customers', icon: Users, path: '/hauler-customers', roles: ['hauler'] as const },
+      { id: 'hauler-manifests', label: 'My Manifests', icon: FileText, path: '/hauler-manifests', roles: ['hauler'] as const },
+      { id: 'hauler-manifest-create', label: 'Create Manifest', icon: Plus, path: '/hauler-manifest-create', roles: ['hauler'] as const },
+      { id: 'independent-haulers', label: 'Independent Haulers', icon: Truck, path: '/haulers', roles: ['admin', 'ops_manager'] as const },
+      { id: 'hauler-rates', label: 'Hauler Rates', icon: DollarSign, path: '/hauler-rates', roles: ['admin', 'ops_manager'] as const },
+    ],
+    financial: [
+      { id: 'dropoffs', label: 'Drop-offs', icon: PackageOpen, path: '/dropoffs', roles: ['admin', 'ops_manager', 'sales'] as const },
+      { id: 'pricing', label: 'Pricing', icon: DollarSign, path: '/pricing', roles: ['admin', 'ops_manager'] as const },
+    ],
+    reporting: [
+      { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics', roles: ['admin', 'ops_manager'] as const },
+      { id: 'reports', label: 'Reports', icon: FileText, path: '/reports', roles: ['admin', 'ops_manager'] as const },
+      { id: 'michigan-reports', label: 'Michigan Reports', icon: Recycle, path: '/michigan-reports', roles: ['admin', 'ops_manager'] as const },
+    ],
+    administration: [
+      { id: 'settings', label: 'Settings', icon: Settings, path: '/settings', roles: ['admin', 'ops_manager'] as const },
+      { id: 'integrations', label: 'Integrations', icon: CreditCard, path: '/integrations', roles: ['admin'] as const },
+      { id: 'signatures', label: 'Signatures', icon: PenTool, path: '/receiver-signatures', roles: ['admin', 'ops_manager'] as const },
+      { id: 'receivers', label: 'Receivers', icon: Building, path: '/receivers', roles: ['admin', 'ops_manager'] as const },
+    ],
+  };
+
+  // Flat list for regular users
   const navigationItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/', roles: ['admin', 'ops_manager', 'dispatcher', 'sales'] as const },
     { id: 'clients', label: 'Clients', icon: Users, path: '/clients', roles: ['admin', 'ops_manager', 'sales'] as const },
@@ -124,62 +165,224 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="py-4">
-        <SidebarGroup>
-          <SidebarGroupLabel className={isCollapsed ? "sr-only" : ""}>
-            Navigation
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="space-y-1">
-              {filteredNavItems.map((item) => (
-                <SidebarMenuItem key={item.id}>
-                  <SidebarMenuButton asChild className="h-12">
-                    <NavLink 
-                      to={item.path} 
-                      onClick={handleNavClick}
-                      className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${getNavClass(item.path)}`}
-                    >
-                      <item.icon className={`h-5 w-5 flex-shrink-0 ${isCollapsed ? 'mx-auto' : ''}`} />
-                      {!isCollapsed && (
-                        <span className="text-sm font-medium truncate">
-                          {item.label}
-                        </span>
-                      )}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {isSuperAdmin ? (
+          // Super admin sees organized categories
+          <>
+            <SidebarGroup>
+              <SidebarGroupLabel className={isCollapsed ? "sr-only" : ""}>Overview</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu className="space-y-1">
+                  {superAdminNavigation.overview.map((item) => (
+                    <SidebarMenuItem key={item.id}>
+                      <SidebarMenuButton asChild className="h-12">
+                        <NavLink 
+                          to={item.path} 
+                          onClick={handleNavClick}
+                          className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${getNavClass(item.path)}`}
+                        >
+                          <item.icon className={`h-5 w-5 flex-shrink-0 ${isCollapsed ? 'mx-auto' : ''}`} />
+                          {!isCollapsed && <span className="text-sm font-medium truncate">{item.label}</span>}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
 
-        {filteredAdminItems.length > 0 && (
-          <SidebarGroup>
-            <SidebarGroupLabel className={isCollapsed ? "sr-only" : ""}>
-              Administration
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu className="space-y-1">
-                {filteredAdminItems.map((item) => (
-                  <SidebarMenuItem key={item.id}>
-                    <SidebarMenuButton asChild className="h-12">
-                      <NavLink 
-                        to={item.path} 
-                        onClick={handleNavClick}
-                        className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${getNavClass(item.path)}`}
-                      >
-                        <item.icon className={`h-5 w-5 flex-shrink-0 ${isCollapsed ? 'mx-auto' : ''}`} />
-                        {!isCollapsed && (
-                          <span className="text-sm font-medium truncate">
-                            {item.label}
-                          </span>
-                        )}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+            <SidebarGroup>
+              <SidebarGroupLabel className={isCollapsed ? "sr-only" : ""}>Scheduling & Operations</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu className="space-y-1">
+                  {superAdminNavigation.scheduling.map((item) => (
+                    <SidebarMenuItem key={item.id}>
+                      <SidebarMenuButton asChild className="h-12">
+                        <NavLink 
+                          to={item.path} 
+                          onClick={handleNavClick}
+                          className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${getNavClass(item.path)}`}
+                        >
+                          <item.icon className={`h-5 w-5 flex-shrink-0 ${isCollapsed ? 'mx-auto' : ''}`} />
+                          {!isCollapsed && <span className="text-sm font-medium truncate">{item.label}</span>}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+
+            <SidebarGroup>
+              <SidebarGroupLabel className={isCollapsed ? "sr-only" : ""}>Driver Portal</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu className="space-y-1">
+                  {superAdminNavigation.driverPortal.map((item) => (
+                    <SidebarMenuItem key={item.id}>
+                      <SidebarMenuButton asChild className="h-12">
+                        <NavLink 
+                          to={item.path} 
+                          onClick={handleNavClick}
+                          className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${getNavClass(item.path)}`}
+                        >
+                          <item.icon className={`h-5 w-5 flex-shrink-0 ${isCollapsed ? 'mx-auto' : ''}`} />
+                          {!isCollapsed && <span className="text-sm font-medium truncate">{item.label}</span>}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+
+            <SidebarGroup>
+              <SidebarGroupLabel className={isCollapsed ? "sr-only" : ""}>Hauler Portal</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu className="space-y-1">
+                  {superAdminNavigation.haulerPortal.map((item) => (
+                    <SidebarMenuItem key={item.id}>
+                      <SidebarMenuButton asChild className="h-12">
+                        <NavLink 
+                          to={item.path} 
+                          onClick={handleNavClick}
+                          className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${getNavClass(item.path)}`}
+                        >
+                          <item.icon className={`h-5 w-5 flex-shrink-0 ${isCollapsed ? 'mx-auto' : ''}`} />
+                          {!isCollapsed && <span className="text-sm font-medium truncate">{item.label}</span>}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+
+            <SidebarGroup>
+              <SidebarGroupLabel className={isCollapsed ? "sr-only" : ""}>Financial</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu className="space-y-1">
+                  {superAdminNavigation.financial.map((item) => (
+                    <SidebarMenuItem key={item.id}>
+                      <SidebarMenuButton asChild className="h-12">
+                        <NavLink 
+                          to={item.path} 
+                          onClick={handleNavClick}
+                          className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${getNavClass(item.path)}`}
+                        >
+                          <item.icon className={`h-5 w-5 flex-shrink-0 ${isCollapsed ? 'mx-auto' : ''}`} />
+                          {!isCollapsed && <span className="text-sm font-medium truncate">{item.label}</span>}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+
+            <SidebarGroup>
+              <SidebarGroupLabel className={isCollapsed ? "sr-only" : ""}>Reports & Analytics</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu className="space-y-1">
+                  {superAdminNavigation.reporting.map((item) => (
+                    <SidebarMenuItem key={item.id}>
+                      <SidebarMenuButton asChild className="h-12">
+                        <NavLink 
+                          to={item.path} 
+                          onClick={handleNavClick}
+                          className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${getNavClass(item.path)}`}
+                        >
+                          <item.icon className={`h-5 w-5 flex-shrink-0 ${isCollapsed ? 'mx-auto' : ''}`} />
+                          {!isCollapsed && <span className="text-sm font-medium truncate">{item.label}</span>}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+
+            <SidebarGroup>
+              <SidebarGroupLabel className={isCollapsed ? "sr-only" : ""}>Administration</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu className="space-y-1">
+                  {superAdminNavigation.administration.map((item) => (
+                    <SidebarMenuItem key={item.id}>
+                      <SidebarMenuButton asChild className="h-12">
+                        <NavLink 
+                          to={item.path} 
+                          onClick={handleNavClick}
+                          className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${getNavClass(item.path)}`}
+                        >
+                          <item.icon className={`h-5 w-5 flex-shrink-0 ${isCollapsed ? 'mx-auto' : ''}`} />
+                          {!isCollapsed && <span className="text-sm font-medium truncate">{item.label}</span>}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        ) : (
+          // Regular users see role-filtered navigation
+          <>
+            <SidebarGroup>
+              <SidebarGroupLabel className={isCollapsed ? "sr-only" : ""}>
+                Navigation
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu className="space-y-1">
+                  {filteredNavItems.map((item) => (
+                    <SidebarMenuItem key={item.id}>
+                      <SidebarMenuButton asChild className="h-12">
+                        <NavLink 
+                          to={item.path} 
+                          onClick={handleNavClick}
+                          className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${getNavClass(item.path)}`}
+                        >
+                          <item.icon className={`h-5 w-5 flex-shrink-0 ${isCollapsed ? 'mx-auto' : ''}`} />
+                          {!isCollapsed && (
+                            <span className="text-sm font-medium truncate">
+                              {item.label}
+                            </span>
+                          )}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+
+            {filteredAdminItems.length > 0 && (
+              <SidebarGroup>
+                <SidebarGroupLabel className={isCollapsed ? "sr-only" : ""}>
+                  Administration
+                </SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu className="space-y-1">
+                    {filteredAdminItems.map((item) => (
+                      <SidebarMenuItem key={item.id}>
+                        <SidebarMenuButton asChild className="h-12">
+                          <NavLink 
+                            to={item.path} 
+                            onClick={handleNavClick}
+                            className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${getNavClass(item.path)}`}
+                          >
+                            <item.icon className={`h-5 w-5 flex-shrink-0 ${isCollapsed ? 'mx-auto' : ''}`} />
+                            {!isCollapsed && (
+                              <span className="text-sm font-medium truncate">
+                                {item.label}
+                              </span>
+                            )}
+                          </NavLink>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            )}
+          </>
         )}
       </SidebarContent>
 
