@@ -42,11 +42,12 @@ export function EditClientDialog({ client, trigger }: EditClientDialogProps) {
         tags: data.tags || null,
         sla_weeks: data.sla_weeks || null,
         pricing_tier_id: data.pricing_tier_id || null,
-        mailing_address: data.mailing_address || null,
-        city: data.city || null,
-        state: data.state || null,
-        zip: data.zip || null,
-        county: data.county || null,
+        // Address fields - keep as-is including empty strings
+        mailing_address: data.mailing_address === "" ? null : data.mailing_address,
+        city: data.city === "" ? null : data.city,
+        state: data.state === "" ? null : data.state,
+        zip: data.zip === "" ? null : data.zip,
+        county: data.county === "" ? null : data.county,
       }
     });
 

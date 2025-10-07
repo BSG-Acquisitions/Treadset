@@ -19,11 +19,11 @@ export const clientSchema = z.object({
   sla_weeks: z.number().int().min(1, "SLA weeks must be at least 1").optional(),
   pricing_tier_id: z.string().uuid().optional(),
   // Address fields - simplified to single address
-  mailing_address: z.string().max(500, "Address must be less than 500 characters").optional(),
-  city: z.string().max(100, "City must be less than 100 characters").optional(),
-  state: z.string().max(2, "State must be 2 characters").optional(),
-  zip: z.string().max(10, "ZIP code must be less than 10 characters").optional(),
-  county: z.string().max(100, "County must be less than 100 characters").optional(),
+  mailing_address: z.string().max(500, "Address must be less than 500 characters").optional().or(z.literal("")),
+  city: z.string().max(100, "City must be less than 100 characters").optional().or(z.literal("")),
+  state: z.string().max(2, "State must be 2 characters").optional().or(z.literal("")),
+  zip: z.string().max(10, "ZIP code must be less than 10 characters").optional().or(z.literal("")),
+  county: z.string().max(100, "County must be less than 100 characters").optional().or(z.literal("")),
 });
 
 export const locationSchema = z.object({
