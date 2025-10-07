@@ -87,13 +87,20 @@ export function AppSidebar() {
     { id: 'receivers', label: 'Receivers', icon: Building, path: '/receivers', roles: ['admin', 'ops_manager'] as const },
   ];
 
-  const filteredNavItems = navigationItems.filter(item => 
-    ([...item.roles].length === 0) || hasAnyRole([...item.roles])
-  );
+  // Super admin (creator) sees everything - no other user has this privilege
+  const isSuperAdmin = user?.email === 'zachdevon@bsgtires.com';
 
-  const filteredAdminItems = adminItems.filter(item => 
-    ([...item.roles].length === 0) || hasAnyRole([...item.roles])
-  );
+  const filteredNavItems = isSuperAdmin 
+    ? navigationItems 
+    : navigationItems.filter(item => 
+        ([...item.roles].length === 0) || hasAnyRole([...item.roles])
+      );
+
+  const filteredAdminItems = isSuperAdmin
+    ? adminItems
+    : adminItems.filter(item => 
+        ([...item.roles].length === 0) || hasAnyRole([...item.roles])
+      );
 
   return (
     <Sidebar 
