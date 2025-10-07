@@ -11,11 +11,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import SignatureCanvas from "react-signature-canvas";
-import { useHaulerCustomers } from "@/hooks/useHaulerCustomers";
+import { useHaulerCustomers, useCreateHaulerCustomer, type CreateHaulerCustomerData } from "@/hooks/useHaulerCustomers";
 import { useHaulerManifests } from "@/hooks/useHaulerManifests";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, ChevronLeft, ChevronRight, Building, Package, PenTool, DollarSign } from "lucide-react";
+import { CheckCircle, ChevronLeft, ChevronRight, Building, Package, PenTool, DollarSign, Plus, X } from "lucide-react";
 import { pteToTons, MICHIGAN_CONVERSIONS } from "@/lib/michigan-conversions";
 
 // Validation schema matching driver wizard
@@ -69,6 +69,18 @@ export const HaulerManifestWizard = ({ haulerId, haulerName }: HaulerManifestWiz
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [manifestCreated, setManifestCreated] = useState(false);
   const [manualWeightOverride, setManualWeightOverride] = useState(false);
+  const [showAddCustomer, setShowAddCustomer] = useState(false);
+  const [newCustomerData, setNewCustomerData] = useState<CreateHaulerCustomerData>({
+    company_name: "",
+    contact_name: "",
+    email: "",
+    phone: "",
+    address: "",
+    city: "",
+    state: "MI",
+    zip: "",
+    county: "",
+  });
   
   // Rate states for payment step
   const [pteOffRimRate, setPteOffRimRate] = useState<string>("");
@@ -80,6 +92,7 @@ export const HaulerManifestWizard = ({ haulerId, haulerName }: HaulerManifestWiz
   
   const { data: customers } = useHaulerCustomers(haulerId);
   const { createManifest } = useHaulerManifests(haulerId);
+  const createCustomer = useCreateHaulerCustomer();
 
   // Signature refs
   const generatorSigRef = useRef<SignatureCanvas>(null);
@@ -289,48 +302,208 @@ export const HaulerManifestWizard = ({ haulerId, haulerName }: HaulerManifestWiz
       case "customer":
         return (
           <div className="space-y-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Building className="h-5 w-5 text-primary" />
-              <h3 className="text-lg font-semibold">Customer Information</h3>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Building className="h-5 w-5 text-primary" />
+                <h3 className="text-lg font-semibold">Customer Information</h3>
+              </div>
+              {!showAddCustomer && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAddCustomer(true)}
+                  className="gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add New Customer
+                </Button>
+              )}
             </div>
 
-            <FormField
-              control={form.control}
-              name="customer_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Select Customer</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose a customer..." />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {customers?.map((customer) => (
-                        <SelectItem key={customer.id} value={customer.id}>
-                          {customer.company_name || customer.contact_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {selectedCustomer && (
-              <Card>
+            {showAddCustomer ? (
+              <Card className="border-primary/50">
                 <CardHeader>
-                  <CardTitle className="text-base">Customer Details</CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">New Customer Details</CardTitle>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setShowAddCustomer(false);
+                        setNewCustomerData({
+                          company_name: "",
+                          contact_name: "",
+                          email: "",
+                          phone: "",
+                          address: "",
+                          city: "",
+                          state: "MI",
+                          zip: "",
+                          county: "",
+                        });
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                  <div><strong>Contact:</strong> {selectedCustomer.contact_name}</div>
-                  <div><strong>Phone:</strong> {selectedCustomer.phone || 'N/A'}</div>
-                  <div><strong>Email:</strong> {selectedCustomer.email || 'N/A'}</div>
-                  {selectedCustomer.address && <div><strong>Address:</strong> {selectedCustomer.address}</div>}
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="col-span-2">
+                      <Label>Company Name *</Label>
+                      <Input
+                        value={newCustomerData.company_name}
+                        onChange={(e) => setNewCustomerData({ ...newCustomerData, company_name: e.target.value })}
+                        placeholder="ABC Tire Shop"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label>Contact Name</Label>
+                      <Input
+                        value={newCustomerData.contact_name}
+                        onChange={(e) => setNewCustomerData({ ...newCustomerData, contact_name: e.target.value })}
+                        placeholder="John Smith"
+                      />
+                    </div>
+                    <div>
+                      <Label>Phone</Label>
+                      <Input
+                        value={newCustomerData.phone}
+                        onChange={(e) => setNewCustomerData({ ...newCustomerData, phone: e.target.value })}
+                        placeholder="(555) 123-4567"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Label>Email</Label>
+                      <Input
+                        type="email"
+                        value={newCustomerData.email}
+                        onChange={(e) => setNewCustomerData({ ...newCustomerData, email: e.target.value })}
+                        placeholder="contact@company.com"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Label>Address</Label>
+                      <Input
+                        value={newCustomerData.address}
+                        onChange={(e) => setNewCustomerData({ ...newCustomerData, address: e.target.value })}
+                        placeholder="123 Main St"
+                      />
+                    </div>
+                    <div>
+                      <Label>City</Label>
+                      <Input
+                        value={newCustomerData.city}
+                        onChange={(e) => setNewCustomerData({ ...newCustomerData, city: e.target.value })}
+                        placeholder="Detroit"
+                      />
+                    </div>
+                    <div>
+                      <Label>County</Label>
+                      <Input
+                        value={newCustomerData.county}
+                        onChange={(e) => setNewCustomerData({ ...newCustomerData, county: e.target.value })}
+                        placeholder="Wayne"
+                      />
+                    </div>
+                    <div>
+                      <Label>State</Label>
+                      <Input
+                        value={newCustomerData.state}
+                        onChange={(e) => setNewCustomerData({ ...newCustomerData, state: e.target.value })}
+                        placeholder="MI"
+                        maxLength={2}
+                      />
+                    </div>
+                    <div>
+                      <Label>ZIP</Label>
+                      <Input
+                        value={newCustomerData.zip}
+                        onChange={(e) => setNewCustomerData({ ...newCustomerData, zip: e.target.value })}
+                        placeholder="48201"
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={async () => {
+                      if (!newCustomerData.company_name.trim()) {
+                        toast({ title: "Error", description: "Company name is required", variant: "destructive" });
+                        return;
+                      }
+                      try {
+                        const result = await createCustomer.mutateAsync({
+                          haulerId,
+                          data: newCustomerData,
+                        }) as any;
+                        form.setValue("customer_id", result?.id || "");
+                        setShowAddCustomer(false);
+                        setNewCustomerData({
+                          company_name: "",
+                          contact_name: "",
+                          email: "",
+                          phone: "",
+                          address: "",
+                          city: "",
+                          state: "MI",
+                          zip: "",
+                          county: "",
+                        });
+                      } catch (error) {
+                        console.error("Failed to create customer:", error);
+                      }
+                    }}
+                    className="w-full"
+                    disabled={createCustomer.isPending}
+                  >
+                    {createCustomer.isPending ? "Saving..." : "Save Customer"}
+                  </Button>
                 </CardContent>
               </Card>
+            ) : (
+              <>
+                <FormField
+                  control={form.control}
+                  name="customer_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Select Customer</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choose a customer..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {customers?.map((customer) => (
+                            <SelectItem key={customer.id} value={customer.id}>
+                              {customer.company_name || customer.contact_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {selectedCustomer && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Customer Details</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2 text-sm">
+                      <div><strong>Contact:</strong> {selectedCustomer.contact_name}</div>
+                      <div><strong>Phone:</strong> {selectedCustomer.phone || 'N/A'}</div>
+                      <div><strong>Email:</strong> {selectedCustomer.email || 'N/A'}</div>
+                      {selectedCustomer.address && <div><strong>Address:</strong> {selectedCustomer.address}</div>}
+                    </CardContent>
+                  </Card>
+                )}
+              </>
             )}
           </div>
         );
