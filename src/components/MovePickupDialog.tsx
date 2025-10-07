@@ -9,6 +9,7 @@ import { CalendarIcon, Clock, MapPin } from "lucide-react";
 import { format, startOfWeek, addDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { formatLocalDateString } from "@/lib/formatters";
+import { getPickupAddress } from "@/lib/pickupUtils";
 
 interface MovePickupDialogProps {
   open: boolean;
@@ -16,8 +17,21 @@ interface MovePickupDialogProps {
   pickup: {
     id: string;
     pickup_date: string;
-    client?: { company_name: string };
-    location?: { address: string };
+    client?: { 
+      company_name: string;
+      mailing_address?: string;
+      city?: string;
+      state?: string;
+      zip?: string;
+      physical_address?: string;
+      physical_city?: string;
+      physical_state?: string;
+      physical_zip?: string;
+    };
+    location?: { 
+      address?: string;
+      name?: string;
+    };
   };
   currentWeek?: Date; // Optional: if provided, show week view with quick day selection
 }
@@ -78,17 +92,15 @@ export function MovePickupDialog({ open, onOpenChange, pickup, currentWeek }: Mo
             </div>
           </div>
 
-          {pickup.location?.address && (
-            <div className="space-y-2">
-              <Label>Location</Label>
-              <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md">
-                <MapPin className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">
-                  {pickup.location.address}
-                </span>
-              </div>
+          <div className="space-y-2">
+            <Label>Service Address</Label>
+            <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md">
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">
+                {getPickupAddress(pickup)}
+              </span>
             </div>
-          )}
+          </div>
 
           {/* Quick Week Day Selection (if in week view) */}
           {weekDays.length > 0 && (

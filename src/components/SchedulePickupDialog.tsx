@@ -281,30 +281,50 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
                  name="locationId"
                  render={({ field }) => (
                    <FormItem>
-                     <FormLabel>Location (Optional)</FormLabel>
+                     <FormLabel>Service Address</FormLabel>
+                     {selectedClientId && clients?.data && (
+                       <div className="mb-2 p-3 bg-muted rounded-md">
+                         <div className="text-sm font-medium">Client Address:</div>
+                         <div className="text-sm text-muted-foreground">
+                           {(() => {
+                             const client = clients.data.find(c => c.id === selectedClientId);
+                             if (!client) return "No address found";
+                             
+                             const address = client.physical_address || client.mailing_address;
+                             const city = client.physical_city || client.city;
+                             const state = client.physical_state || client.state;
+                             const zip = client.physical_zip || client.zip;
+                             
+                             if (!address) return "No address on file";
+                             return `${address}, ${city}, ${state} ${zip}`;
+                           })()}
+                         </div>
+                         {locations && locations.length > 0 && (
+                           <div className="text-xs text-muted-foreground mt-1">
+                             Or select a different location below
+                           </div>
+                         )}
+                       </div>
+                     )}
                      <Select 
                        onValueChange={field.onChange} 
                        value={field.value}
-                       disabled={!selectedClientId}
+                       disabled={!selectedClientId || !locations || locations.length === 0}
                      >
                        <FormControl>
                          <SelectTrigger>
                            <SelectValue placeholder={
                              !selectedClientId 
                                ? "Select a client first" 
-                               : locations?.length === 0
-                                 ? "No locations - add one in client settings"
-                                 : "Select a location"
+                               : !locations || locations.length === 0
+                                 ? "Using client address above"
+                                 : "Or select alternate location"
                            } />
                          </SelectTrigger>
                        </FormControl>
                        <SelectContent className="z-50 bg-popover">
-                          {locations?.length === 0 ? (
-                            <div className="p-2 text-sm text-muted-foreground">
-                              No locations found. You can still schedule the pickup without a location.
-                            </div>
-                          ) : (
-                            locations?.map((location) => (
+                          {locations && locations.length > 0 ? (
+                            locations.map((location) => (
                               <SelectItem key={location.id} value={location.id}>
                                 <div>
                                   <div className="font-medium">{location.address || location.name}</div>
@@ -314,11 +334,15 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
                                 </div>
                               </SelectItem>
                             ))
+                          ) : (
+                            <div className="p-2 text-sm text-muted-foreground">
+                              No alternate locations. Using client address.
+                            </div>
                           )}
                        </SelectContent>
                      </Select>
-                    <FormMessage />
-                  </FormItem>
+                     <FormMessage />
+                   </FormItem>
                 )}
               />
             </div>

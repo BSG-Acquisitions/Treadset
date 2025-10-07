@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { useCompletedPickups, useCreateInvoice } from "@/hooks/useFinance";
 import { useClients } from "@/hooks/useClients";
 import { CalendarDays, DollarSign, FileText, MapPin } from "lucide-react";
+import { getPickupAddress } from "@/lib/pickupUtils";
 
 const createInvoiceSchema = z.object({
   clientId: z.string().min(1, "Client is required"),
@@ -186,11 +187,11 @@ export function CreateInvoiceDialog({ trigger, clientId }: CreateInvoiceDialogPr
                                   </div>
                                 </div>
                                 
-                                {pickup.location && (
+                                {pickup.client && (
                                   <div className="flex items-center gap-2">
                                     <MapPin className="h-4 w-4 text-muted-foreground" />
                                     <span className="text-sm text-muted-foreground">
-                                      {pickup.location.address}
+                                      {getPickupAddress(pickup)}
                                     </span>
                                   </div>
                                 )}
