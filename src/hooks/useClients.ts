@@ -144,9 +144,10 @@ export const useUpdateClient = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (updated) => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
-      queryClient.invalidateQueries({ queryKey: ['client'] });
+      queryClient.invalidateQueries({ queryKey: ['clients-table'] });
+      queryClient.invalidateQueries({ queryKey: ['client', updated.id] });
       toast({
         title: "Success",
         description: "Client updated successfully",
