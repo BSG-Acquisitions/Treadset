@@ -30,16 +30,16 @@ export default function Index() {
     document.title = "TreadSet Dashboard";
   }, []);
   
-  // Redirect drivers to their routes (only once when user loads)
+  // Redirect ONLY pure drivers (not admins who also have driver role) to their routes
   useEffect(() => {
-    if (user && user.roles?.includes('driver')) {
-      console.log('Redirecting driver to routes');
+    if (user && user.roles?.includes('driver') && !hasAnyRole(['admin', 'ops_manager', 'dispatcher', 'sales'])) {
+      console.log('Redirecting pure driver to routes');
       navigate('/routes/driver', { replace: true });
     }
-  }, [user?.id, navigate]); // Only trigger when user ID changes
+  }, [user?.id, navigate, hasAnyRole]);
   
-  // Don't render admin content for drivers while redirecting
-  if (user && user.roles?.includes('driver')) {
+  // Don't render admin content for pure drivers while redirecting
+  if (user && user.roles?.includes('driver') && !hasAnyRole(['admin', 'ops_manager', 'dispatcher', 'sales'])) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
