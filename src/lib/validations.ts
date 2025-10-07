@@ -18,12 +18,12 @@ export const clientSchema = z.object({
   tags: z.array(z.string()).optional(),
   sla_weeks: z.number().int().min(1, "SLA weeks must be at least 1").optional(),
   pricing_tier_id: z.string().uuid().optional(),
-  // Address fields - simplified to single address
-  mailing_address: z.string().max(500, "Address must be less than 500 characters").optional().or(z.literal("")),
-  city: z.string().max(100, "City must be less than 100 characters").optional().or(z.literal("")),
-  state: z.string().max(2, "State must be 2 characters").optional().or(z.literal("")),
-  zip: z.string().max(10, "ZIP code must be less than 10 characters").optional().or(z.literal("")),
-  county: z.string().max(100, "County must be less than 100 characters").optional().or(z.literal("")),
+  // Address fields - REQUIRED for manifest generation
+  mailing_address: z.string().min(1, "Street address is required for manifests").max(500, "Address must be less than 500 characters"),
+  city: z.string().min(1, "City is required for manifests").max(100, "City must be less than 100 characters"),
+  state: z.string().min(2, "State is required for manifests").max(2, "State must be 2 characters"),
+  zip: z.string().min(1, "ZIP code is required for manifests").max(10, "ZIP code must be less than 10 characters"),
+  county: z.string().min(1, "County is required for manifests").max(100, "County must be less than 100 characters"),
 });
 
 export const locationSchema = z.object({

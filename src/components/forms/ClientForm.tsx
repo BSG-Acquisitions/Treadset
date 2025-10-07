@@ -173,14 +173,15 @@ export function ClientForm({ initialData, onSubmit, onCancel, isLoading }: Clien
 
         {/* Mailing Address Section */}
         <div className="space-y-4">
-          <h3 className="text-lg font-medium">Address Information</h3>
+          <h3 className="text-lg font-medium">Address Information <span className="text-destructive">*</span></h3>
+          <p className="text-sm text-muted-foreground">Required for manifest generation</p>
           <div className="grid md:grid-cols-2 gap-4">
             <FormField
               control={form.control}
               name="mailing_address"
               render={({ field }) => (
                 <FormItem className="md:col-span-2">
-                  <FormLabel>Street Address</FormLabel>
+                  <FormLabel>Street Address *</FormLabel>
                   <FormControl>
                     <Input placeholder="Enter street address" {...field} />
                   </FormControl>
@@ -194,7 +195,7 @@ export function ClientForm({ initialData, onSubmit, onCancel, isLoading }: Clien
               name="city"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>City</FormLabel>
+                  <FormLabel>City *</FormLabel>
                   <FormControl>
                     <Input placeholder="Enter city" {...field} />
                   </FormControl>
@@ -208,7 +209,7 @@ export function ClientForm({ initialData, onSubmit, onCancel, isLoading }: Clien
               name="state"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>State</FormLabel>
+                  <FormLabel>State *</FormLabel>
                   <FormControl>
                     <Input placeholder="Enter state" maxLength={2} {...field} />
                   </FormControl>
@@ -222,7 +223,7 @@ export function ClientForm({ initialData, onSubmit, onCancel, isLoading }: Clien
               name="zip"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>ZIP Code</FormLabel>
+                  <FormLabel>ZIP Code *</FormLabel>
                   <FormControl>
                     <Input placeholder="Enter ZIP" {...field} />
                   </FormControl>
@@ -236,7 +237,7 @@ export function ClientForm({ initialData, onSubmit, onCancel, isLoading }: Clien
               name="county"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>County</FormLabel>
+                  <FormLabel>County *</FormLabel>
                   <FormControl>
                     <Input placeholder="Enter county" {...field} />
                   </FormControl>
