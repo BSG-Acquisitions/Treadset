@@ -157,12 +157,12 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
   const handleClientChange = (clientId: string) => {
     setSelectedClientId(clientId);
     form.setValue("clientId", clientId);
-    form.setValue("locationId", ""); // Will be auto-filled by useEffect if only one location
+    form.setValue("locationId", ""); // Will be auto-filled by useEffect
   };
 
-  // Auto-select location if there's only one for the selected client
+  // Auto-select location if client has locations (first one by default)
   useEffect(() => {
-    if (locations && locations.length === 1 && selectedClientId) {
+    if (locations && locations.length > 0 && selectedClientId) {
       form.setValue("locationId", locations[0].id);
     }
   }, [locations, selectedClientId, form]);
@@ -263,20 +263,30 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select location (optional)" />
+                          <SelectValue placeholder={
+                            locations?.length === 0
+                              ? "No locations - add one in client settings"
+                              : "Select location (optional)"
+                          } />
                         </SelectTrigger>
                       </FormControl>
                        <SelectContent className="z-50 bg-popover">
-                         {locations?.map((location) => (
-                           <SelectItem key={location.id} value={location.id}>
-                              <div>
-                                <div className="font-medium">{location.address || location.name}</div>
-                                {location.address && location.name && (
-                                  <div className="text-sm text-muted-foreground">{location.name}</div>
-                                )}
-                              </div>
-                           </SelectItem>
-                         ))}
+                          {locations?.length === 0 ? (
+                            <div className="p-2 text-sm text-muted-foreground">
+                              No locations found. You can still schedule the pickup without a location.
+                            </div>
+                          ) : (
+                            locations?.map((location) => (
+                              <SelectItem key={location.id} value={location.id}>
+                                 <div>
+                                   <div className="font-medium">{location.address || location.name}</div>
+                                   {location.address && location.name && (
+                                     <div className="text-sm text-muted-foreground">{location.name}</div>
+                                   )}
+                                 </div>
+                              </SelectItem>
+                            ))
+                          )}
                        </SelectContent>
                     </Select>
                     <FormMessage />
