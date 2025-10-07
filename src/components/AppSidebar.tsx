@@ -63,6 +63,7 @@ export function AppSidebar() {
     { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/', roles: [] as const },
     { id: 'clients', label: 'Clients', icon: Users, path: '/clients', roles: ['admin', 'ops_manager', 'sales'] as const },
     { id: 'routes', label: 'Routes', icon: MapPin, path: '/routes/today', roles: ['admin', 'ops_manager', 'dispatcher'] as const },
+    { id: 'driver-dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/driver/dashboard', roles: ['driver'] as const },
     { id: 'driver', label: 'My Routes', icon: UserCheck, path: '/routes/driver', roles: ['driver'] as const },
     { id: 'add-pickup', label: 'Add Pickup', icon: PackageOpen, path: '/book', roles: ['driver'] as const },
     { id: 'employees', label: 'Employees', icon: UserCheck, path: '/employees', roles: ['admin'] as const },
