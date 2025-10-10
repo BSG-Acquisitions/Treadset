@@ -111,6 +111,7 @@ export function DriverManifestCreationWizard({
   // Signature refs
   const generatorSigRef = useRef<SignatureCanvas>(null);
   const haulerSigRef = useRef<SignatureCanvas>(null);
+  const contentScrollRef = useRef<HTMLDivElement>(null);
   const [genSigPath, setGenSigPath] = useState<string>('');
   const [haulSigPath, setHaulSigPath] = useState<string>('');
   const form = useForm<ManifestFormData>({
