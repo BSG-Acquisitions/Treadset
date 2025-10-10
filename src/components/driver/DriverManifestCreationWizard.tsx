@@ -273,10 +273,7 @@ hauler_print_name: "",
 
   // Scroll to top when step changes
   useEffect(() => {
-    const scrollContainer = document.querySelector('.max-h-\\[50vh\\]');
-    if (scrollContainer) {
-      scrollContainer.scrollTop = 0;
-    }
+    contentScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
   }, [step]);
 
   // Ensure generator printed name starts blank on first visit to Signatures step

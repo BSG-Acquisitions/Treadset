@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -41,7 +41,7 @@ import { format } from "date-fns";
 
 const driverPickupSchema = z.object({
   client_id: z.string().min(1, "Please select a client"),
-  location_id: z.string().min(1, "Please select a location"),
+  location_id: z.string().optional(),
   pickup_date: z.date({ required_error: "Please select a pickup date" }),
   preferred_window: z.string().optional(),
   pte_count: z.number().min(0, "PTE count must be 0 or greater").default(0),
@@ -97,8 +97,14 @@ export function DriverSchedulePickupDialog({ trigger }: DriverSchedulePickupDial
     form.setValue("location_id", "");
   }
 
-  const clients = clientsData?.data || [];
-  const locations = locationsData || [];
+const clients = clientsData?.data || [];
+const locations = locationsData || [];
+
+useEffect(() => {
+  if (selectedClientId && locations.length > 0) {
+    form.setValue("location_id", locations[0].id);
+  }
+}, [selectedClientId, locations, form]);
 
   const onSubmit = async (data: DriverPickupFormData) => {
     try {
@@ -111,7 +117,7 @@ export function DriverSchedulePickupDialog({ trigger }: DriverSchedulePickupDial
 
       await schedulePickup.mutateAsync({
         clientId: data.client_id,
-        locationId: data.location_id,
+        locationId: data.location_id || undefined,
         pickupDate: format(data.pickup_date, 'yyyy-MM-dd'),
         preferredWindow: data.preferred_window ? mapPreferredWindow(data.preferred_window) : 'Any',
         pteCount: data.pte_count,
@@ -221,33 +227,58 @@ export function DriverSchedulePickupDialog({ trigger }: DriverSchedulePickupDial
               )}
             />
 
-            {/* Location Selection */}
+            {/* Location / Service Address */}
             {selectedClientId && (
               <FormField
                 control={form.control}
                 name="location_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Location *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <FormLabel>Service Address</FormLabel>
+                    {selectedClient && (
+                      <div className="mb-2 p-3 bg-muted rounded-md">
+                        <div className="text-sm font-medium">Client Address:</div>
+                        <div className="text-sm text-muted-foreground">
+                          {(() => {
+                            const address = selectedClient.physical_address || selectedClient.mailing_address;
+                            const city = selectedClient.physical_city || selectedClient.city;
+                            const state = selectedClient.physical_state || selectedClient.state;
+                            const zip = selectedClient.physical_zip || selectedClient.zip;
+                            return address ? `${address}, ${city}, ${state} ${zip}` : "No address on file";
+                          })()}
+                        </div>
+                        {locations.length > 0 && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            Or select a different location below
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <Select onValueChange={field.onChange} value={field.value} disabled={locations.length === 0}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select location" />
+                          <SelectValue placeholder={
+                            locations.length === 0
+                              ? "Using client address above"
+                              : "Or select alternate location"
+                          } />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {locations.map((location) => (
-                          <SelectItem key={location.id} value={location.id}>
-                            <div>
-                              <div className="font-medium">
-                                {location.name || 'Primary Location'}
+                        {locations.length > 0 ? (
+                          locations.map((location) => (
+                            <SelectItem key={location.id} value={location.id}>
+                              <div>
+                                <div className="font-medium">{location.name || 'Primary Location'}</div>
+                                <div className="text-sm text-muted-foreground">{location.address}</div>
                               </div>
-                              <div className="text-sm text-muted-foreground">
-                                {location.address}
-                              </div>
-                            </div>
-                          </SelectItem>
-                        ))}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <div className="p-2 text-sm text-muted-foreground">
+                            No alternate locations. Using client address.
+                          </div>
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />
