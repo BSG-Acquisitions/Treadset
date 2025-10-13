@@ -334,7 +334,7 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
                     </FormControl>
                     <SelectContent className="z-50 bg-popover max-h-[300px]">
                       {allTrucks.map((truck) => (
-                        <SelectItem key={truck.id} value={truck.id} className="cursor-pointer">
+                        <SelectItem key={truck.id} value={truck.id} textValue={truck.name} className="cursor-pointer">
                           <div className="flex items-start gap-2 w-full max-w-[280px]">
                             <div className="flex-shrink-0 mt-0.5">
                               {truck.type === 'vehicle' ? (
