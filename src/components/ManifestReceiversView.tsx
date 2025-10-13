@@ -148,20 +148,66 @@ export const ManifestReceiversView = () => {
    }, [pendingReceiverSignature?.length]);
 
   // Build a map of client_id -> company_name for display without DB joins
+  // Also fetch dropoff customer names for dropoff manifests
   useEffect(() => {
     const fetchClientNames = async () => {
       try {
-        const ids = new Set<string>();
-        (manifests || []).forEach((m: any) => m.client_id && ids.add(m.client_id));
-        (fallbackPending || []).forEach((m: any) => m.client_id && ids.add(m.client_id));
-        if (ids.size === 0) return;
-        const { data, error } = await supabase
+        const clientIds = new Set<string>();
+        const manifestIds = new Set<string>();
+        
+        (manifests || []).forEach((m: any) => {
+          if (m.client_id) clientIds.add(m.client_id);
+          manifestIds.add(m.id);
+        });
+        (fallbackPending || []).forEach((m: any) => {
+          if (m.client_id) clientIds.add(m.client_id);
+          manifestIds.add(m.id);
+        });
+        
+        if (clientIds.size === 0) return;
+        
+        // Fetch client names
+        const { data: clientData, error: clientError } = await supabase
           .from('clients')
           .select('id, company_name')
-          .in('id', Array.from(ids));
-        if (error) throw error;
+          .in('id', Array.from(clientIds));
+        if (clientError) throw clientError;
+        
         const map: Record<string, string> = {};
-        (data || []).forEach((c: any) => { map[c.id] = c.company_name; });
+        (clientData || []).forEach((c: any) => { map[c.id] = c.company_name; });
+        
+        // For manifests with "Dropoff Customers" as the client, fetch the actual dropoff customer name
+        const dropoffManifests = (manifests || []).concat(fallbackPending || [])
+          .filter((m: any) => map[m.client_id] === 'Dropoff Customers');
+        
+        if (dropoffManifests.length > 0) {
+          const { data: dropoffData, error: dropoffError } = await supabase
+            .from('dropoffs')
+            .select(`
+              manifest_id,
+              dropoff_customer_id,
+              dropoff_customers (
+                company_name,
+                contact_name
+              )
+            `)
+            .in('manifest_id', dropoffManifests.map(m => m.id))
+            .not('manifest_id', 'is', null);
+          
+          if (!dropoffError && dropoffData) {
+            dropoffData.forEach((d: any) => {
+              if (d.manifest_id && d.dropoff_customers) {
+                const name = d.dropoff_customers.company_name || d.dropoff_customers.contact_name || 'Unknown Dropoff Customer';
+                // Find the manifest and override its client name
+                const manifest = dropoffManifests.find((m: any) => m.id === d.manifest_id);
+                if (manifest?.client_id) {
+                  map[manifest.client_id] = name;
+                }
+              }
+            });
+          }
+        }
+        
         setClientNames(map);
       } catch (e) {
         console.error('Failed fetching client names', e);
