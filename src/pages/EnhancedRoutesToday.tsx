@@ -97,6 +97,8 @@ export default function EnhancedRoutesToday() {
   const [showDriverView, setShowDriverView] = useState(false);
   const [movePickupOpen, setMovePickupOpen] = useState(false);
   const [selectedPickupToMove, setSelectedPickupToMove] = useState<any>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [pickupToDelete, setPickupToDelete] = useState<any>(null);
   const lastOptimizeRef = useRef<number>(0);
 
   // Get 7 days starting from current week
@@ -775,8 +777,41 @@ export default function EnhancedRoutesToday() {
             onOpenChange={setMovePickupOpen}
             pickup={selectedPickupToMove}
             currentWeek={currentWeek}
+            onDelete={() => {
+              setPickupToDelete(selectedPickupToMove);
+              setDeleteDialogOpen(true);
+              setMovePickupOpen(false);
+            }}
           />
         )}
+
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remove Stop</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to permanently remove this pickup for{' '}
+                <span className="font-semibold">{pickupToDelete?.client?.company_name}</span>?
+                This action cannot be undone and will delete all associated assignments.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setPickupToDelete(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={() => {
+                  if (pickupToDelete?.id) {
+                    deletePickup.mutate(pickupToDelete.id);
+                  }
+                  setDeleteDialogOpen(false);
+                  setPickupToDelete(null);
+                }}
+              >
+                Remove Stop
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         </div>
       </main>
     </div>
