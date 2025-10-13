@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { usePickups } from "@/hooks/usePickups";
+import { usePickups, useDeletePickup } from "@/hooks/usePickups";
 import { CompletePickupDialog } from "@/components/CompletePickupDialog";
 import { MovePickupDialog } from "@/components/MovePickupDialog";
 import { ManifestPDFControls } from "@/components/ManifestPDFControls";
@@ -7,15 +7,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
-import { Building, MapPin, Calendar, CheckCircle2, Clock, AlertCircle, Package, MoreVertical, Move, ChevronLeft, ChevronRight } from "lucide-react";
+import { Building, MapPin, Calendar, CheckCircle2, Clock, AlertCircle, Package, MoreVertical, Move, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { format, addDays, subDays, startOfWeek, addWeeks, subWeeks } from "date-fns";
 
 export default function RoutesToday() {
   const [currentWeek, setCurrentWeek] = useState(startOfWeek(new Date(), { weekStartsOn: 0 }));
   const [movePickupOpen, setMovePickupOpen] = useState(false);
   const [selectedPickupToMove, setSelectedPickupToMove] = useState<any>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [pickupToDelete, setPickupToDelete] = useState<any>(null);
+  const deletePickup = useDeletePickup();
   
   // Get 7 days starting from current week
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeek, i));
@@ -246,6 +250,17 @@ export default function RoutesToday() {
                                         <Move className="h-4 w-4 mr-2" />
                                         Move to Different Date
                                       </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem 
+                                        onClick={() => {
+                                          setPickupToDelete(pickup);
+                                          setDeleteDialogOpen(true);
+                                        }}
+                                        className="text-destructive focus:text-destructive"
+                                      >
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Remove Stop
+                                      </DropdownMenuItem>
                                     </DropdownMenuContent>
                                   </DropdownMenu>
                                 </div>
@@ -281,6 +296,34 @@ export default function RoutesToday() {
             pickup={selectedPickupToMove}
           />
         )}
+
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remove Stop</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to permanently remove this pickup for{' '}
+                <span className="font-semibold">{pickupToDelete?.client?.company_name}</span>?
+                This action cannot be undone and will delete all associated assignments.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (pickupToDelete) {
+                    deletePickup.mutate(pickupToDelete.id);
+                    setDeleteDialogOpen(false);
+                    setPickupToDelete(null);
+                  }
+                }}
+                className="bg-destructive hover:bg-destructive/90"
+              >
+                Remove Stop
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </main>
     </div>
   );
