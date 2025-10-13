@@ -1,7 +1,6 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
-import { useSessionValidation } from '@/hooks/useSessionValidation';
 
 type AppRole = 'admin' | 'ops_manager' | 'dispatcher' | 'driver' | 'sales' | 'client' | 'hauler';
 
@@ -50,9 +49,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<AuthUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  
-  // Use session validation hook to prevent auth expiry
-  useSessionValidation();
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const validatingRef = useRef(false);
+
+  // Session validation to prevent auth expiry
+  const validateSession = useCallback(async () => {
+    if (validatingRef.current) return true;
+    
+    validatingRef.current = true;
+    
+    try {
+      const { data, error } = await supabase.auth.getSession();
+      
+      if (error || !data.session) {
+        console.warn('Session validation failed:', error);
+        await supabase.auth.signOut();
+        return false;
+      }
+
+      const now = Math.floor(Date.now() / 1000);
+      if (data.session.expires_at && data.session.expires_at < now) {
+        console.warn('Session expired');
+        await supabase.auth.signOut();
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Session validation error:', error);
+      return false;
+    } finally {
+      validatingRef.current = false;
+    }
+  }, []);
 
   const getCurrentOrgSlug = () => {
     if (typeof window !== 'undefined') {
@@ -282,8 +311,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       mounted = false;
       subscription.unsubscribe();
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
     };
   }, []);
+
+  // Set up session validation interval
+  useEffect(() => {
+    if (!session) {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      return;
+    }
+
+    // Validate session every 10 minutes
+    intervalRef.current = setInterval(validateSession, 10 * 60 * 1000);
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [session, validateSession]);
 
   // Check if user needs onboarding
   useEffect(() => {
