@@ -29,7 +29,6 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
   const [otrCount, setOtrCount] = useState("");
   const [tractorCount, setTractorCount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
-  const [requiresManifest, setRequiresManifest] = useState(false);
   const [notes, setNotes] = useState("");
   
   // New customer fields
@@ -82,7 +81,7 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
         computed_revenue: subtotal,
         payment_method: paymentMethod,
         payment_status: paymentMethod === 'invoice' ? 'pending' : 'paid',
-        requires_manifest: requiresManifest,
+        requires_manifest: true, // All dropoffs require manifests
         notes: notes || null,
         status: 'completed'
       });
@@ -93,7 +92,6 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
       setOtrCount("");
       setTractorCount("");
       setPaymentMethod("cash");
-      setRequiresManifest(false);
       setNotes("");
       
       onOpenChange(false);
@@ -250,22 +248,16 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
             </Select>
           </div>
 
-          {/* Options */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label className="flex items-center gap-2">
-                  <FileText className="h-4 w-4" />
-                  Requires Manifest
-                </Label>
-                <div className="text-sm text-muted-foreground">
-                  Generate manifest document for this drop-off
-                </div>
+          {/* Manifest Notice */}
+          <div className="bg-muted p-4 rounded-lg border border-border">
+            <div className="flex items-start gap-3">
+              <FileText className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+              <div className="space-y-1">
+                <p className="font-medium text-sm">Manifest Required</p>
+                <p className="text-sm text-muted-foreground">
+                  A manifest will be automatically generated for this drop-off after processing
+                </p>
               </div>
-              <Switch
-                checked={requiresManifest}
-                onCheckedChange={setRequiresManifest}
-              />
             </div>
           </div>
 

@@ -232,7 +232,7 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
 
                 {/* Actions - Mobile Full Width */}
                 <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-border/50">
-                  {dropoff.requires_manifest && !dropoff.manifest_id && (
+                  {!dropoff.manifest_id && (
                     <Button 
                       size="sm" 
                       variant="outline"
@@ -249,10 +249,22 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
                     </Button>
                   )}
                   
-                  {dropoff.manifest_id && (
-                    <Badge variant="default" className="w-fit">
+                  {dropoff.manifest_id && dropoff.manifest_pdf_path && (
+                    <Button 
+                      size="sm" 
+                      variant="default"
+                      onClick={() => window.open(`https://wvjehbozyxhmgdljwsiz.supabase.co/storage/v1/object/public/${dropoff.manifest_pdf_path}`, '_blank')}
+                      className="w-full sm:w-auto"
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      View Manifest
+                    </Button>
+                  )}
+                  
+                  {dropoff.manifest_id && !dropoff.manifest_pdf_path && (
+                    <Badge variant="secondary" className="w-fit">
                       <FileText className="h-3 w-3 mr-1" />
-                      Manifest Generated
+                      Manifest Processing...
                     </Badge>
                   )}
                   
@@ -268,6 +280,12 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
                           <Edit className="h-4 w-4 mr-2" />
                           Edit Drop-off
                         </DropdownMenuItem>
+                        {dropoff.manifest_id && dropoff.manifest_pdf_path && (
+                          <DropdownMenuItem onClick={() => window.open(`https://wvjehbozyxhmgdljwsiz.supabase.co/storage/v1/object/public/${dropoff.manifest_pdf_path}`, '_blank')}>
+                            <FileText className="h-4 w-4 mr-2" />
+                            View Manifest
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem>
                           <Receipt className="h-4 w-4 mr-2" />
                           View Receipt
