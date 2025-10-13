@@ -19,6 +19,7 @@ export default function RoutesToday() {
   const [selectedPickupToMove, setSelectedPickupToMove] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [pickupToDelete, setPickupToDelete] = useState<any>(null);
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
   const deletePickup = useDeletePickup();
   
   // Get 7 days starting from current week
@@ -157,7 +158,9 @@ export default function RoutesToday() {
                             <p className="text-xs text-muted-foreground">No pickups</p>
                           </div>
                         ) : (
-                          dayData.pickups.map((pickup) => {
+                          dayData.pickups
+                            .filter((p) => !deletedIds.has(p.id))
+                            .map((pickup) => {
                             const StatusIcon = getStatusIcon(pickup.status);
                             return (
                               <div
@@ -292,6 +295,7 @@ export default function RoutesToday() {
               <AlertDialogAction
                 onClick={() => {
                   if (pickupToDelete) {
+                    setDeletedIds(prev => new Set(prev).add(pickupToDelete.id));
                     deletePickup.mutate(pickupToDelete.id);
                     setDeleteDialogOpen(false);
                     setPickupToDelete(null);
