@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
+import { useSessionValidation } from '@/hooks/useSessionValidation';
 
 type AppRole = 'admin' | 'ops_manager' | 'dispatcher' | 'driver' | 'sales' | 'client' | 'hauler';
 
@@ -49,6 +50,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<AuthUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Use session validation hook to prevent auth expiry
+  useSessionValidation();
 
   const getCurrentOrgSlug = () => {
     if (typeof window !== 'undefined') {
