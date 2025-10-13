@@ -348,12 +348,12 @@ export default function Index() {
               <RowCarousel
                 title=""
                 items={todayPickups.map(pickup => ({
-                  id: pickup.id, // Use pickup.id instead of client_id for unique keys
+                  id: pickup.id,
                   name: pickup.client?.company_name || 'Unknown Client',
                   capacity: pickup.pte_count || 0,
                   lastPickup: pickup.pickup_date,
-                  revenue: pickup.computed_revenue || Math.floor(Math.random() * 15000) + 5000,
-                  pickupsThisMonth: Math.floor(Math.random() * 8) + 3,
+                  revenue: pickup.computed_revenue || 0,
+                  pickupsThisMonth: 0, // Will be populated from client data if available
                   status: pickup.status === 'completed' ? 'active' : 
                    pickup.status === 'overdue' ? 'overdue' : 'scheduled',
                   address: pickup.location?.address || 'Detroit Metro Area'
