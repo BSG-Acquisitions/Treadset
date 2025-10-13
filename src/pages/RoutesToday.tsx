@@ -294,6 +294,12 @@ export default function RoutesToday() {
             open={movePickupOpen}
             onOpenChange={setMovePickupOpen}
             pickup={selectedPickupToMove}
+            currentWeek={currentWeek}
+            onDelete={() => {
+              setPickupToDelete(selectedPickupToMove);
+              setDeleteDialogOpen(true);
+              setMovePickupOpen(false);
+            }}
           />
         )}
 

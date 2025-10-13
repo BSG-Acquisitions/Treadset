@@ -34,9 +34,10 @@ interface MovePickupDialogProps {
     };
   };
   currentWeek?: Date; // Optional: if provided, show week view with quick day selection
+  onDelete?: () => void; // Optional: callback to handle deletion
 }
 
-export function MovePickupDialog({ open, onOpenChange, pickup, currentWeek }: MovePickupDialogProps) {
+export function MovePickupDialog({ open, onOpenChange, pickup, currentWeek, onDelete }: MovePickupDialogProps) {
   const [newDate, setNewDate] = useState<Date>();
   const movePickup = useMovePickup();
 
@@ -170,23 +171,40 @@ export function MovePickupDialog({ open, onOpenChange, pickup, currentWeek }: Mo
             </Popover>
           </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                onOpenChange(false);
-                setNewDate(undefined);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={!newDate || movePickup.isPending}
-            >
-              {movePickup.isPending ? "Moving..." : "Move Pickup"}
-            </Button>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <div className="flex-1">
+              {onDelete && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() => {
+                    onDelete();
+                    onOpenChange(false);
+                  }}
+                  className="w-full sm:w-auto"
+                >
+                  Remove Stop
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  onOpenChange(false);
+                  setNewDate(undefined);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={!newDate || movePickup.isPending}
+              >
+                {movePickup.isPending ? "Moving..." : "Move Pickup"}
+              </Button>
+            </div>
           </DialogFooter>
         </form>
       </DialogContent>
