@@ -118,13 +118,7 @@ export function ClientCard({
           </div>
 
           {/* Enhanced metrics row */}
-          <div className="grid grid-cols-2 gap-3 py-2">
-            <div className="space-y-1">
-              <div className="text-xs text-muted-foreground">Revenue</div>
-              <div className="font-semibold text-brand-success">
-                ${revenue.toLocaleString()}
-              </div>
-            </div>
+          <div className="py-2">
             <div className="space-y-1">
               <div className="text-xs text-muted-foreground">This Month</div>
               <div className="font-semibold text-primary">

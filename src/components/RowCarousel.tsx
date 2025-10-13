@@ -74,7 +74,6 @@ export function RowCarousel({ title, items, viewAllLink }: RowCarouselProps) {
                      capacity={item.capacity} 
                      lastPickup={item.lastPickup}
                      address={item.address}
-                     revenue={item.revenue || 0}
                      pickupsThisMonth={item.pickupsThisMonth || 0}
                      status={item.status || 'scheduled'}
                    />
