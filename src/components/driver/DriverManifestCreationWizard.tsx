@@ -78,6 +78,7 @@ export function DriverManifestCreationWizard({
   const [haulerData, setHaulerData] = useState<any>(null);
   const [assignmentData, setAssignmentData] = useState<any>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [resolvedClientId, setResolvedClientId] = useState<string | null>(null);
   const [manualWeightOverride, setManualWeightOverride] = useState<boolean>(false);
   const [manifestCreated, setManifestCreated] = useState(false);
   const [createdManifestId, setCreatedManifestId] = useState<string | null>(null);
@@ -220,6 +221,13 @@ hauler_print_name: "",
         ]);
 
         setPickupData({ ...pickupRow, client, location });
+        // Resolve client_id from pickup or prop
+        const finalClientId = pickupRow.client_id || clientId;
+        if (!finalClientId) {
+          setLoadError('Client ID is missing. Cannot create manifest without a valid client.');
+          return;
+        }
+        setResolvedClientId(finalClientId);
         setLoadError(null);
 
         // Get assignment for this pickup to find hauler
@@ -444,8 +452,19 @@ hauler_print_name: "",
         ? Number(data.weight_tons_manual)
         : (tonsFromNet > 0 ? tonsFromNet : tonsFromPte);
 
+      // Validate client_id before creating manifest
+      if (!resolvedClientId) {
+        toast({
+          title: 'Missing Client Information',
+          description: 'Cannot create manifest without a valid client ID.',
+          variant: 'destructive',
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
       const manifestData = {
-        client_id: clientId,
+        client_id: resolvedClientId,
         location_id: pickupData.location_id,
         pickup_id: pickupId,
         driver_id: assignmentData?.driver_id,
