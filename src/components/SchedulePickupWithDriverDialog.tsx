@@ -332,24 +332,28 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
                         <SelectValue placeholder="Select truck or hauler" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent className="z-50 bg-popover">
+                    <SelectContent className="z-50 bg-popover max-h-[300px]">
                       {allTrucks.map((truck) => (
-                        <SelectItem key={truck.id} value={truck.id}>
-                          <div className="flex items-center gap-2">
-                            {truck.type === 'vehicle' ? (
-                              <Truck className="h-4 w-4 text-primary" />
-                            ) : (
-                              <Building className="h-4 w-4 text-secondary" />
-                            )}
-                            <div>
-                              <div className="font-medium">{truck.name}</div>
+                        <SelectItem key={truck.id} value={truck.id} className="cursor-pointer">
+                          <div className="flex items-start gap-2 w-full max-w-[280px]">
+                            <div className="flex-shrink-0 mt-0.5">
+                              {truck.type === 'vehicle' ? (
+                                <Truck className="h-4 w-4 text-primary" />
+                              ) : (
+                                <Building className="h-4 w-4 text-secondary" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium truncate">{truck.name}</div>
                               {truck.details && (
-                                <div className="text-sm text-muted-foreground">{truck.details}</div>
+                                <div className="text-sm text-muted-foreground truncate">
+                                  {truck.details}
+                                </div>
                               )}
                               {truck.driverInfo && (
                                 <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                                  <User className="h-3 w-3" />
-                                  {truck.driverInfo}
+                                  <User className="h-3 w-3 flex-shrink-0" />
+                                  <span className="truncate">{truck.driverInfo}</span>
                                 </div>
                               )}
                             </div>

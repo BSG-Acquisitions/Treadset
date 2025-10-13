@@ -360,29 +360,31 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
                         <SelectValue placeholder="Select a truck or hauler" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent className="z-50 bg-popover">
+                    <SelectContent className="z-50 bg-popover max-h-[300px]">
                       {allTrucks.map((truck) => (
-                        <SelectItem key={truck.id} value={truck.id}>
-                          <div className="flex flex-col items-start">
-                            <div className="flex items-center gap-2">
+                        <SelectItem key={truck.id} value={truck.id} className="cursor-pointer">
+                          <div className="flex items-start gap-2 w-full max-w-[280px]">
+                            <div className="flex-shrink-0 mt-0.5">
                               {truck.type === 'vehicle' ? (
                                 <Truck className="h-4 w-4 text-primary" />
                               ) : (
                                 <Building className="h-4 w-4 text-secondary" />
                               )}
-                              <span className="font-medium">{truck.name}</span>
                             </div>
-                            {truck.details && (
-                              <span className="text-muted-foreground text-sm">
-                                {truck.details}
-                              </span>
-                            )}
-                            {truck.driverInfo && (
-                              <span className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                                <User className="h-3 w-3" />
-                                {truck.driverInfo}
-                              </span>
-                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium truncate">{truck.name}</div>
+                              {truck.details && (
+                                <div className="text-sm text-muted-foreground truncate">
+                                  {truck.details}
+                                </div>
+                              )}
+                              {truck.driverInfo && (
+                                <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                                  <User className="h-3 w-3 flex-shrink-0" />
+                                  <span className="truncate">{truck.driverInfo}</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </SelectItem>
                       ))}
