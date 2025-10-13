@@ -162,7 +162,11 @@ export default function RoutesToday() {
                             return (
                               <div
                                 key={pickup.id}
-                                className="p-3 border rounded-lg hover:bg-secondary/10 transition-colors space-y-2 bg-card"
+                                className="p-3 border rounded-lg hover:bg-secondary/10 transition-colors space-y-2 bg-card cursor-pointer"
+                                onClick={() => {
+                                  setSelectedPickupToMove(pickup);
+                                  setMovePickupOpen(true);
+                                }}
                               >
                                 {/* Client Name */}
                                 <div className="flex items-start gap-2">
@@ -220,7 +224,7 @@ export default function RoutesToday() {
                                 )}
 
                                 {/* Actions */}
-                                <div className="flex gap-2 pt-2">
+                                <div className="flex gap-2 pt-2" onClick={(e) => e.stopPropagation()}>
                                   <CompletePickupDialog
                                     pickup={pickup}
                                     trigger={
@@ -233,41 +237,11 @@ export default function RoutesToday() {
                                       </Button>
                                     }
                                   />
-                                  
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button variant="outline" size="sm" className="px-2 h-8">
-                                        <MoreVertical className="h-3 w-3" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      <DropdownMenuItem 
-                                        onClick={() => {
-                                          setSelectedPickupToMove(pickup);
-                                          setMovePickupOpen(true);
-                                        }}
-                                      >
-                                        <Move className="h-4 w-4 mr-2" />
-                                        Move to Different Date
-                                      </DropdownMenuItem>
-                                      <DropdownMenuSeparator />
-                                      <DropdownMenuItem 
-                                        onClick={() => {
-                                          setPickupToDelete(pickup);
-                                          setDeleteDialogOpen(true);
-                                        }}
-                                        className="text-destructive focus:text-destructive"
-                                      >
-                                        <Trash2 className="h-4 w-4 mr-2" />
-                                        Remove Stop
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
                                 </div>
 
                                 {/* Manifest PDF */}
                                 {pickup.status === 'completed' && pickup.manifest_pdf_path && (
-                                  <div className="pt-2 border-t">
+                                  <div className="pt-2 border-t" onClick={(e) => e.stopPropagation()}>
                                     <ManifestPDFControls 
                                       manifestId={pickup.manifest_id}
                                       acroformPdfPath={pickup.manifest_pdf_path}
