@@ -335,15 +335,10 @@ export default function Index() {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6">
-              <div className="mb-4 flex justify-between items-center">
+              <div className="mb-4">
                 <span className="text-sm text-muted-foreground">
                   {todayPickups.length} pickups scheduled for today
                 </span>
-                <Link to="/routes/today">
-                  <Button variant="brand" size="sm">
-                    ✅ Complete Pickups
-                  </Button>
-                </Link>
               </div>
               <RowCarousel
                 title=""
