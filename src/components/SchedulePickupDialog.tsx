@@ -357,7 +357,21 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a truck or hauler" />
+                        <SelectValue placeholder="Select a truck or hauler">
+                          {field.value && (() => {
+                            const selected = allTrucks.find(t => t.id === field.value);
+                            return selected ? (
+                              <div className="flex items-center gap-2 truncate">
+                                {selected.type === 'vehicle' ? (
+                                  <Truck className="h-4 w-4 text-primary flex-shrink-0" />
+                                ) : (
+                                  <Building className="h-4 w-4 text-secondary flex-shrink-0" />
+                                )}
+                                <span className="truncate">{selected.name}</span>
+                              </div>
+                            ) : null;
+                          })()}
+                        </SelectValue>
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent className="z-50 bg-popover max-h-[300px]">
