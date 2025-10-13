@@ -340,98 +340,144 @@ export const ManifestReceiversView = () => {
         </TabsList>
 
         <TabsContent value="pending">
-          {viewMode === "table" ? (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Client</TableHead>
-                    <TableHead>Manifest #</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredPending.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                        No pending manifests
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredPending.map((manifest) => (
-                      <TableRow key={manifest.id}>
-                        <TableCell>
-                          <div className="font-semibold text-base">
-                            {clientNames[manifest.client_id] || 'Unknown Client'}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {manifest.manifest_number}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {manifest.signed_at ? 
-                            format(new Date(manifest.signed_at), 'MMM d, h:mm a') : 'N/A'
-                          }
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button 
-                            size="sm" 
-                            onClick={() => handleAddReceiverSignature(manifest.id)}
-                          >
-                            Sign
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-              {filteredPending.length === 0 ? (
-                <div className="col-span-full text-center py-8 text-muted-foreground">
+          {(() => {
+            // Group pending manifests by date
+            const groupPendingByDate = (manifests: any[]) => {
+              const groups: Record<string, any[]> = {};
+              
+              manifests.forEach(manifest => {
+                const date = manifest.signed_at ? new Date(manifest.signed_at) : new Date(manifest.created_at);
+                const dateKey = format(date, 'MMMM d, yyyy');
+                
+                if (!groups[dateKey]) {
+                  groups[dateKey] = [];
+                }
+                groups[dateKey].push(manifest);
+              });
+              
+              // Sort dates descending (newest first)
+              return Object.entries(groups).sort((a, b) => {
+                return new Date(b[0]).getTime() - new Date(a[0]).getTime();
+              });
+            };
+            
+            const groupedPending = groupPendingByDate(filteredPending);
+            
+            if (filteredPending.length === 0) {
+              return (
+                <div className="text-center py-8 text-muted-foreground">
                   No pending manifests
                 </div>
-              ) : (
-                filteredPending.map((manifest) => (
-                  <Card key={manifest.id}>
-                    <CardContent className="p-4">
-                      <div className="space-y-3">
-                        <div>
-                          <h3 className="font-bold text-lg mb-2">
-                            {clientNames[manifest.client_id] || 'Unknown Client'}
-                          </h3>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline">
-                              {manifest.manifest_number}
-                            </Badge>
-                            {manifest.signed_at && (
-                              <span className="text-xs text-muted-foreground">
-                                {format(new Date(manifest.signed_at), 'MMM d, h:mm a')}
-                              </span>
-                            )}
-                          </div>
+              );
+            }
+            
+            return viewMode === "table" ? (
+              <div className="space-y-4">
+                {groupedPending.map(([date, manifests]) => (
+                  <Collapsible key={date} defaultOpen>
+                    <div className="rounded-md border">
+                      <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-accent">
+                        <div className="flex items-center gap-2">
+                          <ChevronRight className="h-4 w-4 transition-transform [[data-state=open]>&]:rotate-90" />
+                          <h3 className="font-semibold">{date}</h3>
+                          <Badge variant="secondary">{manifests.length}</Badge>
                         </div>
-                        
-                        <Button 
-                          size="sm" 
-                          className="w-full"
-                          onClick={() => handleAddReceiverSignature(manifest.id)}
-                        >
-                          <Signature className="h-4 w-4 mr-2" />
-                          Sign for {clientNames[manifest.client_id] || 'Client'}
-                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Client</TableHead>
+                              <TableHead>Manifest #</TableHead>
+                              <TableHead>Time</TableHead>
+                              <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {manifests.map((manifest) => (
+                              <TableRow key={manifest.id}>
+                                <TableCell>
+                                  <div className="font-semibold text-base">
+                                    {clientNames[manifest.client_id] || 'Unknown Client'}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline">
+                                    {manifest.manifest_number}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-muted-foreground text-sm">
+                                  {manifest.signed_at ? 
+                                    format(new Date(manifest.signed_at), 'h:mm a') : 'N/A'
+                                  }
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <Button 
+                                    size="sm" 
+                                    onClick={() => handleAddReceiverSignature(manifest.id)}
+                                  >
+                                    Sign
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </CollapsibleContent>
+                    </div>
+                  </Collapsible>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {groupedPending.map(([date, manifests]) => (
+                  <Collapsible key={date} defaultOpen>
+                    <CollapsibleTrigger className="flex items-center gap-2 w-full mb-3 hover:bg-accent p-2 rounded">
+                      <ChevronRight className="h-4 w-4 transition-transform [[data-state=open]>&]:rotate-90" />
+                      <h3 className="font-semibold">{date}</h3>
+                      <Badge variant="secondary">{manifests.length}</Badge>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 pl-6">
+                        {manifests.map((manifest) => (
+                          <Card key={manifest.id}>
+                            <CardContent className="p-4">
+                              <div className="space-y-3">
+                                <div>
+                                  <h3 className="font-bold text-lg mb-2">
+                                    {clientNames[manifest.client_id] || 'Unknown Client'}
+                                  </h3>
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant="outline">
+                                      {manifest.manifest_number}
+                                    </Badge>
+                                    {manifest.signed_at && (
+                                      <span className="text-xs text-muted-foreground">
+                                        {format(new Date(manifest.signed_at), 'h:mm a')}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                <Button 
+                                  size="sm" 
+                                  className="w-full"
+                                  onClick={() => handleAddReceiverSignature(manifest.id)}
+                                >
+                                  <Signature className="h-4 w-4 mr-2" />
+                                  Sign for {clientNames[manifest.client_id] || 'Client'}
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
                       </div>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </div>
-          )}
+                    </CollapsibleContent>
+                  </Collapsible>
+                ))}
+              </div>
+            );
+          })()}
         </TabsContent>
 
         <TabsContent value="completed">
