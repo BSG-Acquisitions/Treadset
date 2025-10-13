@@ -67,18 +67,18 @@ export function RowCarousel({ title, items, viewAllLink }: RowCarouselProps) {
                 key={item.id} 
                 className="pl-2 basis-full sm:basis-1/2 lg:basis-1/3 xl:basis-1/4 2xl:basis-1/5"
               >
-                <div className="h-full">
+                 <div className="h-full">
                    <ClientCard 
                      id={item.id} 
                      name={item.name} 
                      capacity={item.capacity} 
                      lastPickup={item.lastPickup}
                      address={item.address}
-                     revenue={item.revenue || Math.floor(Math.random() * 50000) + 5000}
-                     pickupsThisMonth={item.pickupsThisMonth || Math.floor(Math.random() * 12) + 1}
-                     status={item.status || (item.capacity >= 90 ? 'overdue' : Math.random() > 0.7 ? 'scheduled' : 'active')}
+                     revenue={item.revenue || 0}
+                     pickupsThisMonth={item.pickupsThisMonth || 0}
+                     status={item.status || 'scheduled'}
                    />
-                </div>
+                 </div>
               </CarouselItem>
             ))}
           </CarouselContent>
