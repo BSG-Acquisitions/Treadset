@@ -128,8 +128,9 @@ async function geocodeAddress(
     const encodedAddress = encodeURIComponent(address.trim());
     const params = new URLSearchParams({ 
       access_token: mapboxToken,
-      limit: '1',
-      types: 'address,poi' // Only precise address or point of interest
+      limit: '5', // Get top 5 results to find best match
+      types: 'address,poi', // Only precise address or point of interest
+      autocomplete: 'false' // Disable autocomplete for more precise results
     });
     
     if (opts?.country) params.set('country', opts.country);
@@ -138,45 +139,64 @@ async function geocodeAddress(
     
     const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodedAddress}.json?${params.toString()}`;
 
+    console.log(`🔍 Geocoding: "${address}"`);
     const response = await fetch(url);
     const data: MapboxGeocodeResponse = await response.json();
 
     if (data.features && data.features.length > 0) {
-      const feature = data.features[0];
-      const [lng, lat] = feature.center;
-      const placeTypes = feature.place_type || [];
-      const relevance = feature.relevance || 0;
-      
-      // Only accept address or POI results
-      const allowedTypes = ['address', 'poi'];
-      const isPrecise = placeTypes.some((t) => allowedTypes.includes(t));
-      if (!isPrecise) {
-        console.log(`❌ Rejected imprecise geocode (types: ${placeTypes.join(',')}) for: ${address}`);
+      // Find the most precise result within Detroit metro
+      let bestFeature: MapboxGeocodeFeature | null = null;
+      let bestScore = 0;
+
+      for (const feature of data.features) {
+        const [lng, lat] = feature.center;
+        const placeTypes = feature.place_type || [];
+        const relevance = feature.relevance || 0;
+        
+        // Skip if not precise enough
+        const allowedTypes = ['address', 'poi'];
+        const isPrecise = placeTypes.some((t) => allowedTypes.includes(t));
+        if (!isPrecise) continue;
+        
+        // Check if within Detroit metro bounds
+        const inDetroitBounds = isWithinDetroitMetro(lat, lng);
+        if (!inDetroitBounds) continue;
+        
+        // Calculate score based on relevance and precision
+        let score = relevance * 100;
+        if (placeTypes.includes('address')) score += 50; // Prefer addresses over POIs
+        
+        if (score > bestScore) {
+          bestScore = score;
+          bestFeature = feature;
+        }
+      }
+
+      if (!bestFeature) {
+        console.log(`❌ No precise Detroit metro results for: ${address}`);
         return null;
       }
+
+      const [lng, lat] = bestFeature.center;
+      const placeTypes = bestFeature.place_type || [];
+      const relevance = bestFeature.relevance || 0;
       
       // Extract county for validation
-      const county = extractCounty(feature);
+      const county = extractCounty(bestFeature);
       
       // Validate against Detroit metro area bounds
       const inDetroitBounds = isWithinDetroitMetro(lat, lng);
       const inDetroitCounty = county ? DETROIT_METRO_COUNTIES.includes(county) : false;
       
-      // Calculate confidence score (Mapbox relevance is 0-1, convert to percentage)
+      // Calculate confidence score
       let confidence = Math.round(relevance * 50); // Base score from relevance
-      if (isPrecise) confidence += 20;
-      if (inDetroitBounds) confidence += 15;
-      if (inDetroitCounty) confidence += 15;
+      if (placeTypes.includes('address')) confidence += 30; // Address is better than POI
+      if (inDetroitBounds) confidence += 10;
+      if (inDetroitCounty) confidence += 10;
       
       // Log validation results
-      console.log(`📍 Geocoded: ${address} -> (${lat}, ${lng})`);
-      console.log(`   County: ${county || 'unknown'}, In bounds: ${inDetroitBounds}, Confidence: ${confidence}%, Relevance: ${relevance}`);
-      
-      // Reject results outside Detroit metro area (unless very high relevance)
-      if (!inDetroitBounds && !inDetroitCounty && relevance < 0.8) {
-        console.log(`❌ Rejected: Outside Detroit metro area`);
-        return null;
-      }
+      console.log(`📍 Geocoded: ${address} -> (${lat.toFixed(6)}, ${lng.toFixed(6)})`);
+      console.log(`   Type: ${placeTypes.join(',')}, County: ${county || 'unknown'}, Confidence: ${confidence}%, Relevance: ${relevance.toFixed(2)}`);
       
       return { 
         lat, 
@@ -186,7 +206,7 @@ async function geocodeAddress(
       };
     }
 
-    console.log(`Geocoding failed for address: ${address}, no features returned`);
+    console.log(`❌ No results for: ${address}`);
     return null;
   } catch (error) {
     console.error('Error geocoding address:', error);
@@ -268,16 +288,26 @@ Deno.serve(async (req) => {
       const proximity = `${depot.lng},${depot.lat}`; // Mapbox uses lng,lat
       const bbox = `${depot.lng - 1.5},${depot.lat - 1},${depot.lng + 1},${depot.lat + 1}`; // ~100 mile radius
       
-      // Try geocoding with enhanced address
-      let coordinates = await geocodeAddress(enhancedAddress, mapboxToken, { 
+      // Try 1: Full address with business name for best precision
+      let coordinates = await geocodeAddress(`${location.name}, ${enhancedAddress}`, mapboxToken, { 
         country: 'us',
         proximity,
         bbox
       });
       
-      // Fallback attempts if first geocode fails
+      // Try 2: Just the enhanced address
       if (!coordinates) {
-        console.log('⚠️  First attempt failed, trying original address...');
+        console.log('⚠️  Trying without business name...');
+        coordinates = await geocodeAddress(enhancedAddress, mapboxToken, {
+          country: 'us',
+          proximity,
+          bbox
+        });
+      }
+      
+      // Try 3: Original address
+      if (!coordinates) {
+        console.log('⚠️  Trying original address...');
         coordinates = await geocodeAddress(addressToGeocode, mapboxToken, {
           country: 'us',
           proximity,
@@ -285,8 +315,9 @@ Deno.serve(async (req) => {
         });
       }
       
+      // Try 4: Business name with city (last resort)
       if (!coordinates && location?.name) {
-        console.log('⚠️  Trying business name instead...');
+        console.log('⚠️  Last resort: business name with Detroit, MI...');
         coordinates = await geocodeAddress(`${location.name}, Detroit, MI`, mapboxToken, { 
           country: 'us',
           proximity,
@@ -404,16 +435,26 @@ Deno.serve(async (req) => {
           console.log(`🔍 Enhanced: "${location.address}" -> "${enhancedAddress}"`);
         }
 
-        // Try geocoding with enhanced address
-        let coordinates = await geocodeAddress(enhancedAddress, mapboxToken, { 
+        // Try geocoding with business name + enhanced address for better precision
+        let coordinates = await geocodeAddress(`${location.name}, ${enhancedAddress}`, mapboxToken, { 
           country: 'us',
           proximity,
           bbox
         });
         
-        // Fallback: try original address
+        // Fallback: enhanced address only
         if (!coordinates) {
-          console.log(`⚠️  Enhanced address failed, trying original...`);
+          console.log(`⚠️  Trying enhanced address without business name...`);
+          coordinates = await geocodeAddress(enhancedAddress, mapboxToken, {
+            country: 'us',
+            proximity,
+            bbox
+          });
+        }
+        
+        // Fallback: original address
+        if (!coordinates) {
+          console.log(`⚠️  Trying original address...`);
           coordinates = await geocodeAddress(location.address, mapboxToken, {
             country: 'us',
             proximity,
@@ -421,9 +462,9 @@ Deno.serve(async (req) => {
           });
         }
         
-        // Last resort: try business name
+        // Last resort: business name with city
         if (!coordinates && location?.name) {
-          console.log(`⚠️  Trying business name: ${location.name}`);
+          console.log(`⚠️  Last resort: business name with Detroit, MI`);
           coordinates = await geocodeAddress(`${location.name}, Detroit, MI`, mapboxToken, { 
             country: 'us',
             proximity,
