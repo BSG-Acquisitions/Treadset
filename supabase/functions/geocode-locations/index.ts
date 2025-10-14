@@ -60,17 +60,25 @@ async function getOrgDepot(supabase: any, orgId: string): Promise<{ lat: number;
   return { lat, lng };
 }
 
+function boundsFromCenter(center: { lat: number; lng: number }, radiusKm: number) {
+  const latDelta = radiusKm / 111; // ~111km per degree lat
+  const lngDelta = radiusKm / (111 * Math.cos(toRadians(center.lat)) || 1);
+  const sw = { lat: center.lat - latDelta, lng: center.lng - lngDelta };
+  const ne = { lat: center.lat + latDelta, lng: center.lng + lngDelta };
+  return `${sw.lat},${sw.lng}|${ne.lat},${ne.lng}`;
+}
 
 async function geocodeAddress(
   address: string,
   googleMapsApiKey: string,
-  opts?: { components?: string; region?: string }
+  opts?: { components?: string; region?: string; bounds?: string }
 ): Promise<{ lat: number; lng: number } | null> {
   try {
     const encodedAddress = encodeURIComponent(address.trim());
     const params = new URLSearchParams({ address: encodedAddress, key: googleMapsApiKey });
     if (opts?.region) params.set('region', opts.region);
     if (opts?.components) params.set('components', opts.components);
+    if (opts?.bounds) params.set('bounds', opts.bounds);
     const url = `https://maps.googleapis.com/maps/api/geocode/json?${params.toString()}`;
 
     const response = await fetch(url);
@@ -154,22 +162,25 @@ Deno.serve(async (req) => {
       }
 
       const initialState = guessState(addressToGeocode) || 'MI';
-      let coordinates = await geocodeAddress(addressToGeocode, googleMapsApiKey, { region: 'us', components: `administrative_area:${initialState}|country:US` });
+      const depot = await getOrgDepot(supabase, location.organization_id);
+      const bounds = boundsFromCenter(depot, 120);
+      let coordinates = await geocodeAddress(addressToGeocode, googleMapsApiKey, { region: 'us', components: `administrative_area:${initialState}|country:US`, bounds });
       
       if (!coordinates) {
         // Retry with state bias (defaults to MI) to resolve ambiguous addresses like "10031 Greenfield"
-        const state = guessState(addressToGeocode) || 'MI';
+        const state = initialState;
         let strict = await geocodeAddress(addressToGeocode, googleMapsApiKey, {
           region: 'us',
-          components: `administrative_area:${state}|country:US`
+          components: `administrative_area:${state}|country:US`,
+          bounds
         });
         if (!strict) {
           // Fallback: append state to the address to disambiguate
-          strict = await geocodeAddress(`${addressToGeocode}, ${state}`, googleMapsApiKey, { region: 'us' });
+          strict = await geocodeAddress(`${addressToGeocode}, ${state}`, googleMapsApiKey, { region: 'us', components: `administrative_area:${state}|country:US`, bounds });
         }
         if (!strict && location?.name) {
           // Last attempt: try business name with state near depot city
-          strict = await geocodeAddress(`${location.name}, ${state}`, googleMapsApiKey, { region: 'us' });
+          strict = await geocodeAddress(`${location.name}, ${state}`, googleMapsApiKey, { region: 'us', components: `administrative_area:${state}|country:US`, bounds });
         }
         if (strict) {
           coordinates = strict;
@@ -179,17 +190,13 @@ Deno.serve(async (req) => {
       }
 
       // Validate against org depot and retry with state bias if it's an outlier
-      const depot = await getOrgDepot(supabase, location.organization_id);
       if (haversineDistance(depot, coordinates) > 300) {
-        const state = guessState(addressToGeocode) || 'MI';
-        let strict = await geocodeAddress(addressToGeocode, googleMapsApiKey, { 
+        const state = initialState;
+        let strict = await geocodeAddress(`${addressToGeocode}, ${state}`, googleMapsApiKey, { 
           region: 'us', 
-          components: `administrative_area:${state}|country:US` 
+          components: `administrative_area:${state}|country:US`,
+          bounds
         });
-        if (!strict) {
-          // Fallback: append state to address to disambiguate cases like "10031 Greenfield"
-          strict = await geocodeAddress(`${addressToGeocode}, ${state}`, googleMapsApiKey, { region: 'us' });
-        }
         if (strict) coordinates = strict;
       }
 
@@ -236,9 +243,8 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Get org depot for outlier detection
-      const orgId = allLocations[0]?.organization_id;
-      const depot = orgId ? await getOrgDepot(supabase, orgId) : { lat: 42.3314, lng: -83.0458 };
+      // We'll compute depot per location to respect multi-org data
+
 
       const results = [];
       let successful = 0;
@@ -252,6 +258,10 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        const hasCoords = location.latitude && location.longitude;
+        const depot = await getOrgDepot(supabase, location.organization_id);
+        const isOutlier = hasCoords && haversineDistance(depot, { lat: Number(location.latitude), lng: Number(location.longitude) }) > 300;
+        
         // Determine if we should process this location
         const shouldProcess = (!hasCoords) || (fixOutliers && isOutlier) || (forceUpdate === true);
         if (!shouldProcess) {
