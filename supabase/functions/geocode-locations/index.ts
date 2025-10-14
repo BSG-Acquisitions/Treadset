@@ -68,10 +68,14 @@ function isWithinDetroitMetro(lat: number, lng: number): boolean {
 
 function extractCounty(feature: MapboxGeocodeFeature): string | null {
   if (!feature.context) return null;
-  const districtContext = feature.context.find(ctx => 
-    ctx.id.startsWith('district.')
+  // Mapbox uses 'district' for US counties
+  const countyContext = feature.context.find(ctx => 
+    ctx.id.startsWith('district.') || ctx.id.startsWith('region.')
   );
-  return districtContext?.text.replace(' County', '') || null;
+  if (countyContext) {
+    return countyContext.text.replace(' County', '');
+  }
+  return null;
 }
 
 function enhanceAddress(address: string, clientCity?: string, clientState?: string): string {

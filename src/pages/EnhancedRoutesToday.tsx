@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { FixGeocodingButton } from "@/components/FixGeocodingButton";
 import { useAssignments, usePickups, useDeletePickup } from "@/hooks/usePickups";
 import { useVehicles } from "@/hooks/useVehicles";
 import { supabase } from "@/integrations/supabase/client";
@@ -521,9 +522,7 @@ export default function EnhancedRoutesToday() {
                 <ChevronRight className="h-4 w-4 ml-2" />
               </Button>
               
-              <Button variant="outline" size="sm" onClick={fixDetroitMisGeocodes} disabled={isGeocoding}>
-                Fix Detroit coords
-              </Button>
+              <FixGeocodingButton />
               <LocationGeocodeDialog />
               <VehicleManagementDialog 
                 trigger={
