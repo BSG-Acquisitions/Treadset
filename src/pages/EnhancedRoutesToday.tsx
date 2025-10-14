@@ -129,19 +129,19 @@ export default function EnhancedRoutesToday() {
         },
         (payload) => {
           console.log('Location updated:', payload);
-          // Invalidate all route-related queries to trigger re-optimization
+          // Invalidate all route-related queries to trigger re-fetch
           queryClient.invalidateQueries({ queryKey: ['routes'] });
           queryClient.invalidateQueries({ queryKey: ['optimized-routes'] });
           queryClient.invalidateQueries({ queryKey: ['assignments'] });
           queryClient.invalidateQueries({ queryKey: ['locations'] });
           queryClient.invalidateQueries({ queryKey: ['pickups'] });
           
-          // Force AI insights to re-fetch and re-run
+          // Force AI insights to re-fetch with new data
           setDataVersion((v) => v + 1);
           
           toast({
             title: "Location Updated",
-            description: "Routes and AI insights refreshed with new coordinates",
+            description: "Routes and AI insights will refresh with new coordinates",
           });
         }
       )
@@ -150,7 +150,7 @@ export default function EnhancedRoutesToday() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [queryClient, toast, optimizeRoutes]);
+  }, [queryClient, toast]);
 
   useEffect(() => {
     document.title = "Route Planning – TreadSet";
