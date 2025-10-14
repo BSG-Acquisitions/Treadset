@@ -12,6 +12,7 @@ import NotFound from "./pages/NotFound";
 import ClientDetail from "./pages/ClientDetail";
 import Clients from "./pages/Clients";
 import RoutesToday from "./pages/RoutesToday";
+import GeocodingTest from "./pages/GeocodingTest";
 import RoutesPrintToday from "./pages/RoutesPrintToday";
 import Book from "./pages/Book";
 import BookingConfirmation from "./pages/BookingConfirmation";
@@ -119,6 +120,13 @@ const App = () => (
               <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
                 <AppLayout>
                   <RoutesToday />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/geocoding-test" element={
+              <ProtectedRoute roles={['admin']}>
+                <AppLayout>
+                  <GeocodingTest />
                 </AppLayout>
               </ProtectedRoute>
             } />
