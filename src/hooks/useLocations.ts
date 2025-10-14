@@ -25,6 +25,21 @@ export const useLocations = (clientId?: string) => {
   });
 };
 
+export const useAllLocations = () => {
+  return useQuery({
+    queryKey: ['all-locations'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('locations')
+        .select('*, clients(company_name), pricing_tier:pricing_tier_id(name, rate)')
+        .order('name');
+      
+      if (error) throw error;
+      return data || [];
+    }
+  });
+};
+
 export const useCreateLocation = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();

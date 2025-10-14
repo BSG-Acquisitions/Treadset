@@ -58,6 +58,7 @@ import { format, addDays, subDays, startOfWeek, addWeeks, subWeeks } from "date-
 import { motion } from "framer-motion";
 import { WeeklyPickupsGrid } from "@/components/routes/WeeklyPickupsGrid";
 import { AIRouteInsights } from "@/components/routes/AIRouteInsights";
+import { LocationGeocodeDialog } from "@/components/locations/LocationGeocodeDialog";
 
 interface OptimizedStop {
   id: string;
@@ -376,6 +377,8 @@ export default function EnhancedRoutesToday() {
                 Next Week
                 <ChevronRight className="h-4 w-4 ml-2" />
               </Button>
+              
+              <LocationGeocodeDialog />
               
               <VehicleManagementDialog 
                 trigger={
