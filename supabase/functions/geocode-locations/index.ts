@@ -13,6 +13,8 @@ interface GoogleMapsGeocodeResult {
       lng: number;
     };
   };
+  types?: string[];
+  partial_match?: boolean;
 }
 
 interface GoogleMapsGeocodeResponse {
@@ -75,7 +77,14 @@ async function geocodeAddress(
     const data: GoogleMapsGeocodeResponse = await response.json();
 
     if (data.status === 'OK' && data.results.length > 0) {
-      const location = data.results[0].geometry.location;
+      const result = data.results[0];
+      const location = result.geometry.location;
+      const types = result.types || [];
+      const isCoarse = types.includes('administrative_area_level_1') || types.includes('country');
+      if (isCoarse) {
+        console.log(`Rejected coarse geocode result (types: ${types.join(',')}) for: ${address}`);
+        return null;
+      }
       return { lat: location.lat, lng: location.lng };
     }
 
@@ -150,6 +159,10 @@ Deno.serve(async (req) => {
         if (!strict) {
           // Fallback: append state to the address to disambiguate
           strict = await geocodeAddress(`${addressToGeocode}, ${state}`, googleMapsApiKey, { region: 'us' });
+        }
+        if (!strict && location?.name) {
+          // Last attempt: try business name with state near depot city
+          strict = await geocodeAddress(`${location.name}, ${state}`, googleMapsApiKey, { region: 'us' });
         }
         if (strict) {
           coordinates = strict;
@@ -253,6 +266,10 @@ Deno.serve(async (req) => {
           if (!strict) {
             // Fallback: append state to the address to disambiguate
             strict = await geocodeAddress(`${location.address}, ${state}`, googleMapsApiKey, { region: 'us' });
+          }
+          if (!strict && location?.name) {
+            // Last attempt: try business name with state
+            strict = await geocodeAddress(`${location.name}, ${state}`, googleMapsApiKey, { region: 'us' });
           }
           if (strict) {
             coordinates = strict;

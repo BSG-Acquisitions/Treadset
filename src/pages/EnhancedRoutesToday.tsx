@@ -58,7 +58,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format, addDays, subDays, startOfWeek, addWeeks, subWeeks } from "date-fns";
 import { motion } from "framer-motion";
 import { WeeklyPickupsGrid } from "@/components/routes/WeeklyPickupsGrid";
-import { AIRouteInsights } from "@/components/routes/AIRouteInsights";
+
 import { LocationGeocodeDialog } from "@/components/locations/LocationGeocodeDialog";
 
 interface OptimizedStop {
@@ -184,6 +184,13 @@ export default function EnhancedRoutesToday() {
         setTimeout(() => reject(new Error('Request timeout')), 30000)
       );
       
+      // Pre-step: fix missing/bad geocodes and outliers before optimizing
+      try {
+        await supabase.functions.invoke('geocode-locations', { body: { fixOutliers: true } });
+      } catch (e) {
+        console.warn('Geocode pre-step failed (continuing anyway):', e);
+      }
+
       const optimizePromise = supabase.functions.invoke('enhanced-route-optimizer', {
         body: {
           date: activeDay,
@@ -448,9 +455,8 @@ export default function EnhancedRoutesToday() {
         <div className="py-6 px-2 sm:px-4">
           {/* Tabs for better organization */}
           <Tabs defaultValue="today" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-6">
+            <TabsList className="grid w-full grid-cols-3 mb-6">
               <TabsTrigger value="today">Today's Routes</TabsTrigger>
-              <TabsTrigger value="ai">AI Insights</TabsTrigger>
               <TabsTrigger value="week">Week View</TabsTrigger>
               <TabsTrigger value="stats">Statistics</TabsTrigger>
             </TabsList>
@@ -725,10 +731,6 @@ export default function EnhancedRoutesToday() {
           </div>
         </TabsContent>
 
-        {/* AI Insights Tab */}
-        <TabsContent value="ai" className="space-y-6">
-          <AIRouteInsights key={`ai-${dataVersion}-${activeDay}`} date={activeDay} />
-        </TabsContent>
 
         {/* Statistics Tab */}
         <TabsContent value="stats">
