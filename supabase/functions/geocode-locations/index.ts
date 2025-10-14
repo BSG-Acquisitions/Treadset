@@ -148,10 +148,14 @@ Deno.serve(async (req) => {
       const depot = await getOrgDepot(supabase, location.organization_id);
       if (haversineDistance(depot, coordinates) > 300) {
         const state = guessState(addressToGeocode) || 'MI';
-        const strict = await geocodeAddress(addressToGeocode, googleMapsApiKey, { 
+        let strict = await geocodeAddress(addressToGeocode, googleMapsApiKey, { 
           region: 'us', 
           components: `administrative_area:${state}|country:US` 
         });
+        if (!strict) {
+          // Fallback: append state to address to disambiguate cases like "10031 Greenfield"
+          strict = await geocodeAddress(`${addressToGeocode}, ${state}`, googleMapsApiKey, { region: 'us' });
+        }
         if (strict) coordinates = strict;
       }
 
@@ -235,10 +239,14 @@ Deno.serve(async (req) => {
         if (haversineDistance(depot, coordinates) > 300) {
           const state = guessState(location.address) || 'MI';
           console.log(`Location ${location.id} is an outlier (${haversineDistance(depot, coordinates).toFixed(0)}km from depot), retrying with state: ${state}`);
-          const strict = await geocodeAddress(location.address, googleMapsApiKey, { 
+          let strict = await geocodeAddress(location.address, googleMapsApiKey, { 
             region: 'us', 
             components: `administrative_area:${state}|country:US` 
           });
+          if (!strict) {
+            // Fallback: append state to address to disambiguate
+            strict = await geocodeAddress(`${location.address}, ${state}`, googleMapsApiKey, { region: 'us' });
+          }
           if (strict) {
             coordinates = strict;
             if (hasCoords) outliersCorrected++;
