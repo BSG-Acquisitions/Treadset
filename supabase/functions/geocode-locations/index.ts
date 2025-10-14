@@ -20,19 +20,65 @@ interface GoogleMapsGeocodeResponse {
   status: string;
 }
 
-async function geocodeAddress(address: string, googleMapsApiKey: string): Promise<{ lat: number; lng: number } | null> {
+function toRadians(deg: number) {
+  return (deg * Math.PI) / 180;
+}
+
+function haversineDistance(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+  const R = 6371; // km
+  const dLat = toRadians(b.lat - a.lat);
+  const dLng = toRadians(b.lng - a.lng);
+  const lat1 = toRadians(a.lat);
+  const lat2 = toRadians(b.lat);
+  const sinDLat = Math.sin(dLat / 2);
+  const sinDLng = Math.sin(dLng / 2);
+  const h = sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLng * sinDLng;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+function guessState(address: string): string | null {
+  // Try to pick up a two-letter state before ZIP
+  const m = address.match(/,\s*([A-Z]{2})\s*\d{5}/i);
+  if (m) return m[1].toUpperCase();
+  if (/\bMI\b/i.test(address)) return 'MI';
+  return null;
+}
+
+async function getOrgDepot(supabase: any, orgId: string): Promise<{ lat: number; lng: number }> {
+  const { data: org, error } = await supabase
+    .from('organizations')
+    .select('depot_lat, depot_lng')
+    .eq('id', orgId)
+    .maybeSingle();
+  if (error) {
+    console.log('Failed to fetch org depot, using Detroit default:', error.message);
+  }
+  const lat = Number(org?.depot_lat ?? 42.3314);
+  const lng = Number(org?.depot_lng ?? -83.0458);
+  return { lat, lng };
+}
+
+
+async function geocodeAddress(
+  address: string,
+  googleMapsApiKey: string,
+  opts?: { components?: string; region?: string }
+): Promise<{ lat: number; lng: number } | null> {
   try {
     const encodedAddress = encodeURIComponent(address);
-    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodedAddress}&key=${googleMapsApiKey}`;
-    
+    const params = new URLSearchParams({ address: encodedAddress, key: googleMapsApiKey });
+    if (opts?.region) params.set('region', opts.region);
+    if (opts?.components) params.set('components', opts.components);
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?${params.toString()}`;
+
     const response = await fetch(url);
     const data: GoogleMapsGeocodeResponse = await response.json();
-    
+
     if (data.status === 'OK' && data.results.length > 0) {
       const location = data.results[0].geometry.location;
       return { lat: location.lat, lng: location.lng };
     }
-    
+
     console.log(`Geocoding failed for address: ${address}, status: ${data.status}`);
     return null;
   } catch (error) {
@@ -58,14 +104,14 @@ Deno.serve(async (req) => {
       throw new Error('Google Maps API key not configured');
     }
 
-    const { locationId, address, forceUpdate = false } = await req.json();
-    console.log('Geocoding request:', { locationId, address, forceUpdate });
+    const { locationId, address, forceUpdate = false, fixOutliers = false } = await req.json();
+    console.log('Geocoding request:', { locationId, address, forceUpdate, fixOutliers });
 
     if (locationId) {
       // Geocode a specific location
       const { data: location, error: locationError } = await supabase
         .from('locations')
-        .select('id, name, address, latitude, longitude')
+        .select('id, name, address, latitude, longitude, organization_id')
         .eq('id', locationId)
         .single();
 
@@ -92,10 +138,21 @@ Deno.serve(async (req) => {
         throw new Error('No address available for geocoding');
       }
 
-      const coordinates = await geocodeAddress(addressToGeocode, googleMapsApiKey);
+      let coordinates = await geocodeAddress(addressToGeocode, googleMapsApiKey, { region: 'us' });
       
       if (!coordinates) {
         throw new Error(`Failed to geocode address: ${addressToGeocode}`);
+      }
+
+      // Validate against org depot and retry with state bias if it's an outlier
+      const depot = await getOrgDepot(supabase, location.organization_id);
+      if (haversineDistance(depot, coordinates) > 300) {
+        const state = guessState(addressToGeocode) || 'MI';
+        const strict = await geocodeAddress(addressToGeocode, googleMapsApiKey, { 
+          region: 'us', 
+          components: `administrative_area:${state}|country:US` 
+        });
+        if (strict) coordinates = strict;
       }
 
       // Update the location with coordinates
