@@ -682,6 +682,11 @@ export default function EnhancedRoutesToday() {
           </div>
         </TabsContent>
 
+        {/* AI Insights Tab */}
+        <TabsContent value="ai" className="space-y-6">
+          <AIRouteInsights date={activeDay} />
+        </TabsContent>
+
         {/* Statistics Tab */}
         <TabsContent value="stats">
           <div className="space-y-6">
@@ -743,11 +748,6 @@ export default function EnhancedRoutesToday() {
                 </CardContent>
               </Card>
             </div>
-            
-            {/* AI Insights Tab */}
-            <TabsContent value="ai" className="space-y-6">
-              <AIRouteInsights date={activeDay} />
-            </TabsContent>
 
             {/* Additional stats could go here */}
             <Card>
