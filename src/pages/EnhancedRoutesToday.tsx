@@ -105,6 +105,7 @@ export default function EnhancedRoutesToday() {
   const lastOptimizeRef = useRef<number>(0);
   const optimizeRef = useRef<() => void>(() => {});
   const [dataVersion, setDataVersion] = useState(0);
+  const [aiAnalysis, setAiAnalysis] = useState<any>(null);
 
   // Get 7 days starting from current week
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeek, i));
@@ -208,14 +209,18 @@ export default function EnhancedRoutesToday() {
 
       // Apply AI sequencing suggestions on top of base route metrics
       let aiSuggestions: any[] = [];
+      let fullAiAnalysis: any = null;
       try {
         const { data: aiData, error: aiError } = await supabase.functions.invoke('ai-route-optimizer', {
           body: { date: activeDay }
         });
         if (aiError) throw aiError;
+        fullAiAnalysis = aiData?.ai_analysis;
         aiSuggestions = aiData?.ai_analysis?.route_suggestions || [];
+        setAiAnalysis(fullAiAnalysis);
       } catch (e) {
         console.warn('AI suggestions unavailable, proceeding with base optimization:', e);
+        setAiAnalysis(null);
       }
 
       const normalize = (s: string) => (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -512,6 +517,68 @@ export default function EnhancedRoutesToday() {
             {/* Today's Routes Tab */}
             <TabsContent value="today" className="space-y-6">
               {/* Pickups and Routes Section */}
+              {/* AI Insights Section */}
+              {aiAnalysis && (
+                <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-background">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5 text-primary" />
+                      AI Route Insights
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Efficiency Score */}
+                    <div className="flex items-center gap-4 p-4 bg-background/50 rounded-lg border">
+                      <div className="flex-1">
+                        <div className="text-sm text-muted-foreground mb-1">Route Efficiency Score</div>
+                        <div className="text-3xl font-bold text-primary">{aiAnalysis.efficiency_score}%</div>
+                      </div>
+                      <TrendingUp className="h-12 w-12 text-primary/20" />
+                    </div>
+
+                    {/* Top Improvements */}
+                    {aiAnalysis.improvements && aiAnalysis.improvements.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold mb-3 flex items-center gap-2">
+                          <AlertTriangle className="h-4 w-4 text-amber-500" />
+                          Top Improvements
+                        </h4>
+                        <div className="space-y-2">
+                          {aiAnalysis.improvements.map((improvement: any, idx: number) => (
+                            <div key={idx} className="p-3 bg-background/50 rounded-lg border border-border/50">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex-1">
+                                  <div className="font-medium mb-1">{improvement.title}</div>
+                                  <div className="text-sm text-muted-foreground">{improvement.description}</div>
+                                  {improvement.estimated_savings && (
+                                    <div className="text-xs text-primary mt-1">💡 {improvement.estimated_savings}</div>
+                                  )}
+                                </div>
+                                <Badge variant={
+                                  improvement.impact === 'high' ? 'destructive' : 
+                                  improvement.impact === 'medium' ? 'default' : 
+                                  'secondary'
+                                }>
+                                  {improvement.impact}
+                                </Badge>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Overall Analysis */}
+                    {aiAnalysis.overall_analysis && (
+                      <div className="p-4 bg-primary/5 rounded-lg border border-primary/10">
+                        <h4 className="font-semibold mb-2 text-sm">Overall Analysis</h4>
+                        <p className="text-sm text-muted-foreground leading-relaxed">{aiAnalysis.overall_analysis}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
               {pickups.length === 0 && optimizedRoutes.length === 0 ? (
                 <Card>
                   <CardContent className="py-12 text-center">
