@@ -260,6 +260,7 @@ Deno.serve(async (req) => {
 
         const hasCoords = location.latitude && location.longitude;
         const depot = await getOrgDepot(supabase, location.organization_id);
+        const bounds = boundsFromCenter(depot, 120);
         const isOutlier = hasCoords && haversineDistance(depot, { lat: Number(location.latitude), lng: Number(location.longitude) }) > 300;
         
         // Determine if we should process this location
@@ -270,22 +271,23 @@ Deno.serve(async (req) => {
         }
 
         const defaultState = guessState(location.address) || 'MI';
-        let coordinates = await geocodeAddress(location.address, googleMapsApiKey, { region: 'us', components: `administrative_area:${defaultState}|country:US` });
+        let coordinates = await geocodeAddress(location.address, googleMapsApiKey, { region: 'us', components: `administrative_area:${defaultState}|country:US`, bounds });
         
         if (!coordinates) {
           // Retry with state bias (defaults to MI) for ambiguous addresses
           const state = guessState(location.address) || 'MI';
           let strict = await geocodeAddress(location.address, googleMapsApiKey, {
             region: 'us',
-            components: `administrative_area:${state}|country:US`
+            components: `administrative_area:${state}|country:US`,
+            bounds
           });
           if (!strict) {
             // Fallback: append state to the address to disambiguate
-            strict = await geocodeAddress(`${location.address}, ${state}`, googleMapsApiKey, { region: 'us' });
+            strict = await geocodeAddress(`${location.address}, ${state}`, googleMapsApiKey, { region: 'us', bounds });
           }
           if (!strict && location?.name) {
             // Last attempt: try business name with state
-            strict = await geocodeAddress(`${location.name}, ${state}`, googleMapsApiKey, { region: 'us' });
+            strict = await geocodeAddress(`${location.name}, ${state}`, googleMapsApiKey, { region: 'us', bounds });
           }
           if (strict) {
             coordinates = strict;
@@ -302,11 +304,12 @@ Deno.serve(async (req) => {
           console.log(`Location ${location.id} is an outlier (${haversineDistance(depot, coordinates).toFixed(0)}km from depot), retrying with state: ${state}`);
           let strict = await geocodeAddress(location.address, googleMapsApiKey, { 
             region: 'us', 
-            components: `administrative_area:${state}|country:US` 
+            components: `administrative_area:${state}|country:US`,
+            bounds 
           });
           if (!strict) {
             // Fallback: append state to address to disambiguate
-            strict = await geocodeAddress(`${location.address}, ${state}`, googleMapsApiKey, { region: 'us' });
+            strict = await geocodeAddress(`${location.address}, ${state}`, googleMapsApiKey, { region: 'us', bounds });
           }
           if (strict) {
             coordinates = strict;

@@ -60,6 +60,7 @@ import { motion } from "framer-motion";
 import { WeeklyPickupsGrid } from "@/components/routes/WeeklyPickupsGrid";
 
 import { LocationGeocodeDialog } from "@/components/locations/LocationGeocodeDialog";
+import { useGeocodeLocations } from "@/hooks/useGeocodeLocations";
 
 interface OptimizedStop {
   id: string;
@@ -116,6 +117,7 @@ export default function EnhancedRoutesToday() {
   const { toast } = useToast();
   const deletePickup = useDeletePickup();
   const queryClient = useQueryClient();
+  const { geocodeLocation, isLoading: isGeocoding } = useGeocodeLocations();
 
   // Real-time location updates
   useEffect(() => {
@@ -167,6 +169,51 @@ export default function EnhancedRoutesToday() {
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const day = String(today.getDate()).padStart(2, '0');
     setActiveDay(`${year}-${month}-${day}`);
+  };
+
+  const fixDetroitMisGeocodes = async () => {
+    try {
+      const { data: hoodRows, error: hoodErr } = await supabase
+        .from('locations')
+        .select('id, name, address')
+        .ilike('name', "Hood%");
+
+      const { data: hantzRows, error: hantzErr } = await supabase
+        .from('locations')
+        .select('id, name, address')
+        .ilike('name', "Hantz%");
+
+      if (hoodErr || hantzErr) throw (hoodErr || hantzErr);
+
+      const targets = [...(hoodRows || []), ...(hantzRows || [])];
+
+      if (!targets.length) {
+        toast({
+          title: "No matching locations",
+          description: "Couldn't find Hood's or Hantz locations.",
+        });
+        return;
+      }
+
+      for (const loc of targets) {
+        await geocodeLocation(loc.id, true);
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ['locations'] });
+      await queryClient.invalidateQueries({ queryKey: ['assignments'] });
+      await queryClient.invalidateQueries({ queryKey: ['routes'] });
+
+      toast({
+        title: "Coordinates corrected",
+        description: `Updated ${targets.length} location(s).`,
+      });
+    } catch (e: any) {
+      toast({
+        title: "Fix failed",
+        description: e.message || 'Unable to fix coordinates',
+        variant: "destructive",
+      });
+    }
   };
 
   const optimizeRoutes = useCallback(async () => {
@@ -474,8 +521,10 @@ export default function EnhancedRoutesToday() {
                 <ChevronRight className="h-4 w-4 ml-2" />
               </Button>
               
+              <Button variant="outline" size="sm" onClick={fixDetroitMisGeocodes} disabled={isGeocoding}>
+                Fix Detroit coords
+              </Button>
               <LocationGeocodeDialog />
-              
               <VehicleManagementDialog 
                 trigger={
                   <Button variant="outline" size="sm">
