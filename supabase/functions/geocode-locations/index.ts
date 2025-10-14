@@ -6,25 +6,22 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-interface GoogleMapsGeocodeResult {
-  geometry: {
-    location: {
-      lat: number;
-      lng: number;
-    };
-  };
-  types?: string[];
-  partial_match?: boolean;
-  address_components?: Array<{
-    long_name: string;
-    short_name: string;
-    types: string[];
+interface MapboxGeocodeFeature {
+  center: [number, number]; // [lng, lat]
+  place_type: string[];
+  relevance: number;
+  context?: Array<{
+    id: string;
+    text: string;
   }>;
+  properties?: {
+    accuracy?: string;
+  };
 }
 
-interface GoogleMapsGeocodeResponse {
-  results: GoogleMapsGeocodeResult[];
-  status: string;
+interface MapboxGeocodeResponse {
+  type: string;
+  features: MapboxGeocodeFeature[];
 }
 
 // Detroit Metro Area Boundaries (Wayne, Oakland, Macomb counties)
@@ -69,12 +66,12 @@ function isWithinDetroitMetro(lat: number, lng: number): boolean {
          lng <= DETROIT_BOUNDS.maxLng;
 }
 
-function extractCounty(result: GoogleMapsGeocodeResult): string | null {
-  if (!result.address_components) return null;
-  const countyComponent = result.address_components.find(comp => 
-    comp.types.includes('administrative_area_level_2')
+function extractCounty(feature: MapboxGeocodeFeature): string | null {
+  if (!feature.context) return null;
+  const districtContext = feature.context.find(ctx => 
+    ctx.id.startsWith('district.')
   );
-  return countyComponent?.long_name.replace(' County', '') || null;
+  return districtContext?.text.replace(' County', '') || null;
 }
 
 function enhanceAddress(address: string, clientCity?: string, clientState?: string): string {
@@ -120,72 +117,72 @@ function boundsFromCenter(center: { lat: number; lng: number }, radiusKm: number
 
 async function geocodeAddress(
   address: string,
-  googleMapsApiKey: string,
-  opts?: { components?: string; region?: string; bounds?: string }
+  mapboxToken: string,
+  opts?: { proximity?: string; bbox?: string; country?: string }
 ): Promise<{ lat: number; lng: number; county?: string; confidence: number } | null> {
   try {
     const encodedAddress = encodeURIComponent(address.trim());
-    const params = new URLSearchParams({ address: encodedAddress, key: googleMapsApiKey });
-    if (opts?.region) params.set('region', opts.region);
-    if (opts?.components) params.set('components', opts.components);
-    if (opts?.bounds) params.set('bounds', opts.bounds);
-    const url = `https://maps.googleapis.com/maps/api/geocode/json?${params.toString()}`;
+    const params = new URLSearchParams({ 
+      access_token: mapboxToken,
+      limit: '1',
+      types: 'address,poi' // Only precise address or point of interest
+    });
+    
+    if (opts?.country) params.set('country', opts.country);
+    if (opts?.proximity) params.set('proximity', opts.proximity);
+    if (opts?.bbox) params.set('bbox', opts.bbox);
+    
+    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodedAddress}.json?${params.toString()}`;
 
     const response = await fetch(url);
-    const data: GoogleMapsGeocodeResponse = await response.json();
+    const data: MapboxGeocodeResponse = await response.json();
 
-    if (data.status === 'OK' && data.results.length > 0) {
-      const result = data.results[0];
-      const location = result.geometry.location;
-      const types = result.types || [];
+    if (data.features && data.features.length > 0) {
+      const feature = data.features[0];
+      const [lng, lat] = feature.center;
+      const placeTypes = feature.place_type || [];
+      const relevance = feature.relevance || 0;
       
-      // Reject coarse results (state-level or country-level)
-      const isCoarse = types.includes('administrative_area_level_1') || types.includes('country');
-      if (isCoarse) {
-        console.log(`❌ Rejected coarse geocode (types: ${types.join(',')}) for: ${address}`);
-        return null;
-      }
-      
-      // Only accept precise street-level results
-      const allowedTypes = ['street_address','premise','establishment','subpremise','point_of_interest'];
-      const isPrecise = types.some((t) => allowedTypes.includes(t));
+      // Only accept address or POI results
+      const allowedTypes = ['address', 'poi'];
+      const isPrecise = placeTypes.some((t) => allowedTypes.includes(t));
       if (!isPrecise) {
-        console.log(`❌ Rejected imprecise geocode (types: ${types.join(',')}) for: ${address}`);
+        console.log(`❌ Rejected imprecise geocode (types: ${placeTypes.join(',')}) for: ${address}`);
         return null;
       }
       
       // Extract county for validation
-      const county = extractCounty(result);
+      const county = extractCounty(feature);
       
       // Validate against Detroit metro area bounds
-      const inDetroitBounds = isWithinDetroitMetro(location.lat, location.lng);
+      const inDetroitBounds = isWithinDetroitMetro(lat, lng);
       const inDetroitCounty = county ? DETROIT_METRO_COUNTIES.includes(county) : false;
       
-      // Calculate confidence score
-      let confidence = 0;
-      if (isPrecise) confidence += 40;
-      if (inDetroitBounds) confidence += 30;
-      if (inDetroitCounty) confidence += 30;
+      // Calculate confidence score (Mapbox relevance is 0-1, convert to percentage)
+      let confidence = Math.round(relevance * 50); // Base score from relevance
+      if (isPrecise) confidence += 20;
+      if (inDetroitBounds) confidence += 15;
+      if (inDetroitCounty) confidence += 15;
       
       // Log validation results
-      console.log(`📍 Geocoded: ${address} -> (${location.lat}, ${location.lng})`);
-      console.log(`   County: ${county || 'unknown'}, In bounds: ${inDetroitBounds}, Confidence: ${confidence}%`);
+      console.log(`📍 Geocoded: ${address} -> (${lat}, ${lng})`);
+      console.log(`   County: ${county || 'unknown'}, In bounds: ${inDetroitBounds}, Confidence: ${confidence}%, Relevance: ${relevance}`);
       
-      // Reject results outside Detroit metro area (unless very high precision)
-      if (!inDetroitBounds && !inDetroitCounty && confidence < 70) {
+      // Reject results outside Detroit metro area (unless very high relevance)
+      if (!inDetroitBounds && !inDetroitCounty && relevance < 0.8) {
         console.log(`❌ Rejected: Outside Detroit metro area`);
         return null;
       }
       
       return { 
-        lat: location.lat, 
-        lng: location.lng,
+        lat, 
+        lng,
         county,
         confidence
       };
     }
 
-    console.log(`Geocoding failed for address: ${address}, status: ${data.status}`);
+    console.log(`Geocoding failed for address: ${address}, no features returned`);
     return null;
   } catch (error) {
     console.error('Error geocoding address:', error);
@@ -205,9 +202,9 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const googleMapsApiKey = Deno.env.get('GOOGLE_MAPS_API_KEY');
-    if (!googleMapsApiKey) {
-      throw new Error('Google Maps API key not configured');
+    const mapboxToken = Deno.env.get('MAPBOX_ACCESS_TOKEN');
+    if (!mapboxToken) {
+      throw new Error('Mapbox access token not configured');
     }
 
     const { locationId, address, forceUpdate = false, fixOutliers = false } = await req.json();
@@ -264,31 +261,32 @@ Deno.serve(async (req) => {
       console.log(`🔍 Original: "${addressToGeocode}" -> Enhanced: "${enhancedAddress}"`);
 
       const depot = await getOrgDepot(supabase, location.organization_id);
-      const bounds = boundsFromCenter(depot, 120);
+      const proximity = `${depot.lng},${depot.lat}`; // Mapbox uses lng,lat
+      const bbox = `${depot.lng - 1.5},${depot.lat - 1},${depot.lng + 1},${depot.lat + 1}`; // ~100 mile radius
       
       // Try geocoding with enhanced address
-      let coordinates = await geocodeAddress(enhancedAddress, googleMapsApiKey, { 
-        region: 'us', 
-        components: `administrative_area:MI|country:US`, 
-        bounds 
+      let coordinates = await geocodeAddress(enhancedAddress, mapboxToken, { 
+        country: 'us',
+        proximity,
+        bbox
       });
       
       // Fallback attempts if first geocode fails
       if (!coordinates) {
-        console.log('⚠️  First attempt failed, trying with strict Michigan components...');
-        coordinates = await geocodeAddress(addressToGeocode, googleMapsApiKey, {
-          region: 'us',
-          components: `administrative_area:MI|country:US`,
-          bounds
+        console.log('⚠️  First attempt failed, trying original address...');
+        coordinates = await geocodeAddress(addressToGeocode, mapboxToken, {
+          country: 'us',
+          proximity,
+          bbox
         });
       }
       
       if (!coordinates && location?.name) {
         console.log('⚠️  Trying business name instead...');
-        coordinates = await geocodeAddress(`${location.name}, Detroit, MI`, googleMapsApiKey, { 
-          region: 'us', 
-          components: `administrative_area:MI|country:US`,
-          bounds 
+        coordinates = await geocodeAddress(`${location.name}, Detroit, MI`, mapboxToken, { 
+          country: 'us',
+          proximity,
+          bbox
         });
       }
       
@@ -381,7 +379,8 @@ Deno.serve(async (req) => {
 
         const hasCoords = location.latitude && location.longitude;
         const depot = await getOrgDepot(supabase, location.organization_id);
-        const bounds = boundsFromCenter(depot, 120);
+        const proximity = `${depot.lng},${depot.lat}`;
+        const bbox = `${depot.lng - 1.5},${depot.lat - 1},${depot.lng + 1},${depot.lat + 1}`;
         const isOutlier = hasCoords && haversineDistance(depot, { lat: Number(location.latitude), lng: Number(location.longitude) }) > MAX_DISTANCE_FROM_DEPOT_KM;
         
         // Only process if: no coords, is outlier+fixing, or force update
@@ -401,30 +400,30 @@ Deno.serve(async (req) => {
           console.log(`🔍 Enhanced: "${location.address}" -> "${enhancedAddress}"`);
         }
 
-        // Try geocoding with enhanced address and strict Michigan filtering
-        let coordinates = await geocodeAddress(enhancedAddress, googleMapsApiKey, { 
-          region: 'us', 
-          components: `administrative_area:MI|country:US`, 
-          bounds 
+        // Try geocoding with enhanced address
+        let coordinates = await geocodeAddress(enhancedAddress, mapboxToken, { 
+          country: 'us',
+          proximity,
+          bbox
         });
         
-        // Fallback: try original address with strict Michigan filtering
+        // Fallback: try original address
         if (!coordinates) {
           console.log(`⚠️  Enhanced address failed, trying original...`);
-          coordinates = await geocodeAddress(location.address, googleMapsApiKey, {
-            region: 'us',
-            components: `administrative_area:MI|country:US`,
-            bounds
+          coordinates = await geocodeAddress(location.address, mapboxToken, {
+            country: 'us',
+            proximity,
+            bbox
           });
         }
         
         // Last resort: try business name
         if (!coordinates && location?.name) {
           console.log(`⚠️  Trying business name: ${location.name}`);
-          coordinates = await geocodeAddress(`${location.name}, Detroit, MI`, googleMapsApiKey, { 
-            region: 'us', 
-            components: `administrative_area:MI|country:US`,
-            bounds 
+          coordinates = await geocodeAddress(`${location.name}, Detroit, MI`, mapboxToken, { 
+            country: 'us',
+            proximity,
+            bbox
           });
         }
         
