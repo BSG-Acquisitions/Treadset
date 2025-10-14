@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useAssignments, usePickups, useDeletePickup } from "@/hooks/usePickups";
 import { useVehicles } from "@/hooks/useVehicles";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { CompleteAssignmentDialog } from "@/components/driver/CompleteAssignmentDialog";
 import { CompletePickupDialog } from "@/components/CompletePickupDialog";
 import { MovePickupDialog } from "@/components/MovePickupDialog";
@@ -111,6 +112,40 @@ export default function EnhancedRoutesToday() {
   const { data: vehicles = [] } = useVehicles();
   const { toast } = useToast();
   const deletePickup = useDeletePickup();
+  const queryClient = useQueryClient();
+
+  // Real-time location updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('location-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'locations'
+        },
+        (payload) => {
+          console.log('Location updated:', payload);
+          // Invalidate all route-related queries to trigger re-optimization
+          queryClient.invalidateQueries({ queryKey: ['routes'] });
+          queryClient.invalidateQueries({ queryKey: ['optimized-routes'] });
+          queryClient.invalidateQueries({ queryKey: ['assignments'] });
+          queryClient.invalidateQueries({ queryKey: ['locations'] });
+          queryClient.invalidateQueries({ queryKey: ['pickups'] });
+          
+          toast({
+            title: "Location Updated",
+            description: "Route automatically re-optimized with new coordinates",
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient, toast]);
 
   useEffect(() => {
     document.title = "Route Planning – TreadSet";

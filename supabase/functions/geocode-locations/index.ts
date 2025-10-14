@@ -181,64 +181,91 @@ Deno.serve(async (req) => {
       );
 
     } else {
-      // Geocode all locations without coordinates
-      const { data: locations, error: locationsError } = await supabase
+      // Geocode all locations - batch mode with automatic outlier detection
+      const { data: allLocations, error: locationsError } = await supabase
         .from('locations')
-        .select('id, name, address, latitude, longitude')
-        .is('latitude', null)
-        .is('longitude', null)
-        .limit(20); // Process in batches to avoid rate limits
+        .select('id, name, address, latitude, longitude, organization_id');
 
       if (locationsError) throw locationsError;
 
-      if (!locations || locations.length === 0) {
+      if (!allLocations || allLocations.length === 0) {
         return new Response(
           JSON.stringify({ 
-            message: 'No locations need geocoding',
+            message: 'No locations found',
             processed: 0 
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
+      // Get org depot for outlier detection
+      const orgId = allLocations[0]?.organization_id;
+      const depot = orgId ? await getOrgDepot(supabase, orgId) : { lat: 42.3314, lng: -83.0458 };
+
       const results = [];
       let successful = 0;
       let failed = 0;
+      let outliersCorrected = 0;
 
-      for (const location of locations) {
+      for (const location of allLocations) {
         if (!location.address) {
           console.log(`Skipping location ${location.id} - no address`);
           failed++;
           continue;
         }
 
-        const coordinates = await geocodeAddress(location.address, googleMapsApiKey);
+        // Skip if has valid coordinates and not fixing outliers
+        const hasCoords = location.latitude && location.longitude;
+        const isOutlier = hasCoords && haversineDistance(depot, { lat: Number(location.latitude), lng: Number(location.longitude) }) > 300;
         
-        if (coordinates) {
-          const { error: updateError } = await supabase
-            .from('locations')
-            .update({
-              latitude: coordinates.lat,
-              longitude: coordinates.lng,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', location.id);
+        if (hasCoords && !fixOutliers && !isOutlier) {
+          console.log(`Skipping location ${location.id} - already has coordinates`);
+          continue;
+        }
 
-          if (updateError) {
-            console.error(`Failed to update location ${location.id}:`, updateError);
-            failed++;
-          } else {
-            results.push({
-              id: location.id,
-              name: location.name,
-              latitude: coordinates.lat,
-              longitude: coordinates.lng
-            });
-            successful++;
-          }
-        } else {
+        let coordinates = await geocodeAddress(location.address, googleMapsApiKey, { region: 'us' });
+        
+        if (!coordinates) {
           console.log(`Failed to geocode location ${location.id}: ${location.address}`);
           failed++;
+          continue;
+        }
+
+        // Auto-detect and fix outliers with state bias
+        if (haversineDistance(depot, coordinates) > 300) {
+          const state = guessState(location.address) || 'MI';
+          console.log(`Location ${location.id} is an outlier (${haversineDistance(depot, coordinates).toFixed(0)}km from depot), retrying with state: ${state}`);
+          const strict = await geocodeAddress(location.address, googleMapsApiKey, { 
+            region: 'us', 
+            components: `administrative_area:${state}|country:US` 
+          });
+          if (strict) {
+            coordinates = strict;
+            if (hasCoords) outliersCorrected++;
+          }
+        }
+
+        const { error: updateError } = await supabase
+            .from('locations')
+            .update({
+          .update({
+            latitude: coordinates.lat,
+            longitude: coordinates.lng,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', location.id);
+
+        if (updateError) {
+          console.error(`Failed to update location ${location.id}:`, updateError);
+          failed++;
+        } else {
+          results.push({
+            id: location.id,
+            name: location.name,
+            latitude: coordinates.lat,
+            longitude: coordinates.lng
+          });
+          successful++;
         }
 
         // Rate limiting - wait 100ms between requests
@@ -247,10 +274,11 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({
-          message: `Geocoding completed: ${successful} successful, ${failed} failed`,
+          message: `Geocoding completed: ${successful} successful, ${failed} failed${outliersCorrected > 0 ? `, ${outliersCorrected} outliers corrected` : ''}`,
           processed: successful + failed,
           successful,
           failed,
+          outliersCorrected,
           locations: results
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
