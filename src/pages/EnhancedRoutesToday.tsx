@@ -108,6 +108,8 @@ export default function EnhancedRoutesToday() {
   const optimizeRef = useRef<() => void>(() => {});
   const [dataVersion, setDataVersion] = useState(0);
   const [aiAnalysis, setAiAnalysis] = useState<any>(null);
+  const [isApplyingAI, setIsApplyingAI] = useState(false);
+  const [originalEfficiency, setOriginalEfficiency] = useState<number | null>(null);
 
   // Get 7 days starting from current week
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeek, i));
@@ -214,6 +216,100 @@ export default function EnhancedRoutesToday() {
         description: e.message || 'Unable to fix coordinates',
         variant: "destructive",
       });
+    }
+  };
+
+  const applyAISuggestions = async () => {
+    if (!aiAnalysis?.route_suggestions) {
+      toast({ title: "No AI suggestions available", variant: "destructive" });
+      return;
+    }
+
+    setIsApplyingAI(true);
+    try {
+      // Save original efficiency
+      if (originalEfficiency === null && optimizedRoutes.length > 0) {
+        const avgEfficiency = Math.round(
+          optimizedRoutes.reduce((sum, r) => sum + r.efficiency, 0) / optimizedRoutes.length
+        );
+        setOriginalEfficiency(avgEfficiency);
+      }
+
+      const aiSuggestions = aiAnalysis.route_suggestions || [];
+      const normalize = (s: string) => (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+
+      // Apply AI ordering to routes
+      const reorderedRoutes = optimizedRoutes.map((route: any) => {
+        const suggestion = aiSuggestions.find((s: any) => {
+          const v = normalize(s.vehicle || '');
+          return v.includes(normalize(route.vehicleName)) || v.includes(normalize(route.vehicleId));
+        });
+        
+        if (!suggestion || !Array.isArray(suggestion.suggested_sequence)) return route;
+
+        const seq: string[] = suggestion.suggested_sequence;
+        const originalStops = route.stops || [];
+        const withIndex = originalStops.map((stop: any, idx: number) => ({ ...stop, __originalIdx: idx }));
+
+        const scoreFor = (stop: any) => {
+          const keys = [stop.clientName, stop.address, stop.coordinates ? `${stop.coordinates.lat},${stop.coordinates.lng}` : '']
+            .map(normalize);
+          let best = Number.POSITIVE_INFINITY;
+          seq.forEach((label, i) => {
+            const l = normalize(label);
+            if (keys.some((k) => k && (l.includes(k) || k.includes(l)))) {
+              best = Math.min(best, i);
+            }
+          });
+          return best;
+        };
+
+        const sorted = [...withIndex].sort((a, b) => {
+          const sa = scoreFor(a);
+          const sb = scoreFor(b);
+          if (sa === sb) return a.__originalIdx - b.__originalIdx;
+          return sa - sb;
+        }).map(({ __originalIdx, ...rest }) => rest);
+
+        return { ...route, stops: sorted };
+      });
+
+      // Update assignments in database with new sequence order
+      for (const route of reorderedRoutes) {
+        for (let i = 0; i < route.stops.length; i++) {
+          const stop = route.stops[i];
+          if (stop.id) {
+            const { error } = await supabase
+              .from('assignments')
+              .update({ 
+                sequence_order: i + 1,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', stop.id);
+
+            if (error) {
+              console.error('Error updating assignment sequence:', error);
+            }
+          }
+        }
+      }
+
+      // Re-run optimization to get updated metrics
+      await optimizeRoutes();
+
+      toast({
+        title: "AI Suggestions Applied!",
+        description: "Routes reordered and assignments updated. Check the new efficiency scores.",
+      });
+    } catch (error: any) {
+      console.error('Error applying AI suggestions:', error);
+      toast({
+        title: "Failed to apply suggestions",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsApplyingAI(false);
     }
   };
 
@@ -565,17 +661,49 @@ export default function EnhancedRoutesToday() {
               {aiAnalysis && (
                 <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-background">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <TrendingUp className="h-5 w-5 text-primary" />
-                      AI Route Insights
-                    </CardTitle>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2">
+                        <TrendingUp className="h-5 w-5 text-primary" />
+                        AI Route Insights
+                      </CardTitle>
+                      <Button 
+                        onClick={applyAISuggestions}
+                        disabled={isApplyingAI || !aiAnalysis?.route_suggestions?.length}
+                        size="sm"
+                        className="gap-2"
+                      >
+                        {isApplyingAI ? (
+                          <>
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                            Applying...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="h-4 w-4" />
+                            Apply AI Suggestions
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {/* Efficiency Score */}
                     <div className="flex items-center gap-4 p-4 bg-background/50 rounded-lg border">
                       <div className="flex-1">
                         <div className="text-sm text-muted-foreground mb-1">Route Efficiency Score</div>
-                        <div className="text-3xl font-bold text-primary">{aiAnalysis.efficiency_score}%</div>
+                        <div className="flex items-center gap-3">
+                          <div className="text-3xl font-bold text-primary">{aiAnalysis.efficiency_score}%</div>
+                          {originalEfficiency !== null && originalEfficiency !== aiAnalysis.efficiency_score && (
+                            <Badge variant="default" className="bg-green-600">
+                              +{aiAnalysis.efficiency_score - originalEfficiency}%
+                            </Badge>
+                          )}
+                        </div>
+                        {originalEfficiency !== null && originalEfficiency !== aiAnalysis.efficiency_score && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            Improved from {originalEfficiency}%
+                          </div>
+                        )}
                       </div>
                       <TrendingUp className="h-12 w-12 text-primary/20" />
                     </div>
