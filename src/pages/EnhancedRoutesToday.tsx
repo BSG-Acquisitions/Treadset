@@ -103,6 +103,8 @@ export default function EnhancedRoutesToday() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [pickupToDelete, setPickupToDelete] = useState<any>(null);
   const lastOptimizeRef = useRef<number>(0);
+  const optimizeRef = useRef<() => void>(() => {});
+  const [dataVersion, setDataVersion] = useState(0);
 
   // Get 7 days starting from current week
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeek, i));
@@ -134,9 +136,12 @@ export default function EnhancedRoutesToday() {
           queryClient.invalidateQueries({ queryKey: ['locations'] });
           queryClient.invalidateQueries({ queryKey: ['pickups'] });
           
+          // Force AI insights to re-fetch and re-run
+          setDataVersion((v) => v + 1);
+          
           toast({
             title: "Location Updated",
-            description: "Route automatically re-optimized with new coordinates",
+            description: "Routes and AI insights refreshed with new coordinates",
           });
         }
       )
@@ -145,7 +150,7 @@ export default function EnhancedRoutesToday() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [queryClient, toast]);
+  }, [queryClient, toast, optimizeRoutes]);
 
   useEffect(() => {
     document.title = "Route Planning – TreadSet";
@@ -198,7 +203,7 @@ export default function EnhancedRoutesToday() {
         title: "Routes Optimized",
         description: `Generated ${data.routes?.length || 0} optimized routes for maximum efficiency.`,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Route optimization error:', error);
       toast({
         title: "Optimization Error", 
@@ -722,7 +727,7 @@ export default function EnhancedRoutesToday() {
 
         {/* AI Insights Tab */}
         <TabsContent value="ai" className="space-y-6">
-          <AIRouteInsights date={activeDay} />
+          <AIRouteInsights key={`ai-${dataVersion}-${activeDay}`} date={activeDay} />
         </TabsContent>
 
         {/* Statistics Tab */}
