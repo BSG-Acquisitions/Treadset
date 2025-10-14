@@ -65,7 +65,7 @@ async function geocodeAddress(
   opts?: { components?: string; region?: string }
 ): Promise<{ lat: number; lng: number } | null> {
   try {
-    const encodedAddress = encodeURIComponent(address);
+    const encodedAddress = encodeURIComponent(address.trim());
     const params = new URLSearchParams({ address: encodedAddress, key: googleMapsApiKey });
     if (opts?.region) params.set('region', opts.region);
     if (opts?.components) params.set('components', opts.components);
@@ -141,7 +141,21 @@ Deno.serve(async (req) => {
       let coordinates = await geocodeAddress(addressToGeocode, googleMapsApiKey, { region: 'us' });
       
       if (!coordinates) {
-        throw new Error(`Failed to geocode address: ${addressToGeocode}`);
+        // Retry with state bias (defaults to MI) to resolve ambiguous addresses like "10031 Greenfield"
+        const state = guessState(addressToGeocode) || 'MI';
+        let strict = await geocodeAddress(addressToGeocode, googleMapsApiKey, {
+          region: 'us',
+          components: `administrative_area:${state}|country:US`
+        });
+        if (!strict) {
+          // Fallback: append state to the address to disambiguate
+          strict = await geocodeAddress(`${addressToGeocode}, ${state}`, googleMapsApiKey, { region: 'us' });
+        }
+        if (strict) {
+          coordinates = strict;
+        } else {
+          throw new Error(`Failed to geocode address: ${addressToGeocode}`);
+        }
       }
 
       // Validate against org depot and retry with state bias if it's an outlier
@@ -230,9 +244,23 @@ Deno.serve(async (req) => {
         let coordinates = await geocodeAddress(location.address, googleMapsApiKey, { region: 'us' });
         
         if (!coordinates) {
-          console.log(`Failed to geocode location ${location.id}: ${location.address}`);
-          failed++;
-          continue;
+          // Retry with state bias (defaults to MI) for ambiguous addresses
+          const state = guessState(location.address) || 'MI';
+          let strict = await geocodeAddress(location.address, googleMapsApiKey, {
+            region: 'us',
+            components: `administrative_area:${state}|country:US`
+          });
+          if (!strict) {
+            // Fallback: append state to the address to disambiguate
+            strict = await geocodeAddress(`${location.address}, ${state}`, googleMapsApiKey, { region: 'us' });
+          }
+          if (strict) {
+            coordinates = strict;
+          } else {
+            console.log(`Failed to geocode location ${location.id}: ${location.address}`);
+            failed++;
+            continue;
+          }
         }
 
         // Auto-detect and fix outliers with state bias
