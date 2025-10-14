@@ -185,12 +185,8 @@ export default function EnhancedRoutesToday() {
         setTimeout(() => reject(new Error('Request timeout')), 30000)
       );
       
-      // Pre-step: fix missing/bad geocodes and outliers before optimizing
-      try {
-        await supabase.functions.invoke('geocode-locations', { body: { fixOutliers: true } });
-      } catch (e) {
-        console.warn('Geocode pre-step failed (continuing anyway):', e);
-      }
+      // Removed automatic mass geocoding to avoid clobbering valid coordinates
+      // If needed, run geocode-locations manually from an admin tool or only for explicit fixes.
 
       const optimizePromise = supabase.functions.invoke('enhanced-route-optimizer', {
         body: {

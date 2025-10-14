@@ -85,6 +85,12 @@ async function geocodeAddress(
         console.log(`Rejected coarse geocode result (types: ${types.join(',')}) for: ${address}`);
         return null;
       }
+      const allowedTypes = ['street_address','premise','establishment','subpremise','point_of_interest'];
+      const isPrecise = types.some((t) => allowedTypes.includes(t));
+      if (!isPrecise) {
+        console.log(`Rejected imprecise geocode result (types: ${types.join(',')}) for: ${address}`);
+        return null;
+      }
       return { lat: location.lat, lng: location.lng };
     }
 
@@ -147,7 +153,8 @@ Deno.serve(async (req) => {
         throw new Error('No address available for geocoding');
       }
 
-      let coordinates = await geocodeAddress(addressToGeocode, googleMapsApiKey, { region: 'us' });
+      const initialState = guessState(addressToGeocode) || 'MI';
+      let coordinates = await geocodeAddress(addressToGeocode, googleMapsApiKey, { region: 'us', components: `administrative_area:${initialState}|country:US` });
       
       if (!coordinates) {
         // Retry with state bias (defaults to MI) to resolve ambiguous addresses like "10031 Greenfield"
@@ -245,16 +252,15 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Skip if has valid coordinates and not fixing outliers
-        const hasCoords = location.latitude && location.longitude;
-        const isOutlier = hasCoords && haversineDistance(depot, { lat: Number(location.latitude), lng: Number(location.longitude) }) > 300;
-        
-        if (hasCoords && !fixOutliers && !isOutlier) {
-          console.log(`Skipping location ${location.id} - already has coordinates`);
+        // Determine if we should process this location
+        const shouldProcess = (!hasCoords) || (fixOutliers && isOutlier) || (forceUpdate === true);
+        if (!shouldProcess) {
+          console.log(`Skipping location ${location.id} - already has good coordinates`);
           continue;
         }
 
-        let coordinates = await geocodeAddress(location.address, googleMapsApiKey, { region: 'us' });
+        const defaultState = guessState(location.address) || 'MI';
+        let coordinates = await geocodeAddress(location.address, googleMapsApiKey, { region: 'us', components: `administrative_area:${defaultState}|country:US` });
         
         if (!coordinates) {
           // Retry with state bias (defaults to MI) for ambiguous addresses
