@@ -107,3 +107,6 @@ verify_jwt = true
 
 [functions.delete-hauler-and-manifests]
 verify_jwt = true
+
+[functions.ai-route-optimizer]
+verify_jwt = false

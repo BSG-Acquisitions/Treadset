@@ -57,6 +57,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format, addDays, subDays, startOfWeek, addWeeks, subWeeks } from "date-fns";
 import { motion } from "framer-motion";
 import { WeeklyPickupsGrid } from "@/components/routes/WeeklyPickupsGrid";
+import { AIRouteInsights } from "@/components/routes/AIRouteInsights";
 
 interface OptimizedStop {
   id: string;
@@ -404,8 +405,9 @@ export default function EnhancedRoutesToday() {
         <div className="py-6 px-2 sm:px-4">
           {/* Tabs for better organization */}
           <Tabs defaultValue="today" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-6">
+            <TabsList className="grid w-full grid-cols-4 mb-6">
               <TabsTrigger value="today">Today's Routes</TabsTrigger>
+              <TabsTrigger value="ai">AI Insights</TabsTrigger>
               <TabsTrigger value="week">Week View</TabsTrigger>
               <TabsTrigger value="stats">Statistics</TabsTrigger>
             </TabsList>
@@ -742,6 +744,11 @@ export default function EnhancedRoutesToday() {
               </Card>
             </div>
             
+            {/* AI Insights Tab */}
+            <TabsContent value="ai" className="space-y-6">
+              <AIRouteInsights date={activeDay} />
+            </TabsContent>
+
             {/* Additional stats could go here */}
             <Card>
               <CardHeader>
