@@ -15,12 +15,28 @@ interface GoogleMapsGeocodeResult {
   };
   types?: string[];
   partial_match?: boolean;
+  address_components?: Array<{
+    long_name: string;
+    short_name: string;
+    types: string[];
+  }>;
 }
 
 interface GoogleMapsGeocodeResponse {
   results: GoogleMapsGeocodeResult[];
   status: string;
 }
+
+// Detroit Metro Area Boundaries (Wayne, Oakland, Macomb counties)
+const DETROIT_BOUNDS = {
+  minLat: 42.1,
+  maxLat: 42.8,
+  minLng: -83.6,
+  maxLng: -82.4
+};
+
+const DETROIT_METRO_COUNTIES = ['Wayne', 'Oakland', 'Macomb'];
+const MAX_DISTANCE_FROM_DEPOT_KM = 160; // ~100 miles
 
 function toRadians(deg: number) {
   return (deg * Math.PI) / 180;
@@ -44,6 +60,40 @@ function guessState(address: string): string | null {
   if (m) return m[1].toUpperCase();
   if (/\bMI\b/i.test(address)) return 'MI';
   return null;
+}
+
+function isWithinDetroitMetro(lat: number, lng: number): boolean {
+  return lat >= DETROIT_BOUNDS.minLat &&
+         lat <= DETROIT_BOUNDS.maxLat &&
+         lng >= DETROIT_BOUNDS.minLng &&
+         lng <= DETROIT_BOUNDS.maxLng;
+}
+
+function extractCounty(result: GoogleMapsGeocodeResult): string | null {
+  if (!result.address_components) return null;
+  const countyComponent = result.address_components.find(comp => 
+    comp.types.includes('administrative_area_level_2')
+  );
+  return countyComponent?.long_name.replace(' County', '') || null;
+}
+
+function enhanceAddress(address: string, clientCity?: string, clientState?: string): string {
+  // If address already has city and state, return as-is
+  if (/,\s*[A-Z]{2}\s*\d{5}/.test(address)) {
+    return address;
+  }
+  
+  // Add city and state if available from client
+  if (clientCity && clientState) {
+    return `${address}, ${clientCity}, ${clientState}`;
+  }
+  
+  // Default to Detroit, MI if no other info available
+  if (!/Detroit|MI/i.test(address)) {
+    return `${address}, Detroit, MI`;
+  }
+  
+  return address;
 }
 
 async function getOrgDepot(supabase: any, orgId: string): Promise<{ lat: number; lng: number }> {
@@ -72,7 +122,7 @@ async function geocodeAddress(
   address: string,
   googleMapsApiKey: string,
   opts?: { components?: string; region?: string; bounds?: string }
-): Promise<{ lat: number; lng: number } | null> {
+): Promise<{ lat: number; lng: number; county?: string; confidence: number } | null> {
   try {
     const encodedAddress = encodeURIComponent(address.trim());
     const params = new URLSearchParams({ address: encodedAddress, key: googleMapsApiKey });
@@ -88,18 +138,51 @@ async function geocodeAddress(
       const result = data.results[0];
       const location = result.geometry.location;
       const types = result.types || [];
+      
+      // Reject coarse results (state-level or country-level)
       const isCoarse = types.includes('administrative_area_level_1') || types.includes('country');
       if (isCoarse) {
-        console.log(`Rejected coarse geocode result (types: ${types.join(',')}) for: ${address}`);
+        console.log(`❌ Rejected coarse geocode (types: ${types.join(',')}) for: ${address}`);
         return null;
       }
+      
+      // Only accept precise street-level results
       const allowedTypes = ['street_address','premise','establishment','subpremise','point_of_interest'];
       const isPrecise = types.some((t) => allowedTypes.includes(t));
       if (!isPrecise) {
-        console.log(`Rejected imprecise geocode result (types: ${types.join(',')}) for: ${address}`);
+        console.log(`❌ Rejected imprecise geocode (types: ${types.join(',')}) for: ${address}`);
         return null;
       }
-      return { lat: location.lat, lng: location.lng };
+      
+      // Extract county for validation
+      const county = extractCounty(result);
+      
+      // Validate against Detroit metro area bounds
+      const inDetroitBounds = isWithinDetroitMetro(location.lat, location.lng);
+      const inDetroitCounty = county ? DETROIT_METRO_COUNTIES.includes(county) : false;
+      
+      // Calculate confidence score
+      let confidence = 0;
+      if (isPrecise) confidence += 40;
+      if (inDetroitBounds) confidence += 30;
+      if (inDetroitCounty) confidence += 30;
+      
+      // Log validation results
+      console.log(`📍 Geocoded: ${address} -> (${location.lat}, ${location.lng})`);
+      console.log(`   County: ${county || 'unknown'}, In bounds: ${inDetroitBounds}, Confidence: ${confidence}%`);
+      
+      // Reject results outside Detroit metro area (unless very high precision)
+      if (!inDetroitBounds && !inDetroitCounty && confidence < 70) {
+        console.log(`❌ Rejected: Outside Detroit metro area`);
+        return null;
+      }
+      
+      return { 
+        lat: location.lat, 
+        lng: location.lng,
+        county,
+        confidence
+      };
     }
 
     console.log(`Geocoding failed for address: ${address}, status: ${data.status}`);
@@ -134,7 +217,11 @@ Deno.serve(async (req) => {
       // Geocode a specific location
       const { data: location, error: locationError } = await supabase
         .from('locations')
-        .select('id, name, address, latitude, longitude, organization_id')
+        .select(`
+          id, name, address, latitude, longitude, organization_id,
+          client_id,
+          clients!inner(city, state)
+        `)
         .eq('id', locationId)
         .single();
 
@@ -142,18 +229,25 @@ Deno.serve(async (req) => {
 
       // Skip if already has coordinates and not forcing update
       if (!forceUpdate && location.latitude && location.longitude) {
-        return new Response(
-          JSON.stringify({ 
-            message: 'Location already has coordinates',
-            location: {
-              id: location.id,
-              name: location.name,
-              latitude: location.latitude,
-              longitude: location.longitude
-            }
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        const depot = await getOrgDepot(supabase, location.organization_id);
+        const distanceKm = haversineDistance(depot, { lat: Number(location.latitude), lng: Number(location.longitude) });
+        const isOutlier = distanceKm > MAX_DISTANCE_FROM_DEPOT_KM;
+        
+        if (!isOutlier) {
+          return new Response(
+            JSON.stringify({ 
+              message: 'Location already has good coordinates',
+              location: {
+                id: location.id,
+                name: location.name,
+                latitude: location.latitude,
+                longitude: location.longitude,
+                distanceFromDepotMiles: (distanceKm * 0.621371).toFixed(1)
+              }
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
       }
 
       const addressToGeocode = address || location.address;
@@ -161,43 +255,55 @@ Deno.serve(async (req) => {
         throw new Error('No address available for geocoding');
       }
 
-      const initialState = guessState(addressToGeocode) || 'MI';
+      // Get client city/state if available
+      const clientCity = (location as any).clients?.city;
+      const clientState = (location as any).clients?.state || 'MI';
+
+      // Enhance address with Detroit context
+      const enhancedAddress = enhanceAddress(addressToGeocode, clientCity, clientState);
+      console.log(`🔍 Original: "${addressToGeocode}" -> Enhanced: "${enhancedAddress}"`);
+
       const depot = await getOrgDepot(supabase, location.organization_id);
       const bounds = boundsFromCenter(depot, 120);
-      let coordinates = await geocodeAddress(addressToGeocode, googleMapsApiKey, { region: 'us', components: `administrative_area:${initialState}|country:US`, bounds });
+      
+      // Try geocoding with enhanced address
+      let coordinates = await geocodeAddress(enhancedAddress, googleMapsApiKey, { 
+        region: 'us', 
+        components: `administrative_area:MI|country:US`, 
+        bounds 
+      });
+      
+      // Fallback attempts if first geocode fails
+      if (!coordinates) {
+        console.log('⚠️  First attempt failed, trying with strict Michigan components...');
+        coordinates = await geocodeAddress(addressToGeocode, googleMapsApiKey, {
+          region: 'us',
+          components: `administrative_area:MI|country:US`,
+          bounds
+        });
+      }
+      
+      if (!coordinates && location?.name) {
+        console.log('⚠️  Trying business name instead...');
+        coordinates = await geocodeAddress(`${location.name}, Detroit, MI`, googleMapsApiKey, { 
+          region: 'us', 
+          components: `administrative_area:MI|country:US`,
+          bounds 
+        });
+      }
       
       if (!coordinates) {
-        // Retry with state bias (defaults to MI) to resolve ambiguous addresses like "10031 Greenfield"
-        const state = initialState;
-        let strict = await geocodeAddress(addressToGeocode, googleMapsApiKey, {
-          region: 'us',
-          components: `administrative_area:${state}|country:US`,
-          bounds
-        });
-        if (!strict) {
-          // Fallback: append state to the address to disambiguate
-          strict = await geocodeAddress(`${addressToGeocode}, ${state}`, googleMapsApiKey, { region: 'us', components: `administrative_area:${state}|country:US`, bounds });
-        }
-        if (!strict && location?.name) {
-          // Last attempt: try business name with state near depot city
-          strict = await geocodeAddress(`${location.name}, ${state}`, googleMapsApiKey, { region: 'us', components: `administrative_area:${state}|country:US`, bounds });
-        }
-        if (strict) {
-          coordinates = strict;
-        } else {
-          throw new Error(`Failed to geocode address: ${addressToGeocode}`);
-        }
+        throw new Error(`Failed to geocode address: ${enhancedAddress}. All attempts exhausted.`);
       }
 
-      // Validate against org depot and retry with state bias if it's an outlier
-      if (haversineDistance(depot, coordinates) > 300) {
-        const state = initialState;
-        let strict = await geocodeAddress(`${addressToGeocode}, ${state}`, googleMapsApiKey, { 
-          region: 'us', 
-          components: `administrative_area:${state}|country:US`,
-          bounds
-        });
-        if (strict) coordinates = strict;
+      // Final validation - reject if way outside Detroit area
+      const distanceFromDepot = haversineDistance(depot, coordinates);
+      if (distanceFromDepot > MAX_DISTANCE_FROM_DEPOT_KM) {
+        console.log(`⚠️  WARNING: Geocoded location is ${distanceFromDepot.toFixed(0)}km from depot (>${MAX_DISTANCE_FROM_DEPOT_KM}km threshold)`);
+        throw new Error(
+          `Geocoded coordinates are too far from depot (${(distanceFromDepot * 0.621371).toFixed(0)} miles). ` +
+          `This likely indicates an incorrect geocode result. Please verify the address.`
+        );
       }
 
       // Update the location with coordinates
@@ -212,6 +318,11 @@ Deno.serve(async (req) => {
 
       if (updateError) throw updateError;
 
+      const distanceMiles = (distanceFromDepot * 0.621371).toFixed(1);
+      const confidenceMsg = coordinates.confidence >= 80 ? '✅ High confidence' : 
+                           coordinates.confidence >= 60 ? '⚠️  Medium confidence' : 
+                           '❌ Low confidence - manual review recommended';
+
       return new Response(
         JSON.stringify({
           message: 'Location coordinates updated successfully',
@@ -219,17 +330,26 @@ Deno.serve(async (req) => {
             id: location.id,
             name: location.name,
             latitude: coordinates.lat,
-            longitude: coordinates.lng
+            longitude: coordinates.lng,
+            county: coordinates.county,
+            confidence: coordinates.confidence,
+            distanceFromDepotMiles: distanceMiles,
+            confidenceLevel: confidenceMsg
           }
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
 
     } else {
-      // Geocode all locations - batch mode with automatic outlier detection
+      // Geocode all locations - batch mode
+      console.log('🔄 Starting batch geocoding...');
       const { data: allLocations, error: locationsError } = await supabase
         .from('locations')
-        .select('id, name, address, latitude, longitude, organization_id');
+        .select(`
+          id, name, address, latitude, longitude, organization_id,
+          client_id,
+          clients!inner(city, state)
+        `);
 
       if (locationsError) throw locationsError;
 
@@ -243,17 +363,18 @@ Deno.serve(async (req) => {
         );
       }
 
-      // We'll compute depot per location to respect multi-org data
-
+      console.log(`📊 Found ${allLocations.length} locations to process`);
 
       const results = [];
       let successful = 0;
       let failed = 0;
+      let skipped = 0;
       let outliersCorrected = 0;
+      let lowConfidence = 0;
 
       for (const location of allLocations) {
         if (!location.address) {
-          console.log(`Skipping location ${location.id} - no address`);
+          console.log(`⏭️  Skipping location ${location.id} - no address`);
           failed++;
           continue;
         }
@@ -261,48 +382,136 @@ Deno.serve(async (req) => {
         const hasCoords = location.latitude && location.longitude;
         const depot = await getOrgDepot(supabase, location.organization_id);
         const bounds = boundsFromCenter(depot, 120);
-        const isOutlier = hasCoords && haversineDistance(depot, { lat: Number(location.latitude), lng: Number(location.longitude) }) > 300;
+        const isOutlier = hasCoords && haversineDistance(depot, { lat: Number(location.latitude), lng: Number(location.longitude) }) > MAX_DISTANCE_FROM_DEPOT_KM;
         
-        // Determine if we should process this location
+        // Only process if: no coords, is outlier+fixing, or force update
         const shouldProcess = (!hasCoords) || (fixOutliers && isOutlier) || (forceUpdate === true);
         if (!shouldProcess) {
-          console.log(`Skipping location ${location.id} - already has good coordinates`);
+          skipped++;
           continue;
         }
 
-        const defaultState = guessState(location.address) || 'MI';
-        let coordinates = await geocodeAddress(location.address, googleMapsApiKey, { region: 'us', components: `administrative_area:${defaultState}|country:US`, bounds });
-        
-        if (!coordinates) {
-          // Retry with state bias (defaults to MI) for ambiguous addresses
-          const state = guessState(location.address) || 'MI';
-          let strict = await geocodeAddress(location.address, googleMapsApiKey, {
-            region: 'us',
-            components: `administrative_area:${state}|country:US`,
-            bounds
-          });
-          if (!strict) {
-            // Fallback: append state to the address to disambiguate
-            strict = await geocodeAddress(`${location.address}, ${state}`, googleMapsApiKey, { region: 'us', bounds });
-          }
-          if (!strict && location?.name) {
-            // Last attempt: try business name with state
-            strict = await geocodeAddress(`${location.name}, ${state}`, googleMapsApiKey, { region: 'us', bounds });
-          }
-          if (strict) {
-            coordinates = strict;
-          } else {
-            console.log(`Failed to geocode location ${location.id}: ${location.address}`);
-            failed++;
-            continue;
-          }
+        // Get client location info
+        const clientCity = (location as any).clients?.city;
+        const clientState = (location as any).clients?.state || 'MI';
+
+        // Enhance address before geocoding
+        const enhancedAddress = enhanceAddress(location.address, clientCity, clientState);
+        if (enhancedAddress !== location.address) {
+          console.log(`🔍 Enhanced: "${location.address}" -> "${enhancedAddress}"`);
         }
 
-        // Auto-detect and fix outliers with state bias
-        if (haversineDistance(depot, coordinates) > 300) {
-          const state = guessState(location.address) || 'MI';
-          console.log(`Location ${location.id} is an outlier (${haversineDistance(depot, coordinates).toFixed(0)}km from depot), retrying with state: ${state}`);
-          let strict = await geocodeAddress(location.address, googleMapsApiKey, { 
+        // Try geocoding with enhanced address and strict Michigan filtering
+        let coordinates = await geocodeAddress(enhancedAddress, googleMapsApiKey, { 
+          region: 'us', 
+          components: `administrative_area:MI|country:US`, 
+          bounds 
+        });
+        
+        // Fallback: try original address with strict Michigan filtering
+        if (!coordinates) {
+          console.log(`⚠️  Enhanced address failed, trying original...`);
+          coordinates = await geocodeAddress(location.address, googleMapsApiKey, {
+            region: 'us',
+            components: `administrative_area:MI|country:US`,
+            bounds
+          });
+        }
+        
+        // Last resort: try business name
+        if (!coordinates && location?.name) {
+          console.log(`⚠️  Trying business name: ${location.name}`);
+          coordinates = await geocodeAddress(`${location.name}, Detroit, MI`, googleMapsApiKey, { 
+            region: 'us', 
+            components: `administrative_area:MI|country:US`,
+            bounds 
+          });
+        }
+        
+        if (!coordinates) {
+          console.log(`❌ Failed to geocode location ${location.id}: ${location.address}`);
+          failed++;
+          continue;
+        }
+
+        // Final distance validation - reject if too far from depot
+        const distanceFromDepot = haversineDistance(depot, coordinates);
+        if (distanceFromDepot > MAX_DISTANCE_FROM_DEPOT_KM) {
+          console.log(`❌ Rejected geocode for ${location.id}: ${distanceFromDepot.toFixed(0)}km from depot (max: ${MAX_DISTANCE_FROM_DEPOT_KM}km)`);
+          failed++;
+          continue;
+        }
+
+        // Track outlier corrections
+        if (isOutlier && hasCoords) {
+          outliersCorrected++;
+          console.log(`✅ Corrected outlier ${location.id}: was ${haversineDistance(depot, { lat: Number(location.latitude), lng: Number(location.longitude) }).toFixed(0)}km, now ${distanceFromDepot.toFixed(0)}km from depot`);
+        }
+
+        // Track low confidence results
+        if (coordinates.confidence < 70) {
+          lowConfidence++;
+          console.log(`⚠️  Low confidence (${coordinates.confidence}%) for ${location.id}`);
+        }
+
+        // Update database
+        const { error: updateError } = await supabase
+          .from('locations')
+          .update({
+            latitude: coordinates.lat,
+            longitude: coordinates.lng,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', location.id);
+
+        if (updateError) {
+          console.error(`Failed to update location ${location.id}:`, updateError);
+          failed++;
+        } else {
+          results.push({
+            id: location.id,
+            name: location.name,
+            latitude: coordinates.lat,
+            longitude: coordinates.lng,
+            county: coordinates.county,
+            confidence: coordinates.confidence,
+            distanceFromDepotMiles: (distanceFromDepot * 0.621371).toFixed(1)
+          });
+          successful++;
+        }
+
+        // Rate limiting
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      console.log(`✅ Batch complete: ${successful} successful, ${failed} failed, ${skipped} skipped, ${outliersCorrected} outliers corrected, ${lowConfidence} low confidence`);
+
+      return new Response(
+        JSON.stringify({
+          message: `Geocoding completed: ${successful} successful, ${failed} failed, ${skipped} skipped`,
+          processed: successful + failed,
+          successful,
+          failed,
+          skipped,
+          outliersCorrected,
+          lowConfidence,
+          locations: results
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+  } catch (error: any) {
+    console.error('Geocoding error:', error);
+    return new Response(
+      JSON.stringify({ error: error?.message || 'Unknown error' }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      }
+    );
+  }
+});
             region: 'us', 
             components: `administrative_area:${state}|country:US`,
             bounds 
