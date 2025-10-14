@@ -205,10 +205,58 @@ export default function EnhancedRoutesToday() {
       if (error) throw error;
       
       console.log('Route optimization response:', data);
-      setOptimizedRoutes(data.routes || []);
+
+      // Apply AI sequencing suggestions on top of base route metrics
+      let aiSuggestions: any[] = [];
+      try {
+        const { data: aiData, error: aiError } = await supabase.functions.invoke('ai-route-optimizer', {
+          body: { date: activeDay }
+        });
+        if (aiError) throw aiError;
+        aiSuggestions = aiData?.ai_analysis?.route_suggestions || [];
+      } catch (e) {
+        console.warn('AI suggestions unavailable, proceeding with base optimization:', e);
+      }
+
+      const normalize = (s: string) => (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+      const reordered = (data.routes || []).map((route: any) => {
+        const suggestion = aiSuggestions.find((s) => {
+          const v = normalize(s.vehicle || '');
+          return v.includes(normalize(route.vehicleName)) || v.includes(normalize(route.vehicleId));
+        });
+        if (!suggestion || !Array.isArray(suggestion.suggested_sequence)) return route;
+
+        const seq: string[] = suggestion.suggested_sequence;
+        const originalStops = route.stops || [];
+        const withIndex = originalStops.map((stop: any, idx: number) => ({ ...stop, __originalIdx: idx }));
+
+        const scoreFor = (stop: any) => {
+          const keys = [stop.clientName, stop.address, stop.coordinates ? `${stop.coordinates.lat},${stop.coordinates.lng}` : '']
+            .map(normalize);
+          let best = Number.POSITIVE_INFINITY;
+          seq.forEach((label, i) => {
+            const l = normalize(label);
+            if (keys.some((k) => k && (l.includes(k) || k.includes(l)))) {
+              best = Math.min(best, i);
+            }
+          });
+          return best;
+        };
+
+        const sorted = [...withIndex].sort((a, b) => {
+          const sa = scoreFor(a);
+          const sb = scoreFor(b);
+          if (sa === sb) return a.__originalIdx - b.__originalIdx; // stable fallback
+          return sa - sb;
+        }).map(({ __originalIdx, ...rest }) => rest);
+
+        return { ...route, stops: sorted };
+      });
+
+      setOptimizedRoutes(reordered);
       toast({
-        title: "Routes Optimized",
-        description: `Generated ${data.routes?.length || 0} optimized routes for maximum efficiency.`,
+        title: "AI Optimization Applied",
+        description: `Sequenced ${reordered.length || 0} routes using AI suggestions.`,
       });
     } catch (error: any) {
       console.error('Route optimization error:', error);
