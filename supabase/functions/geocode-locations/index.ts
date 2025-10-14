@@ -246,8 +246,7 @@ Deno.serve(async (req) => {
         }
 
         const { error: updateError } = await supabase
-            .from('locations')
-            .update({
+          .from('locations')
           .update({
             latitude: coordinates.lat,
             longitude: coordinates.lng,
