@@ -591,40 +591,39 @@ export default function EnhancedRoutesToday() {
     <div className="min-h-screen bg-background">
       
       <main>
-        {/* Enhanced Header */}
+        {/* Compact Header */}
         <div className="bg-gradient-to-br from-background to-secondary/20 border-b border-border/20">
-          <div className="container py-6">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
+          <div className="container py-3">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
               <TreadSetAnimatedLogo size="sm" animated={true} showText={false} />
               <div>
-                <h1 className="text-2xl font-bold text-foreground">Route Planning</h1>
-                <p className="text-muted-foreground">
-                  AI-optimized routes across multiple days for maximum efficiency
+                <h1 className="text-xl font-bold text-foreground">Route Planning</h1>
+                <p className="text-xs text-muted-foreground">
+                  AI-optimized routes for maximum efficiency
                 </p>
               </div>
             </div>
             
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button variant="outline" size="sm" onClick={goToPreviousWeek}>
-                <ChevronLeft className="h-4 w-4 mr-2" />
-                Previous Week
-              </Button>
-              <Button variant="outline" size="sm" onClick={goToToday}>
-                Today
-              </Button>
-              <Button variant="outline" size="sm" onClick={goToNextWeek}>
-                Next Week
-                <ChevronRight className="h-4 w-4 ml-2" />
-              </Button>
+            <div className="flex flex-wrap gap-2">
+              <div className="flex gap-1">
+                <Button variant="outline" size="sm" onClick={goToPreviousWeek}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="sm" onClick={goToToday}>
+                  Today
+                </Button>
+                <Button variant="outline" size="sm" onClick={goToNextWeek}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
               
               <FixGeocodingButton />
               <LocationGeocodeDialog />
               <VehicleManagementDialog 
                 trigger={
                   <Button variant="outline" size="sm">
-                    <Truck className="h-4 w-4 mr-2" />
-                    Manage Fleet
+                    <Truck className="h-4 w-4" />
                   </Button>
                 }
               />
@@ -632,12 +631,12 @@ export default function EnhancedRoutesToday() {
               <Button 
                 onClick={optimizeRoutes} 
                 disabled={isOptimizing}
-                className="whitespace-nowrap"
+                size="sm"
               >
                 {isOptimizing ? (
-                  <><RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Optimizing...</>
+                  <><RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Optimizing</>
                 ) : (
-                  <><Route className="h-4 w-4 mr-2" /> Re-optimize Routes</>
+                  <><Route className="h-4 w-4 mr-2" /> Optimize</>
                 )}
               </Button>
             </div>
@@ -645,353 +644,364 @@ export default function EnhancedRoutesToday() {
           </div>
         </div>
 
-        <div className="py-6 px-2 sm:px-4">
+        <div className="py-3 px-2 sm:px-4">
           {/* Tabs for better organization */}
           <Tabs defaultValue="today" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-6">
+            <TabsList className="grid w-full grid-cols-3 mb-3">
               <TabsTrigger value="today">Today's Routes</TabsTrigger>
               <TabsTrigger value="week">Week View</TabsTrigger>
               <TabsTrigger value="stats">Statistics</TabsTrigger>
             </TabsList>
 
             {/* Today's Routes Tab */}
-            <TabsContent value="today" className="space-y-6">
-              {/* Pickups and Routes Section */}
-              {/* AI Insights Section */}
+            <TabsContent value="today" className="space-y-3">
+              {/* AI Insights Section - Collapsible */}
               {aiAnalysis && (
-                <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-background">
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="flex items-center gap-2">
-                        <TrendingUp className="h-5 w-5 text-primary" />
-                        AI Route Insights
-                      </CardTitle>
-                      <Button 
-                        onClick={applyAISuggestions}
-                        disabled={isApplyingAI || !aiAnalysis?.route_suggestions?.length}
-                        size="sm"
-                        className="gap-2"
-                      >
-                        {isApplyingAI ? (
-                          <>
-                            <RefreshCw className="h-4 w-4 animate-spin" />
-                            Applying...
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle className="h-4 w-4" />
-                            Apply AI Suggestions
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Efficiency Score */}
-                    <div className="flex items-center gap-4 p-4 bg-background/50 rounded-lg border">
-                      <div className="flex-1">
-                        <div className="text-sm text-muted-foreground mb-1">Route Efficiency Score</div>
-                        <div className="flex items-center gap-3">
-                          <div className="text-3xl font-bold text-primary">{aiAnalysis.efficiency_score}%</div>
-                          {originalEfficiency !== null && originalEfficiency !== aiAnalysis.efficiency_score && (
-                            <Badge variant="default" className="bg-green-600">
-                              +{aiAnalysis.efficiency_score - originalEfficiency}%
-                            </Badge>
-                          )}
+                <Collapsible defaultOpen={false}>
+                  <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-background">
+                    <CollapsibleTrigger asChild>
+                      <CardHeader className="py-3 cursor-pointer hover:bg-secondary/10 transition-colors">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="flex items-center gap-2 text-base">
+                            <TrendingUp className="h-4 w-4 text-primary" />
+                            AI Route Insights - {aiAnalysis.efficiency_score}% Efficiency
+                          </CardTitle>
+                          <Button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              applyAISuggestions();
+                            }}
+                            disabled={isApplyingAI || !aiAnalysis?.route_suggestions?.length}
+                            size="sm"
+                            className="gap-2"
+                          >
+                            {isApplyingAI ? (
+                              <>
+                                <RefreshCw className="h-4 w-4 animate-spin" />
+                                Applying
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle className="h-4 w-4" />
+                                Apply
+                              </>
+                            )}
+                          </Button>
                         </div>
-                        {originalEfficiency !== null && originalEfficiency !== aiAnalysis.efficiency_score && (
-                          <div className="text-xs text-muted-foreground mt-1">
-                            Improved from {originalEfficiency}%
+                      </CardHeader>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <CardContent className="space-y-3 pt-0">
+                        {/* Efficiency Score */}
+                        <div className="flex items-center gap-3 p-3 bg-background/50 rounded-lg border">
+                          <div className="flex-1">
+                            <div className="text-xs text-muted-foreground mb-1">Route Efficiency Score</div>
+                            <div className="flex items-center gap-2">
+                              <div className="text-2xl font-bold text-primary">{aiAnalysis.efficiency_score}%</div>
+                              {originalEfficiency !== null && originalEfficiency !== aiAnalysis.efficiency_score && (
+                                <Badge variant="default" className="bg-green-600">
+                                  +{aiAnalysis.efficiency_score - originalEfficiency}%
+                                </Badge>
+                              )}
+                            </div>
+                            {originalEfficiency !== null && originalEfficiency !== aiAnalysis.efficiency_score && (
+                              <div className="text-xs text-muted-foreground mt-1">
+                                Improved from {originalEfficiency}%
+                              </div>
+                            )}
+                          </div>
+                          <TrendingUp className="h-8 w-8 text-primary/20" />
+                        </div>
+
+                        {/* Top Improvements */}
+                        {aiAnalysis.improvements && aiAnalysis.improvements.length > 0 && (
+                          <div>
+                            <h4 className="font-semibold mb-2 flex items-center gap-2 text-sm">
+                              <AlertTriangle className="h-4 w-4 text-amber-500" />
+                              Top Improvements
+                            </h4>
+                            <div className="space-y-2">
+                              {aiAnalysis.improvements.map((improvement: any, idx: number) => (
+                                <div key={idx} className="p-2 bg-background/50 rounded-lg border border-border/50">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="flex-1">
+                                      <div className="font-medium text-sm mb-0.5">{improvement.title}</div>
+                                      <div className="text-xs text-muted-foreground">{improvement.description}</div>
+                                      {improvement.estimated_savings && (
+                                        <div className="text-xs text-primary mt-0.5">💡 {improvement.estimated_savings}</div>
+                                      )}
+                                    </div>
+                                    <Badge variant={
+                                      improvement.impact === 'high' ? 'destructive' : 
+                                      improvement.impact === 'medium' ? 'default' : 
+                                      'secondary'
+                                    } className="text-xs">
+                                      {improvement.impact}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         )}
-                      </div>
-                      <TrendingUp className="h-12 w-12 text-primary/20" />
-                    </div>
 
-                    {/* Top Improvements */}
-                    {aiAnalysis.improvements && aiAnalysis.improvements.length > 0 && (
-                      <div>
-                        <h4 className="font-semibold mb-3 flex items-center gap-2">
-                          <AlertTriangle className="h-4 w-4 text-amber-500" />
-                          Top Improvements
-                        </h4>
-                        <div className="space-y-2">
-                          {aiAnalysis.improvements.map((improvement: any, idx: number) => (
-                            <div key={idx} className="p-3 bg-background/50 rounded-lg border border-border/50">
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="flex-1">
-                                  <div className="font-medium mb-1">{improvement.title}</div>
-                                  <div className="text-sm text-muted-foreground">{improvement.description}</div>
-                                  {improvement.estimated_savings && (
-                                    <div className="text-xs text-primary mt-1">💡 {improvement.estimated_savings}</div>
-                                  )}
-                                </div>
-                                <Badge variant={
-                                  improvement.impact === 'high' ? 'destructive' : 
-                                  improvement.impact === 'medium' ? 'default' : 
-                                  'secondary'
-                                }>
-                                  {improvement.impact}
-                                </Badge>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Overall Analysis */}
-                    {aiAnalysis.overall_analysis && (
-                      <div className="p-4 bg-primary/5 rounded-lg border border-primary/10">
-                        <h4 className="font-semibold mb-2 text-sm">Overall Analysis</h4>
-                        <p className="text-sm text-muted-foreground leading-relaxed">{aiAnalysis.overall_analysis}</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                        {/* Overall Analysis */}
+                        {aiAnalysis.overall_analysis && (
+                          <div className="p-3 bg-primary/5 rounded-lg border border-primary/10">
+                            <h4 className="font-semibold mb-1 text-xs">Overall Analysis</h4>
+                            <p className="text-xs text-muted-foreground leading-relaxed">{aiAnalysis.overall_analysis}</p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </CollapsibleContent>
+                  </Card>
+                </Collapsible>
               )}
 
               {pickups.length === 0 && optimizedRoutes.length === 0 ? (
                 <Card>
-                  <CardContent className="py-12 text-center">
-                    <Route className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground text-lg">No pickups or routes scheduled for {format(activeDateLocal, 'EEEE, MMMM d')}</p>
-                    <p className="text-sm text-muted-foreground mt-2">Pickups and routes will appear here once scheduled</p>
+                  <CardContent className="py-8 text-center">
+                    <Route className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-muted-foreground text-sm">No pickups scheduled for {format(activeDateLocal, 'EEEE, MMM d')}</p>
                   </CardContent>
                 </Card>
               ) : (
-                <div className="space-y-6">
-              {/* Scheduled Pickups */}
+                <div className="space-y-3">
+              {/* Scheduled Pickups - Collapsible */}
               {pickups.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Package className="h-5 w-5" />
-                      Scheduled Pickups - {format(activeDateLocal, 'EEEE, MMMM d')}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                     <div className="space-y-4">
-                       {pickups.map((pickup) => (
-                          <div
-                            key={pickup.id}
-                            className="flex flex-col gap-3 p-4 border rounded-lg hover:bg-secondary/10 transition-colors"
-                          >
-                            <div className="flex items-center gap-4 min-w-0 flex-1">
-                              <Package className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                              <div className="space-y-2 min-w-0 flex-1">
-                                <div className="flex items-center gap-2">
-                                  <Building className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                  <span className="font-medium text-base sm:text-lg truncate">
+                <Collapsible defaultOpen={true}>
+                  <Card>
+                    <CollapsibleTrigger asChild>
+                      <CardHeader className="py-3 cursor-pointer hover:bg-secondary/10 transition-colors">
+                        <CardTitle className="flex items-center gap-2 text-base">
+                          <Package className="h-4 w-4" />
+                          Scheduled Pickups - {format(activeDateLocal, 'EEE, MMM d')} ({pickups.length})
+                        </CardTitle>
+                      </CardHeader>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <CardContent className="pt-0">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                          {pickups.map((pickup) => (
+                            <div
+                              key={pickup.id}
+                              className="flex flex-col gap-2 p-2 border rounded-lg hover:bg-secondary/10 transition-colors"
+                            >
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-1.5">
+                                  <Building className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                                  <span className="font-medium text-sm truncate">
                                     {pickup.client?.company_name || 'Unknown Client'}
                                   </span>
                                 </div>
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                  <MapPin className="h-4 w-4 flex-shrink-0" />
-                                  <span className="truncate">{pickup.location?.name || pickup.location?.address || 'No address'}</span>
+                                <div className="flex items-center gap-1.5">
+                                  <MapPin className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                                  <span className="text-xs text-muted-foreground truncate">{pickup.location?.name || pickup.location?.address || 'No address'}</span>
                                 </div>
-                                <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+                                <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                                   <span>PTE {pickup.pte_count}</span>
                                   <span>•</span>
                                   <span>OTR {pickup.otr_count}</span>
                                   <span>•</span>
                                   <span>Tractor {pickup.tractor_count}</span>
-                                  <span>•</span>
-                                  <span>Revenue: ${pickup.computed_revenue?.toFixed(2) || '0.00'}</span>
+                                </div>
+                                <div className="text-xs font-semibold">
+                                  ${pickup.computed_revenue?.toFixed(2) || '0.00'}
                                 </div>
                               </div>
-                            </div>
-                            
-                            <div className="flex flex-wrap items-center gap-2 sm:gap-3 flex-shrink-0 w-full sm:w-auto">
-                              <Badge variant="outline" className="whitespace-nowrap">
-                                {pickup.status.replace('_', ' ')}
-                              </Badge>
+                              
+                              <div className="flex gap-1 pt-1">
+                                <Badge variant="outline" className="text-xs">
+                                  {pickup.status.replace('_', ' ')}
+                                </Badge>
+                                
+                                <CompletePickupDialog
+                                  pickup={pickup}
+                                  trigger={
+                                    <Button size="sm" disabled={pickup.status === 'completed'} className="h-6 text-xs px-2 flex-1">
+                                      {pickup.status === 'completed' ? 'Done' : 'Complete'}
+                                    </Button>
+                                  }
+                                />
+                                
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" size="sm" className="h-6 w-6 p-0">
+                                      <MoreVertical className="h-3 w-3" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="bg-background border z-50">
+                                    <DropdownMenuItem 
+                                      onClick={() => {
+                                        setSelectedPickupToMove(pickup);
+                                        setMovePickupOpen(true);
+                                      }}
+                                    >
+                                      <Move className="h-4 w-4 mr-2" />
+                                      Move to Different Date
+                                    </DropdownMenuItem>
+                                    
+                                    {pickup.status === 'scheduled' && (
+                                      <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                          <DropdownMenuItem 
+                                            onSelect={(e) => e.preventDefault()}
+                                            className="text-destructive focus:text-destructive"
+                                          >
+                                            <Trash2 className="h-4 w-4 mr-2" />
+                                            Delete Pickup
+                                          </DropdownMenuItem>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent className="bg-card border z-50">
+                                          <AlertDialogHeader>
+                                            <AlertDialogTitle>Delete Pickup</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                              Are you sure you want to delete this pickup for {pickup.client?.company_name}? 
+                                              This action cannot be undone.
+                                            </AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction
+                                              onClick={() => deletePickup.mutate(pickup.id)}
+                                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                            >
+                                              Delete
+                                            </AlertDialogAction>
+                                          </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                      </AlertDialog>
+                                    )}
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
                               
                               {pickup.status === 'completed' && pickup.manifest_pdf_path && (
                                 <ManifestPDFControls
                                   manifestId={pickup.manifest_id}
                                   acroformPdfPath={pickup.manifest_pdf_path}
                                   clientEmails={[]}
-                                  className="flex-shrink-0"
+                                  className="text-xs"
                                 />
                               )}
-                              
-                              <CompletePickupDialog
-                                pickup={pickup}
-                                trigger={
-                                  <Button size="sm" disabled={pickup.status === 'completed'} className="whitespace-nowrap">
-                                    {pickup.status === 'completed' ? 'Completed' : 'Complete'}
-                                  </Button>
-                                }
-                              />
-                              
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="outline" size="sm" className="flex-shrink-0">
-                                    <MoreVertical className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="bg-background border z-50">
-                                  <DropdownMenuItem 
-                                    onClick={() => {
-                                      setSelectedPickupToMove(pickup);
-                                      setMovePickupOpen(true);
-                                    }}
-                                  >
-                                    <Move className="h-4 w-4 mr-2" />
-                                    Move to Different Date
-                                  </DropdownMenuItem>
-                                  
-                                  {pickup.status === 'scheduled' && (
-                                    <AlertDialog>
-                                      <AlertDialogTrigger asChild>
-                                        <DropdownMenuItem 
-                                          onSelect={(e) => e.preventDefault()}
-                                          className="text-destructive focus:text-destructive"
-                                        >
-                                          <Trash2 className="h-4 w-4 mr-2" />
-                                          Delete Pickup
-                                        </DropdownMenuItem>
-                                      </AlertDialogTrigger>
-                                     <AlertDialogContent className="bg-card border z-50">
-                                       <AlertDialogHeader>
-                                         <AlertDialogTitle>Delete Pickup</AlertDialogTitle>
-                                         <AlertDialogDescription>
-                                           Are you sure you want to delete this pickup for {pickup.client?.company_name}? 
-                                           This action cannot be undone and will remove it from the schedule.
-                                         </AlertDialogDescription>
-                                       </AlertDialogHeader>
-                                       <AlertDialogFooter>
-                                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                         <AlertDialogAction
-                                           onClick={() => deletePickup.mutate(pickup.id)}
-                                           className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                         >
-                                           Delete Pickup
-                                         </AlertDialogAction>
-                                       </AlertDialogFooter>
-                                     </AlertDialogContent>
-                                   </AlertDialog>
-                                 )}
-                               </DropdownMenuContent>
-                             </DropdownMenu>
-                           </div>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                      </CardContent>
+                    </CollapsibleContent>
+                  </Card>
+                </Collapsible>
               )}
               
-              {/* Optimized Routes */}
+              {/* Optimized Routes - Collapsible */}
               {optimizedRoutes.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Truck className="h-5 w-5" />
-                      Optimized Routes - {format(activeDateLocal, 'EEEE, MMMM d')}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {optimizedRoutes.map((route, routeIndex) => (
-                        <Collapsible key={route.vehicleId} className="border rounded-lg">
-                          <CollapsibleTrigger className="w-full p-4 hover:bg-muted/50 transition-colors">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <div className="p-2 bg-brand-primary rounded-md">
-                                  <Truck className="h-4 w-4 text-white" />
-                                </div>
-                                <div className="text-left">
-                                  <p className="font-semibold">{route.vehicleName}</p>
-                                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                    <span>{route.stops.length} stops</span>
-                                    <span>•</span>
-                                    <span>{route.totalDistance.toFixed(1)} mi</span>
-                                    <span>•</span>
-                                    <span>{formatTime(route.startTime)} - {formatTime(route.endTime)}</span>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Badge className={`${getEfficiencyColor(route.efficiency)} border text-xs`}>
-                                  {route.efficiency}%
-                                </Badge>
-                                <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-90" />
-                              </div>
-                            </div>
-                          </CollapsibleTrigger>
-                          <CollapsibleContent className="px-4 pb-4">
-                            <div className="pt-3 border-t space-y-3">
-                              {/* Driver Assignment */}
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm text-muted-foreground">Driver:</span>
-                                <DriverAssignmentDropdown
-                                  vehicleId={route.vehicleId}
-                                  vehicleName={route.vehicleName}
-                                  routeDate={activeDay}
-                                  currentDriverId={
-                                    assignments?.find(a => a.vehicle_id === route.vehicleId)?.assigned_driver?.id
-                                  }
-                                  onDriverAssigned={(driverId) => {
-                                    console.log(`Driver ${driverId} assigned to ${route.vehicleName}`);
-                                  }}
-                                />
-                              </div>
-                              
-                              {/* Stops */}
-                              <div className="space-y-2">
-                                {route.stops.map((stop, index) => (
-                                  <div key={stop.id} className="flex items-start gap-3 p-3 bg-muted/30 rounded-md text-sm">
-                                    <div className="flex-shrink-0 w-6 h-6 bg-brand-primary text-white rounded-full flex items-center justify-center text-xs font-bold">
-                                      {index + 1}
+                <Collapsible defaultOpen={true}>
+                  <Card>
+                    <CollapsibleTrigger asChild>
+                      <CardHeader className="py-3 cursor-pointer hover:bg-secondary/10 transition-colors">
+                        <CardTitle className="flex items-center gap-2 text-base">
+                          <Truck className="h-4 w-4" />
+                          Optimized Routes - {format(activeDateLocal, 'EEE, MMM d')} ({optimizedRoutes.length})
+                        </CardTitle>
+                      </CardHeader>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <CardContent className="pt-0">
+                        <div className="space-y-2">
+                          {optimizedRoutes.map((route, routeIndex) => (
+                            <Collapsible key={route.vehicleId} className="border rounded-lg">
+                              <CollapsibleTrigger className="w-full p-2 hover:bg-muted/50 transition-colors">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <div className="p-1.5 bg-brand-primary rounded-md">
+                                      <Truck className="h-3 w-3 text-white" />
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                      <p className="font-medium truncate">{stop.clientName}</p>
-                                      <p className="text-xs text-muted-foreground truncate">📍 {stop.address}</p>
-                                      <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                                        <span>{stop.pteCount} PTE</span>
+                                    <div className="text-left">
+                                      <p className="font-semibold text-sm">{route.vehicleName}</p>
+                                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                        <span>{route.stops.length} stops</span>
                                         <span>•</span>
-                                        <span>{stop.serviceTimeMinutes} min</span>
+                                        <span>{route.totalDistance.toFixed(1)} mi</span>
+                                        <span>•</span>
+                                        <span>{formatTime(route.startTime)} - {formatTime(route.endTime)}</span>
                                       </div>
-                                      {stop.notes && (
-                                        <p className="text-xs text-muted-foreground mt-1 italic">📝 {stop.notes}</p>
-                                      )}
                                     </div>
                                   </div>
-                                ))}
-                              </div>
-                              
-                              {/* Actions */}
-                              <div className="flex items-center gap-2 pt-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handlePrintRoute(route)}
-                                  className="flex-1"
-                                >
-                                  <Printer className="h-4 w-4 mr-2" />
-                                  Print Route
-                                </Button>
-                              </div>
-                              
-                              {/* Warning */}
-                              {(new Date(route.endTime).getHours() > 16 || 
-                               (new Date(route.endTime).getHours() === 16 && new Date(route.endTime).getMinutes() > 30)) && (
-                                <div className="p-2 bg-yellow-50 border border-yellow-200 rounded-md flex items-center gap-2">
-                                  <AlertTriangle className="h-4 w-4 text-yellow-600 flex-shrink-0" />
-                                  <span className="text-xs text-yellow-800">
-                                    Route extends beyond 4:30 PM
-                                  </span>
+                                  <div className="flex items-center gap-2">
+                                    <Badge className={`${getEfficiencyColor(route.efficiency)} border text-xs`}>
+                                      {route.efficiency}%
+                                    </Badge>
+                                  </div>
                                 </div>
-                              )}
-                            </div>
-                          </CollapsibleContent>
-                        </Collapsible>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                              </CollapsibleTrigger>
+                              <CollapsibleContent className="px-2 pb-2">
+                                <div className="pt-2 border-t space-y-2">
+                                  {/* Driver Assignment */}
+                                  <div className="flex items-center justify-between text-sm">
+                                    <span className="text-xs text-muted-foreground">Driver:</span>
+                                    <DriverAssignmentDropdown
+                                      vehicleId={route.vehicleId}
+                                      vehicleName={route.vehicleName}
+                                      routeDate={activeDay}
+                                      currentDriverId={
+                                        assignments?.find(a => a.vehicle_id === route.vehicleId)?.assigned_driver?.id
+                                      }
+                                      onDriverAssigned={(driverId) => {
+                                        console.log(`Driver ${driverId} assigned to ${route.vehicleName}`);
+                                      }}
+                                    />
+                                  </div>
+                                  
+                                  {/* Stops */}
+                                  <div className="space-y-1.5">
+                                    {route.stops.map((stop, index) => (
+                                      <div key={stop.id} className="flex items-start gap-2 p-2 bg-muted/30 rounded-md text-xs">
+                                        <div className="flex-shrink-0 w-5 h-5 bg-brand-primary text-white rounded-full flex items-center justify-center text-xs font-bold">
+                                          {index + 1}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <p className="font-medium truncate text-xs">{stop.clientName}</p>
+                                          <p className="text-xs text-muted-foreground truncate">📍 {stop.address}</p>
+                                          <div className="flex items-center gap-1.5 mt-0.5 text-xs text-muted-foreground">
+                                            <span>{stop.pteCount} PTE</span>
+                                            <span>•</span>
+                                            <span>{stop.serviceTimeMinutes} min</span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  
+                                  {/* Actions */}
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handlePrintRoute(route)}
+                                    className="w-full h-7 text-xs"
+                                  >
+                                    <Printer className="h-3 w-3 mr-1" />
+                                    Print Route
+                                  </Button>
+                                  
+                                  {/* Warning */}
+                                  {(new Date(route.endTime).getHours() > 16 || 
+                                   (new Date(route.endTime).getHours() === 16 && new Date(route.endTime).getMinutes() > 30)) && (
+                                    <div className="p-1.5 bg-yellow-50 border border-yellow-200 rounded-md flex items-center gap-1.5">
+                                      <AlertTriangle className="h-3 w-3 text-yellow-600 flex-shrink-0" />
+                                      <span className="text-xs text-yellow-800">
+                                        Route extends beyond 4:30 PM
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              </CollapsibleContent>
+                            </Collapsible>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </CollapsibleContent>
+                  </Card>
+                </Collapsible>
               )}
             </div>
           )}
@@ -999,10 +1009,10 @@ export default function EnhancedRoutesToday() {
 
         {/* Week View Tab */}
         <TabsContent value="week">
-          <div className="space-y-4">
+          <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Week of {format(currentWeek, 'MMMM d, yyyy')}</h2>
-              <div className="text-sm text-muted-foreground">All pickups by day</div>
+              <h2 className="text-base font-semibold">Week of {format(currentWeek, 'MMM d, yyyy')}</h2>
+              <div className="text-xs text-muted-foreground">All pickups by day</div>
             </div>
             <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen overflow-x-hidden">
               <div className="px-2 sm:px-4">
@@ -1021,18 +1031,18 @@ export default function EnhancedRoutesToday() {
 
         {/* Statistics Tab */}
         <TabsContent value="stats">
-          <div className="space-y-6">
-            <h2 className="text-xl font-semibold">Route Statistics</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="space-y-3">
+            <h2 className="text-base font-semibold">Route Statistics</h2>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
               <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-3">
-                    <div className="p-3 bg-brand-primary/10 rounded-lg">
-                      <Truck className="h-6 w-6 text-brand-primary" />
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-brand-primary/10 rounded-lg">
+                      <Truck className="h-4 w-4 text-brand-primary" />
                     </div>
                     <div>
-                      <p className="text-3xl font-bold">{optimizedRoutes.length}</p>
-                      <p className="text-sm text-muted-foreground">Active Vehicles</p>
+                      <p className="text-2xl font-bold">{optimizedRoutes.length}</p>
+                      <p className="text-xs text-muted-foreground">Active Vehicles</p>
                     </div>
                   </div>
                 </CardContent>
