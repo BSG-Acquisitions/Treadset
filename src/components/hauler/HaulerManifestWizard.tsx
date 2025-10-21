@@ -16,7 +16,6 @@ import { useHaulerCustomers, useCreateHaulerCustomer, type CreateHaulerCustomerD
 import { useHaulerManifests } from "@/hooks/useHaulerManifests";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { CheckCircle, ChevronLeft, ChevronRight, Building, Package, PenTool, DollarSign, Plus, X } from "lucide-react";
 import { pteToTons, MICHIGAN_CONVERSIONS } from "@/lib/michigan-conversions";
 
@@ -67,7 +66,6 @@ interface HaulerManifestWizardProps {
 export const HaulerManifestWizard = ({ haulerId, haulerName }: HaulerManifestWizardProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const isMobile = useIsMobile();
   const [step, setStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [manifestCreated, setManifestCreated] = useState(false);
@@ -1120,57 +1118,12 @@ export const HaulerManifestWizard = ({ haulerId, haulerName }: HaulerManifestWiz
     }
   };
 
-  // Mobile full-screen view
-  if (isMobile) {
-    return (
-      <div className="fixed inset-0 bg-background z-50 flex flex-col">
-        <div className="flex-none p-4 border-b bg-background">
-          <div className="mb-2">
-            <Progress value={progress} className="h-2" />
-            <div className="flex justify-between mt-2 text-sm text-muted-foreground">
-              <span>Step {step + 1} of {steps.length}</span>
-              <span>{currentStep.title}</span>
-            </div>
-          </div>
-        </div>
-
-        <ScrollArea className="flex-1">
-          <div className="p-4 pb-24">
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleSubmit)}>
-                {renderStepContent()}
-                
-                <div className="flex justify-between mt-6 pt-6 border-t">
-                  {step > 0 && (
-                    <Button type="button" variant="outline" onClick={handleBack}>
-                      <ChevronLeft className="mr-2 h-4 w-4" /> Back
-                    </Button>
-                  )}
-                  
-                  {step < steps.length - 1 ? (
-                    <Button type="button" onClick={handleNext} className="ml-auto">
-                      Next <ChevronRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  ) : (
-                    <Button type="submit" disabled={isSubmitting} className="ml-auto">
-                      {isSubmitting ? "Creating..." : "Create Manifest"}
-                    </Button>
-                  )}
-                </div>
-              </form>
-            </Form>
-          </div>
-        </ScrollArea>
-      </div>
-    );
-  }
-
-  // Desktop view
+  // Unified responsive layout
   return (
-    <div className="max-w-4xl mx-auto py-8">
-      <div className="mb-6">
+    <div className="md:max-w-4xl md:mx-auto md:py-8">
+      <div className="mb-4 md:mb-6 p-4 md:p-0">
         <Progress value={progress} className="h-2" />
-        <div className="flex justify-between mt-2 text-sm text-muted-foreground">
+        <div className="flex justify-between mt-2 text-xs sm:text-sm text-muted-foreground">
           <span>Step {step + 1} of {steps.length}</span>
           <span>{currentStep.title}</span>
         </div>
@@ -1178,23 +1131,38 @@ export const HaulerManifestWizard = ({ haulerId, haulerName }: HaulerManifestWiz
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleSubmit)}>
-          <Card>
-            <CardContent className="pt-6">
-              {renderStepContent()}
+          <Card className="border-0 md:border">
+            <CardContent className="p-4 md:pt-6">
+              <ScrollArea className="h-[calc(100vh-200px)] md:h-auto pr-2 md:pr-0" hideScrollbar>
+                {renderStepContent()}
+              </ScrollArea>
 
-              <div className="flex justify-between mt-6 pt-6 border-t">
+              <div className="flex justify-between mt-6 pt-6 border-t gap-3">
                 {step > 0 && (
-                  <Button type="button" variant="outline" onClick={handleBack}>
-                    <ChevronLeft className="mr-2 h-4 w-4" /> Back
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={handleBack}
+                    className="flex-1 md:flex-none text-xs sm:text-sm"
+                  >
+                    <ChevronLeft className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" /> Back
                   </Button>
                 )}
                 
                 {step < steps.length - 1 ? (
-                  <Button type="button" onClick={handleNext} className="ml-auto">
-                    Next <ChevronRight className="ml-2 h-4 w-4" />
+                  <Button 
+                    type="button" 
+                    onClick={handleNext} 
+                    className="flex-1 md:flex-none md:ml-auto text-xs sm:text-sm"
+                  >
+                    Next <ChevronRight className="ml-1 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4" />
                   </Button>
                 ) : (
-                  <Button type="submit" disabled={isSubmitting} className="ml-auto">
+                  <Button 
+                    type="submit" 
+                    disabled={isSubmitting} 
+                    className="flex-1 md:flex-none md:ml-auto text-xs sm:text-sm"
+                  >
                     {isSubmitting ? "Creating..." : "Create Manifest"}
                   </Button>
                 )}
