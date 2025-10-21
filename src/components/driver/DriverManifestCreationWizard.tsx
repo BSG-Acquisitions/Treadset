@@ -396,6 +396,73 @@ export function DriverManifestCreationWizard({
       }
     }
 
+    // Final validation before submission on review step
+    if (currentStep.key === "review") {
+      // Ensure we have pickup and hauler data
+      if (!pickupData) {
+        toast({
+          title: "Error",
+          description: "Pickup data is missing. Please refresh and try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!haulerData) {
+        toast({
+          title: "Error",
+          description: "Hauler information is missing. Please go back and select a hauler.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Ensure signatures are still saved
+      if (!genSigPath || !haulSigPath) {
+        toast({
+          title: "Error",
+          description: "Signatures were not saved properly. Please go back to the Signatures step.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Validate tire counts one more time
+      const values = form.getValues();
+      const totalTires = (values.pte_off_rim || 0) + (values.pte_on_rim || 0) + 
+                        (values.commercial_17_5_19_5_off || 0) + (values.commercial_17_5_19_5_on || 0) +
+                        (values.commercial_22_5_off || 0) + (values.commercial_22_5_on || 0) +
+                        (values.otr_count || 0) + (values.tractor_count || 0);
+      
+      if (totalTires === 0) {
+        toast({
+          title: "Error",
+          description: "No tire counts found. Please go back to the Tire Counts step.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Validate printed names
+      if (!values.generator_print_name || values.generator_print_name.trim() === '') {
+        toast({
+          title: "Error",
+          description: "Generator printed name is required. Please go back to the Signatures step.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!values.hauler_print_name || values.hauler_print_name.trim() === '') {
+        toast({
+          title: "Error",
+          description: "Hauler printed name is required. Please go back to the Signatures step.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     if (step < steps.length - 1) {
       setStep(step + 1);
     }
@@ -1202,7 +1269,60 @@ export function DriverManifestCreationWizard({
         const otrTotalCount = (formValues.otr_count || 0) + (formValues.tractor_count || 0);
 
         const handleCollectPayment = async () => {
-          if (calculatedTotal <= 0) return;
+          // Validate that all required rates are set
+          if (pteOffRimCount > 0 && (!pteOffRimRate || parseFloat(pteOffRimRate) <= 0)) {
+            toast({
+              title: "Missing Rate",
+              description: "Please set a rate for Passenger Off-Rim tires",
+              variant: "destructive",
+            });
+            return;
+          }
+
+          if (pteOnRimCount > 0 && (!pteOnRimRate || parseFloat(pteOnRimRate) <= 0)) {
+            toast({
+              title: "Missing Rate",
+              description: "Please set a rate for Passenger On-Rim tires",
+              variant: "destructive",
+            });
+            return;
+          }
+
+          if (commercialOffRimCount > 0 && (!commercialOffRimRate || parseFloat(commercialOffRimRate) <= 0)) {
+            toast({
+              title: "Missing Rate",
+              description: "Please set a rate for Commercial Off-Rim tires",
+              variant: "destructive",
+            });
+            return;
+          }
+
+          if (commercialOnRimCount > 0 && (!commercialOnRimRate || parseFloat(commercialOnRimRate) <= 0)) {
+            toast({
+              title: "Missing Rate",
+              description: "Please set a rate for Commercial On-Rim tires",
+              variant: "destructive",
+            });
+            return;
+          }
+
+          if (otrTotalCount > 0 && (!otrRate || parseFloat(otrRate) <= 0)) {
+            toast({
+              title: "Missing Rate",
+              description: "Please set a rate for OTR/Tractor tires",
+              variant: "destructive",
+            });
+            return;
+          }
+
+          if (calculatedTotal <= 0) {
+            toast({
+              title: "Invalid Total",
+              description: "Total amount must be greater than $0",
+              variant: "destructive",
+            });
+            return;
+          }
 
           try {
             // Update the pickup with computed_revenue
