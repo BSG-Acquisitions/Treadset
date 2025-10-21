@@ -311,6 +311,18 @@ export function DriverManifestCreationWizard({
   }, [step, genSigDataUrl, haulSigDataUrl]);
 
   const handleNext = async () => {
+    // Validate hauler selection on info step
+    if (currentStep.key === "info") {
+      if (!haulerData) {
+        toast({
+          title: "Hauler Required",
+          description: "Please select a hauler company before continuing",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     // Validate current step before proceeding
     if (currentStep.key === "tires") {
       const values = form.getValues();
@@ -664,7 +676,7 @@ export function DriverManifestCreationWizard({
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Hauler</CardTitle>
+                <CardTitle className="text-base">Hauler {!haulerData && <span className="text-destructive">*Required</span>}</CardTitle>
                 <CardDescription>Your company information</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
@@ -675,23 +687,39 @@ export function DriverManifestCreationWizard({
                     <div><strong>City, State ZIP:</strong> {haulerData?.city}, {haulerData?.state} {haulerData?.zip}</div>
                     <div><strong>Phone:</strong> {haulerData?.phone || 'N/A'}</div>
                     <div><strong>MI Registration:</strong> {haulerData?.hauler_mi_reg || 'N/A'}</div>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setHaulerData(null)}
+                      className="mt-2"
+                    >
+                      Change Hauler
+                    </Button>
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    <div className="text-muted-foreground">No hauler detected from assignment. Select your hauler to continue.</div>
-                    <Select onValueChange={(value) => {
-                      const selected = haulers.find(h => h.id === value);
-                      if (selected) setHaulerData(selected);
-                    }}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a hauler" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {haulers.map((h) => (
-                          <SelectItem key={h.id} value={h.id}>{h.company_name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="space-y-3">
+                    <div className="text-sm text-muted-foreground bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md p-3">
+                      ⚠️ <strong>Action Required:</strong> Please select your hauler company to continue
+                    </div>
+                    <div>
+                      <Label htmlFor="hauler-select" className="text-sm font-medium mb-2 block">
+                        Select Hauler Company *
+                      </Label>
+                      <Select onValueChange={(value) => {
+                        const selected = haulers.find(h => h.id === value);
+                        if (selected) setHaulerData(selected);
+                      }}>
+                        <SelectTrigger id="hauler-select" className="w-full">
+                          <SelectValue placeholder="Choose a hauler..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {haulers.map((h) => (
+                            <SelectItem key={h.id} value={h.id}>{h.company_name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 )}
               </CardContent>
