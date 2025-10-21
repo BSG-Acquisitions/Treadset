@@ -11,6 +11,7 @@ import { Camera, CheckCircle, Clock, FileText, PenTool } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useToast } from '@/hooks/use-toast';
 
 import { useManifestIntegration } from '@/hooks/useManifestIntegration';
 import { useSendManifestEmail } from '@/hooks/useSendManifestEmail';
@@ -32,6 +33,7 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
   const isMobile = useIsMobile();
   const contentRef = useRef<HTMLDivElement>(null);
   const manifestIntegration = useManifestIntegration();
+  const { toast } = useToast();
   const sendEmail = useSendManifestEmail();
   const customerSigRef = useRef<SignatureCanvas>(null);
   const driverSigRef = useRef<SignatureCanvas>(null);
@@ -110,7 +112,11 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
 
   const saveSignature = async (type: 'customer' | 'driver', sigRef: React.RefObject<SignatureCanvas>) => {
     if (!sigRef.current || sigRef.current.isEmpty()) {
-      console.error("Please provide a signature");
+      toast({
+        title: "Signature Required",
+        description: "Please provide a signature before saving.",
+        variant: "destructive",
+      });
       return false;
     }
 
@@ -129,13 +135,26 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
 
       if (type === 'customer') {
         setData(prev => ({ ...prev, customerSigned: true, customerSigPath: fileName, customerSigDataUrl: dataUrl }));
+        toast({
+          title: "Signature Saved",
+          description: "Customer signature has been saved successfully.",
+        });
       } else {
         setData(prev => ({ ...prev, driverSigned: true, driverSigPath: fileName, driverSigDataUrl: dataUrl }));
+        toast({
+          title: "Signature Saved",
+          description: "Driver signature has been saved successfully.",
+        });
       }
 
       return true;
     } catch (error) {
       console.error("Failed to save signature:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save signature. Please try again.",
+        variant: "destructive",
+      });
       return false;
     } finally {
       setLoading(false);
@@ -144,7 +163,11 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
 
   const handleFinalize = async () => {
     if (!data.customerSigned || !data.driverSigned) {
-      console.error("Both signatures are required");
+      toast({
+        title: "Signatures Required",
+        description: "Please ensure both customer and driver signatures are saved before finalizing.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -433,7 +456,9 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
               </Button>
               <Button 
                 type="button"
-                onClick={() => saveSignature('customer', customerSigRef)}
+                onClick={async () => {
+                  await saveSignature('customer', customerSigRef);
+                }}
                 disabled={loading || data.customerSigned}
                 className="flex-1"
               >
