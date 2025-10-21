@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -1466,58 +1466,60 @@ export function DriverManifestCreationWizard({
   }
 
   return (
-    <Card className="w-full max-w-4xl mx-auto">
-      <CardHeader className="px-3 sm:px-6 py-4">
-        <div className="flex items-center justify-between mb-4">
-          <div className="min-w-0 flex-1">
-            <CardTitle className="text-base sm:text-lg truncate">Create Manifest</CardTitle>
-            <CardDescription className="text-xs sm:text-sm">Step {step + 1} of {steps.length}: {currentStep.title}</CardDescription>
-          </div>
-        </div>
-        <Progress value={progress} className="h-2" />
-      </CardHeader>
-
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent className="px-3 sm:px-6 py-4">
-            <div className="max-h-[50vh] overflow-y-auto overflow-x-hidden pr-1 sm:pr-4">
-              {renderStepContent()}
+    <Card className="w-full max-w-6xl mx-auto">
+      {/* Mobile/Small screens - Vertical Layout */}
+      <div className="md:hidden">
+        <CardHeader className="px-3 sm:px-6 py-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="min-w-0 flex-1">
+              <CardTitle className="text-base sm:text-lg truncate">Create Manifest</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Step {step + 1} of {steps.length}: {currentStep.title}</CardDescription>
             </div>
-          </CardContent>
+          </div>
+          <Progress value={progress} className="h-2" />
+        </CardHeader>
 
-          <div className="flex items-center justify-between px-3 sm:px-6 py-4 border-t gap-2">
-            {currentStep.key !== "payment" && (
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleBack}
-                  disabled={step === 0 || isSubmitting}
-                  className="text-xs sm:text-sm"
-                >
-                  <ChevronLeft className="mr-1 h-3 w-3 sm:h-4 sm:w-4" />
-                  Back
-                </Button>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <CardContent className="px-3 sm:px-6 py-4">
+              <div className="max-h-[50vh] overflow-y-auto overflow-x-hidden pr-1 sm:pr-4">
+                {renderStepContent()}
+              </div>
+            </CardContent>
 
-                {currentStep.key === "review" ? (
-                  <Button 
-                    type="submit" 
-                    disabled={isSubmitting}
-                    className="!bg-green-600 hover:!bg-green-700 !text-white font-semibold disabled:opacity-50 text-xs sm:text-sm whitespace-nowrap"
-                    style={{ backgroundColor: '#16a34a', color: 'white' }}
+            <div className="flex items-center justify-between px-3 sm:px-6 py-4 border-t gap-2">
+              {currentStep.key !== "payment" && (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleBack}
+                    disabled={step === 0 || isSubmitting}
+                    className="text-xs sm:text-sm"
                   >
-                    {isSubmitting ? "Creating..." : "Create Manifest"}
+                    <ChevronLeft className="mr-1 h-3 w-3 sm:h-4 sm:w-4" />
+                    Back
                   </Button>
-                ) : (
-                  <Button 
-                    type="button" 
-                    onClick={handleNext} 
-                    disabled={isSubmitting}
-                    className="!bg-green-600 hover:!bg-green-700 !text-white font-semibold disabled:opacity-50 text-xs sm:text-sm"
-                    style={{ backgroundColor: '#16a34a', color: 'white' }}
-                  >
-                    Next
-                    <ChevronRight className="ml-1 h-3 w-3 sm:h-4 sm:w-4" />
+
+                  {currentStep.key === "review" ? (
+                    <Button 
+                      type="submit" 
+                      disabled={isSubmitting}
+                      className="!bg-green-600 hover:!bg-green-700 !text-white font-semibold disabled:opacity-50 text-xs sm:text-sm whitespace-nowrap"
+                      style={{ backgroundColor: '#16a34a', color: 'white' }}
+                    >
+                      {isSubmitting ? "Creating..." : "Create Manifest"}
+                    </Button>
+                  ) : (
+                    <Button 
+                      type="button" 
+                      onClick={handleNext} 
+                      disabled={isSubmitting}
+                      className="!bg-green-600 hover:!bg-green-700 !text-white font-semibold disabled:opacity-50 text-xs sm:text-sm"
+                      style={{ backgroundColor: '#16a34a', color: 'white' }}
+                    >
+                      Next
+                      <ChevronRight className="ml-1 h-3 w-3 sm:h-4 sm:w-4" />
                   </Button>
                 )}
               </>
@@ -1525,6 +1527,115 @@ export function DriverManifestCreationWizard({
           </div>
         </form>
       </Form>
+      </div>
+
+      {/* Tablet/Desktop - Horizontal Layout */}
+      <div className="hidden md:flex md:flex-row">
+        {/* Left: Form Content */}
+        <div className="flex-1 border-r">
+          <CardHeader className="px-6 py-4 border-b">
+            <CardTitle className="text-lg">Create Manifest</CardTitle>
+            <CardDescription className="text-sm">Complete all steps to finalize the manifest</CardDescription>
+          </CardHeader>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <CardContent className="px-6 py-4">
+                <ScrollArea className="h-[calc(100vh-300px)] pr-4">
+                  {renderStepContent()}
+                </ScrollArea>
+              </CardContent>
+            </form>
+          </Form>
+        </div>
+
+        {/* Right: Navigation & Progress */}
+        <div className="w-80 flex flex-col">
+          <div className="px-6 py-4 border-b">
+            <h3 className="font-semibold mb-4">Progress</h3>
+            <Progress value={progress} className="h-2 mb-4" />
+            <p className="text-sm text-muted-foreground">Step {step + 1} of {steps.length}</p>
+          </div>
+
+          <div className="flex-1 px-6 py-4">
+            <div className="space-y-3">
+              {steps.map((s, idx) => {
+                const StepIcon = s.icon;
+                return (
+                  <div 
+                    key={s.key} 
+                    className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
+                      idx === step 
+                        ? 'bg-primary/10 border-2 border-primary' 
+                        : idx < step 
+                          ? 'bg-green-50 border border-green-200' 
+                          : 'bg-muted border border-border'
+                    }`}
+                  >
+                    <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
+                      idx === step 
+                        ? 'bg-primary text-primary-foreground' 
+                        : idx < step 
+                          ? 'bg-green-600 text-white' 
+                          : 'bg-muted-foreground/20 text-muted-foreground'
+                    }`}>
+                      <StepIcon className="h-4 w-4" />
+                    </div>
+                    <span className={`text-sm font-medium ${
+                      idx === step ? 'text-primary' : idx < step ? 'text-green-600' : 'text-muted-foreground'
+                    }`}>
+                      {s.title}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <div className="px-6 py-4 border-t space-y-3">
+                {currentStep.key !== "payment" && (
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleBack}
+                      disabled={step === 0 || isSubmitting}
+                      className="w-full"
+                    >
+                      <ChevronLeft className="mr-2 h-4 w-4" />
+                      Back
+                    </Button>
+
+                    {currentStep.key === "review" ? (
+                      <Button 
+                        type="submit" 
+                        disabled={isSubmitting}
+                        className="w-full !bg-green-600 hover:!bg-green-700 !text-white font-semibold"
+                        style={{ backgroundColor: '#16a34a', color: 'white' }}
+                      >
+                        {isSubmitting ? "Creating..." : "Create Manifest"}
+                      </Button>
+                    ) : (
+                      <Button 
+                        type="button" 
+                        onClick={handleNext} 
+                        disabled={isSubmitting}
+                        className="w-full !bg-green-600 hover:!bg-green-700 !text-white font-semibold"
+                        style={{ backgroundColor: '#16a34a', color: 'white' }}
+                      >
+                        Next
+                        <ChevronRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    )}
+                  </>
+                )}
+              </div>
+            </form>
+          </Form>
+        </div>
+      </div>
 
       {/* Payment Dialog */}
       <CollectPaymentWithCard

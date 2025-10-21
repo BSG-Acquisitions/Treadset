@@ -585,7 +585,7 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
   // Mobile full-screen view
   if (isMobile) {
     return (
-      <div className="fixed inset-0 bg-background z-50 flex flex-col">
+      <div className="fixed inset-0 bg-background z-50 flex flex-col md:hidden">
         <div className="flex-none p-4 border-b bg-background">
           <div className="flex items-center justify-between mb-2">
             <span className="font-semibold">Complete Manifest</span>
@@ -621,29 +621,69 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
     );
   }
 
-  // Desktop card view
+  // Tablet/Desktop horizontal layout
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader className="flex-shrink-0">
-        <CardTitle className="flex items-center justify-between">
-          <span>Manifest {manifestId.slice(-8)}</span>
-          <span className="text-sm font-normal">{Math.round(progress)}%</span>
-        </CardTitle>
-        <Progress value={progress} className="w-full" />
-        <div className="flex justify-between text-xs text-muted-foreground">
-          {steps.map((s, i) => (
-            <div key={s.key} className={`flex items-center gap-1 ${i <= currentStepIndex ? 'text-primary' : ''}`}>
-              {s.icon}
-              <span className="hidden sm:inline">{s.title}</span>
-            </div>
-          ))}
+    <Card className="w-full max-w-6xl mx-auto hidden md:flex md:flex-row">
+      {/* Left: Form Content */}
+      <div className="flex-1 border-r">
+        <CardHeader className="px-6 py-4 border-b">
+          <CardTitle className="text-lg">Complete Manifest</CardTitle>
+          <div className="text-sm text-muted-foreground">Manifest {manifestId.slice(-8)}</div>
+        </CardHeader>
+
+        <CardContent className="px-6 py-4">
+          <ScrollArea className="h-[calc(100vh-300px)] pr-4" ref={contentRef}>
+            {renderStepContent()}
+          </ScrollArea>
+        </CardContent>
+      </div>
+
+      {/* Right: Navigation & Progress */}
+      <div className="w-80 flex flex-col">
+        <div className="px-6 py-4 border-b">
+          <h3 className="font-semibold mb-4">Progress</h3>
+          <Progress value={progress} className="h-2 mb-4" />
+          <p className="text-sm text-muted-foreground">
+            Step {currentStepIndex + 1} of {steps.length}
+          </p>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div ref={contentRef}>
-          {renderStepContent()}
+
+        <div className="flex-1 px-6 py-4">
+          <div className="space-y-3">
+            {steps.map((s, i) => (
+              <div 
+                key={s.key}
+                className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
+                  i === currentStepIndex 
+                    ? 'bg-primary/10 border-2 border-primary' 
+                    : i < currentStepIndex 
+                      ? 'bg-green-50 border border-green-200' 
+                      : 'bg-muted border border-border'
+                }`}
+              >
+                <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
+                  i === currentStepIndex 
+                    ? 'bg-primary text-primary-foreground' 
+                    : i < currentStepIndex 
+                      ? 'bg-green-600 text-white' 
+                      : 'bg-muted-foreground/20 text-muted-foreground'
+                }`}>
+                  {s.icon}
+                </div>
+                <span className={`text-sm font-medium ${
+                  i === currentStepIndex 
+                    ? 'text-primary' 
+                    : i < currentStepIndex 
+                      ? 'text-green-600' 
+                      : 'text-muted-foreground'
+                }`}>
+                  {s.title}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
-      </CardContent>
+      </div>
     </Card>
   );
 };
