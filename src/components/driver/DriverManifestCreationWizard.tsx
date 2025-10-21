@@ -399,13 +399,25 @@ export function DriverManifestCreationWizard({
       tare_weight_lbs: data.tare_weight_lbs,
       pte_off_rim: data.pte_off_rim,
       pte_on_rim: data.pte_on_rim,
-      totalPTE: computeTotalPTE(data)
+      totalPTE: computeTotalPTE(data),
+      pickupData: !!pickupData,
+      haulerData: !!haulerData,
+      assignmentData: !!assignmentData
     });
 
-    if (!pickupData || !haulerData) {
+    if (!pickupData) {
       toast({
         title: "Error",
-        description: "Missing pickup or hauler data",
+        description: "Pickup data is not loaded. Please refresh the page and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!haulerData) {
+      toast({
+        title: "Missing Hauler Information",
+        description: "No hauler is assigned to this pickup. Please contact your administrator to assign a hauler to this pickup first.",
         variant: "destructive",
       });
       return;
