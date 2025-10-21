@@ -1482,8 +1482,8 @@ export function DriverManifestCreationWizard({
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardContent className="px-3 sm:px-6 py-4">
-            <ScrollArea className="h-[calc(100vh-280px)] pr-2 sm:pr-4" hideScrollbar>
-              <div ref={contentScrollRef}>
+            <ScrollArea className="h-[calc(100vh-240px)] pr-2 sm:pr-4">
+              <div ref={contentScrollRef} className="pb-6">
                 {renderStepContent()}
               </div>
             </ScrollArea>
