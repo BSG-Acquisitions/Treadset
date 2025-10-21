@@ -1466,117 +1466,70 @@ export function DriverManifestCreationWizard({
   }
 
   return (
-    <Card className="w-full max-w-6xl mx-auto">
-      <div className="flex flex-col md:flex-row">
-        {/* Main Content Area */}
-        <div className="flex-1 flex flex-col">
-          <CardHeader className="px-3 sm:px-6 py-4 border-b">
-            <div className="flex items-center justify-between mb-2">
-              <div className="min-w-0 flex-1">
-                <CardTitle className="text-base sm:text-lg truncate">Create Manifest</CardTitle>
-                <CardDescription className="text-xs sm:text-sm">
-                  Step {step + 1} of {steps.length}: {currentStep.title}
-                </CardDescription>
+    <Card className="w-full max-w-4xl mx-auto">
+      <CardHeader className="px-3 sm:px-6 py-4 border-b">
+        <div className="flex items-center justify-between mb-2">
+          <div className="min-w-0 flex-1">
+            <CardTitle className="text-base sm:text-lg truncate">Create Manifest</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">
+              Step {step + 1} of {steps.length}: {currentStep.title}
+            </CardDescription>
+          </div>
+        </div>
+        <Progress value={progress} className="h-2 mt-3" />
+      </CardHeader>
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <CardContent className="px-3 sm:px-6 py-4">
+            <ScrollArea className="h-[calc(100vh-280px)] pr-2 sm:pr-4" hideScrollbar>
+              <div ref={contentScrollRef}>
+                {renderStepContent()}
               </div>
-            </div>
-            <Progress value={progress} className="h-2 mt-3" />
-          </CardHeader>
+            </ScrollArea>
+          </CardContent>
 
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col">
-              <CardContent className="flex-1 px-3 sm:px-6 py-4">
-                <ScrollArea className="h-[calc(100vh-280px)] md:h-[calc(100vh-300px)] pr-2 sm:pr-4" hideScrollbar>
-                  <div ref={contentScrollRef}>
-                    {renderStepContent()}
-                  </div>
-                </ScrollArea>
-              </CardContent>
+          {/* Navigation Buttons */}
+          <div className="px-3 sm:px-6 py-4 border-t">
+            {currentStep.key !== "payment" && (
+              <div className="flex items-center justify-between gap-2 md:gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleBack}
+                  disabled={step === 0 || isSubmitting}
+                  className="flex-1 md:flex-none md:min-w-[120px] text-xs sm:text-sm"
+                >
+                  <ChevronLeft className="mr-1 h-3 w-3 sm:h-4 sm:w-4" />
+                  Back
+                </Button>
 
-              {/* Navigation Buttons */}
-              <div className="px-3 sm:px-6 py-4 border-t">
-                {currentStep.key !== "payment" && (
-                  <div className="flex items-center justify-between gap-2 md:gap-3">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleBack}
-                      disabled={step === 0 || isSubmitting}
-                      className="flex-1 md:flex-none md:min-w-[120px] text-xs sm:text-sm"
-                    >
-                      <ChevronLeft className="mr-1 h-3 w-3 sm:h-4 sm:w-4" />
-                      Back
-                    </Button>
-
-                    {currentStep.key === "review" ? (
-                      <Button 
-                        type="submit" 
-                        disabled={isSubmitting}
-                        className="flex-1 md:flex-none md:min-w-[180px] !bg-green-600 hover:!bg-green-700 !text-white font-semibold disabled:opacity-50 text-xs sm:text-sm whitespace-nowrap"
-                        style={{ backgroundColor: '#16a34a', color: 'white' }}
-                      >
-                        {isSubmitting ? "Creating..." : "Create Manifest"}
-                      </Button>
-                    ) : (
-                      <Button 
-                        type="button" 
-                        onClick={handleNext} 
-                        disabled={isSubmitting}
-                        className="flex-1 md:flex-none md:min-w-[120px] !bg-green-600 hover:!bg-green-700 !text-white font-semibold disabled:opacity-50 text-xs sm:text-sm"
-                        style={{ backgroundColor: '#16a34a', color: 'white' }}
-                      >
-                        Next
-                        <ChevronRight className="ml-1 h-3 w-3 sm:h-4 sm:w-4" />
-                      </Button>
-                    )}
-                  </div>
+                {currentStep.key === "review" ? (
+                  <Button 
+                    type="submit" 
+                    disabled={isSubmitting}
+                    className="flex-1 md:flex-none md:min-w-[180px] !bg-green-600 hover:!bg-green-700 !text-white font-semibold disabled:opacity-50 text-xs sm:text-sm whitespace-nowrap"
+                    style={{ backgroundColor: '#16a34a', color: 'white' }}
+                  >
+                    {isSubmitting ? "Creating..." : "Create Manifest"}
+                  </Button>
+                ) : (
+                  <Button 
+                    type="button" 
+                    onClick={handleNext} 
+                    disabled={isSubmitting}
+                    className="flex-1 md:flex-none md:min-w-[120px] !bg-green-600 hover:!bg-green-700 !text-white font-semibold disabled:opacity-50 text-xs sm:text-sm"
+                    style={{ backgroundColor: '#16a34a', color: 'white' }}
+                  >
+                    Next
+                    <ChevronRight className="ml-1 h-3 w-3 sm:h-4 sm:w-4" />
+                  </Button>
                 )}
               </div>
-            </form>
-          </Form>
-        </div>
-
-        {/* Right Sidebar - Steps Indicator (Desktop/Tablet only) */}
-        <div className="hidden md:flex md:flex-col w-72 border-l">
-          <div className="px-6 py-4 border-b">
-            <h3 className="font-semibold text-sm">Wizard Steps</h3>
+            )}
           </div>
-
-          <div className="flex-1 px-6 py-6">
-            <div className="space-y-3">
-              {steps.map((s, idx) => {
-                const StepIcon = s.icon;
-                return (
-                  <div 
-                    key={s.key} 
-                    className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
-                      idx === step 
-                        ? 'bg-primary/10 border-2 border-primary' 
-                        : idx < step 
-                          ? 'bg-green-50 border border-green-200' 
-                          : 'bg-muted border border-border'
-                    }`}
-                  >
-                    <div className={`flex items-center justify-center w-8 h-8 rounded-full shrink-0 ${
-                      idx === step 
-                        ? 'bg-primary text-primary-foreground' 
-                        : idx < step 
-                          ? 'bg-green-600 text-white' 
-                          : 'bg-muted-foreground/20 text-muted-foreground'
-                    }`}>
-                      <StepIcon className="h-4 w-4" />
-                    </div>
-                    <span className={`text-sm font-medium ${
-                      idx === step ? 'text-primary' : idx < step ? 'text-green-600' : 'text-muted-foreground'
-                    }`}>
-                      {s.title}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </div>
+        </form>
+      </Form>
 
       {/* Payment Dialog */}
       <CollectPaymentWithCard
