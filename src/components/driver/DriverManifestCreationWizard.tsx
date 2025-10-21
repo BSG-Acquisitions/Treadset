@@ -314,10 +314,10 @@ export function DriverManifestCreationWizard({
     // Validate current step before proceeding
     if (currentStep.key === "tires") {
       const values = form.getValues();
-      const totalTires = values.pte_off_rim + values.pte_on_rim + 
-                        values.commercial_17_5_19_5_off + values.commercial_17_5_19_5_on +
-                        values.commercial_22_5_off + values.commercial_22_5_on +
-                        values.otr_count + values.tractor_count;
+      const totalTires = (values.pte_off_rim || 0) + (values.pte_on_rim || 0) + 
+                        (values.commercial_17_5_19_5_off || 0) + (values.commercial_17_5_19_5_on || 0) +
+                        (values.commercial_22_5_off || 0) + (values.commercial_22_5_on || 0) +
+                        (values.otr_count || 0) + (values.tractor_count || 0);
       
       if (totalTires === 0) {
         toast({
@@ -1090,10 +1090,10 @@ export function DriverManifestCreationWizard({
 
       case "review":
         const values = form.getValues();
-        const totalPTE = values.pte_off_rim + values.pte_on_rim;
-        const totalCommercial = values.commercial_17_5_19_5_off + values.commercial_17_5_19_5_on + 
-                               values.commercial_22_5_off + values.commercial_22_5_on;
-        const totalOversized = values.otr_count + values.tractor_count;
+        const totalPTE = (values.pte_off_rim || 0) + (values.pte_on_rim || 0);
+        const totalCommercial = (values.commercial_17_5_19_5_off || 0) + (values.commercial_17_5_19_5_on || 0) + 
+                               (values.commercial_22_5_off || 0) + (values.commercial_22_5_on || 0);
+        const totalOversized = (values.otr_count || 0) + (values.tractor_count || 0);
         const totalPteCalculated = computeTotalPTE(values);
         const gross = Number(values.gross_weight_lbs || 0);
         const tare = Number(values.tare_weight_lbs || 0);
