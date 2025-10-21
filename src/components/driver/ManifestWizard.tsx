@@ -62,19 +62,33 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
   
   const [data, setData] = useState({
     arriveTime: '',
-    pteOff: 0,
-    pteOn: 0,
-    c175Off: 0,
-    c175On: 0,
-    c225Off: 0,
-    c225On: 0,
+    pteOff: undefined as number | undefined,
+    pteOn: undefined as number | undefined,
+    c175Off: undefined as number | undefined,
+    c175On: undefined as number | undefined,
+    c225Off: undefined as number | undefined,
+    c225On: undefined as number | undefined,
     notes: '',
     photos: [] as File[],
     customerSigned: false,
     driverSigned: false,
     customerSigPath: '',
-    driverSigPath: ''
+    driverSigPath: '',
+    customerSigDataUrl: '',
+    driverSigDataUrl: ''
   });
+
+  // Restore signatures when returning to signatures step
+  useEffect(() => {
+    if (step === 'signatures') {
+      if (data.customerSigDataUrl && customerSigRef.current && customerSigRef.current.isEmpty()) {
+        customerSigRef.current.fromDataURL(data.customerSigDataUrl);
+      }
+      if (data.driverSigDataUrl && driverSigRef.current && driverSigRef.current.isEmpty()) {
+        driverSigRef.current.fromDataURL(data.driverSigDataUrl);
+      }
+    }
+  }, [step, data.customerSigDataUrl, data.driverSigDataUrl]);
 
   const steps: Array<{ key: WizardStep; title: string; icon: React.ReactNode }> = [
     { key: 'arrive', title: 'Arrive', icon: <Clock className="h-4 w-4" /> },
@@ -102,6 +116,7 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
 
     try {
       setLoading(true);
+      const dataUrl = sigRef.current.toDataURL();
       const canvas = sigRef.current.getTrimmedCanvas();
       const blob = await new Promise<Blob>((resolve) => canvas.toBlob(resolve as BlobCallback, 'image/png'));
       
@@ -113,9 +128,9 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
       if (error) throw error;
 
       if (type === 'customer') {
-        setData(prev => ({ ...prev, customerSigned: true, customerSigPath: fileName }));
+        setData(prev => ({ ...prev, customerSigned: true, customerSigPath: fileName, customerSigDataUrl: dataUrl }));
       } else {
-        setData(prev => ({ ...prev, driverSigned: true, driverSigPath: fileName }));
+        setData(prev => ({ ...prev, driverSigned: true, driverSigPath: fileName, driverSigDataUrl: dataUrl }));
       }
 
       return true;
@@ -145,12 +160,12 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
       const { error: updateError } = await supabase
         .from('manifests')
         .update({
-          pte_off_rim: data.pteOff,
-          pte_on_rim: data.pteOn,
-          commercial_17_5_19_5_off: data.c175Off,
-          commercial_17_5_19_5_on: data.c175On,
-          commercial_22_5_off: data.c225Off,
-          commercial_22_5_on: data.c225On,
+          pte_off_rim: data.pteOff ?? 0,
+          pte_on_rim: data.pteOn ?? 0,
+          commercial_17_5_19_5_off: data.c175Off ?? 0,
+          commercial_17_5_19_5_on: data.c175On ?? 0,
+          commercial_22_5_off: data.c225Off ?? 0,
+          commercial_22_5_on: data.c225On ?? 0,
           customer_signature_png_path: data.customerSigPath,
           driver_signature_png_path: data.driverSigPath,
           generator_signed_at: timestamp,
@@ -285,8 +300,9 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
                 <Input
                   id="pteOff"
                   type="number"
-                  value={data.pteOff}
-                  onChange={(e) => setData(prev => ({ ...prev, pteOff: parseInt(e.target.value) || 0 }))}
+                  placeholder="0"
+                  value={data.pteOff ?? ''}
+                  onChange={(e) => setData(prev => ({ ...prev, pteOff: parseInt(e.target.value) || undefined }))}
                 />
               </div>
               <div>
@@ -294,8 +310,9 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
                 <Input
                   id="pteOn"
                   type="number"
-                  value={data.pteOn}
-                  onChange={(e) => setData(prev => ({ ...prev, pteOn: parseInt(e.target.value) || 0 }))}
+                  placeholder="0"
+                  value={data.pteOn ?? ''}
+                  onChange={(e) => setData(prev => ({ ...prev, pteOn: parseInt(e.target.value) || undefined }))}
                 />
               </div>
               <div>
@@ -303,8 +320,9 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
                 <Input
                   id="c175Off"
                   type="number"
-                  value={data.c175Off}
-                  onChange={(e) => setData(prev => ({ ...prev, c175Off: parseInt(e.target.value) || 0 }))}
+                  placeholder="0"
+                  value={data.c175Off ?? ''}
+                  onChange={(e) => setData(prev => ({ ...prev, c175Off: parseInt(e.target.value) || undefined }))}
                 />
               </div>
               <div>
@@ -312,8 +330,9 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
                 <Input
                   id="c175On"
                   type="number"
-                  value={data.c175On}
-                  onChange={(e) => setData(prev => ({ ...prev, c175On: parseInt(e.target.value) || 0 }))}
+                  placeholder="0"
+                  value={data.c175On ?? ''}
+                  onChange={(e) => setData(prev => ({ ...prev, c175On: parseInt(e.target.value) || undefined }))}
                 />
               </div>
               <div>
@@ -321,8 +340,9 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
                 <Input
                   id="c225Off"
                   type="number"
-                  value={data.c225Off}
-                  onChange={(e) => setData(prev => ({ ...prev, c225Off: parseInt(e.target.value) || 0 }))}
+                  placeholder="0"
+                  value={data.c225Off ?? ''}
+                  onChange={(e) => setData(prev => ({ ...prev, c225Off: parseInt(e.target.value) || undefined }))}
                 />
               </div>
               <div>
@@ -330,8 +350,9 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
                 <Input
                   id="c225On"
                   type="number"
-                  value={data.c225On}
-                  onChange={(e) => setData(prev => ({ ...prev, c225On: parseInt(e.target.value) || 0 }))}
+                  placeholder="0"
+                  value={data.c225On ?? ''}
+                  onChange={(e) => setData(prev => ({ ...prev, c225On: parseInt(e.target.value) || undefined }))}
                 />
               </div>
             </div>
@@ -390,10 +411,16 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
                 ref={customerSigRef}
                 canvasProps={{
                   className: 'w-full h-40 border border-border rounded touch-none',
-                  style: { touchAction: 'none' }
+                  style: { touchAction: 'none', width: '100%', height: '160px' }
                 }}
               />
             </div>
+            {data.customerSigned && (
+              <div className="text-xs text-green-600 flex items-center gap-1">
+                <CheckCircle className="h-3 w-3" />
+                Customer signature saved
+              </div>
+            )}
             
             <div className="flex gap-2">
               <Button 
@@ -425,10 +452,16 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
                     ref={driverSigRef}
                     canvasProps={{
                       className: 'w-full h-40 border border-border rounded touch-none',
-                      style: { touchAction: 'none' }
+                      style: { touchAction: 'none', width: '100%', height: '160px' }
                     }}
                   />
                 </div>
+                {data.driverSigned && (
+                  <div className="text-xs text-green-600 flex items-center gap-1">
+                    <CheckCircle className="h-3 w-3" />
+                    Driver signature saved
+                  </div>
+                )}
                 
                 <div className="flex gap-2">
                   <Button 
@@ -464,12 +497,12 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
                 <h3 className="text-lg font-medium">Review & Finalize</h3>
                 
                 <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>PTE Off Rim: {data.pteOff}</div>
-                  <div>PTE On Rim: {data.pteOn}</div>
-                  <div>17.5-19.5 Off: {data.c175Off}</div>
-                  <div>17.5-19.5 On: {data.c175On}</div>
-                  <div>22.5 Off: {data.c225Off}</div>
-                  <div>22.5 On: {data.c225On}</div>
+                  <div>PTE Off Rim: {data.pteOff ?? 0}</div>
+                  <div>PTE On Rim: {data.pteOn ?? 0}</div>
+                  <div>17.5-19.5 Off: {data.c175Off ?? 0}</div>
+                  <div>17.5-19.5 On: {data.c175On ?? 0}</div>
+                  <div>22.5 Off: {data.c225Off ?? 0}</div>
+                  <div>22.5 On: {data.c225On ?? 0}</div>
                 </div>
                 
                 {data.notes && (
@@ -490,10 +523,10 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
                 <AcroFormLivePreview
                   manifestId={manifestId}
                   overrides={{
-                    pte_off_rim: data.pteOff,
-                    pte_on_rim: data.pteOn,
-                    commercial_17_5_19_5_off: data.c175Off,
-                    commercial_17_5_19_5_on: data.c175On,
+                    pte_off_rim: data.pteOff ?? 0,
+                    pte_on_rim: data.pteOn ?? 0,
+                    commercial_17_5_19_5_off: data.c175Off ?? 0,
+                    commercial_17_5_19_5_on: data.c175On ?? 0,
                     commercial_22_5_off: data.c225Off,
                     commercial_22_5_on: data.c225On,
                     generator_date: new Date().toISOString().split('T')[0],

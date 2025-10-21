@@ -115,23 +115,25 @@ export function DriverManifestCreationWizard({
   const contentScrollRef = useRef<HTMLDivElement>(null);
   const [genSigPath, setGenSigPath] = useState<string>('');
   const [haulSigPath, setHaulSigPath] = useState<string>('');
+  const [genSigDataUrl, setGenSigDataUrl] = useState<string>('');
+  const [haulSigDataUrl, setHaulSigDataUrl] = useState<string>('');
   const form = useForm<ManifestFormData>({
     resolver: zodResolver(manifestSchema),
     mode: "onChange",
-defaultValues: {
-  pte_off_rim: 0,
-  pte_on_rim: 0,
-  commercial_17_5_19_5_off: 0,
-  commercial_17_5_19_5_on: 0,
-  commercial_22_5_off: 0,
-  commercial_22_5_on: 0,
-  otr_count: 0,
-  tractor_count: 0,
-  gross_weight_lbs: 0,
-  tare_weight_lbs: 0,
-  weight_tons_manual: 0,
-  generator_print_name: "",
-hauler_print_name: "",
+    defaultValues: {
+      pte_off_rim: undefined,
+      pte_on_rim: undefined,
+      commercial_17_5_19_5_off: undefined,
+      commercial_17_5_19_5_on: undefined,
+      commercial_22_5_off: undefined,
+      commercial_22_5_on: undefined,
+      otr_count: undefined,
+      tractor_count: undefined,
+      gross_weight_lbs: 0,
+      tare_weight_lbs: 0,
+      weight_tons_manual: 0,
+      generator_print_name: "",
+      hauler_print_name: "",
     },
   });
 
@@ -294,6 +296,20 @@ hauler_print_name: "",
     }
   }, [step, form]);
 
+  // Restore signatures to canvas when returning to Signatures step
+  useEffect(() => {
+    if (steps[step]?.key === 'signatures') {
+      // Restore generator signature if we have it saved
+      if (genSigDataUrl && generatorSigRef.current && generatorSigRef.current.isEmpty()) {
+        generatorSigRef.current.fromDataURL(genSigDataUrl);
+      }
+      // Restore hauler signature if we have it saved
+      if (haulSigDataUrl && haulerSigRef.current && haulerSigRef.current.isEmpty()) {
+        haulerSigRef.current.fromDataURL(haulSigDataUrl);
+      }
+    }
+  }, [step, genSigDataUrl, haulSigDataUrl]);
+
   const handleNext = async () => {
     // Validate current step before proceeding
     if (currentStep.key === "tires") {
@@ -335,7 +351,9 @@ hauler_print_name: "",
         const timestamp = now.toISOString().replace(/[:.]/g, '-');
 
         if (generatorSigRef.current && !genSigPath) {
-          const generatorBlob = await fetch(generatorSigRef.current.toDataURL()).then(r => r.blob());
+          const dataUrl = generatorSigRef.current.toDataURL();
+          setGenSigDataUrl(dataUrl); // Store data URL for restoration
+          const generatorBlob = await fetch(dataUrl).then(r => r.blob());
           const generatorFileName = `signatures/${timestamp}-generator.png`;
           const { error: genUploadError } = await supabase.storage
             .from('manifests')
@@ -345,7 +363,9 @@ hauler_print_name: "",
         }
 
         if (haulerSigRef.current && !haulSigPath) {
-          const haulerBlob = await fetch(haulerSigRef.current.toDataURL()).then(r => r.blob());
+          const dataUrl = haulerSigRef.current.toDataURL();
+          setHaulSigDataUrl(dataUrl); // Store data URL for restoration
+          const haulerBlob = await fetch(dataUrl).then(r => r.blob());
           const haulerFileName = `signatures/${timestamp}-hauler.png`;
           const { error: haulUploadError } = await supabase.storage
             .from('manifests')
@@ -995,10 +1015,16 @@ hauler_print_name: "",
                       ref={generatorSigRef}
                       canvasProps={{ 
                         className: "w-full h-24 sm:h-32 touch-none",
-                        style: { width: '100%', height: '96px' }
+                        style: { width: '100%', height: '96px', touchAction: 'none' }
                       }}
                     />
                   </div>
+                  {genSigPath && (
+                    <div className="text-xs text-green-600 flex items-center gap-1 mt-1">
+                      <CheckCircle className="h-3 w-3" />
+                      Signature saved
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -1046,10 +1072,16 @@ hauler_print_name: "",
                       ref={haulerSigRef}
                       canvasProps={{ 
                         className: "w-full h-24 sm:h-32 touch-none",
-                        style: { width: '100%', height: '96px' }
+                        style: { width: '100%', height: '96px', touchAction: 'none' }
                       }}
                     />
                   </div>
+                  {haulSigPath && (
+                    <div className="text-xs text-green-600 flex items-center gap-1 mt-1">
+                      <CheckCircle className="h-3 w-3" />
+                      Signature saved
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
