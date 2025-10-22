@@ -15,6 +15,7 @@ import { createPrintNameWithTimestamp } from "@/lib/manifestTimestamps";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useReceivers } from "@/hooks/useReceivers";
+import { useEmployees } from "@/hooks/useEmployees";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface ReceiverSignatureDialogProps {
@@ -37,20 +38,16 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
   const sendEmail = useSendManifestEmail();
   const { toast } = useToast();
   const { data: receivers } = useReceivers();
+  const { data: employees } = useEmployees();
 
   // Get selected receiver data
   const selectedReceiver = receivers?.find(r => r.id === selectedReceiverId);
 
-  // Common print names for receiver signatures
-  const printNameOptions = [
-    "BSG Processor",
-    "Facility Manager", 
-    "Operations Manager",
-    "Receiving Supervisor",
-    "Plant Supervisor",
-    "Quality Control",
-    "Warehouse Manager"
-  ];
+  // Get print name options from active employees
+  const printNameOptions = employees
+    ?.filter(emp => emp.isActive)
+    ?.map(emp => `${emp.firstName} ${emp.lastName}`.trim())
+    ?.filter(name => name.length > 0) || [];
 
   // Reset state when dialog opens/closes
   const handleOpenChange = (newOpen: boolean) => {
@@ -265,14 +262,20 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
                 <Label htmlFor="printNameSelect">Print Name for Signature</Label>
                 <Select value={printName} onValueChange={setPrintName}>
                   <SelectTrigger className="bg-background border border-input">
-                    <SelectValue placeholder="Choose or enter print name..." />
+                    <SelectValue placeholder="Choose an employee or enter custom name..." />
                   </SelectTrigger>
                   <SelectContent className="bg-background border border-input shadow-lg z-[100]">
-                    {printNameOptions.map((name) => (
-                      <SelectItem key={name} value={name}>
-                        {name}
-                      </SelectItem>
-                    ))}
+                    {printNameOptions.length > 0 ? (
+                      printNameOptions.map((name) => (
+                        <SelectItem key={name} value={name}>
+                          {name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                        No employees found. Enter a custom name below.
+                      </div>
+                    )}
                   </SelectContent>
                 </Select>
                 <Input
