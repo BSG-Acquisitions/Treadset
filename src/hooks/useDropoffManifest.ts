@@ -71,10 +71,11 @@ export const useGenerateDropoffManifest = () => {
       }
 
       // Find existing BSG hauler - global table (no organization_id column)
+      // Use ILIKE with trim to handle any whitespace issues
       const { data: haulerRow, error: haulerError } = await supabase
         .from('haulers')
         .select('id')
-        .eq('hauler_name', 'BSG Tire Recycling')
+        .ilike('hauler_name', '%BSG Tire Recycling%')
         .eq('is_active', true)
         .maybeSingle();
 
