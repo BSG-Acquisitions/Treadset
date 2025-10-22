@@ -70,39 +70,20 @@ export const useGenerateDropoffManifest = () => {
         clientId = newClient.id;
       }
 
-      // Get or create BSG as the hauler for all dropoffs
-      let haulerId: string;
-      
-      // Try to find existing BSG hauler (type cast to avoid circular type issue)
-      const { data: existingHauler } = await (supabase as any)
+      // Find existing BSG hauler - it should already exist in the system
+      const { data: existingHauler, error: haulerError } = await (supabase as any)
         .from('haulers')
         .select('id')
         .eq('organization_id', orgId)
         .eq('hauler_name', 'BSG Tire Recycling')
         .limit(1);
 
-      if (existingHauler && existingHauler.length > 0) {
-        haulerId = existingHauler[0].id;
-      } else {
-        // Create BSG as the default hauler
-        const { data: newHauler, error: createHaulerError } = await (supabase as any)
-          .from('haulers')
-          .insert({
-            organization_id: orgId,
-            hauler_name: 'BSG Tire Recycling',
-            hauler_mail_address: '2971 Bellevue Street',
-            hauler_city: 'Detroit',
-            hauler_state: 'MI',
-            hauler_zip: '48207',
-            hauler_phone: '313-731-0817',
-            hauler_mi_reg: 'H-82220004'
-          })
-          .select('id')
-          .single();
-
-        if (createHaulerError) throw createHaulerError;
-        haulerId = newHauler.id;
+      if (haulerError) throw haulerError;
+      if (!existingHauler || existingHauler.length === 0) {
+        throw new Error('BSG Tire Recycling hauler not found. Please ensure it exists in the system.');
       }
+
+      const haulerId = existingHauler[0].id;
 
       // Create manifest data from dropoff
       const manifestData = {
