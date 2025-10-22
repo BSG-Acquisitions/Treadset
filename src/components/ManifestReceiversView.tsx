@@ -63,7 +63,7 @@ export const ManifestReceiversView = () => {
       
       // Date filter
       if (dateFilter !== "all") {
-        const manifestDate = new Date(manifest.created_at || manifest.signed_at);
+        const manifestDate = new Date(manifest.updated_at || manifest.created_at || manifest.signed_at);
         const now = new Date();
         
         switch (dateFilter) {
@@ -81,8 +81,8 @@ export const ManifestReceiversView = () => {
     
     // Sort
     filtered.sort((a, b) => {
-      const dateA = new Date(a.created_at || a.signed_at);
-      const dateB = new Date(b.created_at || b.signed_at);
+      const dateA = new Date(a.updated_at || a.created_at || a.signed_at);
+      const dateB = new Date(b.updated_at || b.created_at || b.signed_at);
       
       switch (sortBy) {
         case "newest":
@@ -392,7 +392,7 @@ export const ManifestReceiversView = () => {
               const groups: Record<string, any[]> = {};
               
               manifests.forEach(manifest => {
-                const date = new Date(manifest.created_at);
+                const date = new Date(manifest.updated_at || manifest.created_at || manifest.signed_at);
                 const dateKey = format(date, 'MMMM d, yyyy');
                 
                 if (!groups[dateKey]) {
@@ -453,8 +453,8 @@ export const ManifestReceiversView = () => {
                                   </Badge>
                                 </TableCell>
                                 <TableCell className="text-muted-foreground text-sm">
-                                  {manifest.signed_at ? 
-                                    format(new Date(manifest.signed_at), 'h:mm a') : 'N/A'
+                                  { (manifest.updated_at || manifest.signed_at || manifest.created_at) ?
+                                    format(new Date(manifest.updated_at || manifest.signed_at || manifest.created_at), 'h:mm a') : 'N/A'
                                   }
                                 </TableCell>
                                 <TableCell className="text-right">
@@ -497,9 +497,9 @@ export const ManifestReceiversView = () => {
                                     <Badge variant="outline">
                                       {manifest.manifest_number}
                                     </Badge>
-                                    {manifest.signed_at && (
+                                    {(manifest.updated_at || manifest.signed_at || manifest.created_at) && (
                                       <span className="text-xs text-muted-foreground">
-                                        {format(new Date(manifest.signed_at), 'h:mm a')}
+                                        {format(new Date(manifest.updated_at || manifest.signed_at || manifest.created_at), 'h:mm a')}
                                       </span>
                                     )}
                                   </div>
