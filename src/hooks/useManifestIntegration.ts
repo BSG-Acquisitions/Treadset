@@ -158,7 +158,7 @@ export const useManifestIntegration = () => {
 
   return useMutation({
     mutationFn: async ({ manifestId, overrides }: ManifestIntegrationParams) => {
-      // 1. Fetch manifest data with all related entities
+      // 1. Fetch manifest data with all related entities including dropoff data
       const { data: manifestData, error: fetchError } = await supabase
         .from('manifests')
         .select(`
@@ -166,7 +166,8 @@ export const useManifestIntegration = () => {
           client:clients(*),
           location:locations(*),
           hauler:haulers(*),
-          pickup:pickups!manifests_pickup_id_fkey(*)
+          pickup:pickups!manifests_pickup_id_fkey(*),
+          dropoff:dropoffs(*, dropoff_customer:dropoff_customers(*))
         `)
         .eq('id', manifestId)
         .single();
@@ -187,10 +188,42 @@ export const useManifestIntegration = () => {
         driver_signature_png_path: manifestData.driver_signature_png_path,
       });
 
-      // 2. Do not auto-select any receiver; receiver info must come from explicit overrides on receiver side
+      // 2. Check if this is a dropoff manifest and extract dropoff customer data
+      let dropoffCustomerData = null;
+      const isDropoffManifest = manifestData.client?.company_name === "Dropoff Customers" && manifestData.dropoff;
+      
+      if (isDropoffManifest && manifestData.dropoff?.dropoff_customer) {
+        const dc = manifestData.dropoff.dropoff_customer;
+        dropoffCustomerData = {
+          generator_name: dc.company_name || dc.contact_name || '',
+          generator_mail_address: '', // Dropoff customers don't have mailing address in schema
+          generator_city: '',
+          generator_state: '',
+          generator_zip: '',
+          generator_physical_address: '',
+          generator_physical_city: '',
+          generator_physical_state: '',
+          generator_physical_zip: '',
+          generator_county: '',
+          generator_phone: dc.phone || ''
+        };
+        
+        console.log('[MANIFEST_INTEGRATION] Using dropoff customer as generator:', {
+          manifestId,
+          dropoffCustomerName: dc.company_name || dc.contact_name,
+          isDropoffManifest
+        });
+      }
+      
       // 3. Build AcroForm data from DB record
       const acroFormData = convertManifestToAcroForm(manifestData, undefined);
-      const mergedData = { ...acroFormData, ...(overrides || {}) };
+      
+      // Override generator fields with dropoff customer data if applicable
+      const mergedData = { 
+        ...acroFormData, 
+        ...(dropoffCustomerData || {}),
+        ...(overrides || {}) 
+      };
       
       // Validate AcroForm data before mapping
       const validationResult = validateAcroFormData(mergedData as Partial<AcroFormManifestData>);

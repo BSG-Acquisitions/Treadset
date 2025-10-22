@@ -82,7 +82,7 @@ export const TEMPLATE_CONFIGS: Record<string, PDFTemplateConfig> = {
   
   '4': {
     version: 4,
-    templatePath: 'Michigan_Manifest_AcrofromV4.pdf', // Actual filename in storage
+    templatePath: 'Michigan_Manifest_AcroForm_V4.pdf', // Corrected filename
     description: 'New v4 template with corrected field names',
     fieldMapping: {
       // Header fields - exact v4 keys

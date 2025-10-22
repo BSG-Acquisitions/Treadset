@@ -14,6 +14,7 @@ import { SlideUp } from "@/components/motion/SlideUp";
 import { useUserPreferences, useUpdateUserPreferences, useUpdateUserProfile } from "@/hooks/useUserPreferences";
 import { useToast } from "@/hooks/use-toast";
 import { SignatureManager } from "@/components/settings/SignatureManager";
+import { TemplateUploadUtility } from "@/components/TemplateUploadUtility";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function Settings() {
@@ -562,15 +563,18 @@ if (preferencesLoading) {
               </CardContent>
             </Card>
 
+            {/* AcroForm Templates Upload */}
+            <TemplateUploadUtility />
+
             {/* State Manifest Template */}
             <Card id="data-privacy-section">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Database className="h-5 w-5" />
-                  State Manifest Template
+                  Legacy State Template (Overlay)
                 </CardTitle>
                 <CardDescription>
-                  Upload the official state PDF template used for overlay.
+                  Upload PDF template for legacy overlay system (deprecated).
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">

@@ -29,23 +29,8 @@ export const ManifestReceiversView = () => {
   const [sortBy, setSortBy] = useState("newest");
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
 
-  // One-time sync: move manifests without receiver signature into AWAITING_RECEIVER_SIGNATURE
-  useEffect(() => {
-    const syncStatuses = async () => {
-      try {
-        await supabase
-          .from('manifests')
-          .update({ status: 'AWAITING_RECEIVER_SIGNATURE', updated_at: new Date().toISOString() })
-          .in('status', ['DRAFT', 'COMPLETED', 'AWAITING_SIGNATURE', 'IN_PROGRESS'])
-          .is('receiver_signed_at', null)
-          .not('signed_at', 'is', null);
-        queryClient.invalidateQueries({ queryKey: ['manifests'] });
-      } catch (e) {
-        console.error('Sync statuses failed', e);
-      }
-    };
-    syncStatuses();
-  }, [queryClient]);
+  // Removed automatic status sync - status should only be updated when receiver signature is added
+  // This prevents marking manifests as COMPLETED without proper receiver signature workflow
 
   // Apply filters and search
   const getFilteredManifests = (manifestList: any[], isPending: boolean) => {

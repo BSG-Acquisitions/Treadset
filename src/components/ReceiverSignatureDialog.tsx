@@ -136,15 +136,18 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
       }
 
       // Update manifest with receiver signature info
+      // Guard: Only allow COMPLETED status when receiver signature is being added
+      const updateData: any = {
+        receiver_sig_path: `signatures/${fileName}`,
+        receiver_signed_at: timestamp,
+        receiver_signed_by: printName,
+        status: 'COMPLETED', // Safe to set COMPLETED here because we have all signature data
+        updated_at: timestamp
+      };
+
       const { error: updateError } = await supabase
         .from('manifests')
-        .update({
-          receiver_sig_path: `signatures/${fileName}`,
-          receiver_signed_at: timestamp,
-          receiver_signed_by: printName,
-          status: 'COMPLETED',
-          updated_at: timestamp
-        })
+        .update(updateData)
         .eq('id', manifestId);
 
       if (updateError) throw updateError;
