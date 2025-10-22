@@ -70,20 +70,20 @@ export const useGenerateDropoffManifest = () => {
         clientId = newClient.id;
       }
 
-      // Find existing BSG hauler - it should already exist in the system
-      const { data: existingHauler, error: haulerError } = await (supabase as any)
+      // Find existing BSG hauler - global table (no organization_id column)
+      const { data: haulerRow, error: haulerError } = await supabase
         .from('haulers')
         .select('id')
-        .eq('organization_id', orgId)
         .eq('hauler_name', 'BSG Tire Recycling')
-        .limit(1);
+        .eq('is_active', true)
+        .maybeSingle();
 
       if (haulerError) throw haulerError;
-      if (!existingHauler || existingHauler.length === 0) {
-        throw new Error('BSG Tire Recycling hauler not found. Please ensure it exists in the system.');
+      if (!haulerRow) {
+        throw new Error('BSG Tire Recycling hauler not found. Please create or activate it in Haulers.');
       }
 
-      const haulerId = existingHauler[0].id;
+      const haulerId = haulerRow.id;
 
       // Create manifest data from dropoff
       const manifestData = {
