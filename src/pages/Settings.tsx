@@ -7,12 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { User, Bell, Shield, Palette, Database, Key, Loader2, Save, X, FileText } from "lucide-react";
+import { User, Bell, Shield, Palette, Database, Key, Loader2, Save, X, FileText, PenTool } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { SlideUp } from "@/components/motion/SlideUp";
 import { useUserPreferences, useUpdateUserPreferences, useUpdateUserProfile } from "@/hooks/useUserPreferences";
 import { useToast } from "@/hooks/use-toast";
+import { SignatureManager } from "@/components/settings/SignatureManager";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function Settings() {
@@ -232,6 +233,14 @@ if (preferencesLoading) {
                 <Button 
                   variant="ghost" 
                   className="w-full justify-start"
+                  onClick={() => scrollToSection('signature-section')}
+                >
+                  <PenTool className="h-4 w-4 mr-2" />
+                  My Signature
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start"
                   onClick={() => scrollToSection('notifications-section')}
                 >
                   <Bell className="h-4 w-4 mr-2" />
@@ -359,6 +368,9 @@ if (preferencesLoading) {
                 )}
               </CardContent>
             </Card>
+
+            {/* Signature Manager */}
+            <SignatureManager />
 
             {/* Notification Settings */}
             <Card id="notifications-section">

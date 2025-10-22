@@ -11,6 +11,7 @@ interface AuthUser {
   lastName?: string;
   phone?: string;
   roles: AppRole[];
+  signatureDataUrl?: string;
   currentOrganization?: {
     id: string;
     name: string;
@@ -152,6 +153,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           first_name,
           last_name,
           phone,
+          signature_data_url,
           user_organization_roles!inner (
             role,
             organization:organizations!inner (
@@ -219,6 +221,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         firstName: userData.first_name,
         lastName: userData.last_name,
         phone: userData.phone,
+        signatureDataUrl: userData.signature_data_url,
         roles: roles.length > 0 ? roles : ['admin'], // Ensure at least one role
         currentOrganization: currentOrg || {
           id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
