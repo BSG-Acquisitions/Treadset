@@ -70,11 +70,46 @@ export const useGenerateDropoffManifest = () => {
         clientId = newClient.id;
       }
 
+      // Get or create BSG as the hauler for all dropoffs
+      let haulerId: string;
+      
+      // Try to find existing BSG hauler (type cast to avoid circular type issue)
+      const { data: existingHauler } = await (supabase as any)
+        .from('haulers')
+        .select('id')
+        .eq('organization_id', orgId)
+        .eq('hauler_name', 'BSG Tire Recycling')
+        .limit(1);
+
+      if (existingHauler && existingHauler.length > 0) {
+        haulerId = existingHauler[0].id;
+      } else {
+        // Create BSG as the default hauler
+        const { data: newHauler, error: createHaulerError } = await (supabase as any)
+          .from('haulers')
+          .insert({
+            organization_id: orgId,
+            hauler_name: 'BSG Tire Recycling',
+            hauler_mail_address: '2971 Bellevue Street',
+            hauler_city: 'Detroit',
+            hauler_state: 'MI',
+            hauler_zip: '48207',
+            hauler_phone: '313-731-0817',
+            hauler_mi_reg: 'H-82220004'
+          })
+          .select('id')
+          .single();
+
+        if (createHaulerError) throw createHaulerError;
+        haulerId = newHauler.id;
+      }
+
       // Create manifest data from dropoff
       const manifestData = {
         manifest_number: manifestNumber as string,
         organization_id: orgId as string,
         client_id: clientId, // Use the default dropoff client
+        hauler_id: haulerId, // BSG is always the hauler for dropoffs
         location_id: null,
         pickup_id: null,
         dropoff_id: dropoff.id, // Link to the dropoff
