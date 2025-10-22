@@ -114,22 +114,10 @@ export const useGenerateDropoffManifest = () => {
         status: 'AWAITING_SIGNATURE' as const,
         // Add dropoff customer info 
         signed_by_name: dropoff.dropoff_customers?.contact_name || 'Dropoff Customer',
-        // Set signed timestamp using actual dropoff date/time
-        signed_at: (() => {
-          const date = dropoff.dropoff_date || new Date().toISOString().split('T')[0];
-          const time = dropoff.dropoff_time || new Date().toTimeString().split(' ')[0];
-          return `${date}T${time}`;
-        })(),
-        generator_signed_at: (() => {
-          const date = dropoff.dropoff_date || new Date().toISOString().split('T')[0];
-          const time = dropoff.dropoff_time || new Date().toTimeString().split(' ')[0];
-          return `${date}T${time}`;
-        })(),
-        hauler_signed_at: (() => {
-          const date = dropoff.dropoff_date || new Date().toISOString().split('T')[0];
-          const time = dropoff.dropoff_time || new Date().toTimeString().split(' ')[0];
-          return `${date}T${time}`;
-        })()
+        // Set signed timestamp
+        signed_at: new Date().toISOString(),
+        generator_signed_at: new Date().toISOString(),
+        hauler_signed_at: new Date().toISOString()
       };
 
       // Create the manifest
