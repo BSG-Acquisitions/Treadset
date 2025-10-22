@@ -31,6 +31,7 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
   const [isCompleting, setIsCompleting] = useState(false);
   const [completionData, setCompletionData] = useState<{ pdfPath: string } | null>(null);
   const [selectedReceiverId, setSelectedReceiverId] = useState<string>("");
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   
   const queryClient = useQueryClient();
   const { data: manifest } = useManifest(manifestId);
@@ -43,11 +44,33 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
   // Get selected receiver data
   const selectedReceiver = receivers?.find(r => r.id === selectedReceiverId);
 
+  // Get selected employee data
+  const selectedEmployee = employees?.find(emp => emp.id === selectedEmployeeId);
+
   // Get print name options from active employees
   const printNameOptions = employees
     ?.filter(emp => emp.isActive)
-    ?.map(emp => `${emp.firstName} ${emp.lastName}`.trim())
-    ?.filter(name => name.length > 0) || [];
+    ?.map(emp => ({
+      id: emp.id,
+      name: `${emp.firstName} ${emp.lastName}`.trim(),
+      signatureDataUrl: emp.signatureDataUrl
+    }))
+    ?.filter(opt => opt.name.length > 0) || [];
+
+  // Load saved signature when employee is selected
+  const handleEmployeeSelect = (employeeId: string) => {
+    setSelectedEmployeeId(employeeId);
+    const employee = employees?.find(emp => emp.id === employeeId);
+    if (employee) {
+      const fullName = `${employee.firstName} ${employee.lastName}`.trim();
+      setPrintName(fullName);
+      
+      // Load saved signature if it exists
+      if (employee.signatureDataUrl && sigCanvas) {
+        sigCanvas.fromDataURL(employee.signatureDataUrl);
+      }
+    }
+  };
 
   // Reset state when dialog opens/closes
   const handleOpenChange = (newOpen: boolean) => {
@@ -56,6 +79,7 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
       setSigCanvas(null);
       setPrintName("");
       setSelectedReceiverId("");
+      setSelectedEmployeeId("");
       setIsCompleting(false);
     }
     onOpenChange(newOpen);
@@ -81,6 +105,18 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
       setIsCompleting(true);
       const signatureDataURL = sigCanvas.toDataURL();
       const timestamp = new Date().toISOString();
+      
+      // Save signature to employee record if an employee is selected
+      if (selectedEmployeeId && selectedEmployee) {
+        try {
+          await supabase
+            .from('users')
+            .update({ signature_data_url: signatureDataURL })
+            .eq('id', selectedEmployeeId);
+        } catch (error) {
+          console.error('Failed to save signature to employee record:', error);
+        }
+      }
       
       // Convert signature to PNG blob
       const response = await fetch(signatureDataURL);
@@ -260,15 +296,20 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
 
               <div className="space-y-2">
                 <Label htmlFor="printNameSelect">Print Name for Signature</Label>
-                <Select value={printName} onValueChange={setPrintName}>
+                <Select value={selectedEmployeeId} onValueChange={handleEmployeeSelect}>
                   <SelectTrigger className="bg-background border border-input">
                     <SelectValue placeholder="Choose an employee or enter custom name..." />
                   </SelectTrigger>
                   <SelectContent className="bg-background border border-input shadow-lg z-[100]">
                     {printNameOptions.length > 0 ? (
-                      printNameOptions.map((name) => (
-                        <SelectItem key={name} value={name}>
-                          {name}
+                      printNameOptions.map((opt) => (
+                        <SelectItem key={opt.id} value={opt.id}>
+                          <div className="flex items-center gap-2">
+                            {opt.name}
+                            {opt.signatureDataUrl && (
+                              <span className="text-xs text-muted-foreground">(saved signature)</span>
+                            )}
+                          </div>
                         </SelectItem>
                       ))
                     ) : (
@@ -281,7 +322,10 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
                 <Input
                   placeholder="Or enter custom print name"
                   value={printName}
-                  onChange={(e) => setPrintName(e.target.value)}
+                  onChange={(e) => {
+                    setPrintName(e.target.value);
+                    setSelectedEmployeeId(""); // Clear employee selection if custom name entered
+                  }}
                   className="bg-background"
                 />
               </div>

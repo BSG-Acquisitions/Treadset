@@ -111,7 +111,7 @@ export type Database = {
           changed_fields: string[] | null
           created_at: string
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           new_data: Json | null
           old_data: Json | null
           organization_id: string
@@ -125,7 +125,7 @@ export type Database = {
           changed_fields?: string[] | null
           created_at?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           new_data?: Json | null
           old_data?: Json | null
           organization_id: string
@@ -139,7 +139,7 @@ export type Database = {
           changed_fields?: string[] | null
           created_at?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           new_data?: Json | null
           old_data?: Json | null
           organization_id?: string
@@ -1377,7 +1377,7 @@ export type Database = {
           receiver_signed_at: string | null
           receiver_signed_by: string | null
           resolved_unit_prices: Json | null
-          sign_ip: unknown | null
+          sign_ip: unknown
           signed_at: string | null
           signed_by_email: string | null
           signed_by_name: string | null
@@ -1435,7 +1435,7 @@ export type Database = {
           receiver_signed_at?: string | null
           receiver_signed_by?: string | null
           resolved_unit_prices?: Json | null
-          sign_ip?: unknown | null
+          sign_ip?: unknown
           signed_at?: string | null
           signed_by_email?: string | null
           signed_by_name?: string | null
@@ -1493,7 +1493,7 @@ export type Database = {
           receiver_signed_at?: string | null
           receiver_signed_by?: string | null
           resolved_unit_prices?: Json | null
-          sign_ip?: unknown | null
+          sign_ip?: unknown
           signed_at?: string | null
           signed_by_email?: string | null
           signed_by_name?: string | null
@@ -2942,6 +2942,7 @@ export type Database = {
           last_name: string | null
           password_hash: string | null
           phone: string | null
+          signature_data_url: string | null
           updated_at: string
         }
         Insert: {
@@ -2954,6 +2955,7 @@ export type Database = {
           last_name?: string | null
           password_hash?: string | null
           phone?: string | null
+          signature_data_url?: string | null
           updated_at?: string
         }
         Update: {
@@ -2966,6 +2968,7 @@ export type Database = {
           last_name?: string | null
           password_hash?: string | null
           phone?: string | null
+          signature_data_url?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -3210,17 +3213,11 @@ export type Database = {
         Returns: number
       }
       create_followup_workflows_for_inactive_clients: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: number
       }
-      generate_invoice_number: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      generate_manifest_number: {
-        Args: { org_id: string }
-        Returns: string
-      }
+      generate_invoice_number: { Args: never; Returns: string }
+      generate_manifest_number: { Args: { org_id: string }; Returns: string }
       get_current_user_organization: {
         Args: { org_slug?: string }
         Returns: string
@@ -3243,43 +3240,16 @@ export type Database = {
           updated_at: string
           user_id: string
         }
+        SetofOptions: {
+          from: "*"
+          to: "user_preferences"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
-      gtrgm_compress: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      gtrgm_decompress: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      gtrgm_in: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      gtrgm_options: {
-        Args: { "": unknown }
-        Returns: undefined
-      }
-      gtrgm_out: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      refresh_reporting_views: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      set_limit: {
-        Args: { "": number }
-        Returns: number
-      }
-      show_limit: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
-      show_trgm: {
-        Args: { "": string }
-        Returns: string[]
-      }
+      refresh_reporting_views: { Args: never; Returns: undefined }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       user_has_role: {
         Args: {
           org_slug?: string

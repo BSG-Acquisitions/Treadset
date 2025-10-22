@@ -13,6 +13,7 @@ export interface Employee {
   createdAt: string;
   roles: string[];
   organizationId: string;
+  signatureDataUrl?: string;
 }
 
 export interface CreateEmployeeData {
@@ -53,6 +54,7 @@ export const useEmployees = () => {
           phone,
           is_active,
           created_at,
+          signature_data_url,
           user_organization_roles!inner(
             role,
             organization_id
@@ -71,7 +73,8 @@ export const useEmployees = () => {
         isActive: user.is_active,
         createdAt: user.created_at,
         roles: user.user_organization_roles.map(r => r.role),
-        organizationId: user.user_organization_roles[0]?.organization_id
+        organizationId: user.user_organization_roles[0]?.organization_id,
+        signatureDataUrl: user.signature_data_url
       } as Employee)) || [];
     },
     enabled: !!user?.currentOrganization?.id
