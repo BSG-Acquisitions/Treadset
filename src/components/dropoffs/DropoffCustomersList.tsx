@@ -116,6 +116,15 @@ export const DropoffCustomersList = ({
                       {customer.phone}
                     </div>
                   )}
+                  {customer.mailing_address && (
+                    <div className="flex items-center gap-1">
+                      <Building2 className="h-3 w-3" />
+                      {customer.mailing_address}
+                      {customer.city && `, ${customer.city}`}
+                      {customer.state && `, ${customer.state}`}
+                      {customer.zip && ` ${customer.zip}`}
+                    </div>
+                  )}
                 </div>
 
                 {/* Stats */}

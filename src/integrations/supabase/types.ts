@@ -528,8 +528,10 @@ export type Database = {
       }
       dropoff_customers: {
         Row: {
+          city: string | null
           company_name: string | null
           contact_name: string
+          county: string | null
           created_at: string
           customer_type: string | null
           email: string | null
@@ -537,19 +539,28 @@ export type Database = {
           is_active: boolean | null
           last_dropoff_at: string | null
           lifetime_revenue: number | null
+          mailing_address: string | null
           notes: string | null
           organization_id: string
           phone: string | null
+          physical_address: string | null
+          physical_city: string | null
+          physical_state: string | null
+          physical_zip: string | null
           pricing_tier_id: string | null
           requires_invoicing: boolean | null
           requires_manifest: boolean | null
+          state: string | null
           tags: string[] | null
           total_dropoffs: number | null
           updated_at: string
+          zip: string | null
         }
         Insert: {
+          city?: string | null
           company_name?: string | null
           contact_name: string
+          county?: string | null
           created_at?: string
           customer_type?: string | null
           email?: string | null
@@ -557,19 +568,28 @@ export type Database = {
           is_active?: boolean | null
           last_dropoff_at?: string | null
           lifetime_revenue?: number | null
+          mailing_address?: string | null
           notes?: string | null
           organization_id: string
           phone?: string | null
+          physical_address?: string | null
+          physical_city?: string | null
+          physical_state?: string | null
+          physical_zip?: string | null
           pricing_tier_id?: string | null
           requires_invoicing?: boolean | null
           requires_manifest?: boolean | null
+          state?: string | null
           tags?: string[] | null
           total_dropoffs?: number | null
           updated_at?: string
+          zip?: string | null
         }
         Update: {
+          city?: string | null
           company_name?: string | null
           contact_name?: string
+          county?: string | null
           created_at?: string
           customer_type?: string | null
           email?: string | null
@@ -577,15 +597,22 @@ export type Database = {
           is_active?: boolean | null
           last_dropoff_at?: string | null
           lifetime_revenue?: number | null
+          mailing_address?: string | null
           notes?: string | null
           organization_id?: string
           phone?: string | null
+          physical_address?: string | null
+          physical_city?: string | null
+          physical_state?: string | null
+          physical_zip?: string | null
           pricing_tier_id?: string | null
           requires_invoicing?: boolean | null
           requires_manifest?: boolean | null
+          state?: string | null
           tags?: string[] | null
           total_dropoffs?: number | null
           updated_at?: string
+          zip?: string | null
         }
         Relationships: [
           {

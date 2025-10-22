@@ -22,6 +22,11 @@ export const CreateDropoffCustomerDialog = ({ open, onOpenChange }: CreateDropof
   const [companyName, setCompanyName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [mailingAddress, setMailingAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [zip, setZip] = useState("");
+  const [county, setCounty] = useState("");
   const [customerType, setCustomerType] = useState("one_time");
   const [pricingTierId, setPricingTierId] = useState("");
   const [requiresManifest, setRequiresManifest] = useState(false);
@@ -39,6 +44,11 @@ export const CreateDropoffCustomerDialog = ({ open, onOpenChange }: CreateDropof
         company_name: companyName || null,
         email: email || null,
         phone: phone || null,
+        mailing_address: mailingAddress || null,
+        city: city || null,
+        state: state || null,
+        zip: zip || null,
+        county: county || null,
         customer_type: customerType as 'regular' | 'one_time',
         pricing_tier_id: pricingTierId || null,
         requires_manifest: requiresManifest,
@@ -51,6 +61,11 @@ export const CreateDropoffCustomerDialog = ({ open, onOpenChange }: CreateDropof
       setCompanyName("");
       setEmail("");
       setPhone("");
+      setMailingAddress("");
+      setCity("");
+      setState("");
+      setZip("");
+      setCounty("");
       setCustomerType("one_time");
       setPricingTierId("");
       setRequiresManifest(false);
@@ -121,6 +136,66 @@ export const CreateDropoffCustomerDialog = ({ open, onOpenChange }: CreateDropof
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="(555) 123-4567"
                 />
+              </div>
+            </div>
+
+            {/* Address Information */}
+            <div className="space-y-4 pt-4 border-t">
+              <h4 className="font-medium text-sm">Address Information (for Manifest)</h4>
+              
+              <div className="space-y-2">
+                <Label htmlFor="mailingAddress">Mailing Address</Label>
+                <Input
+                  id="mailingAddress"
+                  value={mailingAddress}
+                  onChange={(e) => setMailingAddress(e.target.value)}
+                  placeholder="123 Main Street"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="city">City</Label>
+                  <Input
+                    id="city"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    placeholder="Detroit"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="state">State</Label>
+                  <Input
+                    id="state"
+                    value={state}
+                    onChange={(e) => setState(e.target.value)}
+                    placeholder="MI"
+                    maxLength={2}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="zip">ZIP Code</Label>
+                  <Input
+                    id="zip"
+                    value={zip}
+                    onChange={(e) => setZip(e.target.value)}
+                    placeholder="48201"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="county">County</Label>
+                  <Input
+                    id="county"
+                    value={county}
+                    onChange={(e) => setCounty(e.target.value)}
+                    placeholder="Wayne"
+                  />
+                </div>
               </div>
             </div>
 
