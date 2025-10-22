@@ -392,7 +392,7 @@ export const ManifestReceiversView = () => {
               const groups: Record<string, any[]> = {};
               
               manifests.forEach(manifest => {
-                const date = manifest.signed_at ? new Date(manifest.signed_at) : new Date(manifest.created_at);
+                const date = new Date(manifest.created_at);
                 const dateKey = format(date, 'MMMM d, yyyy');
                 
                 if (!groups[dateKey]) {
