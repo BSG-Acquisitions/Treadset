@@ -21,6 +21,7 @@ export const ManifestReceiversView = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const queryClient = useQueryClient();
   const [clientNames, setClientNames] = useState<Record<string, string>>({});
+  const [manifestClientNames, setManifestClientNames] = useState<Record<string, string>>({});
   
   // Filters and search
   const [searchTerm, setSearchTerm] = useState("");
@@ -54,9 +55,9 @@ export const ManifestReceiversView = () => {
       // Search filter
       if (searchTerm) {
         const search = searchTerm.toLowerCase();
-        const clientName = clientNames[manifest.client_id]?.toLowerCase() || '';
-        const manifestNumber = manifest.manifest_number?.toLowerCase() || '';
-        if (!clientName.includes(search) && !manifestNumber.includes(search)) {
+        const displayName = (manifestClientNames[manifest.id] || clientNames[manifest.client_id] || '').toLowerCase();
+        const manifestNumber = (manifest.manifest_number || '').toLowerCase();
+        if (!displayName.includes(search) && !manifestNumber.includes(search)) {
           return false;
         }
       }
@@ -89,10 +90,11 @@ export const ManifestReceiversView = () => {
           return dateB.getTime() - dateA.getTime();
         case "oldest":
           return dateA.getTime() - dateB.getTime();
-        case "client":
-          const clientA = clientNames[a.client_id] || '';
-          const clientB = clientNames[b.client_id] || '';
-          return clientA.localeCompare(clientB);
+        case "client": {
+          const nameA = (manifestClientNames[a.id] || clientNames[a.client_id] || '').toString();
+          const nameB = (manifestClientNames[b.id] || clientNames[b.client_id] || '').toString();
+          return nameA.localeCompare(nameB);
+        }
         default:
           return 0;
       }
@@ -176,9 +178,11 @@ export const ManifestReceiversView = () => {
         const map: Record<string, string> = {};
         (clientData || []).forEach((c: any) => { map[c.id] = c.company_name; });
         
-        // For manifests with "Dropoff Customers" as the client, fetch the actual dropoff customer name
+        // Build per-manifest display names for dropoff manifests
         const dropoffManifests = (manifests || []).concat(fallbackPending || [])
           .filter((m: any) => map[m.client_id] === 'Dropoff Customers');
+        
+        const manifestNameMap: Record<string, string> = {};
         
         if (dropoffManifests.length > 0) {
           const { data: dropoffData, error: dropoffError } = await supabase
@@ -198,17 +202,14 @@ export const ManifestReceiversView = () => {
             dropoffData.forEach((d: any) => {
               if (d.manifest_id && d.dropoff_customers) {
                 const name = d.dropoff_customers.company_name || d.dropoff_customers.contact_name || 'Unknown Dropoff Customer';
-                // Find the manifest and override its client name
-                const manifest = dropoffManifests.find((m: any) => m.id === d.manifest_id);
-                if (manifest?.client_id) {
-                  map[manifest.client_id] = name;
-                }
+                manifestNameMap[d.manifest_id] = name;
               }
             });
           }
         }
         
         setClientNames(map);
+        setManifestClientNames(manifestNameMap);
       } catch (e) {
         console.error('Failed fetching client names', e);
       }
@@ -444,7 +445,7 @@ export const ManifestReceiversView = () => {
                               <TableRow key={manifest.id}>
                                 <TableCell>
                                   <div className="font-semibold text-base">
-                                    {clientNames[manifest.client_id] || 'Unknown Client'}
+                                    {manifestClientNames[manifest.id] || clientNames[manifest.client_id] || 'Unknown Client'}
                                   </div>
                                 </TableCell>
                                 <TableCell>
@@ -491,7 +492,7 @@ export const ManifestReceiversView = () => {
                               <div className="space-y-3">
                                 <div>
                                   <h3 className="font-bold text-lg mb-2">
-                                    {clientNames[manifest.client_id] || 'Unknown Client'}
+                                    {manifestClientNames[manifest.id] || clientNames[manifest.client_id] || 'Unknown Client'}
                                   </h3>
                                   <div className="flex items-center gap-2">
                                     <Badge variant="outline">
@@ -511,7 +512,7 @@ export const ManifestReceiversView = () => {
                                   onClick={() => handleAddReceiverSignature(manifest.id)}
                                 >
                                   <Signature className="h-4 w-4 mr-2" />
-                                  Sign for {clientNames[manifest.client_id] || 'Client'}
+                                  Sign for {manifestClientNames[manifest.id] || clientNames[manifest.client_id] || 'Client'}
                                 </Button>
                               </div>
                             </CardContent>
@@ -563,7 +564,7 @@ export const ManifestReceiversView = () => {
                                   </Badge>
                                 </TableCell>
                                 <TableCell className="font-medium">
-                                  {clientNames[manifest.client_id] || 'Unknown'}
+                                  {manifestClientNames[manifest.id] || clientNames[manifest.client_id] || 'Unknown'}
                                 </TableCell>
                                 <TableCell className="text-muted-foreground text-sm">
                                   {manifest.receiver_signed_at ? 
@@ -619,7 +620,7 @@ export const ManifestReceiversView = () => {
                                         <Badge variant="outline" className="mb-1">
                                           {manifest.manifest_number}
                                         </Badge>
-                                        <h3 className="font-medium text-sm">{clientNames[manifest.client_id] || 'Unknown'}</h3>
+                                        <h3 className="font-medium text-sm">{manifestClientNames[manifest.id] || clientNames[manifest.client_id] || 'Unknown'}</h3>
                                       </div>
                                       <Badge variant="secondary" className="text-xs">Complete</Badge>
                                     </div>
