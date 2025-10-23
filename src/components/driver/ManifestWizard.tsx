@@ -90,7 +90,22 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
         driverSigRef.current.fromDataURL(data.driverSigDataUrl);
       }
     }
-  }, [step, data.customerSigDataUrl, data.driverSigDataUrl]);
+  });
+
+  // Auto-save signatures as they're drawn
+  const handleCustomerSignatureEnd = () => {
+    if (customerSigRef.current && !customerSigRef.current.isEmpty()) {
+      const dataUrl = customerSigRef.current.toDataURL();
+      setData(prev => ({ ...prev, customerSigDataUrl: dataUrl }));
+    }
+  };
+
+  const handleDriverSignatureEnd = () => {
+    if (driverSigRef.current && !driverSigRef.current.isEmpty()) {
+      const dataUrl = driverSigRef.current.toDataURL();
+      setData(prev => ({ ...prev, driverSigDataUrl: dataUrl }));
+    }
+  };
 
   const steps: Array<{ key: WizardStep; title: string; icon: React.ReactNode }> = [
     { key: 'arrive', title: 'Arrive', icon: <Clock className="h-4 w-4" /> },
@@ -429,12 +444,22 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
               <p className="text-sm text-muted-foreground">Hand device to customer to sign</p>
             </div>
             
-            <div className="border-2 border-dashed border-muted-foreground/25 p-4 rounded-lg">
+            <div 
+              className="border-2 border-dashed border-muted-foreground/25 p-4 rounded-lg"
+              onTouchStart={(e) => e.stopPropagation()}
+            >
               <SignatureCanvas
                 ref={customerSigRef}
+                onEnd={handleCustomerSignatureEnd}
                 canvasProps={{
                   className: 'w-full h-40 border border-border rounded touch-none',
-                  style: { touchAction: 'none', width: '100%', height: '160px' }
+                  style: { 
+                    touchAction: 'none', 
+                    width: '100%', 
+                    height: '160px',
+                    WebkitUserSelect: 'none',
+                    userSelect: 'none'
+                  }
                 }}
               />
             </div>
@@ -445,11 +470,16 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
               </div>
             )}
             
-            <div className="flex gap-2">
+            <div 
+              className="flex gap-2"
+            >
               <Button 
                 type="button"
                 variant="outline"
-                onClick={() => customerSigRef.current?.clear()}
+                onClick={() => {
+                  customerSigRef.current?.clear();
+                  setData(prev => ({ ...prev, customerSigDataUrl: '' }));
+                }}
                 className="flex-1"
               >
                 Clear
@@ -472,12 +502,22 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
                   <h3 className="text-lg font-medium">Driver Signature</h3>
                 </div>
                 
-                <div className="border-2 border-dashed border-muted-foreground/25 p-4 rounded-lg">
+                <div 
+                  className="border-2 border-dashed border-muted-foreground/25 p-4 rounded-lg"
+                  onTouchStart={(e) => e.stopPropagation()}
+                >
                   <SignatureCanvas
                     ref={driverSigRef}
+                    onEnd={handleDriverSignatureEnd}
                     canvasProps={{
                       className: 'w-full h-40 border border-border rounded touch-none',
-                      style: { touchAction: 'none', width: '100%', height: '160px' }
+                      style: { 
+                        touchAction: 'none', 
+                        width: '100%', 
+                        height: '160px',
+                        WebkitUserSelect: 'none',
+                        userSelect: 'none'
+                      }
                     }}
                   />
                 </div>
@@ -492,7 +532,10 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
                   <Button 
                     type="button"
                     variant="outline"
-                    onClick={() => driverSigRef.current?.clear()}
+                    onClick={() => {
+                      driverSigRef.current?.clear();
+                      setData(prev => ({ ...prev, driverSigDataUrl: '' }));
+                    }}
                     className="flex-1"
                   >
                     Clear

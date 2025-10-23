@@ -296,7 +296,7 @@ export function DriverManifestCreationWizard({
     }
   }, [step, form]);
 
-  // Restore signatures to canvas when returning to Signatures step
+  // Restore signatures to canvas whenever component renders and canvas is empty
   useEffect(() => {
     if (steps[step]?.key === 'signatures') {
       // Restore generator signature if we have it saved
@@ -308,7 +308,22 @@ export function DriverManifestCreationWizard({
         haulerSigRef.current.fromDataURL(haulSigDataUrl);
       }
     }
-  }, [step, genSigDataUrl, haulSigDataUrl]);
+  });
+
+  // Auto-save signatures as they're drawn (prevents loss on re-render)
+  const handleGeneratorSignatureEnd = () => {
+    if (generatorSigRef.current && !generatorSigRef.current.isEmpty()) {
+      const dataUrl = generatorSigRef.current.toDataURL();
+      setGenSigDataUrl(dataUrl);
+    }
+  };
+
+  const handleHaulerSignatureEnd = () => {
+    if (haulerSigRef.current && !haulerSigRef.current.isEmpty()) {
+      const dataUrl = haulerSigRef.current.toDataURL();
+      setHaulSigDataUrl(dataUrl);
+    }
+  };
 
   const handleNext = async () => {
     // Validate hauler selection on info step
@@ -1111,18 +1126,31 @@ export function DriverManifestCreationWizard({
                       type="button" 
                       variant="outline" 
                       size="sm" 
-                      onClick={() => generatorSigRef.current?.clear()}
+                      onClick={() => {
+                        generatorSigRef.current?.clear();
+                        setGenSigDataUrl('');
+                      }}
                       className="text-xs h-7"
                     >
                       Clear
                     </Button>
                   </div>
-                  <div className="border-2 border-border rounded-lg bg-white overflow-hidden">
+                  <div 
+                    className="border-2 border-border rounded-lg bg-white overflow-hidden"
+                    onTouchStart={(e) => e.stopPropagation()}
+                  >
                     <SignatureCanvas
                       ref={generatorSigRef}
+                      onEnd={handleGeneratorSignatureEnd}
                       canvasProps={{ 
                         className: "w-full h-24 sm:h-32 touch-none",
-                        style: { width: '100%', height: '96px', touchAction: 'none' }
+                        style: { 
+                          width: '100%', 
+                          height: '96px', 
+                          touchAction: 'none',
+                          WebkitUserSelect: 'none',
+                          userSelect: 'none'
+                        }
                       }}
                     />
                   </div>
@@ -1168,18 +1196,31 @@ export function DriverManifestCreationWizard({
                       type="button" 
                       variant="outline" 
                       size="sm" 
-                      onClick={() => haulerSigRef.current?.clear()}
+                      onClick={() => {
+                        haulerSigRef.current?.clear();
+                        setHaulSigDataUrl('');
+                      }}
                       className="text-xs h-7"
                     >
                       Clear
                     </Button>
                   </div>
-                  <div className="border-2 border-border rounded-lg bg-white overflow-hidden">
+                  <div 
+                    className="border-2 border-border rounded-lg bg-white overflow-hidden"
+                    onTouchStart={(e) => e.stopPropagation()}
+                  >
                     <SignatureCanvas
                       ref={haulerSigRef}
+                      onEnd={handleHaulerSignatureEnd}
                       canvasProps={{ 
                         className: "w-full h-24 sm:h-32 touch-none",
-                        style: { width: '100%', height: '96px', touchAction: 'none' }
+                        style: { 
+                          width: '100%', 
+                          height: '96px', 
+                          touchAction: 'none',
+                          WebkitUserSelect: 'none',
+                          userSelect: 'none'
+                        }
                       }}
                     />
                   </div>
