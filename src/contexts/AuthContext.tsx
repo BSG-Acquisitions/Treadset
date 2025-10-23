@@ -320,26 +320,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  // Set up session validation interval
-  useEffect(() => {
-    if (!session) {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-      return;
-    }
+  // DISABLED: Aggressive session validation was causing login issues
+  // Session validation will be handled by Supabase's built-in refresh mechanism
+  // useEffect(() => {
+  //   if (!session) {
+  //     if (intervalRef.current) {
+  //       clearInterval(intervalRef.current);
+  //       intervalRef.current = null;
+  //     }
+  //     return;
+  //   }
 
-    // Validate session every 10 minutes
-    intervalRef.current = setInterval(validateSession, 10 * 60 * 1000);
+  //   // Validate session every 10 minutes
+  //   intervalRef.current = setInterval(validateSession, 10 * 60 * 1000);
 
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    };
-  }, [session, validateSession]);
+  //   return () => {
+  //     if (intervalRef.current) {
+  //       clearInterval(intervalRef.current);
+  //       intervalRef.current = null;
+  //     }
+  //   };
+  // }, [session, validateSession]);
 
   // Check if user needs onboarding
   useEffect(() => {
