@@ -107,6 +107,14 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
     }
   };
 
+  // Blur any active input to hide the Android keyboard when starting to sign
+  const blurActiveInputs = () => {
+    const ae = document.activeElement as HTMLElement | null;
+    if (ae && typeof ae.blur === 'function') {
+      ae.blur();
+    }
+  };
+
   const steps: Array<{ key: WizardStep; title: string; icon: React.ReactNode }> = [
     { key: 'arrive', title: 'Arrive', icon: <Clock className="h-4 w-4" /> },
     { key: 'counts', title: 'Counts', icon: <FileText className="h-4 w-4" /> },
@@ -446,7 +454,8 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
             
             <div 
               className="border-2 border-dashed border-muted-foreground/25 p-4 rounded-lg"
-              onTouchStart={(e) => e.stopPropagation()}
+              onTouchStart={(e) => { blurActiveInputs(); e.stopPropagation(); }}
+              onPointerDown={() => blurActiveInputs()}
             >
               <SignatureCanvas
                 ref={customerSigRef}
@@ -504,7 +513,8 @@ export const ManifestWizard: React.FC<ManifestWizardProps> = ({ manifestId, onCo
                 
                 <div 
                   className="border-2 border-dashed border-muted-foreground/25 p-4 rounded-lg"
-                  onTouchStart={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => { blurActiveInputs(); e.stopPropagation(); }}
+                  onPointerDown={() => blurActiveInputs()}
                 >
                   <SignatureCanvas
                     ref={driverSigRef}

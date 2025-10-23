@@ -325,6 +325,14 @@ export function DriverManifestCreationWizard({
     }
   };
 
+  // Blur any active input to prevent the Android keyboard from staying open when signing
+  const blurActiveInputs = () => {
+    const ae = document.activeElement as HTMLElement | null;
+    if (ae && typeof ae.blur === 'function') {
+      ae.blur();
+    }
+  };
+
   const handleNext = async () => {
     // Validate hauler selection on info step
     if (currentStep.key === "info") {
@@ -1137,7 +1145,8 @@ export function DriverManifestCreationWizard({
                   </div>
                   <div 
                     className="border-2 border-border rounded-lg bg-white overflow-hidden"
-                    onTouchStart={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => { blurActiveInputs(); e.stopPropagation(); }}
+                    onPointerDown={() => blurActiveInputs()}
                   >
                     <SignatureCanvas
                       ref={generatorSigRef}
@@ -1182,6 +1191,10 @@ export function DriverManifestCreationWizard({
                           value={field.value || ""} 
                           placeholder="Full name"
                           type="text"
+                          autoComplete="off"
+                          autoCorrect="off"
+                          spellCheck={false}
+                          inputMode="text"
                           className="text-sm"
                         />
                       </FormControl>
@@ -1207,7 +1220,8 @@ export function DriverManifestCreationWizard({
                   </div>
                   <div 
                     className="border-2 border-border rounded-lg bg-white overflow-hidden"
-                    onTouchStart={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => { blurActiveInputs(); e.stopPropagation(); }}
+                    onPointerDown={() => blurActiveInputs()}
                   >
                     <SignatureCanvas
                       ref={haulerSigRef}
