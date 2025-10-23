@@ -158,7 +158,7 @@ export const useManifestIntegration = () => {
 
   return useMutation({
     mutationFn: async ({ manifestId, overrides }: ManifestIntegrationParams) => {
-      // 1. Fetch manifest data with all related entities including dropoff data
+      // 1. Fetch manifest data with all related entities (excluding dropoff to avoid relation ambiguity)
       const { data: manifestData, error: fetchError } = await supabase
         .from('manifests')
         .select(`
@@ -166,8 +166,7 @@ export const useManifestIntegration = () => {
           client:clients(*),
           location:locations(*),
           hauler:haulers(*),
-          pickup:pickups!manifests_pickup_id_fkey(*),
-          dropoff:dropoffs!manifests_dropoff_id_fkey(*, dropoff_customer:dropoff_customers(*))
+          pickup:pickups!manifests_pickup_id_fkey(*)
         `)
         .eq('id', manifestId)
         .single();
@@ -188,12 +187,18 @@ export const useManifestIntegration = () => {
         driver_signature_png_path: manifestData.driver_signature_png_path,
       });
 
-      // 2. Check if this is a dropoff manifest and extract dropoff customer data
+      // 2. Fetch dropoff data separately if this is a dropoff manifest
       let dropoffCustomerData = null;
-      const isDropoffManifest = manifestData.client?.company_name === "Dropoff Customers" && manifestData.dropoff;
+      const isDropoffManifest = manifestData.client?.company_name === "Dropoff Customers" && manifestData.dropoff_id;
       
-      if (isDropoffManifest && manifestData.dropoff?.dropoff_customer) {
-        const dc = manifestData.dropoff.dropoff_customer;
+      if (isDropoffManifest && manifestData.dropoff_id) {
+        const { data: dropoffData } = await supabase
+          .from('dropoffs')
+          .select('*, dropoff_customer:dropoff_customers(*)')
+          .eq('id', manifestData.dropoff_id)
+          .single();
+        
+        const dc = dropoffData?.dropoff_customer;
         dropoffCustomerData = {
           generator_name: dc.company_name || dc.contact_name || '',
           generator_mail_address: dc.mailing_address || '',
@@ -208,13 +213,15 @@ export const useManifestIntegration = () => {
           generator_phone: dc.phone || ''
         };
         
-        console.log('[MANIFEST_INTEGRATION] Using dropoff customer as generator:', {
-          manifestId,
-          dropoffCustomerName: dc.company_name || dc.contact_name,
-          dropoffCustomerAddress: dc.mailing_address,
-          dropoffCustomerCity: dc.city,
-          isDropoffManifest
-        });
+        if (dc) {
+          console.log('[MANIFEST_INTEGRATION] Using dropoff customer as generator:', {
+            manifestId,
+            dropoffCustomerName: dc.company_name || dc.contact_name,
+            dropoffCustomerAddress: dc.mailing_address,
+            dropoffCustomerCity: dc.city,
+            isDropoffManifest
+          });
+        }
       }
       
       // 3. Build AcroForm data from DB record
