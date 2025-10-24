@@ -199,21 +199,22 @@ export const useManifestIntegration = () => {
           .single();
         
         const dc = dropoffData?.dropoff_customer;
-        dropoffCustomerData = {
-          generator_name: dc.company_name || dc.contact_name || '',
-          generator_mail_address: dc.mailing_address || '',
-          generator_city: dc.city || '',
-          generator_state: dc.state || '',
-          generator_zip: dc.zip || '',
-          generator_physical_address: dc.physical_address || dc.mailing_address || '',
-          generator_physical_city: dc.physical_city || dc.city || '',
-          generator_physical_state: dc.physical_state || dc.state || '',
-          generator_physical_zip: dc.physical_zip || dc.zip || '',
-          generator_county: dc.county || '',
-          generator_phone: dc.phone || ''
-        };
         
         if (dc) {
+          dropoffCustomerData = {
+            generator_name: dc.company_name || dc.contact_name || '',
+            generator_mail_address: dc.mailing_address || '',
+            generator_city: dc.city || '',
+            generator_state: dc.state || '',
+            generator_zip: dc.zip || '',
+            generator_physical_address: dc.physical_address || dc.mailing_address || '',
+            generator_physical_city: dc.physical_city || dc.city || '',
+            generator_physical_state: dc.physical_state || dc.state || '',
+            generator_physical_zip: dc.physical_zip || dc.zip || '',
+            generator_county: dc.county || '',
+            generator_phone: dc.phone || ''
+          };
+          
           console.log('[MANIFEST_INTEGRATION] Using dropoff customer as generator:', {
             manifestId,
             dropoffCustomerName: dc.company_name || dc.contact_name,
