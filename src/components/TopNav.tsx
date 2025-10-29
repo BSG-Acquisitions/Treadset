@@ -43,7 +43,6 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
     if (location.pathname === '/haulers') return 'haulers';
     if (location.pathname === '/employees') return 'employees';
     if (location.pathname === '/analytics') return 'analytics';
-    if (location.pathname === '/pricing') return 'pricing';
     if (location.pathname === '/reports') return 'reports';
     if (location.pathname === '/dropoffs') return 'dropoffs';
     return 'dashboard';
@@ -59,7 +58,6 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
     { id: 'reports', label: 'Reports', icon: FileText, path: '/reports', roles: ['admin', 'ops_manager'] as const },
     { id: 'dropoffs', label: 'Drop-offs', icon: PackageOpen, path: '/dropoffs', roles: ['admin', 'ops_manager', 'sales'] as const },
     { id: 'haulers', label: 'Independent Haulers', icon: Truck, path: '/haulers', roles: ['admin', 'ops_manager'] as const },
-    { id: 'pricing', label: 'Pricing', icon: DollarSign, path: '/pricing', roles: ['admin', 'ops_manager'] as const },
   ];
 
 

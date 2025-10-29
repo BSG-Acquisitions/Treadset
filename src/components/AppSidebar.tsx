@@ -84,7 +84,6 @@ export function AppSidebar() {
     ],
     financial: [
       { id: 'dropoffs', label: 'Drop-offs', icon: PackageOpen, path: '/dropoffs', roles: ['admin', 'ops_manager', 'sales'] as const },
-      { id: 'pricing', label: 'Pricing', icon: DollarSign, path: '/pricing', roles: ['admin', 'ops_manager'] as const },
     ],
     reporting: [
       { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics', roles: ['admin', 'ops_manager'] as const },
@@ -118,7 +117,6 @@ export function AppSidebar() {
     { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics', roles: ['admin', 'ops_manager'] as const },
     { id: 'reports', label: 'Reports', icon: FileText, path: '/reports', roles: ['admin', 'ops_manager'] as const },
     { id: 'michigan-reports', label: 'Michigan Reports', icon: Recycle, path: '/michigan-reports', roles: ['admin', 'ops_manager'] as const },
-    { id: 'pricing', label: 'Pricing', icon: DollarSign, path: '/pricing', roles: ['admin', 'ops_manager'] as const },
   ];
 
   const adminItems = [

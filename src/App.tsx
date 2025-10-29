@@ -22,7 +22,6 @@ import Employees from "./pages/Employees";
 import ClientAnalytics from "./pages/ClientAnalytics";
 import Settings from "./pages/Settings";
 import EnhancedRoutesToday from "./pages/EnhancedRoutesToday";
-import PricingAdmin from "./pages/PricingAdmin";
 import Integrations from "./pages/Integrations";
 import DriverManifests from "./pages/DriverManifests";
 import DriverManifestCreate from "./pages/DriverManifestCreate";
@@ -154,13 +153,6 @@ const App = () => (
               <ProtectedRoute roles={['admin', 'ops_manager']}>
                 <AppLayout>
                   <Settings />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/pricing" element={
-              <ProtectedRoute roles={['admin', 'ops_manager']}>
-                <AppLayout>
-                  <PricingAdmin />
                 </AppLayout>
               </ProtectedRoute>
             } />
