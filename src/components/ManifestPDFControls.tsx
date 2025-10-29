@@ -126,7 +126,7 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
           <FileText className="w-4 h-4 text-primary flex-shrink-0" />
           <div className="min-w-0">
             <div className="font-medium text-sm truncate">Michigan Manifest PDF</div>
-            <div className="text-xs text-muted-foreground">AcroForm PDF with proper field mapping</div>
+            <div className="text-xs text-muted-foreground">View or download manifest</div>
           </div>
         </div>
         <div className="flex flex-wrap gap-1 justify-end w-full sm:w-auto">
