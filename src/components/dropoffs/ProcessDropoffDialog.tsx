@@ -12,8 +12,9 @@ import { Separator } from "@/components/ui/separator";
 import { useDropoffCustomers } from "@/hooks/useDropoffCustomers";
 import { useCreateDropoff } from "@/hooks/useDropoffs";
 import { usePricingTiers } from "@/hooks/usePricingTiers";
+import { useHaulers } from "@/hooks/useHaulers";
 import { useAuth } from "@/contexts/AuthContext";
-import { Calculator, FileText, CreditCard, DollarSign } from "lucide-react";
+import { Calculator, FileText, CreditCard, DollarSign, Factory, Truck, Building2 } from "lucide-react";
 
 interface ProcessDropoffDialogProps {
   open: boolean;
@@ -24,6 +25,7 @@ interface ProcessDropoffDialogProps {
 export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }: ProcessDropoffDialogProps) => {
   const { user } = useAuth();
   const [customerId, setCustomerId] = useState(selectedCustomerId || "");
+  const [haulerId, setHaulerId] = useState("");
   const [customerType, setCustomerType] = useState<"existing" | "new">("existing");
   const [pteCount, setPteCount] = useState("");
   const [otrCount, setOtrCount] = useState("");
@@ -38,6 +40,7 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
   const [newCustomerCompany, setNewCustomerCompany] = useState("");
 
   const { data: customers = [], isLoading: isLoadingCustomers, error: customersError } = useDropoffCustomers();
+  const { data: haulers = [] } = useHaulers();
   const { data: pricingTiers = [] } = usePricingTiers();
   const createDropoff = useCreateDropoff();
 
@@ -72,6 +75,7 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
       await createDropoff.mutateAsync({
         organization_id: user?.currentOrganization?.id || "", 
         dropoff_customer_id: dropoffCustomerId,
+        hauler_id: haulerId || null,
         pte_count: Number(pteCount || 0),
         otr_count: Number(otrCount || 0),
         tractor_count: Number(tractorCount || 0),
@@ -88,6 +92,7 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
 
       // Reset form
       setCustomerId("");
+      setHaulerId("");
       setPteCount("");
       setOtrCount("");
       setTractorCount("");
@@ -114,38 +119,82 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
         </DialogHeader>
 
         <div className="space-y-6 overflow-y-auto max-h-[calc(95vh-200px)] pr-2">
-          {/* Customer Selection */}
-          <div className="space-y-3">
-            <Label>Customer</Label>
-            {customers.length === 0 ? (
-              <div className="text-sm text-muted-foreground p-4 border border-dashed rounded-lg text-center">
-                No customers found. Please create a customer first using the "Add Customer" button on the dropoffs page.
+          {/* Manifest Parties Section */}
+          <Card>
+            <CardContent className="pt-6 space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <FileText className="h-4 w-4 text-primary" />
+                <span className="font-medium">Manifest Parties</span>
               </div>
-            ) : (
-              <Select value={customerId} onValueChange={setCustomerId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select customer..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {customers.map((customer) => (
-                    <SelectItem key={customer.id} value={customer.id}>
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                        <span>{customer.contact_name}</span>
-                        {customer.company_name && (
-                          <span className="text-muted-foreground text-xs sm:text-sm">
-                            ({customer.company_name})
-                          </span>
-                        )}
-                        <Badge variant={customer.customer_type === 'regular' ? 'default' : 'secondary'} className="w-fit">
-                          {customer.customer_type}
-                        </Badge>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
+              
+              {/* Generator Selection */}
+              <div className="space-y-3">
+                <Label className="flex items-center gap-2">
+                  <Factory className="h-4 w-4" />
+                  Generator (Tire Source)
+                </Label>
+                {customers.length === 0 ? (
+                  <div className="text-sm text-muted-foreground p-4 border border-dashed rounded-lg text-center">
+                    No customers found. Please create a customer first using the "Add Customer" button on the dropoffs page.
+                  </div>
+                ) : (
+                  <Select value={customerId} onValueChange={setCustomerId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select generator..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {customers.map((customer) => (
+                        <SelectItem key={customer.id} value={customer.id}>
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                            <span>{customer.contact_name}</span>
+                            {customer.company_name && (
+                              <span className="text-muted-foreground text-xs sm:text-sm">
+                                ({customer.company_name})
+                              </span>
+                            )}
+                            <Badge variant={customer.customer_type === 'regular' ? 'default' : 'secondary'} className="w-fit">
+                              {customer.customer_type}
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              {/* Hauler Selection */}
+              <div className="space-y-3">
+                <Label className="flex items-center gap-2">
+                  <Truck className="h-4 w-4" />
+                  Hauler (Transporter)
+                </Label>
+                <Select value={haulerId} onValueChange={setHaulerId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select hauler (optional)..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {haulers.map((hauler) => (
+                      <SelectItem key={hauler.id} value={hauler.id}>
+                        {hauler.hauler_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Receiver Display */}
+              <div className="space-y-3">
+                <Label className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4" />
+                  Receiver
+                </Label>
+                <div className="p-3 bg-muted rounded-lg border border-border">
+                  <span className="text-sm font-medium">BSG Tire Recycling</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Tire Counts */}
           <div className="space-y-4">
