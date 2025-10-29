@@ -93,10 +93,10 @@ export const ManifestReceiversView = () => {
     (m.receiver_signed_at == null) && m.status !== 'COMPLETED'
   ) || [];
   
-  // Filter manifests that have all signatures
+  // Filter manifests that have all signatures (check both old and new signature fields)
   const completedManifests = manifests?.filter(m => 
     m.status === 'COMPLETED' && 
-    m.signed_at && 
+    (m.signed_at || m.generator_signed_at || m.hauler_signed_at) && 
     m.receiver_signed_at
   ) || [];
 
