@@ -90,6 +90,9 @@ export function DriverManifestCreationWizard({
   const [calculatedTotal, setCalculatedTotal] = useState(0);
   const [offlineMethod, setOfflineMethod] = useState<'CASH' | 'CHECK'>('CASH');
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  
+  // Use ref for more reliable duplicate prevention
+  const isSubmittingRef = useRef(false);
 
   const PRESET_RATES = {
     passengerOffRim: ['2.50', '2.75', '3.00', '3.25', '3.50'],
@@ -496,6 +499,12 @@ export function DriverManifestCreationWizard({
   };
 
   const onSubmit = async (data: ManifestFormData) => {
+    // CRITICAL: Prevent duplicate manifest creation
+    if (isSubmittingRef.current || isSubmitting) {
+      console.log('[DRIVER_WIZARD] Submission already in progress, ignoring duplicate click');
+      return;
+    }
+    
     console.log('[DRIVER_WIZARD] Form submitted with data:', {
       gross_weight_lbs: data.gross_weight_lbs,
       tare_weight_lbs: data.tare_weight_lbs,
@@ -525,7 +534,36 @@ export function DriverManifestCreationWizard({
       return;
     }
 
+    // Check if a manifest already exists for this pickup (prevents duplicates)
+    const { data: existingManifests, error: checkError } = await supabase
+      .from('manifests')
+      .select('id, manifest_number, status')
+      .eq('pickup_id', pickupId)
+      .limit(1);
+
+    if (checkError) {
+      console.error('[DRIVER_WIZARD] Error checking for existing manifests:', checkError);
+    } else if (existingManifests && existingManifests.length > 0) {
+      const existing = existingManifests[0];
+      toast({
+        title: "Manifest Already Exists",
+        description: `A manifest (${existing.manifest_number}) has already been created for this pickup.`,
+        variant: "destructive",
+      });
+      console.log('[DRIVER_WIZARD] Manifest already exists:', existing);
+      
+      // If the manifest exists and is completed or awaiting receiver, proceed to payment
+      if (existing.status === 'COMPLETED' || existing.status === 'AWAITING_RECEIVER_SIGNATURE') {
+        setCreatedManifestId(existing.id);
+        setManifestCreated(true);
+        setStep(step + 1);
+      }
+      return;
+    }
+
+    // Set both state and ref to prevent race conditions
     setIsSubmitting(true);
+    isSubmittingRef.current = true;
 
     try {
       // 1. Use previously persisted signature paths from state (uploaded during Signatures step)
@@ -737,6 +775,7 @@ export function DriverManifestCreationWizard({
       });
     } finally {
       setIsSubmitting(false);
+      isSubmittingRef.current = false;
     }
   };
 
