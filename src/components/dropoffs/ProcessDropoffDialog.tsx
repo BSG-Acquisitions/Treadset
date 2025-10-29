@@ -14,7 +14,8 @@ import { useCreateDropoff } from "@/hooks/useDropoffs";
 import { usePricingTiers } from "@/hooks/usePricingTiers";
 import { useHaulers } from "@/hooks/useHaulers";
 import { useAuth } from "@/contexts/AuthContext";
-import { Calculator, FileText, CreditCard, DollarSign, Factory, Truck, Building2 } from "lucide-react";
+import { Calculator, FileText, CreditCard, DollarSign, Factory, Truck, Building2, Plus } from "lucide-react";
+import { CreateHaulerDialog } from "./CreateHaulerDialog";
 
 interface ProcessDropoffDialogProps {
   open: boolean;
@@ -26,6 +27,7 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
   const { user } = useAuth();
   const [customerId, setCustomerId] = useState(selectedCustomerId || "");
   const [haulerId, setHaulerId] = useState("");
+  const [showCreateHauler, setShowCreateHauler] = useState(false);
   const [customerType, setCustomerType] = useState<"existing" | "new">("existing");
   const [pteCount, setPteCount] = useState("");
   const [otrCount, setOtrCount] = useState("");
@@ -165,10 +167,22 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
 
               {/* Hauler Selection */}
               <div className="space-y-3">
-                <Label className="flex items-center gap-2">
-                  <Truck className="h-4 w-4" />
-                  Hauler (Transporter)
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-2">
+                    <Truck className="h-4 w-4" />
+                    Hauler (Transporter)
+                  </Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowCreateHauler(true)}
+                    className="h-8"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Hauler
+                  </Button>
+                </div>
                 <Select value={haulerId} onValueChange={setHaulerId}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select hauler (optional)..." />
@@ -334,6 +348,11 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <CreateHaulerDialog 
+        open={showCreateHauler}
+        onOpenChange={setShowCreateHauler}
+      />
     </Dialog>
   );
 };
