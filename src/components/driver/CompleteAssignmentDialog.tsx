@@ -339,14 +339,44 @@ export function CompleteAssignmentDialog({
                 </div>
 
                 <div className="space-y-4">
+                  <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-4">
+                    <p className="text-xs text-blue-900 dark:text-blue-100 font-medium">
+                      💡 Tip: You can use preset rates OR enter any custom rate (like $2.30)
+                    </p>
+                  </div>
+
                   {form.watch('actualPteCount') > 0 && (
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">
-                        Passenger Tire Rate ({form.watch('actualPteCount')} tires)
+                    <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+                      <label className="text-sm font-medium flex items-center justify-between">
+                        <span>Passenger Tire Rate</span>
+                        <span className="text-muted-foreground">({form.watch('actualPteCount')} tires)</span>
                       </label>
+                      
+                      <div className="space-y-2">
+                        <label className="text-xs text-muted-foreground">Custom Rate ($/tire)</label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="Enter rate (e.g., 2.30)"
+                          value={pteRate}
+                          onChange={(e) => setPteRate(e.target.value)}
+                          className="text-base font-medium"
+                        />
+                      </div>
+
+                      <div className="relative">
+                        <div className="absolute inset-0 flex items-center">
+                          <span className="w-full border-t" />
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                          <span className="bg-background px-2 text-muted-foreground">or select preset</span>
+                        </div>
+                      </div>
+
                       <Select value={pteRate} onValueChange={setPteRate}>
                         <SelectTrigger className="bg-background">
-                          <SelectValue placeholder="Select rate" />
+                          <SelectValue placeholder="Quick select preset rate" />
                         </SelectTrigger>
                         <SelectContent className="bg-background z-50">
                           {PRESET_RATES.passenger.map((rate) => (
@@ -356,29 +386,47 @@ export function CompleteAssignmentDialog({
                           ))}
                         </SelectContent>
                       </Select>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">or</span>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          placeholder="Enter custom rate"
-                          value={pteRate}
-                          onChange={(e) => setPteRate(e.target.value)}
-                          className="text-sm"
-                        />
-                      </div>
+                      
+                      {pteRate && (
+                        <div className="text-xs text-muted-foreground text-right">
+                          Subtotal: ${(parseFloat(pteRate) * form.watch('actualPteCount')).toFixed(2)}
+                        </div>
+                      )}
                     </div>
                   )}
 
                   {form.watch('actualTractorCount') > 0 && (
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">
-                        Commercial Tire Rate ({form.watch('actualTractorCount')} tires)
+                    <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+                      <label className="text-sm font-medium flex items-center justify-between">
+                        <span>Commercial Tire Rate</span>
+                        <span className="text-muted-foreground">({form.watch('actualTractorCount')} tires)</span>
                       </label>
+                      
+                      <div className="space-y-2">
+                        <label className="text-xs text-muted-foreground">Custom Rate ($/tire)</label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="Enter rate (e.g., 12.50)"
+                          value={commercialRate}
+                          onChange={(e) => setCommercialRate(e.target.value)}
+                          className="text-base font-medium"
+                        />
+                      </div>
+
+                      <div className="relative">
+                        <div className="absolute inset-0 flex items-center">
+                          <span className="w-full border-t" />
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                          <span className="bg-background px-2 text-muted-foreground">or select preset</span>
+                        </div>
+                      </div>
+
                       <Select value={commercialRate} onValueChange={setCommercialRate}>
                         <SelectTrigger className="bg-background">
-                          <SelectValue placeholder="Select rate" />
+                          <SelectValue placeholder="Quick select preset rate" />
                         </SelectTrigger>
                         <SelectContent className="bg-background z-50">
                           {PRESET_RATES.commercial.map((rate) => (
@@ -388,29 +436,47 @@ export function CompleteAssignmentDialog({
                           ))}
                         </SelectContent>
                       </Select>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">or</span>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          placeholder="Enter custom rate"
-                          value={commercialRate}
-                          onChange={(e) => setCommercialRate(e.target.value)}
-                          className="text-sm"
-                        />
-                      </div>
+                      
+                      {commercialRate && (
+                        <div className="text-xs text-muted-foreground text-right">
+                          Subtotal: ${(parseFloat(commercialRate) * form.watch('actualTractorCount')).toFixed(2)}
+                        </div>
+                      )}
                     </div>
                   )}
 
                   {form.watch('actualOtrCount') > 0 && (
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">
-                        OTR Tire Rate ({form.watch('actualOtrCount')} tires)
+                    <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+                      <label className="text-sm font-medium flex items-center justify-between">
+                        <span>OTR Tire Rate</span>
+                        <span className="text-muted-foreground">({form.watch('actualOtrCount')} tires)</span>
                       </label>
+                      
+                      <div className="space-y-2">
+                        <label className="text-xs text-muted-foreground">Custom Rate ($/tire)</label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="Enter rate (e.g., 75.00)"
+                          value={otrRate}
+                          onChange={(e) => setOtrRate(e.target.value)}
+                          className="text-base font-medium"
+                        />
+                      </div>
+
+                      <div className="relative">
+                        <div className="absolute inset-0 flex items-center">
+                          <span className="w-full border-t" />
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                          <span className="bg-background px-2 text-muted-foreground">or select preset</span>
+                        </div>
+                      </div>
+
                       <Select value={otrRate} onValueChange={setOtrRate}>
                         <SelectTrigger className="bg-background">
-                          <SelectValue placeholder="Select rate" />
+                          <SelectValue placeholder="Quick select preset rate" />
                         </SelectTrigger>
                         <SelectContent className="bg-background z-50">
                           {PRESET_RATES.otr.map((rate) => (
@@ -420,18 +486,12 @@ export function CompleteAssignmentDialog({
                           ))}
                         </SelectContent>
                       </Select>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">or</span>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          placeholder="Enter custom rate"
-                          value={otrRate}
-                          onChange={(e) => setOtrRate(e.target.value)}
-                          className="text-sm"
-                        />
-                      </div>
+                      
+                      {otrRate && (
+                        <div className="text-xs text-muted-foreground text-right">
+                          Subtotal: ${(parseFloat(otrRate) * form.watch('actualOtrCount')).toFixed(2)}
+                        </div>
+                      )}
                     </div>
                   )}
 
