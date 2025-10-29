@@ -70,28 +70,35 @@ export const useGenerateDropoffManifest = () => {
         clientId = newClient.id;
       }
 
-      // Find existing BSG hauler - global table (no organization_id column)
-      // Use ILIKE with trim to handle any whitespace issues
-      const { data: haulerRow, error: haulerError } = await supabase
-        .from('haulers')
-        .select('id')
-        .ilike('hauler_name', '%BSG Tire Recycling%')
-        .eq('is_active', true)
-        .maybeSingle();
+      // Use the hauler from the dropoff if specified, otherwise default to BSG
+      let haulerId: string;
+      
+      if (dropoff.hauler_id) {
+        // Use the hauler selected for this dropoff
+        haulerId = dropoff.hauler_id;
+      } else {
+        // Default to BSG Tire Recycling as the hauler
+        const { data: haulerRow, error: haulerError } = await supabase
+          .from('haulers')
+          .select('id')
+          .ilike('hauler_name', '%BSG Tire Recycling%')
+          .eq('is_active', true)
+          .maybeSingle();
 
-      if (haulerError) throw haulerError;
-      if (!haulerRow) {
-        throw new Error('BSG Tire Recycling hauler not found. Please create or activate it in Haulers.');
+        if (haulerError) throw haulerError;
+        if (!haulerRow) {
+          throw new Error('BSG Tire Recycling hauler not found. Please create or activate it in Haulers.');
+        }
+        
+        haulerId = haulerRow.id;
       }
-
-      const haulerId = haulerRow.id;
 
       // Create manifest data from dropoff
       const manifestData = {
         manifest_number: manifestNumber as string,
         organization_id: orgId as string,
         client_id: clientId, // Use the default dropoff client
-        hauler_id: haulerId, // BSG is always the hauler for dropoffs
+        hauler_id: haulerId, // Use selected hauler or default to BSG
         location_id: null,
         pickup_id: null,
         dropoff_id: dropoff.id, // Link to the dropoff
@@ -140,7 +147,14 @@ export const useGenerateDropoffManifest = () => {
 
       if (updateError) throw updateError;
 
-      // 4. Generate the PDF using the manifest integration
+      // 4. Fetch the hauler information to populate manifest properly
+      const { data: haulerInfo } = await supabase
+        .from('haulers')
+        .select('*')
+        .eq('id', haulerId)
+        .single();
+
+      // 5. Generate the PDF using the manifest integration
       const result = await manifestIntegration.mutateAsync({
         manifestId: manifest.id,
         overrides: {
@@ -160,19 +174,25 @@ export const useGenerateDropoffManifest = () => {
           passenger_car_count: (dropoff.pte_count || 0).toString(),
           truck_count: '0',
           oversized_count: ((dropoff.otr_count || 0) + (dropoff.tractor_count || 0)).toString(),
-          // Set hauler as the processing organization
-          hauler_name: 'BSG Tire Recycling',
-          hauler_print_name: 'BSG Representative',
+          // Use the hauler information from the database
+          hauler_name: haulerInfo?.hauler_name || 'Unknown Hauler',
+          hauler_print_name: haulerInfo?.hauler_name || 'Hauler Representative',
           hauler_date: new Date().toISOString().split('T')[0],
-          hauler_mail_address: '2971 Bellevue Street',
-          hauler_city: 'Detroit',
-          hauler_state: 'MI',
-          hauler_zip: '48207',
-          hauler_phone: '313-731-0817',
-          hauler_mi_reg: 'H-82220004',
-          // Leave receiver blank for now
-          receiver_name: '',
-          receiver_print_name: '',
+          hauler_mail_address: haulerInfo?.hauler_mailing_address || '',
+          hauler_city: haulerInfo?.hauler_city || '',
+          hauler_state: haulerInfo?.hauler_state || '',
+          hauler_zip: haulerInfo?.hauler_zip || '',
+          hauler_phone: haulerInfo?.hauler_phone || '',
+          hauler_mi_reg: haulerInfo?.hauler_mi_reg || '',
+          // BSG Tire Recycling is the receiver
+          receiver_name: 'BSG Tire Recycling',
+          receiver_print_name: 'BSG Representative',
+          receiver_physical_address: '2971 Bellevue Street',
+          receiver_city: 'Detroit',
+          receiver_state: 'MI',
+          receiver_zip: '48207',
+          receiver_phone: '313-731-0817',
+          receiver_mi_reg: 'H-82220004',
         }
       });
 
