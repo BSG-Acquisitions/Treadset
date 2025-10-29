@@ -14,7 +14,8 @@ import {
   MoreHorizontal,
   Edit,
   Receipt,
-  Loader2
+  Loader2,
+  ChevronRight
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -22,7 +23,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { format } from "date-fns";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { format, isWithinInterval, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays } from "date-fns";
 import type { Database } from "@/integrations/supabase/types";
 import { useGenerateDropoffManifest } from "@/hooks/useDropoffManifest";
 
@@ -57,6 +63,37 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
     dropoff.dropoff_customers?.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     dropoff.notes?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Group dropoffs by time period
+  const groupDropoffsByPeriod = (dropoffList: Dropoff[]) => {
+    const now = new Date();
+    const groups: Record<string, Dropoff[]> = {
+      'This Week': [],
+      'Last Week': [],
+      'This Month': [],
+      'Last Month': [],
+      'Older': []
+    };
+
+    dropoffList.forEach(dropoff => {
+      const date = new Date(dropoff.dropoff_date);
+      
+      if (isWithinInterval(date, { start: startOfWeek(now), end: endOfWeek(now) })) {
+        groups['This Week'].push(dropoff);
+      } else if (isWithinInterval(date, { start: startOfWeek(subDays(now, 7)), end: endOfWeek(subDays(now, 7)) })) {
+        groups['Last Week'].push(dropoff);
+      } else if (isWithinInterval(date, { start: startOfMonth(now), end: endOfMonth(now) })) {
+        groups['This Month'].push(dropoff);
+      } else if (isWithinInterval(date, { start: startOfMonth(subDays(now, 30)), end: endOfMonth(subDays(now, 30)) })) {
+        groups['Last Month'].push(dropoff);
+      } else {
+        groups['Older'].push(dropoff);
+      }
+    });
+
+    // Remove empty groups and return as array
+    return Object.entries(groups).filter(([_, items]) => items.length > 0);
+  };
 
   const handleGenerateManifest = (dropoff: Dropoff) => {
     generateManifest.mutate(dropoff);
@@ -119,192 +156,176 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
     );
   }
 
-  return (
-    <div className="space-y-4">
-      {filteredDropoffs.map((dropoff) => {
-        const totalTires = (dropoff.pte_count || 0) + (dropoff.otr_count || 0) + (dropoff.tractor_count || 0);
-        
-        return (
-          <Card key={dropoff.id} className="hover:shadow-md transition-shadow">
-            <CardContent className="p-3 sm:p-4">
-              <div className="space-y-4">
-                {/* Mobile Header */}
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                  <div className="space-y-2">
-                    <h3 className="font-semibold text-base sm:text-lg flex items-center gap-2">
-                      <User className="h-4 w-4" />
-                      {dropoff.dropoff_customers?.contact_name || 'Unknown Customer'}
-                    </h3>
-                    {dropoff.dropoff_customers?.company_name && (
-                      <p className="text-sm text-muted-foreground flex items-center gap-1">
-                        <Building2 className="h-3 w-3" />
-                        {dropoff.dropoff_customers.company_name}
-                      </p>
-                    )}
-                  </div>
-                  
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant={dropoff.status === 'completed' ? 'default' : 'secondary'}>
-                      {dropoff.status}
-                    </Badge>
-                    <Badge variant={getPaymentStatusColor(dropoff.payment_status || 'pending')}>
-                      {dropoff.payment_status}
-                    </Badge>
-                  </div>
-                </div>
+  const groupedDropoffs = groupDropoffsByPeriod(filteredDropoffs);
 
-                {/* Date and Time - Mobile Stacked */}
-                <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-1">
+  const renderDropoffCard = (dropoff: Dropoff) => {
+    const totalTires = (dropoff.pte_count || 0) + (dropoff.otr_count || 0) + (dropoff.tractor_count || 0);
+    
+    return (
+      <Card key={dropoff.id} className="hover:shadow-sm transition-shadow">
+        <CardContent className="p-4">
+          <div className="space-y-3">
+            {/* Header */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1 min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-base truncate">
+                    {dropoff.dropoff_customers?.contact_name || 'Unknown Customer'}
+                  </h3>
+                  {dropoff.dropoff_customers?.company_name && (
+                    <Badge variant="outline" className="text-xs">
+                      {dropoff.dropoff_customers.company_name}
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <span className="flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
                     {format(new Date(dropoff.dropoff_date), 'MMM dd, yyyy')}
-                  </div>
+                  </span>
                   {dropoff.dropoff_time && (
-                    <div className="flex items-center gap-1">
+                    <span className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
                       {dropoff.dropoff_time}
-                    </div>
-                  )}
-                  {dropoff.users && (
-                    <div className="flex items-center gap-1">
-                      <User className="h-3 w-3" />
-                      <span className="hidden sm:inline">Processed by </span>
-                      {dropoff.users.first_name} {dropoff.users.last_name}
-                    </div>
-                  )}
-                </div>
-
-                {/* Tire Counts - Mobile Grid */}
-                <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3 sm:gap-6 text-sm">
-                  <div className="flex items-center gap-1 col-span-2 sm:col-span-1">
-                    <Package className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">{totalTires}</span>
-                    <span className="text-muted-foreground">total tires</span>
-                  </div>
-                  
-                  {dropoff.pte_count > 0 && (
-                    <div className="text-muted-foreground">
-                      {dropoff.pte_count} PTE
-                    </div>
-                  )}
-                  
-                  {dropoff.otr_count > 0 && (
-                    <div className="text-muted-foreground">
-                      {dropoff.otr_count} OTR
-                    </div>
-                  )}
-                  
-                  {dropoff.tractor_count > 0 && (
-                    <div className="text-muted-foreground">
-                      {dropoff.tractor_count} Tractor
-                    </div>
-                  )}
-                </div>
-
-                {/* Revenue and Payment - Mobile Stacked */}
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 text-sm">
-                  <div className="flex items-center gap-1">
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">
-                      ${(dropoff.computed_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </span>
-                  </div>
-                  
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    {getPaymentMethodIcon(dropoff.payment_method || 'cash')}
-                    <span className="capitalize">{dropoff.payment_method}</span>
-                  </div>
-
-                  {dropoff.requires_manifest && (
-                    <Badge variant="outline" className="w-fit">
-                      <FileText className="h-3 w-3 mr-1" />
-                      Manifest Required
-                    </Badge>
                   )}
-                </div>
-
-                {/* Notes */}
-                {dropoff.notes && (
-                  <p className="text-sm text-muted-foreground bg-muted p-2 rounded">
-                    {dropoff.notes}
-                  </p>
-                )}
-
-                {/* Actions - Mobile Full Width */}
-                <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-border/50">
-                  {!dropoff.manifest_id && (
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => handleGenerateManifest(dropoff)}
-                      disabled={generateManifest.isPending}
-                      className="w-full sm:w-auto"
-                    >
-                      {generateManifest.isPending ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <FileText className="h-4 w-4 mr-2" />
-                      )}
-                      Generate Manifest
-                    </Button>
-                  )}
-                  
-                  {dropoff.manifest_id && dropoff.manifest_pdf_path && (
-                    <Button 
-                      size="sm" 
-                      variant="default"
-                      onClick={() => window.open(`https://wvjehbozyxhmgdljwsiz.supabase.co/storage/v1/object/public/${dropoff.manifest_pdf_path}`, '_blank')}
-                      className="w-full sm:w-auto"
-                    >
-                      <FileText className="h-4 w-4 mr-2" />
-                      View Manifest
-                    </Button>
-                  )}
-                  
-                  {dropoff.manifest_id && !dropoff.manifest_pdf_path && (
-                    <Badge variant="secondary" className="w-fit">
-                      <FileText className="h-3 w-3 mr-1" />
-                      Manifest Processing...
-                    </Badge>
-                  )}
-                  
-                  <div className="flex justify-end sm:ml-auto">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuItem>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit Drop-off
-                        </DropdownMenuItem>
-                        {dropoff.manifest_id && dropoff.manifest_pdf_path && (
-                          <DropdownMenuItem onClick={() => window.open(`https://wvjehbozyxhmgdljwsiz.supabase.co/storage/v1/object/public/${dropoff.manifest_pdf_path}`, '_blank')}>
-                            <FileText className="h-4 w-4 mr-2" />
-                            View Manifest
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem>
-                          <Receipt className="h-4 w-4 mr-2" />
-                          View Receipt
-                        </DropdownMenuItem>
-                        {dropoff.payment_status === 'pending' && (
-                          <DropdownMenuItem>
-                            <DollarSign className="h-4 w-4 mr-2" />
-                            Mark as Paid
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        );
-      })}
+              
+              <div className="flex gap-2">
+                <Badge variant={getPaymentStatusColor(dropoff.payment_status || 'pending')}>
+                  {dropoff.payment_status}
+                </Badge>
+              </div>
+            </div>
+
+            {/* Metrics Row */}
+            <div className="flex items-center gap-6 text-sm">
+              <div className="flex items-center gap-1.5">
+                <Package className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium">{totalTires}</span>
+                <span className="text-muted-foreground">tires</span>
+              </div>
+              
+              <div className="flex items-center gap-1.5">
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium">
+                  ${(dropoff.computed_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+              
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                {getPaymentMethodIcon(dropoff.payment_method || 'cash')}
+                <span className="capitalize text-xs">{dropoff.payment_method}</span>
+              </div>
+            </div>
+
+            {/* Tire Breakdown */}
+            {(dropoff.pte_count > 0 || dropoff.otr_count > 0 || dropoff.tractor_count > 0) && (
+              <div className="flex gap-4 text-xs text-muted-foreground">
+                {dropoff.pte_count > 0 && <span>{dropoff.pte_count} PTE</span>}
+                {dropoff.otr_count > 0 && <span>{dropoff.otr_count} OTR</span>}
+                {dropoff.tractor_count > 0 && <span>{dropoff.tractor_count} Tractor</span>}
+              </div>
+            )}
+
+            {/* Notes */}
+            {dropoff.notes && (
+              <p className="text-sm text-muted-foreground bg-muted/50 p-2 rounded">
+                {dropoff.notes}
+              </p>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-2 pt-2">
+              {!dropoff.manifest_id && dropoff.requires_manifest && (
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => handleGenerateManifest(dropoff)}
+                  disabled={generateManifest.isPending}
+                >
+                  {generateManifest.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <FileText className="h-4 w-4 mr-2" />
+                  )}
+                  Generate Manifest
+                </Button>
+              )}
+              
+              {dropoff.manifest_id && dropoff.manifest_pdf_path && (
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => window.open(`https://wvjehbozyxhmgdljwsiz.supabase.co/storage/v1/object/public/${dropoff.manifest_pdf_path}`, '_blank')}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  View Manifest
+                </Button>
+              )}
+              
+              <div className="ml-auto">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem>
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit Drop-off
+                    </DropdownMenuItem>
+                    {dropoff.manifest_id && dropoff.manifest_pdf_path && (
+                      <DropdownMenuItem onClick={() => window.open(`https://wvjehbozyxhmgdljwsiz.supabase.co/storage/v1/object/public/${dropoff.manifest_pdf_path}`, '_blank')}>
+                        <FileText className="h-4 w-4 mr-2" />
+                        View Manifest
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem>
+                      <Receipt className="h-4 w-4 mr-2" />
+                      View Receipt
+                    </DropdownMenuItem>
+                    {dropoff.payment_status === 'pending' && (
+                      <DropdownMenuItem>
+                        <DollarSign className="h-4 w-4 mr-2" />
+                        Mark as Paid
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      {groupedDropoffs.map(([period, dropoffList]) => (
+        <Collapsible key={period} defaultOpen>
+          <div className="rounded-md border">
+            <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-accent transition-colors">
+              <div className="flex items-center gap-3">
+                <ChevronRight className="h-4 w-4 transition-transform [[data-state=open]>&]:rotate-90" />
+                <h3 className="font-semibold">{period}</h3>
+                <Badge variant="secondary">{dropoffList.length}</Badge>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {dropoffList.reduce((sum, d) => sum + (d.computed_revenue || 0), 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+              </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="p-4 pt-0 space-y-3">
+                {dropoffList.map((dropoff) => renderDropoffCard(dropoff))}
+              </div>
+            </CollapsibleContent>
+          </div>
+        </Collapsible>
+      ))}
     </div>
   );
 };

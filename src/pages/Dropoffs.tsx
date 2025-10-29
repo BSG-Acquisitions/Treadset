@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Plus, 
   Search, 
@@ -25,6 +26,8 @@ import { format } from "date-fns";
 
 const Dropoffs = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [dateFilter, setDateFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
   const [showProcessDialog, setShowProcessDialog] = useState(false);
   const [showCreateCustomerDialog, setShowCreateCustomerDialog] = useState(false);
@@ -146,24 +149,49 @@ const Dropoffs = () => {
         <TabsContent value="dropoffs" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>All Drop-offs</CardTitle>
-              <CardDescription>
-                History of all processed tire drop-offs
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Drop-off History</CardTitle>
+                  <CardDescription>
+                    Organized by time period for easy navigation
+                  </CardDescription>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center space-x-2 mb-4">
-                <Search className="h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search drop-offs..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="flex-1"
-                />
-                <Button variant="outline" size="sm">
-                  <Filter className="h-4 w-4 mr-2" />
-                  Filter
-                </Button>
+              <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                <div className="flex items-center space-x-2 flex-1">
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by customer name or notes..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="flex-1"
+                  />
+                </div>
+                
+                <Select value={dateFilter} onValueChange={setDateFilter}>
+                  <SelectTrigger className="w-full sm:w-40">
+                    <SelectValue placeholder="Date range" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Time</SelectItem>
+                    <SelectItem value="today">Today</SelectItem>
+                    <SelectItem value="week">This Week</SelectItem>
+                    <SelectItem value="month">This Month</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-full sm:w-40">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <DropoffsList 
                 dropoffs={dropoffs} 
