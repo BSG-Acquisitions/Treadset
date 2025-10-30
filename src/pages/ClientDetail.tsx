@@ -145,57 +145,81 @@ export default function ClientDetail() {
         </div>
 
         {/* Payment History Section - Full Width */}
-        {paymentHistory.length > 0 && (
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Receipt className="h-5 w-5" />
-                Payment History
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border">
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <Receipt className="h-6 w-6 text-primary" />
+              Payment History
+            </CardTitle>
+            <p className="text-sm text-muted-foreground mt-2">
+              Complete record of all completed pickups and payments
+            </p>
+          </CardHeader>
+          <CardContent>
+            {paymentHistory.length === 0 ? (
+              <div className="text-center py-12 bg-muted/20 rounded-lg border-2 border-dashed">
+                <Receipt className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
+                <p className="text-lg font-medium text-muted-foreground mb-2">No payment history yet</p>
+                <p className="text-sm text-muted-foreground">
+                  Completed pickups with payment details will appear here
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-lg border overflow-hidden">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead className="text-center">Tires</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead className="text-center">Payment Method</TableHead>
-                      <TableHead className="text-center">Status</TableHead>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="font-semibold">Date</TableHead>
+                      <TableHead className="font-semibold">Location</TableHead>
+                      <TableHead className="text-center font-semibold">Tires Collected</TableHead>
+                      <TableHead className="text-right font-semibold">Amount</TableHead>
+                      <TableHead className="text-center font-semibold">Payment Method</TableHead>
+                      <TableHead className="text-center font-semibold">Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {paymentHistory.map((payment) => (
-                      <TableRow key={payment.id}>
+                      <TableRow key={payment.id} className="hover:bg-muted/30">
                         <TableCell className="font-medium">
-                          {new Date(payment.pickup_date).toLocaleDateString()}
+                          {new Date(payment.pickup_date).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric', 
+                            year: 'numeric' 
+                          })}
                         </TableCell>
-                        <TableCell className="text-sm">
-                          {payment.location?.name || payment.location?.address || 'N/A'}
+                        <TableCell>
+                          <div className="max-w-xs">
+                            {payment.location?.name && (
+                              <div className="font-medium text-sm">{payment.location.name}</div>
+                            )}
+                            <div className="text-xs text-muted-foreground">
+                              {payment.location?.address || 'N/A'}
+                            </div>
+                          </div>
                         </TableCell>
-                        <TableCell className="text-center text-sm">
-                          <div className="flex gap-2 justify-center text-xs">
+                        <TableCell className="text-center">
+                          <div className="flex gap-1.5 justify-center flex-wrap">
                             {payment.pte_count > 0 && (
-                              <span className="bg-blue-100 dark:bg-blue-900/30 px-2 py-0.5 rounded">
+                              <span className="inline-flex items-center gap-1 bg-blue-100 dark:bg-blue-900/30 text-blue-900 dark:text-blue-100 px-2.5 py-1 rounded-md text-xs font-medium">
                                 {payment.pte_count} PTE
                               </span>
                             )}
                             {payment.otr_count > 0 && (
-                              <span className="bg-green-100 dark:bg-green-900/30 px-2 py-0.5 rounded">
+                              <span className="inline-flex items-center gap-1 bg-green-100 dark:bg-green-900/30 text-green-900 dark:text-green-100 px-2.5 py-1 rounded-md text-xs font-medium">
                                 {payment.otr_count} OTR
                               </span>
                             )}
                             {payment.tractor_count > 0 && (
-                              <span className="bg-purple-100 dark:bg-purple-900/30 px-2 py-0.5 rounded">
+                              <span className="inline-flex items-center gap-1 bg-purple-100 dark:bg-purple-900/30 text-purple-900 dark:text-purple-100 px-2.5 py-1 rounded-md text-xs font-medium">
                                 {payment.tractor_count} COM
                               </span>
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="text-right font-semibold">
-                          ${(payment.computed_revenue || 0).toFixed(2)}
+                        <TableCell className="text-right">
+                          <span className="text-base font-semibold">
+                            ${(payment.computed_revenue || 0).toFixed(2)}
+                          </span>
                         </TableCell>
                         <TableCell className="text-center">
                           <Badge 
@@ -205,8 +229,9 @@ export default function ClientDetail() {
                               payment.payment_method === 'CHECK' ? 'outline' :
                               'secondary'
                             }
+                            className="font-medium"
                           >
-                            {payment.payment_method || 'N/A'}
+                            {payment.payment_method || 'PENDING'}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-center">
@@ -216,6 +241,7 @@ export default function ClientDetail() {
                               payment.payment_status === 'PENDING' ? 'secondary' : 
                               'destructive'
                             }
+                            className="font-medium"
                           >
                             {payment.payment_status || 'PENDING'}
                           </Badge>
@@ -225,9 +251,9 @@ export default function ClientDetail() {
                   </TableBody>
                 </Table>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            )}
+          </CardContent>
+        </Card>
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
