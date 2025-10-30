@@ -48,11 +48,13 @@ serve(async (req) => {
         console.error('[VERIFY-PICKUP-PAYMENT] Failed to update payment:', updatePaymentError);
       }
 
-      // Update pickup payment status
+      // Update pickup payment status with new payment tracking columns
       const { error: updatePickupError } = await supabaseClient
         .from('pickups')
         .update({
-          manifest_payment_status: 'SUCCEEDED',
+          payment_status: 'SUCCEEDED',
+          payment_method: 'CARD',
+          manifest_payment_status: 'SUCCEEDED', // Keep legacy field for compatibility
           updated_at: new Date().toISOString()
         })
         .eq('id', pickup_id);

@@ -3,17 +3,19 @@ import { useParams, Link } from "react-router-dom";
 import { useClient } from "@/hooks/useClients";
 import { useLocations } from "@/hooks/useLocations";
 import { useInvoices, useCompletedPickups } from "@/hooks/useFinance";
+import { usePaymentHistory } from "@/hooks/usePaymentHistory";
 import { CreateInvoiceDialog } from "@/components/finance/CreateInvoiceDialog";
 import { RecordPaymentDialog } from "@/components/finance/RecordPaymentDialog";
 import { PaymentDialog } from "@/components/PaymentDialog";
 import { OptimizedSchedulingCalendar } from "@/components/OptimizedSchedulingCalendar";
 import { SchedulePickupDialog } from "@/components/SchedulePickupDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CapacityGauge } from "@/components/CapacityGauge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { DollarSign, FileText, Calendar, CreditCard, MapPin, Plus, CheckCircle2 } from "lucide-react";
+import { DollarSign, FileText, Calendar, CreditCard, MapPin, Plus, CheckCircle2, Receipt } from "lucide-react";
 
 
 export default function ClientDetail() {
@@ -22,6 +24,7 @@ export default function ClientDetail() {
   const { data: locations = [] } = useLocations(id);
   const { data: invoices = [] } = useInvoices(id);
   const { data: completedPickups = [] } = useCompletedPickups(id);
+  const { data: paymentHistory = [] } = usePaymentHistory(id!);
   const [showSchedulingCalendar, setShowSchedulingCalendar] = useState(false);
 
   useEffect(() => {
@@ -140,6 +143,91 @@ export default function ClientDetail() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Payment History Section - Full Width */}
+        {paymentHistory.length > 0 && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Receipt className="h-5 w-5" />
+                Payment History
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead className="text-center">Tires</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                      <TableHead className="text-center">Payment Method</TableHead>
+                      <TableHead className="text-center">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paymentHistory.map((payment) => (
+                      <TableRow key={payment.id}>
+                        <TableCell className="font-medium">
+                          {new Date(payment.pickup_date).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {payment.location?.name || payment.location?.address || 'N/A'}
+                        </TableCell>
+                        <TableCell className="text-center text-sm">
+                          <div className="flex gap-2 justify-center text-xs">
+                            {payment.pte_count > 0 && (
+                              <span className="bg-blue-100 dark:bg-blue-900/30 px-2 py-0.5 rounded">
+                                {payment.pte_count} PTE
+                              </span>
+                            )}
+                            {payment.otr_count > 0 && (
+                              <span className="bg-green-100 dark:bg-green-900/30 px-2 py-0.5 rounded">
+                                {payment.otr_count} OTR
+                              </span>
+                            )}
+                            {payment.tractor_count > 0 && (
+                              <span className="bg-purple-100 dark:bg-purple-900/30 px-2 py-0.5 rounded">
+                                {payment.tractor_count} COM
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right font-semibold">
+                          ${(payment.computed_revenue || 0).toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge 
+                            variant={
+                              payment.payment_method === 'CARD' ? 'default' : 
+                              payment.payment_method === 'CASH' ? 'secondary' :
+                              payment.payment_method === 'CHECK' ? 'outline' :
+                              'secondary'
+                            }
+                          >
+                            {payment.payment_method || 'N/A'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge 
+                            variant={
+                              payment.payment_status === 'SUCCEEDED' ? 'default' : 
+                              payment.payment_status === 'PENDING' ? 'secondary' : 
+                              'destructive'
+                            }
+                          >
+                            {payment.payment_status || 'PENDING'}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

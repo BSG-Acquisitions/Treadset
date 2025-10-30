@@ -57,10 +57,14 @@ export function CollectPaymentWithCard({
   };
 
   const handleSuccess = async () => {
-    // Update pickup payment status
+    // Update pickup payment status with new payment tracking columns
     const { error } = await supabase
       .from("pickups")
-      .update({ manifest_payment_status: "succeeded" })
+      .update({ 
+        payment_status: "SUCCEEDED",
+        payment_method: "CARD",
+        manifest_payment_status: "SUCCEEDED" // Keep legacy field for compatibility
+      })
       .eq("id", pickupId);
 
     if (error) {
