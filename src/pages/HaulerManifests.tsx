@@ -101,10 +101,8 @@ export default function HaulerManifests() {
                                      (manifest.otr_count || 0) + 
                                      (manifest.tractor_count || 0);
                     
-                    // Get customer name from hauler_customers relation
-                    const customerName = manifest.hauler_customers?.dropoff_customers?.company_name || 
-                                       manifest.hauler_customers?.dropoff_customers?.contact_name ||
-                                       'Unknown Customer';
+                    // Use client name from the manifest
+                    const customerName = manifest.clients?.company_name || 'Unknown Customer';
 
                     return (
                       <TableRow key={manifest.id}>
