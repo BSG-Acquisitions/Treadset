@@ -89,8 +89,11 @@ export const ManifestReceiversView = () => {
   };
 
   // Filter manifests that need receiver signature 
+  // Check for ANY signature field (old signed_at or new generator_signed_at/hauler_signed_at)
   const pendingReceiverSignature = manifests?.filter(m => 
-    (m.receiver_signed_at == null) && m.status !== 'COMPLETED'
+    (m.receiver_signed_at == null) && 
+    m.status !== 'COMPLETED' &&
+    (m.signed_at || m.generator_signed_at || m.hauler_signed_at)
   ) || [];
   
   // Filter manifests that have all signatures (check both old and new signature fields)
@@ -111,17 +114,24 @@ export const ManifestReceiversView = () => {
             id, 
             manifest_number, 
             status, 
-            signed_at, 
+            signed_at,
+            generator_signed_at,
+            hauler_signed_at,
             receiver_signed_at,
             client_id
           `)
           .is('receiver_signed_at', null)
-          .not('signed_at', 'is', null)
           .neq('status', 'COMPLETED')
           .order('created_at', { ascending: false });
         if (error) throw error;
-        setFallbackPending(data || []);
-        console.log('ReceiverSignatures fallback count:', (data || []).length);
+        
+        // Filter to only include manifests that have at least one initial signature
+        const filtered = (data || []).filter(m => 
+          m.signed_at || m.generator_signed_at || m.hauler_signed_at
+        );
+        
+        setFallbackPending(filtered);
+        console.log('ReceiverSignatures fallback count:', filtered.length);
       } catch (e) {
         console.error('Fallback fetch failed:', e);
       }
