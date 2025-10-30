@@ -42,11 +42,7 @@ export const useHaulerManifests = (haulerId?: string) => {
         .from('manifests')
         .select(`
           *,
-          clients:client_id(id, company_name, email),
-          hauler_customers:dropoff_id(
-            dropoff_customer_id,
-            dropoff_customers(id, company_name, contact_name, email, phone)
-          )
+          clients:client_id(id, company_name, email)
         `)
         .eq('hauler_id', haulerId)
         .order('created_at', { ascending: false });
