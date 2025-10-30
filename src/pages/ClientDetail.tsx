@@ -7,15 +7,12 @@ import { usePaymentHistory } from "@/hooks/usePaymentHistory";
 import { CreateInvoiceDialog } from "@/components/finance/CreateInvoiceDialog";
 import { RecordPaymentDialog } from "@/components/finance/RecordPaymentDialog";
 import { PaymentDialog } from "@/components/PaymentDialog";
-import { OptimizedSchedulingCalendar } from "@/components/OptimizedSchedulingCalendar";
 import { SchedulePickupDialog } from "@/components/SchedulePickupDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CapacityGauge } from "@/components/CapacityGauge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { DollarSign, FileText, Calendar, CreditCard, MapPin, Plus, CheckCircle2, Receipt } from "lucide-react";
+import { DollarSign, FileText, CreditCard, MapPin, Plus, Receipt, Clock } from "lucide-react";
 
 
 export default function ClientDetail() {
@@ -25,7 +22,6 @@ export default function ClientDetail() {
   const { data: invoices = [] } = useInvoices(id);
   const { data: completedPickups = [] } = useCompletedPickups(id);
   const { data: paymentHistory = [] } = usePaymentHistory(id!);
-  const [showSchedulingCalendar, setShowSchedulingCalendar] = useState(false);
 
   useEffect(() => {
     document.title = client ? `${client.company_name} – Client – TreadSet` : "Client – TreadSet";
@@ -73,14 +69,10 @@ export default function ClientDetail() {
                   </Button>
                 }
               />
-              <Button variant="outline" onClick={() => setShowSchedulingCalendar(true)}>
-                <Calendar className="h-4 w-4 mr-2" />
-                Optimize Routes
-              </Button>
-              <Link to="/routes/today">
+              <Link to={`/manifests?client=${client.id}`}>
                 <Button variant="outline">
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Today's Routes
+                  <FileText className="h-4 w-4 mr-2" />
+                  View Manifests
                 </Button>
               </Link>
             </div>
@@ -126,7 +118,7 @@ export default function ClientDetail() {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
-                <Calendar className="h-5 w-5 text-muted-foreground" />
+                <Clock className="h-5 w-5 text-muted-foreground" />
                 Last Pickup
               </CardTitle>
             </CardHeader>
@@ -390,22 +382,6 @@ export default function ClientDetail() {
           </Card>
         </div>
       </main>
-
-      {/* Optimized Scheduling Calendar Dialog */}
-      <Dialog open={showSchedulingCalendar} onOpenChange={setShowSchedulingCalendar}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Schedule Optimized Pickup</DialogTitle>
-          </DialogHeader>
-          {client && (
-            <OptimizedSchedulingCalendar
-              clientId={client.id}
-              clientName={client.company_name}
-              onClose={() => setShowSchedulingCalendar(false)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
