@@ -337,12 +337,32 @@ export function DriverManifestCreationWizard({
   };
 
   const handleNext = async () => {
+    // CRITICAL: Validate hauler at EVERY step to prevent bypassing
+    if (!haulerData) {
+      toast({
+        title: "Missing Hauler Information",
+        description: "No hauler is assigned. Please go back to the first step and select a hauler company.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Validate hauler selection on info step
     if (currentStep.key === "info") {
       if (!haulerData) {
         toast({
           title: "Hauler Required",
           description: "Please select a hauler company before continuing",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Ensure hauler has required fields
+      if (!haulerData.company_name || !haulerData.hauler_mi_reg) {
+        toast({
+          title: "Incomplete Hauler Information",
+          description: "The selected hauler is missing required information (company name or MI registration). Please contact your administrator.",
           variant: "destructive",
         });
         return;
@@ -437,7 +457,27 @@ export function DriverManifestCreationWizard({
       if (!haulerData) {
         toast({
           title: "Error",
-          description: "Hauler information is missing. Please go back and select a hauler.",
+          description: "Hauler information is missing. Please go back to the first step and select a hauler.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Validate hauler has all required fields
+      if (!haulerData.company_name || !haulerData.hauler_mi_reg) {
+        toast({
+          title: "Incomplete Hauler Information",
+          description: "The selected hauler is missing required information. Please contact your administrator to complete the hauler profile.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Ensure we have a valid client
+      if (!pickupData.client || !pickupData.client.company_name) {
+        toast({
+          title: "Error",
+          description: "Client information is missing. Please refresh and try again.",
           variant: "destructive",
         });
         return;
@@ -826,28 +866,54 @@ export function DriverManifestCreationWizard({
                       Change Hauler
                     </Button>
                   </div>
-                ) : (
+                 ) : (
                   <div className="space-y-3">
-                    <div className="text-sm text-muted-foreground bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md p-3">
-                      ⚠️ <strong>Action Required:</strong> Please select your hauler company to continue
+                    <div className="text-sm bg-red-50 dark:bg-red-900/20 border-2 border-red-300 dark:border-red-800 rounded-md p-4">
+                      <strong className="text-red-700 dark:text-red-400 block mb-2">🚨 REQUIRED: Hauler Selection</strong>
+                      <p className="text-red-600 dark:text-red-300">You cannot proceed without selecting a hauler company. If no hauler appears in the list below, contact your administrator immediately.</p>
                     </div>
                     <div>
-                      <Label htmlFor="hauler-select" className="text-sm font-medium mb-2 block">
-                        Select Hauler Company *
+                      <Label htmlFor="hauler-select" className="text-sm font-medium mb-2 block text-red-700 dark:text-red-400">
+                        Select Hauler Company * (REQUIRED)
                       </Label>
-                      <Select onValueChange={(value) => {
-                        const selected = haulers.find(h => h.id === value);
-                        if (selected) setHaulerData(selected);
-                      }}>
-                        <SelectTrigger id="hauler-select" className="w-full">
-                          <SelectValue placeholder="Choose a hauler..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {haulers.map((h) => (
-                            <SelectItem key={h.id} value={h.id}>{h.company_name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {haulers.length === 0 ? (
+                        <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 rounded-md">
+                          <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                            <strong>No haulers available.</strong> Please contact your administrator to set up a hauler account before creating manifests.
+                          </p>
+                        </div>
+                      ) : (
+                        <Select onValueChange={(value) => {
+                          const selected = haulers.find(h => h.id === value);
+                          if (selected) {
+                            // Validate the hauler has required fields
+                            if (!selected.company_name || !selected.hauler_mi_reg) {
+                              toast({
+                                title: "Incomplete Hauler",
+                                description: "This hauler is missing required information. Please contact your administrator.",
+                                variant: "destructive",
+                              });
+                              return;
+                            }
+                            setHaulerData(selected);
+                            toast({
+                              title: "Hauler Selected",
+                              description: `${selected.company_name} has been selected.`,
+                            });
+                          }
+                        }}>
+                          <SelectTrigger id="hauler-select" className="w-full border-red-300 dark:border-red-700">
+                            <SelectValue placeholder="Choose a hauler..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {haulers.map((h) => (
+                              <SelectItem key={h.id} value={h.id}>
+                                {h.company_name} {h.hauler_mi_reg ? `(${h.hauler_mi_reg})` : '(⚠️ Missing MI Reg)'}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                     </div>
                   </div>
                 )}
