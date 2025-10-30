@@ -90,9 +90,9 @@ export const ManifestReceiversView = () => {
 
   // Filter manifests that need receiver signature 
   // Check for ANY signature field (old signed_at or new generator_signed_at/hauler_signed_at)
+  // Treat records marked COMPLETED without receiver signature as pending (legacy bug)
   const pendingReceiverSignature = manifests?.filter(m => 
-    (m.receiver_signed_at == null) && 
-    m.status !== 'COMPLETED' &&
+    (m.receiver_signed_at == null) &&
     (m.signed_at || m.generator_signed_at || m.hauler_signed_at)
   ) || [];
   
@@ -110,7 +110,7 @@ export const ManifestReceiversView = () => {
       try {
         const { data, error } = await supabase
           .from('manifests')
-          .select(`
+.select(`
             id, 
             manifest_number, 
             status, 
@@ -121,7 +121,6 @@ export const ManifestReceiversView = () => {
             client_id
           `)
           .is('receiver_signed_at', null)
-          .neq('status', 'COMPLETED')
           .order('created_at', { ascending: false });
         if (error) throw error;
         
