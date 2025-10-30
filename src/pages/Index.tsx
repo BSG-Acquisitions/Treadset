@@ -175,8 +175,91 @@ export default function Index() {
 
         {/* Performance Metrics */}
         <SlideUp delay={0.3}>
-          <div className="grid gap-6 lg:grid-cols-3 mb-8">
-            <Card className="lg:col-span-2 border-border/20 shadow-elevation-lg bg-gradient-to-br from-card to-card-hover">
+          <div className="grid gap-6 lg:grid-cols-2 mb-8">
+            <Card className="border-border/20 shadow-elevation-lg bg-gradient-to-br from-card to-secondary/10">
+              <CardHeader className="border-b border-border/10">
+                <CardTitle className="flex items-center gap-2">
+                  <Recycle className="w-5 h-5 text-brand-recycling" />
+                  Environmental Impact
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 space-y-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-brand-recycling mb-1">
+                    {totalTiresRecycled > 0 ? (totalTiresRecycled * 22).toLocaleString() : '0'} lbs
+                  </div>
+                  <div className="text-sm text-muted-foreground">Tires Recycled Today</div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>CO₂ Saved</span>
+                    <span className="font-medium">{totalTiresRecycled > 0 ? (totalTiresRecycled * 0.00427).toFixed(3) : '0'} tons</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Revenue Today</span>
+                    <span className="font-medium">${totalDailyRevenue.toLocaleString()}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/20 shadow-elevation-lg bg-gradient-to-br from-card to-brand-recycling/5">
+              <CardHeader className="border-b border-border/10">
+                <CardTitle className="flex items-center gap-2">
+                  <CheckCircle2 className="w-5 h-5 text-brand-recycling" />
+                  Daily PTE Goal
+                </CardTitle>
+                <CardDescription>Progress toward 2,600 PTEs daily target</CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="space-y-6">
+                  {/* Main Goal Progress */}
+                  <div className="text-center space-y-3">
+                    <div className="flex items-center justify-center">
+                      <CapacityGauge
+                        value={Math.min((totalTiresRecycled / 2600) * 100, 100)}
+                        size={120}
+                        strokeWidth={12}
+                        animateOnMount
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="text-3xl font-bold text-brand-recycling">
+                        {totalTiresRecycled.toLocaleString()}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        of 2,600 PTEs goal
+                      </div>
+                      <div className="text-lg font-semibold">
+                        {2600 - totalTiresRecycled > 0 ? 
+                          `${(2600 - totalTiresRecycled).toLocaleString()} remaining` : 
+                          '🎯 Goal achieved!'
+                        }
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Additional Metrics */}
+                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/10">
+                    <div className="text-center space-y-1">
+                      <div className="text-2xl font-bold text-brand-primary">
+                        {totalTiresRecycled > 0 ? Math.round(totalTiresRecycled / todayPickups.length) || 0 : 0}
+                      </div>
+                      <div className="text-xs text-muted-foreground">Avg PTEs/Pickup</div>
+                    </div>
+                    <div className="text-center space-y-1">
+                      <div className="text-2xl font-bold text-brand-secondary">
+                        {((totalTiresRecycled / 2600) * 100).toFixed(1)}%
+                      </div>
+                      <div className="text-xs text-muted-foreground">Goal Progress</div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="border-border/20 shadow-elevation-lg bg-gradient-to-br from-card to-card-hover mb-8">
             <CardHeader className="border-b border-border/10">
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-brand-primary" />
@@ -210,34 +293,6 @@ export default function Index() {
               </div>
             </CardContent>
           </Card>
-          
-          <Card className="border-border/20 shadow-elevation-lg bg-gradient-to-br from-card to-secondary/10">
-            <CardHeader className="border-b border-border/10">
-              <CardTitle className="flex items-center gap-2">
-                <Recycle className="w-5 h-5 text-brand-recycling" />
-                Environmental Impact
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6 space-y-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-brand-recycling mb-1">
-                  {totalTiresRecycled > 0 ? (totalTiresRecycled * 22).toLocaleString() : '0'} lbs
-                </div>
-                <div className="text-sm text-muted-foreground">Tires Recycled Today</div>
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>CO₂ Saved</span>
-                  <span className="font-medium">{totalTiresRecycled > 0 ? (totalTiresRecycled * 0.00427).toFixed(3) : '0'} tons</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Revenue Today</span>
-                  <span className="font-medium">${totalDailyRevenue.toLocaleString()}</span>
-                </div>
-              </div>
-            </CardContent>
-            </Card>
-          </div>
         </SlideUp>
 
         {/* Quick Actions */}
@@ -361,8 +416,7 @@ export default function Index() {
 
         {/* Fleet Status */}
         <SlideUp delay={0.6}>
-          <div className="grid gap-6 lg:grid-cols-2">
-          <Card className="border-border/20 shadow-elevation-lg bg-gradient-to-br from-card to-secondary/5">
+          <Card className="border-border/20 shadow-elevation-lg bg-gradient-to-br from-card to-secondary/5 mb-8">
             <CardHeader className="border-b border-border/10">
               <CardTitle className="flex items-center gap-2">
                 <Truck className="w-5 h-5 text-brand-primary" />
@@ -388,62 +442,6 @@ export default function Index() {
               </div>
             </CardContent>
           </Card>
-
-          <Card className="border-border/20 shadow-elevation-lg bg-gradient-to-br from-card to-brand-recycling/5">
-            <CardHeader className="border-b border-border/10">
-              <CardTitle className="flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-brand-recycling" />
-                Daily PTE Goal
-              </CardTitle>
-              <CardDescription>Progress toward 2,600 PTEs daily target</CardDescription>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="space-y-6">
-                {/* Main Goal Progress */}
-                <div className="text-center space-y-3">
-                  <div className="flex items-center justify-center">
-                    <CapacityGauge
-                      value={Math.min((totalTiresRecycled / 2600) * 100, 100)}
-                      size={120}
-                      strokeWidth={12}
-                      animateOnMount
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <div className="text-3xl font-bold text-brand-recycling">
-                      {totalTiresRecycled.toLocaleString()}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      of 2,600 PTEs goal
-                    </div>
-                    <div className="text-lg font-semibold">
-                      {2600 - totalTiresRecycled > 0 ? 
-                        `${(2600 - totalTiresRecycled).toLocaleString()} remaining` : 
-                        '🎯 Goal achieved!'
-                      }
-                    </div>
-                  </div>
-                </div>
-
-                {/* Additional Metrics */}
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/10">
-                  <div className="text-center space-y-1">
-                    <div className="text-2xl font-bold text-brand-primary">
-                      {totalTiresRecycled > 0 ? Math.round(totalTiresRecycled / todayPickups.length) || 0 : 0}
-                    </div>
-                    <div className="text-xs text-muted-foreground">Avg PTEs/Pickup</div>
-                  </div>
-                  <div className="text-center space-y-1">
-                    <div className="text-2xl font-bold text-brand-secondary">
-                      {((totalTiresRecycled / 2600) * 100).toFixed(1)}%
-                    </div>
-                    <div className="text-xs text-muted-foreground">Goal Progress</div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
         </SlideUp>
       </main>
     </div>
