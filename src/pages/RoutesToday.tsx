@@ -3,6 +3,7 @@ import { usePickups, useDeletePickup } from "@/hooks/usePickups";
 import { CompletePickupDialog } from "@/components/CompletePickupDialog";
 import { MovePickupDialog } from "@/components/MovePickupDialog";
 import { ManifestPDFControls } from "@/components/ManifestPDFControls";
+import { ReceiverSignatureDialog } from "@/components/ReceiverSignatureDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +22,8 @@ export default function RoutesToday() {
   const [pickupToDelete, setPickupToDelete] = useState<any>(null);
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
   const deletePickup = useDeletePickup();
+  const [receiverDialogOpen, setReceiverDialogOpen] = useState(false);
+  const [receiverManifest, setReceiverManifest] = useState<{ id: string; number?: string } | null>(null);
   
   // Get 7 days starting from current week
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeek, i));
@@ -240,6 +243,19 @@ export default function RoutesToday() {
                                       </Button>
                                     }
                                   />
+                                  {pickup.manifest_id && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="flex-1 text-xs h-8"
+                                      onClick={() => {
+                                        setReceiverManifest({ id: pickup.manifest_id });
+                                        setReceiverDialogOpen(true);
+                                      }}
+                                    >
+                                      Receiver Signature
+                                    </Button>
+                                  )}
                                 </div>
 
                                 {/* Manifest PDF */}

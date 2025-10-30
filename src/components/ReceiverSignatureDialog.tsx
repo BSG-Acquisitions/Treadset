@@ -40,6 +40,7 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
   const { toast } = useToast();
   const { data: receivers } = useReceivers();
   const { data: employees } = useEmployees();
+  const displayManifestNumber = manifestNumber || manifest?.manifest_number || manifestId;
 
   // Get selected receiver data
   const selectedReceiver = receivers?.find(r => r.id === selectedReceiverId);
@@ -189,7 +190,7 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
           await sendEmail.mutateAsync({
             manifestId,
             pdfPath: result.pdfPath,
-            subject: `Completed Manifest ${manifestNumber}`,
+            subject: `Completed Manifest ${displayManifestNumber}`,
             messageHtml: `
               <h2>Manifest Completion Notice</h2>
               <p>Dear Customer,</p>
@@ -233,13 +234,13 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
         <DialogHeader>
           <DialogTitle>
             {completionData ? (
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
-                Manifest {manifestNumber} - Completed!
-              </div>
-            ) : (
-              `Complete Receiver Signature - Manifest ${manifestNumber}`
-            )}
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  Manifest {displayManifestNumber} - Completed!
+                </div>
+              ) : (
+                `Complete Receiver Signature - Manifest ${displayManifestNumber}`
+              )}
           </DialogTitle>
         </DialogHeader>
         
