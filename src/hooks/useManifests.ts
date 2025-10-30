@@ -133,7 +133,12 @@ export const useManifests = (clientId?: string, driverId?: string) => {
     queryFn: async () => {
       let query = supabase
         .from('manifests')
-        .select('*')
+        .select(`
+          *,
+          client:clients(id, company_name, email),
+          location:locations(id, name, address),
+          pickup:pickups!manifests_pickup_id_fkey(id, pickup_date)
+        `)
         .order('created_at', { ascending: false });
 
       if (clientId) {

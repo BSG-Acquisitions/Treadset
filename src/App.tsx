@@ -51,6 +51,7 @@ import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCancelled from "./pages/PaymentCancelled";
 import DriverPaymentSuccess from "./pages/driver/PaymentSuccess";
 import DriverPaymentCancelled from "./pages/driver/PaymentCancelled";
+import Manifests from "./pages/Manifests";
 
 const queryClient = new QueryClient();
 
@@ -167,6 +168,13 @@ const App = () => (
               <ProtectedRoute roles={['admin']}>
                 <AppLayout>
                   <Integrations />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/manifests" element={
+              <ProtectedRoute roles={['admin', 'ops_manager', 'sales']}>
+                <AppLayout>
+                  <Manifests />
                 </AppLayout>
               </ProtectedRoute>
             } />
