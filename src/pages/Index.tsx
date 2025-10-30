@@ -6,6 +6,7 @@ import { CalendarDays, Clock, MapPin, Users, TrendingUp, Package, Truck, Recycle
 import { usePickups } from "@/hooks/usePickups";
 import { useClients } from "@/hooks/useClients";
 import { useVehicles } from "@/hooks/useVehicles";
+import { useTodaysDropoffs } from "@/hooks/useDropoffs";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { CapacityGauge } from "@/components/CapacityGauge";
@@ -56,6 +57,7 @@ export default function Index() {
   const { data: todayPickupsData = [] } = usePickups(format(new Date(), 'yyyy-MM-dd'));
   const { data: clientsResponse } = useClients();
   const { data: vehiclesData = [] } = useVehicles();
+  const { data: todaysDropoffs = [] } = useTodaysDropoffs();
   
   // Extract clients data from response
   const clientsData = Array.isArray(clientsResponse) ? clientsResponse : (clientsResponse?.data || []);
@@ -94,8 +96,16 @@ export default function Index() {
   const assignedPickups = todayPickups.filter(p => p.status !== 'pending');
   const completedPickups = todayPickups.filter(p => p.status === 'completed');
   const overduePickups = todayPickups.filter(p => p.status === 'overdue');
-  const totalTiresRecycled = todayPickups.reduce((sum, pickup) => sum + (pickup.pte_count || 0), 0);
-  const totalDailyRevenue = todayPickups.reduce((sum, pickup) => sum + (pickup.computed_revenue || 0), 0);
+  
+  // Calculate total PTEs from BOTH completed pickups AND drop-offs
+  const pickupPTEs = completedPickups.reduce((sum, pickup) => sum + (pickup.pte_count || 0), 0);
+  const dropoffPTEs = todaysDropoffs.reduce((sum: number, dropoff: any) => sum + (dropoff.pte_count || 0), 0);
+  const totalTiresRecycled = pickupPTEs + dropoffPTEs;
+  
+  // Calculate revenue from both sources
+  const pickupRevenue = completedPickups.reduce((sum, pickup) => sum + (pickup.computed_revenue || 0), 0);
+  const dropoffRevenue = todaysDropoffs.reduce((sum: number, dropoff: any) => sum + (dropoff.computed_revenue || 0), 0);
+  const totalDailyRevenue = pickupRevenue + dropoffRevenue;
 
   return (
     <div className="min-h-screen bg-background">
