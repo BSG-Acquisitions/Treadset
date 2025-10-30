@@ -73,7 +73,7 @@ export const usePickups = (date?: string) => {
               email
             )
           ),
-          manifests(
+          manifests!manifests_pickup_id_fkey(
             id,
             manifest_number,
             pte_on_rim,
