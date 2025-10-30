@@ -9,6 +9,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { useCreateManifest } from "@/hooks/useManifests";
+import { ReceiverSignatureDialog } from "@/components/ReceiverSignatureDialog";
 
 export type WeeklyPickupsGridProps = {
   currentWeek: Date;
@@ -26,6 +28,58 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [pickupToDelete, setPickupToDelete] = useState<any>(null);
+
+  const [receiverDialogOpen, setReceiverDialogOpen] = useState(false);
+  const [receiverManifest, setReceiverManifest] = useState<{ id: string; number?: string } | null>(null);
+  const [isOpeningReceiver, setIsOpeningReceiver] = useState(false);
+  const createManifest = useCreateManifest({ toastOnSuccess: false });
+
+  const openReceiverSignature = async (pickup: any) => {
+    try {
+      setIsOpeningReceiver(true);
+
+      let manifestId: string | undefined = pickup.manifest_id;
+      let manifestNumber: string | undefined = pickup.manifest_number;
+
+      if (!manifestId) {
+        const { data: found, error } = await supabase
+          .from('manifests')
+          .select('id, manifest_number')
+          .eq('pickup_id', pickup.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (error) console.warn('Lookup manifest by pickup_id failed', error);
+        if (found) {
+          manifestId = found.id;
+          manifestNumber = found.manifest_number as string | undefined;
+        }
+      }
+
+      if (!manifestId) {
+        const created = await createManifest.mutateAsync({
+          client_id: pickup.client_id,
+          location_id: pickup.location_id,
+          pickup_id: pickup.id,
+        } as any);
+        manifestId = created.id;
+        manifestNumber = created.manifest_number;
+        toast({ title: 'Manifest created', description: 'A manifest was created so receiver can sign.' });
+      }
+
+      if (manifestId) {
+        setReceiverManifest({ id: manifestId, number: manifestNumber });
+        setReceiverDialogOpen(true);
+      } else {
+        toast({ title: 'Unable to open receiver signature', description: 'Manifest could not be resolved or created.', variant: 'destructive' });
+      }
+    } catch (e: any) {
+      console.error('openReceiverSignature failed', e);
+      toast({ title: 'Error', description: e?.message ?? 'Failed to open receiver signature.', variant: 'destructive' });
+    } finally {
+      setIsOpeningReceiver(false);
+    }
+  };
 
   const handleRemovePickup = async (pickup: any) => {
     try {
@@ -128,25 +182,34 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
                                 <MoreVertical className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={(e) => {
-                                e.stopPropagation();
-                                onMovePickup?.(pickup);
-                              }}>
-                                <Calendar className="h-4 w-4 mr-2" />
-                                Move Pickup
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setPickupToDelete(pickup);
-                                }}
-                                className="text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Remove from Route
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={(e) => {
+            e.stopPropagation();
+            onMovePickup?.(pickup);
+          }}>
+            <Calendar className="h-4 w-4 mr-2" />
+            Move Pickup
+          </DropdownMenuItem>
+          <DropdownMenuItem 
+            onClick={(e) => {
+              e.stopPropagation();
+              openReceiverSignature(pickup);
+            }}
+            disabled={isOpeningReceiver || createManifest.isPending}
+          >
+            Receiver Signature
+          </DropdownMenuItem>
+          <DropdownMenuItem 
+            onClick={(e) => {
+              e.stopPropagation();
+              setPickupToDelete(pickup);
+            }}
+            className="text-destructive"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Remove from Route
+          </DropdownMenuItem>
+        </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
                       </div>
