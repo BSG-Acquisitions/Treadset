@@ -72,6 +72,20 @@ export const usePickups = (date?: string) => {
               last_name,
               email
             )
+          ),
+          manifests(
+            id,
+            manifest_number,
+            pte_on_rim,
+            pte_off_rim,
+            otr_count,
+            tractor_count,
+            commercial_17_5_19_5_off,
+            commercial_17_5_19_5_on,
+            commercial_22_5_off,
+            commercial_22_5_on,
+            total,
+            status
           )
         `)
         .eq('organization_id', orgData); // Explicitly filter by organization
