@@ -20,7 +20,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { useClients } from "@/hooks/useClients";
 import { useVehicles } from "@/hooks/useVehicles";
 import { useEmployees } from "@/hooks/useEmployees";
-import { useHaulers } from "@/hooks/useHaulers";
 import { useSchedulePickupWithDriver } from "@/hooks/useSchedulePickupWithDriver";
 import { Calendar, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -30,7 +29,6 @@ const scheduleSchema = z.object({
   clientId: z.string().min(1, "Client is required"),
   locationId: z.string().optional(),
   vehicleId: z.string().min(1, "Vehicle is required"),
-  haulerId: z.string().min(1, "Hauler is required"),
   driverId: z.string().min(1, "Driver is required"),
   pickupDate: z.string().min(1, "Date is required"),
   pteCount: z.number().min(0, "Must be 0 or greater"),
@@ -54,7 +52,6 @@ export function SchedulePickupWithDriver({ children, onSuccess }: SchedulePickup
   const { data: clientsData = { data: [], count: 0, totalPages: 0 } } = useClients({ search: clientSearch, limit: 100 });
   const { data: vehicles = [] } = useVehicles();
   const { data: employees = [] } = useEmployees();
-  const { data: haulers = [] } = useHaulers();
 
   const clients = Array.isArray(clientsData) ? clientsData : clientsData.data;
 
@@ -82,7 +79,6 @@ export function SchedulePickupWithDriver({ children, onSuccess }: SchedulePickup
       clientId: data.clientId,
       locationId: data.locationId,
       vehicleId: data.vehicleId,
-      haulerId: data.haulerId,
       driverId: data.driverId,
       pickupDate: data.pickupDate,
       pteCount: data.pteCount,
@@ -250,42 +246,12 @@ export function SchedulePickupWithDriver({ children, onSuccess }: SchedulePickup
 
               <FormField
                 control={form.control}
-                name="haulerId"
+                name="driverId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Hauler *</FormLabel>
+                    <FormLabel>Driver *</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select hauler" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {haulers.length === 0 ? (
-                          <div className="p-2 text-sm text-muted-foreground">No haulers available</div>
-                        ) : (
-                          haulers.map((hauler) => (
-                            <SelectItem key={hauler.id} value={hauler.id}>
-                              {hauler.company_name || hauler.hauler_name}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="driverId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Driver *</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select driver" />
                         </SelectTrigger>
@@ -306,6 +272,8 @@ export function SchedulePickupWithDriver({ children, onSuccess }: SchedulePickup
                   </FormItem>
                 )}
               />
+            </div>
+
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
