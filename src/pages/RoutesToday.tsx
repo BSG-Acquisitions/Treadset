@@ -4,6 +4,9 @@ import { CompletePickupDialog } from "@/components/CompletePickupDialog";
 import { MovePickupDialog } from "@/components/MovePickupDialog";
 import { ManifestPDFControls } from "@/components/ManifestPDFControls";
 import { ReceiverSignatureDialog } from "@/components/ReceiverSignatureDialog";
+import { useCreateManifest } from "@/hooks/useManifests";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +27,9 @@ export default function RoutesToday() {
   const deletePickup = useDeletePickup();
   const [receiverDialogOpen, setReceiverDialogOpen] = useState(false);
   const [receiverManifest, setReceiverManifest] = useState<{ id: string; number?: string } | null>(null);
+  const [isOpeningReceiver, setIsOpeningReceiver] = useState(false);
+  const { toast } = useToast();
+  const createManifest = useCreateManifest({ toastOnSuccess: false });
   
   // Get 7 days starting from current week
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeek, i));
@@ -66,6 +72,58 @@ export default function RoutesToday() {
       case 'in_progress': return Clock;
       case 'overdue': return AlertCircle;
       default: return Calendar;
+    }
+  };
+
+  // Open receiver signature: resolve or create manifest for this pickup
+  const openReceiverSignature = async (pickup: any) => {
+    try {
+      setIsOpeningReceiver(true);
+
+      // 1) Use manifest_id if present on pickup
+      let manifestId: string | undefined = pickup.manifest_id;
+      let manifestNumber: string | undefined = pickup.manifest_number;
+
+      // 2) Fallback: find manifest by pickup_id
+      if (!manifestId) {
+        const { data: found, error } = await supabase
+          .from('manifests')
+          .select('id, manifest_number')
+          .eq('pickup_id', pickup.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (error) console.warn('Lookup manifest by pickup_id failed', error);
+        if (found) {
+          manifestId = found.id;
+          manifestNumber = found.manifest_number as string | undefined;
+        }
+      }
+
+      // 3) If still missing, create a manifest for this pickup (force path)
+      if (!manifestId) {
+        const created = await createManifest.mutateAsync({
+          client_id: pickup.client_id,
+          location_id: pickup.location_id,
+          pickup_id: pickup.id,
+          // status defaults to AWAITING_RECEIVER_SIGNATURE inside hook
+        } as any);
+        manifestId = created.id;
+        manifestNumber = created.manifest_number;
+        toast({ title: 'Manifest created', description: 'A manifest was created so receiver can sign.' });
+      }
+
+      if (manifestId) {
+        setReceiverManifest({ id: manifestId, number: manifestNumber });
+        setReceiverDialogOpen(true);
+      } else {
+        toast({ title: 'Unable to open receiver signature', description: 'Manifest could not be resolved or created.', variant: 'destructive' });
+      }
+    } catch (e: any) {
+      console.error('openReceiverSignature failed', e);
+      toast({ title: 'Error', description: e?.message ?? 'Failed to open receiver signature.', variant: 'destructive' });
+    } finally {
+      setIsOpeningReceiver(false);
     }
   };
 
@@ -243,19 +301,15 @@ export default function RoutesToday() {
                                       </Button>
                                     }
                                   />
-                                  {pickup.manifest_id && (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="flex-1 text-xs h-8"
-                                      onClick={() => {
-                                        setReceiverManifest({ id: pickup.manifest_id });
-                                        setReceiverDialogOpen(true);
-                                      }}
-                                    >
-                                      Receiver Signature
-                                    </Button>
-                                  )}
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="flex-1 text-xs h-8"
+                                    disabled={isOpeningReceiver || createManifest.isPending}
+                                    onClick={async () => { await openReceiverSignature(pickup); }}
+                                  >
+                                    Receiver Signature
+                                  </Button>
                                 </div>
 
                                 {/* Manifest PDF */}
@@ -324,6 +378,15 @@ export default function RoutesToday() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {receiverManifest && (
+          <ReceiverSignatureDialog
+            open={receiverDialogOpen}
+            onOpenChange={setReceiverDialogOpen}
+            manifestId={receiverManifest.id}
+            manifestNumber={receiverManifest.number || ''}
+          />
+        )}
       </main>
     </div>
   );
