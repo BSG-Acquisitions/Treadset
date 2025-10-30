@@ -116,8 +116,8 @@ export default function Index() {
   const completedPickups = todayPickups.filter(p => p.status === 'completed');
   const overduePickups = todayPickups.filter(p => p.status === 'overdue');
   
-  // Calculate PTEs from manifests (where the actual tire counts are stored)
-  const manifestPTEs = todaysManifests.reduce((sum: number, manifest: any) => {
+  // Calculate PTEs and weight from manifests (where the actual tire counts are stored)
+  const manifestStats = todaysManifests.reduce((acc: { ptes: number, pounds: number }, manifest: any) => {
     const pteOnRim = manifest.pte_on_rim || 0;
     const pteOffRim = manifest.pte_off_rim || 0;
     const otr = manifest.otr_count || 0;
@@ -127,15 +127,36 @@ export default function Index() {
     const commercial225Off = manifest.commercial_22_5_off || 0;
     const commercial225On = manifest.commercial_22_5_on || 0;
     
-    return sum + pteOnRim + pteOffRim + otr + tractor + 
-           commercial17519Off + commercial17519On + commercial225Off + commercial225On;
-  }, 0);
+    // Calculate PTE count (all tires count as units)
+    const pteCount = pteOnRim + pteOffRim + otr + tractor + 
+                     commercial17519Off + commercial17519On + commercial225Off + commercial225On;
+    
+    // Calculate actual weight in pounds (each tire type has different weight)
+    const weightPounds = 
+      (pteOnRim + pteOffRim) * 22 +           // PTEs: ~22 lbs each
+      otr * 300 +                              // OTR: ~300 lbs each
+      tractor * 110 +                          // Tractor: ~110 lbs each
+      (commercial17519Off + commercial17519On) * 60 +  // Commercial 17.5-19.5: ~60 lbs each
+      (commercial225Off + commercial225On) * 110;      // Commercial 22.5: ~110 lbs each
+    
+    return {
+      ptes: acc.ptes + pteCount,
+      pounds: acc.pounds + weightPounds
+    };
+  }, { ptes: 0, pounds: 0 });
   
-  // Calculate PTEs from drop-offs
-  const dropoffPTEs = todaysDropoffs.reduce((sum: number, dropoff: any) => sum + (dropoff.pte_count || 0), 0);
+  // Calculate PTEs and weight from drop-offs (assume PTE weight for dropoffs)
+  const dropoffStats = todaysDropoffs.reduce((acc: { ptes: number, pounds: number }, dropoff: any) => {
+    const pteCount = dropoff.pte_count || 0;
+    return {
+      ptes: acc.ptes + pteCount,
+      pounds: acc.pounds + (pteCount * 22)  // Dropoffs are typically PTEs at 22 lbs each
+    };
+  }, { ptes: 0, pounds: 0 });
   
-  // Total PTEs from all sources
-  const totalTiresRecycled = manifestPTEs + dropoffPTEs;
+  // Total PTEs and pounds from all sources
+  const totalTiresRecycled = manifestStats.ptes + dropoffStats.ptes;
+  const totalPoundsRecycled = manifestStats.pounds + dropoffStats.pounds;
   
   // Calculate revenue from manifests and drop-offs
   const manifestRevenue = todaysManifests.reduce((sum: number, manifest: any) => sum + (manifest.total || 0), 0);
@@ -231,7 +252,7 @@ export default function Index() {
               <CardContent className="p-6 space-y-4">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-brand-recycling mb-1">
-                    {totalTiresRecycled > 0 ? (totalTiresRecycled * 22).toLocaleString() : '0'} lbs
+                    {totalPoundsRecycled > 0 ? totalPoundsRecycled.toLocaleString() : '0'} lbs
                   </div>
                   <div className="text-sm text-muted-foreground">Tires Recycled Today</div>
                 </div>
