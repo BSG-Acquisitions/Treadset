@@ -228,7 +228,7 @@ export default function Index() {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>CO₂ Saved</span>
-                  <span className="font-medium">{totalTiresRecycled > 0 ? (totalTiresRecycled * 0.5).toFixed(1) : '0'} tons</span>
+                  <span className="font-medium">{totalTiresRecycled > 0 ? (totalTiresRecycled * 0.00427).toFixed(3) : '0'} tons</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Revenue Today</span>
