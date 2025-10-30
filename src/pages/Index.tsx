@@ -13,7 +13,7 @@ import { CapacityGauge } from "@/components/CapacityGauge";
 import { RowCarousel } from "@/components/RowCarousel";
 
 import { StatsCard } from "@/components/enhanced/StatsCard";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { StaggerList } from "@/components/motion/StaggerList";
@@ -22,6 +22,8 @@ import { SlideUp } from "@/components/motion/SlideUp";
 import { FollowupWorkflows } from "@/components/workflows/FollowupWorkflows";
 import { useRealtimeUpdates } from "@/hooks/useRealtimeUpdates";
 import { SchedulePickupWithDriverDialog } from "@/components/SchedulePickupWithDriverDialog";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Index() {
   const navigate = useNavigate();
@@ -58,6 +60,23 @@ export default function Index() {
   const { data: clientsResponse } = useClients();
   const { data: vehiclesData = [] } = useVehicles();
   const { data: todaysDropoffs = [] } = useTodaysDropoffs();
+  
+  // Fetch today's manifests to get actual PTE counts
+  const { data: todaysManifests = [] } = useQuery({
+    queryKey: ['manifests', 'today', user?.currentOrganization?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('manifests')
+        .select('*')
+        .eq('organization_id', user?.currentOrganization?.id)
+        .gte('created_at', format(new Date(), 'yyyy-MM-dd'))
+        .lt('created_at', format(addDays(new Date(), 1), 'yyyy-MM-dd'));
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user?.currentOrganization?.id,
+  });
   
   // Extract clients data from response
   const clientsData = Array.isArray(clientsResponse) ? clientsResponse : (clientsResponse?.data || []);
@@ -97,15 +116,31 @@ export default function Index() {
   const completedPickups = todayPickups.filter(p => p.status === 'completed');
   const overduePickups = todayPickups.filter(p => p.status === 'overdue');
   
-  // Calculate total PTEs from BOTH completed pickups AND drop-offs
-  const pickupPTEs = completedPickups.reduce((sum, pickup) => sum + (pickup.pte_count || 0), 0);
-  const dropoffPTEs = todaysDropoffs.reduce((sum: number, dropoff: any) => sum + (dropoff.pte_count || 0), 0);
-  const totalTiresRecycled = pickupPTEs + dropoffPTEs;
+  // Calculate PTEs from manifests (where the actual tire counts are stored)
+  const manifestPTEs = todaysManifests.reduce((sum: number, manifest: any) => {
+    const pteOnRim = manifest.pte_on_rim || 0;
+    const pteOffRim = manifest.pte_off_rim || 0;
+    const otr = manifest.otr_count || 0;
+    const tractor = manifest.tractor_count || 0;
+    const commercial17519Off = manifest.commercial_17_5_19_5_off || 0;
+    const commercial17519On = manifest.commercial_17_5_19_5_on || 0;
+    const commercial225Off = manifest.commercial_22_5_off || 0;
+    const commercial225On = manifest.commercial_22_5_on || 0;
+    
+    return sum + pteOnRim + pteOffRim + otr + tractor + 
+           commercial17519Off + commercial17519On + commercial225Off + commercial225On;
+  }, 0);
   
-  // Calculate revenue from both sources
-  const pickupRevenue = completedPickups.reduce((sum, pickup) => sum + (pickup.computed_revenue || 0), 0);
+  // Calculate PTEs from drop-offs
+  const dropoffPTEs = todaysDropoffs.reduce((sum: number, dropoff: any) => sum + (dropoff.pte_count || 0), 0);
+  
+  // Total PTEs from all sources
+  const totalTiresRecycled = manifestPTEs + dropoffPTEs;
+  
+  // Calculate revenue from manifests and drop-offs
+  const manifestRevenue = todaysManifests.reduce((sum: number, manifest: any) => sum + (manifest.total || 0), 0);
   const dropoffRevenue = todaysDropoffs.reduce((sum: number, dropoff: any) => sum + (dropoff.computed_revenue || 0), 0);
-  const totalDailyRevenue = pickupRevenue + dropoffRevenue;
+  const totalDailyRevenue = manifestRevenue + dropoffRevenue;
 
   return (
     <div className="min-h-screen bg-background">
