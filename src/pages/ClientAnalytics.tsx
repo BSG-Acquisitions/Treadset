@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import { ClientAnalyticsDashboard } from "@/components/analytics/ClientAnalyticsDashboard";
-
 import { TreadSetAnimatedLogo } from "@/components/TreadSetAnimatedLogo";
 
 export default function ClientAnalytics() {

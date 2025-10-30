@@ -3255,6 +3255,20 @@ export type Database = {
         Args: { org_slug?: string }
         Returns: string
       }
+      get_live_client_analytics: {
+        Args: { p_organization_id: string; p_year?: number }
+        Returns: {
+          monthly_data: Json
+          top_clients: Json
+          total_clients: number
+          total_otr: number
+          total_pickups: number
+          total_ptes: number
+          total_revenue: number
+          total_tractor: number
+          total_weight_tons: number
+        }[]
+      }
       get_or_create_user_preferences: {
         Args: { target_user_id: string }
         Returns: {
