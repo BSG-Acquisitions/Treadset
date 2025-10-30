@@ -1915,6 +1915,8 @@ export type Database = {
           notes: string | null
           organization_id: string
           otr_count: number | null
+          payment_method: string | null
+          payment_status: string | null
           pickup_date: string
           preferred_window: string | null
           price_version_id: string | null
@@ -1946,6 +1948,8 @@ export type Database = {
           notes?: string | null
           organization_id: string
           otr_count?: number | null
+          payment_method?: string | null
+          payment_status?: string | null
           pickup_date: string
           preferred_window?: string | null
           price_version_id?: string | null
@@ -1977,6 +1981,8 @@ export type Database = {
           notes?: string | null
           organization_id?: string
           otr_count?: number | null
+          payment_method?: string | null
+          payment_status?: string | null
           pickup_date?: string
           preferred_window?: string | null
           price_version_id?: string | null
