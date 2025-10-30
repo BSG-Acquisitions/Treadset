@@ -262,6 +262,15 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {receiverManifest && (
+        <ReceiverSignatureDialog
+          open={receiverDialogOpen}
+          onOpenChange={setReceiverDialogOpen}
+          manifestId={receiverManifest.id}
+          manifestNumber={receiverManifest.number || ''}
+        />
+      )}
     </div>
   );
 }
