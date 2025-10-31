@@ -9,8 +9,9 @@ import { CSVExportDialog } from "@/components/csv/CSVExportDialog";
 import { EditClientDialog } from "@/components/EditClientDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Upload, Download, Edit } from "lucide-react";
+import { Plus, Upload, Download, Edit, AlertTriangle, MailWarning } from "lucide-react";
 import { SchedulePickupDialog } from "@/components/SchedulePickupDialog";
 import { CreateClientDialog } from "@/components/CreateClientDialog";
 
@@ -46,6 +47,10 @@ export default function Clients() {
   const { data: clientsData, isLoading } = useClientsWithTable({ tableState: tableState.state });
   const { data: pricingTiers = [] } = usePricingTiers();
 
+  // Count clients without emails
+  const clientsWithoutEmail = clientsData?.data?.filter(client => !client.email) || [];
+  const missingEmailCount = clientsWithoutEmail.length;
+
   const columns: Column<Client>[] = [
     {
       key: 'company_name',
@@ -65,11 +70,18 @@ export default function Clients() {
       title: 'Contact',
       sortable: true,
       render: (value, row) => (
-        <div className="min-w-0">
-          <div className="font-medium truncate">{value || '—'}</div>
-          {row.email && (
-            <div className="text-xs text-muted-foreground truncate">{row.email}</div>
-          )}
+        <div className="min-w-0 flex items-center gap-2">
+          <div className="flex-1 min-w-0">
+            <div className="font-medium truncate">{value || '—'}</div>
+            {row.email ? (
+              <div className="text-xs text-muted-foreground truncate">{row.email}</div>
+            ) : (
+              <div className="flex items-center gap-1 text-xs text-destructive">
+                <MailWarning className="h-3 w-3" />
+                <span>No email configured</span>
+              </div>
+            )}
+          </div>
         </div>
       )
     },
@@ -206,6 +218,16 @@ export default function Clients() {
             Manage your client database and track their business metrics.
           </p>
         </header>
+
+        {missingEmailCount > 0 && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>{missingEmailCount} client{missingEmailCount !== 1 ? 's' : ''}</strong> {missingEmailCount !== 1 ? 'are' : 'is'} missing email addresses. 
+              Manifests cannot be automatically emailed to these clients. Please update their contact information.
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="container pb-12">
           <DataTable
