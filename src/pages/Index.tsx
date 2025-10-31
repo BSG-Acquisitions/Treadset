@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CalendarDays, Clock, MapPin, Users, TrendingUp, Package, Truck, Recycle, BarChart3, CheckCircle2, User } from "lucide-react";
-import { LineChart, Line, BarChart, Bar, Tooltip, XAxis, YAxis } from "recharts";
+import { LineChart, Line, BarChart, Bar, Tooltip, XAxis, YAxis, CartesianGrid, ReferenceLine, ResponsiveContainer } from "recharts";
 import { usePickups } from "@/hooks/usePickups";
 import { useClients } from "@/hooks/useClients";
 import { useVehicles } from "@/hooks/useVehicles";
@@ -111,45 +111,71 @@ export default function Index() {
 
   // Fetch this week's daily stats for PTE goal chart
   const { data: weeklyData = [] } = useQuery({
-    queryKey: ['weekly-stats', user?.currentOrganization?.id],
+    queryKey: ['weekly-stats', user?.currentOrganization?.id, format(new Date(), 'yyyy-MM-dd')],
     queryFn: async () => {
-      // Get last 5 weekdays
+      // Get last 5 weekdays (Mon-Fri)
       const days = [];
       const today = new Date();
+      let daysAdded = 0;
+      let lookbackDays = 0;
       
-      for (let i = 4; i >= 0; i--) {
+      // Go back up to 10 days to find 5 weekdays
+      while (daysAdded < 5 && lookbackDays < 10) {
         const date = new Date(today);
-        date.setDate(date.getDate() - i);
+        date.setDate(date.getDate() - lookbackDays);
         
-        // Skip weekends
         const dayOfWeek = date.getDay();
+        // Only weekdays (Mon=1 to Fri=5)
         if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-          days.push({
+          days.unshift({
             date: format(date, 'yyyy-MM-dd'),
             label: format(date, 'EEE')
           });
+          daysAdded++;
         }
+        lookbackDays++;
       }
       
-      // Fetch manifests for these days
+      // Fetch manifests AND pickups for these days (to include today's scheduled/in-progress)
       const results = await Promise.all(
         days.map(async ({ date, label }) => {
-          const { data, error } = await supabase
+          const startOfDay = `${date}T00:00:00`;
+          const endOfDay = format(addDays(new Date(date), 1), 'yyyy-MM-dd') + 'T00:00:00';
+          
+          // Get completed manifests
+          const { data: manifests, error: manifestError } = await supabase
             .from('manifests')
             .select('pte_on_rim, pte_off_rim, otr_count, tractor_count')
             .eq('organization_id', user?.currentOrganization?.id)
             .eq('status', 'COMPLETED')
-            .gte('created_at', date)
-            .lt('created_at', format(addDays(new Date(date), 1), 'yyyy-MM-dd'));
+            .gte('signed_at', startOfDay)
+            .lt('signed_at', endOfDay);
           
-          if (error) throw error;
+          if (manifestError) throw manifestError;
           
-          const ptes = (data || []).reduce((sum, m) => 
+          // Also get pickups (scheduled counts for incomplete days like today)
+          const { data: pickups, error: pickupError } = await supabase
+            .from('pickups')
+            .select('pte_count, otr_count, tractor_count, status')
+            .eq('organization_id', user?.currentOrganization?.id)
+            .eq('pickup_date', date);
+            
+          if (pickupError) throw pickupError;
+          
+          // Calculate PTEs from completed manifests
+          const manifestPtes = (manifests || []).reduce((sum, m) => 
             sum + (m.pte_on_rim || 0) + (m.pte_off_rim || 0) + 
             (m.otr_count || 0) + (m.tractor_count || 0), 0
           );
           
-          return { day: label, ptes };
+          // If no completed manifests, use pickup estimates for today
+          const pickupPtes = manifestPtes === 0 ? (pickups || []).reduce((sum, p) =>
+            sum + (p.pte_count || 0) + (p.otr_count || 0) + (p.tractor_count || 0), 0
+          ) : 0;
+          
+          const totalPtes = manifestPtes + pickupPtes;
+          
+          return { day: label, ptes: totalPtes, target: 520 }; // 520 = 2600/5 days
         })
       );
       
@@ -338,34 +364,49 @@ export default function Index() {
                 </div>
 
                 {/* Monthly Trend Chart */}
-                <div className="h-24 -mx-2">
-                  <LineChart
-                    width={300}
-                    height={96}
-                    data={monthlyData?.slice(-6) || []}
-                    margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
-                  >
-                    <Line 
-                      type="monotone" 
-                      dataKey="ptes" 
-                      stroke="hsl(var(--brand-recycling))" 
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                    <Tooltip 
-                      content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
-                          return (
-                            <div className="bg-popover border border-border rounded-lg px-2 py-1 text-xs shadow-lg">
-                              <p className="font-semibold">{payload[0].payload.month}</p>
-                              <p className="text-muted-foreground">{payload[0].value} PTEs</p>
-                            </div>
-                          );
-                        }
-                        return null;
-                      }}
-                    />
-                  </LineChart>
+                <div className="space-y-2">
+                  <div className="text-xs font-medium text-muted-foreground">6-Month Recycling Trend</div>
+                  <ResponsiveContainer width="100%" height={100}>
+                    <LineChart
+                      data={monthlyData?.slice(-6) || []}
+                      margin={{ top: 5, right: 10, left: 10, bottom: 20 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                      <XAxis 
+                        dataKey="month" 
+                        tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                        angle={-45}
+                        textAnchor="end"
+                        height={40}
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                        label={{ value: 'PTEs', angle: -90, position: 'insideLeft', style: { fontSize: 10, fill: 'hsl(var(--muted-foreground))' } }}
+                        width={40}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="ptes" 
+                        stroke="hsl(var(--brand-recycling))" 
+                        strokeWidth={2.5}
+                        dot={{ fill: 'hsl(var(--brand-recycling))', r: 3 }}
+                        activeDot={{ r: 5 }}
+                      />
+                      <Tooltip 
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <div className="bg-popover border border-border rounded-lg px-3 py-2 shadow-lg">
+                                <p className="font-semibold text-sm">{payload[0].payload.month}</p>
+                                <p className="text-brand-recycling font-bold">{payload[0].value?.toLocaleString()} PTEs</p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
                 </div>
 
                 <div className="space-y-2 pt-2 border-t">
@@ -418,42 +459,57 @@ export default function Index() {
                   </div>
 
                   {/* Weekly Trend Chart */}
-                  <div className="pt-4 border-t">
-                    <div className="text-xs text-muted-foreground mb-2 text-center">This Week's Activity</div>
-                    <BarChart
-                      width={280}
-                      height={100}
-                      data={weeklyData}
-                      margin={{ top: 5, right: 10, left: 10, bottom: 5 }}
-                    >
-                      <XAxis 
-                        dataKey="day" 
-                        tick={{ fontSize: 10 }}
-                        stroke="hsl(var(--muted-foreground))"
-                      />
-                      <YAxis 
-                        tick={{ fontSize: 10 }}
-                        stroke="hsl(var(--muted-foreground))"
-                      />
-                      <Tooltip 
-                        content={({ active, payload }) => {
-                          if (active && payload && payload.length) {
-                            return (
-                              <div className="bg-popover border border-border rounded-lg px-2 py-1 text-xs shadow-lg">
-                                <p className="font-semibold">{payload[0].payload.day}</p>
-                                <p className="text-muted-foreground">{payload[0].value} PTEs</p>
-                              </div>
-                            );
-                          }
-                          return null;
-                        }}
-                      />
-                      <Bar 
-                        dataKey="ptes" 
-                        fill="hsl(var(--brand-recycling))" 
-                        radius={[4, 4, 0, 0]}
-                      />
-                    </BarChart>
+                  <div className="pt-4 border-t space-y-2">
+                    <div className="text-xs font-medium text-muted-foreground">This Week's Activity (Target: 520/day)</div>
+                    <ResponsiveContainer width="100%" height={120}>
+                      <BarChart
+                        data={weeklyData}
+                        margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                        <XAxis 
+                          dataKey="day" 
+                          tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                          stroke="hsl(var(--border))"
+                        />
+                        <YAxis 
+                          tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                          stroke="hsl(var(--border))"
+                          label={{ value: 'PTEs', angle: -90, position: 'insideLeft', style: { fontSize: 10, fill: 'hsl(var(--muted-foreground))' } }}
+                          width={35}
+                        />
+                        <ReferenceLine 
+                          y={520} 
+                          stroke="hsl(var(--brand-primary))" 
+                          strokeDasharray="3 3"
+                          label={{ value: 'Daily Target', position: 'right', fontSize: 9, fill: 'hsl(var(--brand-primary))' }}
+                        />
+                        <Tooltip 
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              const value = payload[0].value as number;
+                              const target = 520;
+                              const diff = value - target;
+                              return (
+                                <div className="bg-popover border border-border rounded-lg px-3 py-2 shadow-lg">
+                                  <p className="font-semibold text-sm">{payload[0].payload.day}</p>
+                                  <p className="text-brand-recycling font-bold">{value?.toLocaleString()} PTEs</p>
+                                  <p className={`text-xs ${diff >= 0 ? 'text-green-600' : 'text-amber-600'}`}>
+                                    {diff >= 0 ? '+' : ''}{diff} vs target
+                                  </p>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Bar 
+                          dataKey="ptes" 
+                          fill="hsl(var(--brand-recycling))" 
+                          radius={[4, 4, 0, 0]}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
 
                   {/* Additional Metrics */}
