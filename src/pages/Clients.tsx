@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useDataTable } from "@/hooks/useDataTable";
 import { useClientsWithTable } from "@/hooks/useClientsWithTable";
+import { useDeleteClient } from "@/hooks/useClients";
 import { usePricingTiers } from "@/hooks/usePricingTiers";
 import { DataTable, Column } from "@/components/DataTable";
 import { CSVImportDialog } from "@/components/csv/CSVImportDialog";
@@ -10,8 +11,9 @@ import { EditClientDialog } from "@/components/EditClientDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Upload, Download, Edit, AlertTriangle, MailWarning } from "lucide-react";
+import { Plus, Upload, Download, Edit, AlertTriangle, MailWarning, Trash2 } from "lucide-react";
 import { SchedulePickupDialog } from "@/components/SchedulePickupDialog";
 import { CreateClientDialog } from "@/components/CreateClientDialog";
 
@@ -46,6 +48,7 @@ export default function Clients() {
 
   const { data: clientsData, isLoading } = useClientsWithTable({ tableState: tableState.state });
   const { data: pricingTiers = [] } = usePricingTiers();
+  const deleteClient = useDeleteClient();
 
   // Count clients without emails
   const clientsWithoutEmail = clientsData?.data?.filter(client => !client.email) || [];
@@ -154,14 +157,50 @@ export default function Clients() {
       title: 'Actions',
       sortable: false,
       render: (_, row) => (
-        <EditClientDialog
-          client={row}
-          trigger={
-            <Button variant="ghost" size="sm">
-              <Edit className="h-4 w-4" />
-            </Button>
-          }
-        />
+        <div className="flex items-center gap-1">
+          <EditClientDialog
+            client={row}
+            trigger={
+              <Button variant="ghost" size="sm">
+                <Edit className="h-4 w-4" />
+              </Button>
+            }
+          />
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="ghost" size="sm">
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Client</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete <strong>{row.company_name}</strong>?
+                  {row.open_balance && row.open_balance > 0 ? (
+                    <span className="block mt-2 text-amber-600">
+                      This client has an open balance of ${row.open_balance.toFixed(2)}. 
+                      They will be deactivated instead of permanently deleted.
+                    </span>
+                  ) : (
+                    <span className="block mt-2">
+                      This action cannot be undone.
+                    </span>
+                  )}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => deleteClient.mutate(row.id)}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       )
     }
   ];
