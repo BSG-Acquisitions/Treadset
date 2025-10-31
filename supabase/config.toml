@@ -110,3 +110,6 @@ verify_jwt = true
 
 [functions.ai-route-optimizer]
 verify_jwt = false
+
+[functions.ensure-manifest-pdf]
+verify_jwt = false

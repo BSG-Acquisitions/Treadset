@@ -885,6 +885,26 @@ export function DriverManifestCreationWizard({
         })
         .eq('id', pickupId);
 
+      // Ensure manifest PDF is generated and linked
+      console.log('🔧 Ensuring manifest PDF is generated for pickup:', pickupId);
+      try {
+        const { data: pdfData, error: pdfError } = await supabase.functions.invoke(
+          'ensure-manifest-pdf',
+          {
+            body: { pickup_id: pickupId }
+          }
+        );
+        
+        if (pdfError) {
+          console.error('❌ ensure-manifest-pdf error:', pdfError);
+        } else {
+          console.log('✅ Manifest PDF ensured:', pdfData);
+        }
+      } catch (pdfErr) {
+        console.error('❌ Failed to ensure manifest PDF:', pdfErr);
+        // Don't block the flow if this fails
+      }
+
       // Store manifest ID and move to payment step
       setCreatedManifestId(manifest.id);
       setManifestCreated(true);

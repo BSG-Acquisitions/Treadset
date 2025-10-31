@@ -52,6 +52,7 @@ import PaymentCancelled from "./pages/PaymentCancelled";
 import DriverPaymentSuccess from "./pages/driver/PaymentSuccess";
 import DriverPaymentCancelled from "./pages/driver/PaymentCancelled";
 import Manifests from "./pages/Manifests";
+import BackfillManifestPdfs from "./pages/BackfillManifestPdfs";
 
 const queryClient = new QueryClient();
 
@@ -175,6 +176,13 @@ const App = () => (
               <ProtectedRoute roles={['admin', 'ops_manager', 'sales']}>
                 <AppLayout>
                   <Manifests />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/manifests/backfill" element={
+              <ProtectedRoute roles={['admin']}>
+                <AppLayout>
+                  <BackfillManifestPdfs />
                 </AppLayout>
               </ProtectedRoute>
             } />
