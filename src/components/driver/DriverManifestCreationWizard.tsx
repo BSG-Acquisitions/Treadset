@@ -845,11 +845,29 @@ export function DriverManifestCreationWizard({
 
       // 5. Email the initial manifest to client
       if (pickupData.client.email) {
-        await sendEmail.mutateAsync({
-          manifestId: manifest.id,
-          to: pickupData.client.email,
-          subject: `Tire Manifest - ${pickupData.client.company_name}`,
-          messageHtml: `<p>Your tire pickup manifest is attached. This is the initial manifest with generator and hauler signatures. A final version will be sent once the receiver has signed.</p>`,
+        console.log('📧 Attempting to send manifest email to:', pickupData.client.email);
+        try {
+          await sendEmail.mutateAsync({
+            manifestId: manifest.id,
+            to: pickupData.client.email,
+            subject: `Tire Manifest - ${pickupData.client.company_name}`,
+            messageHtml: `<p>Your tire pickup manifest is attached. This is the initial manifest with generator and hauler signatures. A final version will be sent once the receiver has signed.</p>`,
+          });
+          console.log('✅ Email sent successfully to:', pickupData.client.email);
+        } catch (emailError: any) {
+          console.error('❌ Email sending failed:', emailError);
+          toast({
+            title: "Email Warning",
+            description: `Manifest created but email failed: ${emailError.message || 'Unknown error'}`,
+            variant: "destructive",
+          });
+        }
+      } else {
+        console.warn('⚠️ No email address for client:', pickupData.client.company_name);
+        toast({
+          title: "No Email Address",
+          description: `Manifest created but ${pickupData.client.company_name} has no email address configured.`,
+          variant: "destructive",
         });
       }
 
