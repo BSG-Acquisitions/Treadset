@@ -136,11 +136,11 @@ export default function Index() {
         lookbackDays++;
       }
       
-      // Fetch manifests joined with pickups to get correct date
+      // Fetch data for each day
       const results = await Promise.all(
         days.map(async ({ date, label }) => {
-          // Get manifests for pickups on this date
-          const { data: manifests, error: manifestError } = await supabase
+          // First try to get completed manifests linked to pickups on this date
+          const { data: manifests } = await supabase
             .from('manifests')
             .select(`
               pte_on_rim, 
@@ -150,46 +150,33 @@ export default function Index() {
               pickup:pickups!inner(pickup_date)
             `)
             .eq('organization_id', user?.currentOrganization?.id)
-            .eq('pickup.pickup_date', date);
+            .eq('status', 'COMPLETED')
+            .eq('pickups.pickup_date', date);
           
-          if (manifestError) {
-            console.error('Manifest fetch error:', manifestError);
-            // Fallback to pickups if manifest query fails
+          let totalPtes = 0;
+          
+          // If we have completed manifests, use those counts
+          if (manifests && manifests.length > 0) {
+            totalPtes = manifests.reduce((sum, m) => 
+              sum + (m.pte_on_rim || 0) + (m.pte_off_rim || 0) + 
+              (m.otr_count || 0) + (m.tractor_count || 0), 0
+            );
+          } else {
+            // Otherwise use pickup estimates (for today or incomplete days)
             const { data: pickups } = await supabase
               .from('pickups')
               .select('pte_count, otr_count, tractor_count')
               .eq('organization_id', user?.currentOrganization?.id)
               .eq('pickup_date', date);
             
-            const pickupPtes = (pickups || []).reduce((sum, p) =>
-              sum + (p.pte_count || 0) + (p.otr_count || 0) + (p.tractor_count || 0), 0
-            );
-            
-            return { day: label, ptes: pickupPtes, target: 520 };
+            if (pickups && pickups.length > 0) {
+              totalPtes = pickups.reduce((sum, p) =>
+                sum + (p.pte_count || 0) + (p.otr_count || 0) + (p.tractor_count || 0), 0
+              );
+            }
           }
           
-          // Calculate PTEs from manifests (actual counts)
-          const manifestPtes = (manifests || []).reduce((sum, m) => 
-            sum + (m.pte_on_rim || 0) + (m.pte_off_rim || 0) + 
-            (m.otr_count || 0) + (m.tractor_count || 0), 0
-          );
-          
-          // If no manifests exist yet, get pickup estimates for today
-          if (manifestPtes === 0) {
-            const { data: pickups } = await supabase
-              .from('pickups')
-              .select('pte_count, otr_count, tractor_count')
-              .eq('organization_id', user?.currentOrganization?.id)
-              .eq('pickup_date', date);
-            
-            const pickupPtes = (pickups || []).reduce((sum, p) =>
-              sum + (p.pte_count || 0) + (p.otr_count || 0) + (p.tractor_count || 0), 0
-            );
-            
-            return { day: label, ptes: pickupPtes, target: 520 };
-          }
-          
-          return { day: label, ptes: manifestPtes, target: 520 }; // 520 = 2600/5 days
+          return { day: label, ptes: totalPtes, target: 2600 };
         })
       );
       
@@ -474,7 +461,7 @@ export default function Index() {
 
                   {/* Weekly Trend Chart */}
                   <div className="pt-4 border-t space-y-2">
-                    <div className="text-xs font-medium text-muted-foreground">This Week's Activity (Target: 520/day)</div>
+                    <div className="text-xs font-medium text-muted-foreground">This Week's Activity (Target: 2,600/day)</div>
                     <ResponsiveContainer width="100%" height={120}>
                       <BarChart
                         data={weeklyData}
@@ -493,7 +480,7 @@ export default function Index() {
                           width={35}
                         />
                         <ReferenceLine 
-                          y={520} 
+                          y={2600} 
                           stroke="hsl(var(--brand-primary))" 
                           strokeDasharray="3 3"
                           label={{ value: 'Daily Target', position: 'right', fontSize: 9, fill: 'hsl(var(--brand-primary))' }}
@@ -502,7 +489,7 @@ export default function Index() {
                           content={({ active, payload }) => {
                             if (active && payload && payload.length) {
                               const value = payload[0].value as number;
-                              const target = 520;
+                              const target = 2600;
                               const diff = value - target;
                               return (
                                 <div className="bg-popover border border-border rounded-lg px-3 py-2 shadow-lg">
