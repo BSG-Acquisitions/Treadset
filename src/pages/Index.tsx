@@ -136,46 +136,60 @@ export default function Index() {
         lookbackDays++;
       }
       
-      // Fetch manifests AND pickups for these days (to include today's scheduled/in-progress)
+      // Fetch manifests joined with pickups to get correct date
       const results = await Promise.all(
         days.map(async ({ date, label }) => {
-          const startOfDay = `${date}T00:00:00`;
-          const endOfDay = format(addDays(new Date(date), 1), 'yyyy-MM-dd') + 'T00:00:00';
-          
-          // Get completed manifests
+          // Get manifests for pickups on this date
           const { data: manifests, error: manifestError } = await supabase
             .from('manifests')
-            .select('pte_on_rim, pte_off_rim, otr_count, tractor_count')
+            .select(`
+              pte_on_rim, 
+              pte_off_rim, 
+              otr_count, 
+              tractor_count,
+              pickup:pickups!inner(pickup_date)
+            `)
             .eq('organization_id', user?.currentOrganization?.id)
-            .eq('status', 'COMPLETED')
-            .gte('signed_at', startOfDay)
-            .lt('signed_at', endOfDay);
+            .eq('pickup.pickup_date', date);
           
-          if (manifestError) throw manifestError;
-          
-          // Also get pickups (scheduled counts for incomplete days like today)
-          const { data: pickups, error: pickupError } = await supabase
-            .from('pickups')
-            .select('pte_count, otr_count, tractor_count, status')
-            .eq('organization_id', user?.currentOrganization?.id)
-            .eq('pickup_date', date);
+          if (manifestError) {
+            console.error('Manifest fetch error:', manifestError);
+            // Fallback to pickups if manifest query fails
+            const { data: pickups } = await supabase
+              .from('pickups')
+              .select('pte_count, otr_count, tractor_count')
+              .eq('organization_id', user?.currentOrganization?.id)
+              .eq('pickup_date', date);
             
-          if (pickupError) throw pickupError;
+            const pickupPtes = (pickups || []).reduce((sum, p) =>
+              sum + (p.pte_count || 0) + (p.otr_count || 0) + (p.tractor_count || 0), 0
+            );
+            
+            return { day: label, ptes: pickupPtes, target: 520 };
+          }
           
-          // Calculate PTEs from completed manifests
+          // Calculate PTEs from manifests (actual counts)
           const manifestPtes = (manifests || []).reduce((sum, m) => 
             sum + (m.pte_on_rim || 0) + (m.pte_off_rim || 0) + 
             (m.otr_count || 0) + (m.tractor_count || 0), 0
           );
           
-          // If no completed manifests, use pickup estimates for today
-          const pickupPtes = manifestPtes === 0 ? (pickups || []).reduce((sum, p) =>
-            sum + (p.pte_count || 0) + (p.otr_count || 0) + (p.tractor_count || 0), 0
-          ) : 0;
+          // If no manifests exist yet, get pickup estimates for today
+          if (manifestPtes === 0) {
+            const { data: pickups } = await supabase
+              .from('pickups')
+              .select('pte_count, otr_count, tractor_count')
+              .eq('organization_id', user?.currentOrganization?.id)
+              .eq('pickup_date', date);
+            
+            const pickupPtes = (pickups || []).reduce((sum, p) =>
+              sum + (p.pte_count || 0) + (p.otr_count || 0) + (p.tractor_count || 0), 0
+            );
+            
+            return { day: label, ptes: pickupPtes, target: 520 };
+          }
           
-          const totalPtes = manifestPtes + pickupPtes;
-          
-          return { day: label, ptes: totalPtes, target: 520 }; // 520 = 2600/5 days
+          return { day: label, ptes: manifestPtes, target: 520 }; // 520 = 2600/5 days
         })
       );
       
