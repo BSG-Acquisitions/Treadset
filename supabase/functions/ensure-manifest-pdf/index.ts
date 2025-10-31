@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
             location_id: pickup.location_id,
             pickup_id: pickup.id,
             manifest_number: manifestNumber,
-            status: pickup.status === 'completed' ? 'COMPLETED' : 'AWAITING_RECEIVER_SIGNATURE',
+            status: 'AWAITING_RECEIVER_SIGNATURE', // Always awaiting receiver sig when first created
             pte_on_rim: pickup.pte_count || 0,
             pte_off_rim: 0,
             otr_count: pickup.otr_count || 0,
