@@ -114,7 +114,9 @@ export default function EnhancedRoutesToday() {
   // Get 7 days starting from current week
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeek, i));
   
-  const { data: assignments = [], isLoading } = useAssignments(activeDay);
+  const { data: allAssignments = [], isLoading } = useAssignments(activeDay);
+  // Filter out completed assignments from active routes
+  const assignments = allAssignments.filter(a => a.status !== 'completed');
   const { data: pickups = [] } = usePickups(activeDay);
   const { data: vehicles = [] } = useVehicles();
   const { toast } = useToast();
