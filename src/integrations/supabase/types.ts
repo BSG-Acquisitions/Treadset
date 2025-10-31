@@ -1378,6 +1378,11 @@ export type Database = {
           driver_sig_path: string | null
           driver_signature_png_path: string | null
           dropoff_id: string | null
+          email_error: string | null
+          email_resend_id: string | null
+          email_sent_at: string | null
+          email_sent_to: string[] | null
+          email_status: string | null
           emailed_to: string[] | null
           finalized_by: string | null
           generator_signed_at: string | null
@@ -1436,6 +1441,11 @@ export type Database = {
           driver_sig_path?: string | null
           driver_signature_png_path?: string | null
           dropoff_id?: string | null
+          email_error?: string | null
+          email_resend_id?: string | null
+          email_sent_at?: string | null
+          email_sent_to?: string[] | null
+          email_status?: string | null
           emailed_to?: string[] | null
           finalized_by?: string | null
           generator_signed_at?: string | null
@@ -1494,6 +1504,11 @@ export type Database = {
           driver_sig_path?: string | null
           driver_signature_png_path?: string | null
           dropoff_id?: string | null
+          email_error?: string | null
+          email_resend_id?: string | null
+          email_sent_at?: string | null
+          email_sent_to?: string[] | null
+          email_status?: string | null
           emailed_to?: string[] | null
           finalized_by?: string | null
           generator_signed_at?: string | null

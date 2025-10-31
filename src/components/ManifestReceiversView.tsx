@@ -14,6 +14,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { ManifestPDFControls } from "@/components/ManifestPDFControls";
+import { EmailDeliveryStatus } from "@/components/EmailDeliveryStatus";
 
 export const ManifestReceiversView = () => {
   const { data: manifests, isLoading } = useManifests();
@@ -118,7 +119,11 @@ export const ManifestReceiversView = () => {
             generator_signed_at,
             hauler_signed_at,
             receiver_signed_at,
-            client_id
+            client_id,
+            email_status,
+            email_sent_at,
+            email_sent_to,
+            email_error
           `)
           .is('receiver_signed_at', null)
           .order('created_at', { ascending: false });
@@ -488,7 +493,7 @@ export const ManifestReceiversView = () => {
                                   <h3 className="font-bold text-lg mb-2">
                                     {manifestClientNames[manifest.id] || clientNames[manifest.client_id] || 'Unknown Client'}
                                   </h3>
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex flex-wrap items-center gap-2">
                                     <Badge variant="outline">
                                       {manifest.manifest_number}
                                     </Badge>
@@ -497,6 +502,12 @@ export const ManifestReceiversView = () => {
                                         {format(new Date(manifest.updated_at || manifest.signed_at || manifest.created_at), 'h:mm a')}
                                       </span>
                                     )}
+                                    <EmailDeliveryStatus
+                                      emailStatus={manifest.email_status}
+                                      emailSentAt={manifest.email_sent_at}
+                                      emailSentTo={manifest.email_sent_to}
+                                      emailError={manifest.email_error}
+                                    />
                                   </div>
                                 </div>
                                 
@@ -546,6 +557,7 @@ export const ManifestReceiversView = () => {
                               <TableHead>Manifest #</TableHead>
                               <TableHead>Client</TableHead>
                               <TableHead>Completed</TableHead>
+                              <TableHead>Email Status</TableHead>
                               <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                           </TableHeader>
@@ -564,6 +576,14 @@ export const ManifestReceiversView = () => {
                                   {manifest.receiver_signed_at ? 
                                     format(new Date(manifest.receiver_signed_at), 'MMM d, h:mm a') : 'N/A'
                                   }
+                                </TableCell>
+                                <TableCell>
+                                  <EmailDeliveryStatus
+                                    emailStatus={manifest.email_status}
+                                    emailSentAt={manifest.email_sent_at}
+                                    emailSentTo={manifest.email_sent_to}
+                                    emailError={manifest.email_error}
+                                  />
                                 </TableCell>
                                 <TableCell className="text-right">
                                   {manifest.acroform_pdf_path && (
@@ -608,13 +628,20 @@ export const ManifestReceiversView = () => {
                             {manifests.map((manifest: any) => (
                               <Card key={manifest.id}>
                                 <CardContent className="p-4">
-                                  <div className="space-y-2">
+                                   <div className="space-y-2">
                                     <div className="flex items-start justify-between">
-                                      <div>
+                                      <div className="space-y-2">
                                         <Badge variant="outline" className="mb-1">
                                           {manifest.manifest_number}
                                         </Badge>
                                         <h3 className="font-medium text-sm">{manifestClientNames[manifest.id] || clientNames[manifest.client_id] || 'Unknown'}</h3>
+                                        <EmailDeliveryStatus
+                                          emailStatus={manifest.email_status}
+                                          emailSentAt={manifest.email_sent_at}
+                                          emailSentTo={manifest.email_sent_to}
+                                          emailError={manifest.email_error}
+                                          className="text-xs"
+                                        />
                                       </div>
                                       <Badge variant="secondary" className="text-xs">Complete</Badge>
                                     </div>

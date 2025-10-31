@@ -36,8 +36,12 @@ export const useSendManifestEmail = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      toast({ title: "Email sent", description: "Manifest email sent successfully." });
+    onSuccess: (data) => {
+      const recipients = data?.recipients?.join(', ') || 'client';
+      toast({ 
+        title: "Email sent successfully", 
+        description: `Manifest email delivered to ${recipients}` 
+      });
     },
     onError: (err: any) => {
       toast({

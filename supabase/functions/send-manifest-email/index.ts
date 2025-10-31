@@ -251,12 +251,45 @@ serve(async (req) => {
     const sent = await resend.emails.send(emailPayload);
     console.log("Resend response:", sent);
 
-    return new Response(JSON.stringify({ ok: true, sent }), {
+    // Update manifest with email tracking info if manifest_id was provided
+    if (body.manifest_id && sent.data?.id) {
+      const emailUpdate: any = {
+        email_sent_at: new Date().toISOString(),
+        email_sent_to: toList,
+        email_status: 'sent',
+        email_resend_id: sent.data.id,
+        email_error: null
+      };
+      
+      const { error: updateError } = await supabase
+        .from('manifests')
+        .update(emailUpdate)
+        .eq('id', body.manifest_id);
+      
+      if (updateError) {
+        console.error('Failed to update manifest email tracking:', updateError);
+      }
+    }
+
+    return new Response(JSON.stringify({ ok: true, sent, recipients: toList }), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   } catch (error: any) {
     console.error("Error in send-manifest-email:", error);
+    
+    // Update manifest with error status if manifest_id was provided
+    if ((await req.clone().json()).manifest_id) {
+      const body = await req.clone().json();
+      await supabase
+        .from('manifests')
+        .update({
+          email_status: 'failed',
+          email_error: error.message ?? "Unknown error",
+        })
+        .eq('id', body.manifest_id);
+    }
+    
     return new Response(
       JSON.stringify({ ok: false, error: error.message ?? "Unknown error" }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
