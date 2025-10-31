@@ -62,6 +62,7 @@ import { DollarSign } from "lucide-react";
 const steps = [
   { key: "info", title: "Review Info", icon: Building },
   { key: "tires", title: "Tire Counts", icon: Package },
+  { key: "pricing", title: "Pricing Preview", icon: DollarSign },
   { key: "signatures", title: "Signatures", icon: PenTool },
   { key: "review", title: "Review & Submit", icon: CheckCircle },
   { key: "payment", title: "Payment", icon: DollarSign },
@@ -180,9 +181,9 @@ export function DriverManifestCreationWizard({
     form
   ]);
 
-  // Calculate payment total when rates change
+  // Calculate payment total when rates change (for pricing preview and payment steps)
   useEffect(() => {
-    if (steps[step]?.key === "payment") {
+    if (steps[step]?.key === "pricing" || steps[step]?.key === "payment") {
       const formValues = form.getValues();
       const pteOffRimCount = formValues.pte_off_rim || 0;
       const pteOnRimCount = formValues.pte_on_rim || 0;
@@ -381,6 +382,70 @@ export function DriverManifestCreationWizard({
         toast({
           title: "Missing Information",
           description: "Please enter at least one tire count",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    if (currentStep.key === "pricing") {
+      const values = form.getValues();
+      const pteOffRimCount = values.pte_off_rim || 0;
+      const pteOnRimCount = values.pte_on_rim || 0;
+      const commercialOffRimCount = (values.commercial_17_5_19_5_off || 0) + (values.commercial_22_5_off || 0);
+      const commercialOnRimCount = (values.commercial_17_5_19_5_on || 0) + (values.commercial_22_5_on || 0);
+      const otrTotalCount = (values.otr_count || 0) + (values.tractor_count || 0);
+
+      // Validate that rates are set for tire types that have counts
+      if (pteOffRimCount > 0 && (!pteOffRimRate || parseFloat(pteOffRimRate) <= 0)) {
+        toast({
+          title: "Missing Rate",
+          description: "Please set a rate for Passenger Off-Rim tires",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (pteOnRimCount > 0 && (!pteOnRimRate || parseFloat(pteOnRimRate) <= 0)) {
+        toast({
+          title: "Missing Rate",
+          description: "Please set a rate for Passenger On-Rim tires",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (commercialOffRimCount > 0 && (!commercialOffRimRate || parseFloat(commercialOffRimRate) <= 0)) {
+        toast({
+          title: "Missing Rate",
+          description: "Please set a rate for Commercial Off-Rim tires",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (commercialOnRimCount > 0 && (!commercialOnRimRate || parseFloat(commercialOnRimRate) <= 0)) {
+        toast({
+          title: "Missing Rate",
+          description: "Please set a rate for Commercial On-Rim tires",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (otrTotalCount > 0 && (!otrRate || parseFloat(otrRate) <= 0)) {
+        toast({
+          title: "Missing Rate",
+          description: "Please set a rate for OTR/Tractor tires",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (calculatedTotal <= 0) {
+        toast({
+          title: "Invalid Total",
+          description: "Total amount must be greater than $0",
           variant: "destructive",
         });
         return;
@@ -1195,6 +1260,277 @@ export function DriverManifestCreationWizard({
           </div>
         );
 
+      case "pricing":
+        const formValues = form.getValues();
+        const pteOffRimCount = formValues.pte_off_rim || 0;
+        const pteOnRimCount = formValues.pte_on_rim || 0;
+        const commercialOffRimCount = (formValues.commercial_17_5_19_5_off || 0) + (formValues.commercial_22_5_off || 0);
+        const commercialOnRimCount = (formValues.commercial_17_5_19_5_on || 0) + (formValues.commercial_22_5_on || 0);
+        const otrTotalCount = (formValues.otr_count || 0) + (formValues.tractor_count || 0);
+
+        const pteOffRimAmount = pteOffRimCount * (parseFloat(pteOffRimRate) || 0);
+        const pteOnRimAmount = pteOnRimCount * (parseFloat(pteOnRimRate) || 0);
+        const commercialOffRimAmount = commercialOffRimCount * (parseFloat(commercialOffRimRate) || 0);
+        const commercialOnRimAmount = commercialOnRimCount * (parseFloat(commercialOnRimRate) || 0);
+        const otrAmount = otrTotalCount * (parseFloat(otrRate) || 0);
+        const previewTotal = pteOffRimAmount + pteOnRimAmount + commercialOffRimAmount + commercialOnRimAmount + otrAmount;
+
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center gap-2 mb-4">
+              <DollarSign className="h-5 w-5 text-primary" />
+              <h3 className="text-lg font-semibold">Set Rates & Preview Payment</h3>
+            </div>
+
+            <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
+              <p className="text-sm text-blue-900 dark:text-blue-100">
+                Enter the rates for each tire type to calculate the total amount the customer will pay. This is a preview - actual payment collection happens after signatures.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {pteOffRimCount > 0 && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">Passenger Off-Rim ({pteOffRimCount} tires)</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Quick Select Rate</Label>
+                      <Select value={pteOffRimRate} onValueChange={setPteOffRimRate}>
+                        <SelectTrigger className="bg-background">
+                          <SelectValue placeholder="Select preset rate" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background z-50">
+                          {PRESET_RATES.passengerOffRim.map((rate) => (
+                            <SelectItem key={rate} value={rate}>
+                              ${rate} per tire
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Or Enter Custom Rate</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        value={pteOffRimRate}
+                        onChange={(e) => setPteOffRimRate(e.target.value)}
+                        className="text-base font-medium"
+                      />
+                    </div>
+                    {pteOffRimAmount > 0 && (
+                      <div className="pt-2 border-t">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground">Subtotal:</span>
+                          <span className="font-semibold">${pteOffRimAmount.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {pteOnRimCount > 0 && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">Passenger On-Rim ({pteOnRimCount} tires)</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Quick Select Rate</Label>
+                      <Select value={pteOnRimRate} onValueChange={setPteOnRimRate}>
+                        <SelectTrigger className="bg-background">
+                          <SelectValue placeholder="Select preset rate" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background z-50">
+                          {PRESET_RATES.passengerOnRim.map((rate) => (
+                            <SelectItem key={rate} value={rate}>
+                              ${rate} per tire
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Or Enter Custom Rate</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        value={pteOnRimRate}
+                        onChange={(e) => setPteOnRimRate(e.target.value)}
+                        className="text-base font-medium"
+                      />
+                    </div>
+                    {pteOnRimAmount > 0 && (
+                      <div className="pt-2 border-t">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground">Subtotal:</span>
+                          <span className="font-semibold">${pteOnRimAmount.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {commercialOffRimCount > 0 && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">Commercial Off-Rim ({commercialOffRimCount} tires)</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Quick Select Rate</Label>
+                      <Select value={commercialOffRimRate} onValueChange={setCommercialOffRimRate}>
+                        <SelectTrigger className="bg-background">
+                          <SelectValue placeholder="Select preset rate" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background z-50">
+                          {PRESET_RATES.commercialOffRim.map((rate) => (
+                            <SelectItem key={rate} value={rate}>
+                              ${rate} per tire
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Or Enter Custom Rate</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        value={commercialOffRimRate}
+                        onChange={(e) => setCommercialOffRimRate(e.target.value)}
+                        className="text-base font-medium"
+                      />
+                    </div>
+                    {commercialOffRimAmount > 0 && (
+                      <div className="pt-2 border-t">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground">Subtotal:</span>
+                          <span className="font-semibold">${commercialOffRimAmount.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {commercialOnRimCount > 0 && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">Commercial On-Rim ({commercialOnRimCount} tires)</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Quick Select Rate</Label>
+                      <Select value={commercialOnRimRate} onValueChange={setCommercialOnRimRate}>
+                        <SelectTrigger className="bg-background">
+                          <SelectValue placeholder="Select preset rate" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background z-50">
+                          {PRESET_RATES.commercialOnRim.map((rate) => (
+                            <SelectItem key={rate} value={rate}>
+                              ${rate} per tire
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Or Enter Custom Rate</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        value={commercialOnRimRate}
+                        onChange={(e) => setCommercialOnRimRate(e.target.value)}
+                        className="text-base font-medium"
+                      />
+                    </div>
+                    {commercialOnRimAmount > 0 && (
+                      <div className="pt-2 border-t">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground">Subtotal:</span>
+                          <span className="font-semibold">${commercialOnRimAmount.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {otrTotalCount > 0 && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">OTR/Tractor Tires ({otrTotalCount} tires)</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Quick Select Rate</Label>
+                      <Select value={otrRate} onValueChange={setOtrRate}>
+                        <SelectTrigger className="bg-background">
+                          <SelectValue placeholder="Select preset rate" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background z-50">
+                          {PRESET_RATES.otr.map((rate) => (
+                            <SelectItem key={rate} value={rate}>
+                              ${rate} per tire
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Or Enter Custom Rate</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        value={otrRate}
+                        onChange={(e) => setOtrRate(e.target.value)}
+                        className="text-base font-medium"
+                      />
+                    </div>
+                    {otrAmount > 0 && (
+                      <div className="pt-2 border-t">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground">Subtotal:</span>
+                          <span className="font-semibold">${otrAmount.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {previewTotal > 0 && (
+                <Card className="border-2 border-primary">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                      <span className="text-lg font-semibold">Total to Collect:</span>
+                      <span className="text-3xl font-bold text-primary">${previewTotal.toFixed(2)}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      This amount will be charged after signatures are collected
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+        );
+
       case "signatures":
         return (
           <div className="space-y-4">
@@ -1421,60 +1757,14 @@ export function DriverManifestCreationWizard({
         );
 
       case "payment":
-        const formValues = form.getValues();
-        const pteOffRimCount = formValues.pte_off_rim || 0;
-        const pteOnRimCount = formValues.pte_on_rim || 0;
-        const commercialOffRimCount = (formValues.commercial_17_5_19_5_off || 0) + (formValues.commercial_22_5_off || 0);
-        const commercialOnRimCount = (formValues.commercial_17_5_19_5_on || 0) + (formValues.commercial_22_5_on || 0);
-        const otrTotalCount = (formValues.otr_count || 0) + (formValues.tractor_count || 0);
+        const paymentFormValues = form.getValues();
+        const paymentPteOffRimCount = paymentFormValues.pte_off_rim || 0;
+        const paymentPteOnRimCount = paymentFormValues.pte_on_rim || 0;
+        const paymentCommercialOffRimCount = (paymentFormValues.commercial_17_5_19_5_off || 0) + (paymentFormValues.commercial_22_5_off || 0);
+        const paymentCommercialOnRimCount = (paymentFormValues.commercial_17_5_19_5_on || 0) + (paymentFormValues.commercial_22_5_on || 0);
+        const paymentOtrTotalCount = (paymentFormValues.otr_count || 0) + (paymentFormValues.tractor_count || 0);
 
         const handleCollectPayment = async () => {
-          // Validate that all required rates are set
-          if (pteOffRimCount > 0 && (!pteOffRimRate || parseFloat(pteOffRimRate) <= 0)) {
-            toast({
-              title: "Missing Rate",
-              description: "Please set a rate for Passenger Off-Rim tires",
-              variant: "destructive",
-            });
-            return;
-          }
-
-          if (pteOnRimCount > 0 && (!pteOnRimRate || parseFloat(pteOnRimRate) <= 0)) {
-            toast({
-              title: "Missing Rate",
-              description: "Please set a rate for Passenger On-Rim tires",
-              variant: "destructive",
-            });
-            return;
-          }
-
-          if (commercialOffRimCount > 0 && (!commercialOffRimRate || parseFloat(commercialOffRimRate) <= 0)) {
-            toast({
-              title: "Missing Rate",
-              description: "Please set a rate for Commercial Off-Rim tires",
-              variant: "destructive",
-            });
-            return;
-          }
-
-          if (commercialOnRimCount > 0 && (!commercialOnRimRate || parseFloat(commercialOnRimRate) <= 0)) {
-            toast({
-              title: "Missing Rate",
-              description: "Please set a rate for Commercial On-Rim tires",
-              variant: "destructive",
-            });
-            return;
-          }
-
-          if (otrTotalCount > 0 && (!otrRate || parseFloat(otrRate) <= 0)) {
-            toast({
-              title: "Missing Rate",
-              description: "Please set a rate for OTR/Tractor tires",
-              variant: "destructive",
-            });
-            return;
-          }
-
           if (calculatedTotal <= 0) {
             toast({
               title: "Invalid Total",
@@ -1511,180 +1801,54 @@ export function DriverManifestCreationWizard({
               <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
               <h3 className="text-xl font-semibold mb-2">Manifest Created!</h3>
               <p className="text-muted-foreground">
-                Now set the rates for payment calculation
+                Review pricing and collect payment
               </p>
             </div>
 
-            <div className="space-y-4">
-              {pteOffRimCount > 0 && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    Passenger Off-Rim Rate ({pteOffRimCount} tires)
-                  </label>
-                  <Select value={pteOffRimRate} onValueChange={setPteOffRimRate}>
-                    <SelectTrigger className="bg-background">
-                      <SelectValue placeholder="Select rate" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background z-50">
-                      {PRESET_RATES.passengerOffRim.map((rate) => (
-                        <SelectItem key={rate} value={rate}>
-                          ${rate} per tire
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">or</span>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="Enter custom rate"
-                      value={pteOffRimRate}
-                      onChange={(e) => setPteOffRimRate(e.target.value)}
-                      className="text-sm"
-                    />
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Payment Breakdown</CardTitle>
+                <CardDescription>Based on rates set in the pricing step</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {paymentPteOffRimCount > 0 && parseFloat(pteOffRimRate) > 0 && (
+                  <div className="flex justify-between items-center text-sm">
+                    <span>Passenger Off-Rim ({paymentPteOffRimCount} × ${pteOffRimRate})</span>
+                    <span className="font-medium">${(paymentPteOffRimCount * parseFloat(pteOffRimRate)).toFixed(2)}</span>
+                  </div>
+                )}
+                {paymentPteOnRimCount > 0 && parseFloat(pteOnRimRate) > 0 && (
+                  <div className="flex justify-between items-center text-sm">
+                    <span>Passenger On-Rim ({paymentPteOnRimCount} × ${pteOnRimRate})</span>
+                    <span className="font-medium">${(paymentPteOnRimCount * parseFloat(pteOnRimRate)).toFixed(2)}</span>
+                  </div>
+                )}
+                {paymentCommercialOffRimCount > 0 && parseFloat(commercialOffRimRate) > 0 && (
+                  <div className="flex justify-between items-center text-sm">
+                    <span>Commercial Off-Rim ({paymentCommercialOffRimCount} × ${commercialOffRimRate})</span>
+                    <span className="font-medium">${(paymentCommercialOffRimCount * parseFloat(commercialOffRimRate)).toFixed(2)}</span>
+                  </div>
+                )}
+                {paymentCommercialOnRimCount > 0 && parseFloat(commercialOnRimRate) > 0 && (
+                  <div className="flex justify-between items-center text-sm">
+                    <span>Commercial On-Rim ({paymentCommercialOnRimCount} × ${commercialOnRimRate})</span>
+                    <span className="font-medium">${(paymentCommercialOnRimCount * parseFloat(commercialOnRimRate)).toFixed(2)}</span>
+                  </div>
+                )}
+                {paymentOtrTotalCount > 0 && parseFloat(otrRate) > 0 && (
+                  <div className="flex justify-between items-center text-sm">
+                    <span>OTR/Tractor ({paymentOtrTotalCount} × ${otrRate})</span>
+                    <span className="font-medium">${(paymentOtrTotalCount * parseFloat(otrRate)).toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="pt-3 border-t">
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-semibold">Total Amount:</span>
+                    <span className="text-2xl font-bold text-primary">${calculatedTotal.toFixed(2)}</span>
                   </div>
                 </div>
-              )}
-
-              {pteOnRimCount > 0 && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    Passenger On-Rim Rate ({pteOnRimCount} tires)
-                  </label>
-                  <Select value={pteOnRimRate} onValueChange={setPteOnRimRate}>
-                    <SelectTrigger className="bg-background">
-                      <SelectValue placeholder="Select rate" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background z-50">
-                      {PRESET_RATES.passengerOnRim.map((rate) => (
-                        <SelectItem key={rate} value={rate}>
-                          ${rate} per tire
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">or</span>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="Enter custom rate"
-                      value={pteOnRimRate}
-                      onChange={(e) => setPteOnRimRate(e.target.value)}
-                      className="text-sm"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {commercialOffRimCount > 0 && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    Commercial Off-Rim Rate ({commercialOffRimCount} tires)
-                  </label>
-                  <Select value={commercialOffRimRate} onValueChange={setCommercialOffRimRate}>
-                    <SelectTrigger className="bg-background">
-                      <SelectValue placeholder="Select rate" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background z-50">
-                      {PRESET_RATES.commercialOffRim.map((rate) => (
-                        <SelectItem key={rate} value={rate}>
-                          ${rate} per tire
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">or</span>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="Enter custom rate"
-                      value={commercialOffRimRate}
-                      onChange={(e) => setCommercialOffRimRate(e.target.value)}
-                      className="text-sm"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {commercialOnRimCount > 0 && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    Commercial On-Rim Rate ({commercialOnRimCount} tires)
-                  </label>
-                  <Select value={commercialOnRimRate} onValueChange={setCommercialOnRimRate}>
-                    <SelectTrigger className="bg-background">
-                      <SelectValue placeholder="Select rate" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background z-50">
-                      {PRESET_RATES.commercialOnRim.map((rate) => (
-                        <SelectItem key={rate} value={rate}>
-                          ${rate} per tire
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">or</span>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="Enter custom rate"
-                      value={commercialOnRimRate}
-                      onChange={(e) => setCommercialOnRimRate(e.target.value)}
-                      className="text-sm"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {otrTotalCount > 0 && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    OTR/Tractor Tire Rate ({otrTotalCount} tires)
-                  </label>
-                  <Select value={otrRate} onValueChange={setOtrRate}>
-                    <SelectTrigger className="bg-background">
-                      <SelectValue placeholder="Select rate" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background z-50">
-                      {PRESET_RATES.otr.map((rate) => (
-                        <SelectItem key={rate} value={rate}>
-                          ${rate} per tire
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">or</span>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="Enter custom rate"
-                      value={otrRate}
-                      onChange={(e) => setOtrRate(e.target.value)}
-                      className="text-sm"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {calculatedTotal > 0 && (
-                <div className="bg-primary/10 p-4 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Total Amount:</span>
-                    <span className="text-2xl font-bold">${calculatedTotal.toFixed(2)}</span>
-                  </div>
-                </div>
-              )}
-            </div>
+              </CardContent>
+            </Card>
 
             {/* Offline payment option */}
             {calculatedTotal > 0 && (
