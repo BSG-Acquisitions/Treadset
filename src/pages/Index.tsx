@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CalendarDays, Clock, MapPin, Users, TrendingUp, Package, Truck, Recycle, BarChart3, CheckCircle2, User } from "lucide-react";
+import { LineChart, Line, Tooltip } from "recharts";
 import { usePickups } from "@/hooks/usePickups";
 import { useClients } from "@/hooks/useClients";
 import { useVehicles } from "@/hooks/useVehicles";
@@ -74,6 +75,36 @@ export default function Index() {
       
       if (error) throw error;
       return data || [];
+    },
+    enabled: !!user?.currentOrganization?.id,
+  });
+
+  // Fetch monthly stats for environmental impact chart
+  const { data: monthlyData = [] } = useQuery({
+    queryKey: ['monthly-stats', user?.currentOrganization?.id],
+    queryFn: async () => {
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      
+      const { data, error } = await supabase
+        .from('manifests')
+        .select('pte_on_rim, pte_off_rim, otr_count, tractor_count, created_at')
+        .eq('organization_id', user?.currentOrganization?.id)
+        .eq('status', 'COMPLETED')
+        .gte('created_at', sixMonthsAgo.toISOString());
+      
+      if (error) throw error;
+      
+      // Group by month
+      const byMonth: Record<string, number> = {};
+      (data || []).forEach((manifest) => {
+        const month = format(new Date(manifest.created_at), 'MMM yy');
+        const ptes = (manifest.pte_on_rim || 0) + (manifest.pte_off_rim || 0) + 
+                     (manifest.otr_count || 0) + (manifest.tractor_count || 0);
+        byMonth[month] = (byMonth[month] || 0) + ptes;
+      });
+      
+      return Object.entries(byMonth).map(([month, ptes]) => ({ month, ptes }));
     },
     enabled: !!user?.currentOrganization?.id,
   });
@@ -256,7 +287,39 @@ export default function Index() {
                   </div>
                   <div className="text-sm text-muted-foreground">Tires Recycled Today</div>
                 </div>
-                <div className="space-y-2">
+
+                {/* Monthly Trend Chart */}
+                <div className="h-24 -mx-2">
+                  <LineChart
+                    width={300}
+                    height={96}
+                    data={monthlyData?.slice(-6) || []}
+                    margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+                  >
+                    <Line 
+                      type="monotone" 
+                      dataKey="ptes" 
+                      stroke="hsl(var(--brand-recycling))" 
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                    <Tooltip 
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          return (
+                            <div className="bg-popover border border-border rounded-lg px-2 py-1 text-xs shadow-lg">
+                              <p className="font-semibold">{payload[0].payload.month}</p>
+                              <p className="text-muted-foreground">{payload[0].value} PTEs</p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                  </LineChart>
+                </div>
+
+                <div className="space-y-2 pt-2 border-t">
                   <div className="flex justify-between text-sm">
                     <span>CO₂ Saved</span>
                     <span className="font-medium">{totalTiresRecycled > 0 ? (totalTiresRecycled * 0.00427).toFixed(3) : '0'} tons</span>
