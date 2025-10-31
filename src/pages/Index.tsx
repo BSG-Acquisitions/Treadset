@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CalendarDays, Clock, MapPin, Users, TrendingUp, Package, Truck, Recycle, BarChart3, CheckCircle2, User } from "lucide-react";
-import { LineChart, Line, Tooltip } from "recharts";
+import { LineChart, Line, BarChart, Bar, Tooltip, XAxis, YAxis } from "recharts";
 import { usePickups } from "@/hooks/usePickups";
 import { useClients } from "@/hooks/useClients";
 import { useVehicles } from "@/hooks/useVehicles";
@@ -105,6 +105,55 @@ export default function Index() {
       });
       
       return Object.entries(byMonth).map(([month, ptes]) => ({ month, ptes }));
+    },
+    enabled: !!user?.currentOrganization?.id,
+  });
+
+  // Fetch this week's daily stats for PTE goal chart
+  const { data: weeklyData = [] } = useQuery({
+    queryKey: ['weekly-stats', user?.currentOrganization?.id],
+    queryFn: async () => {
+      // Get last 5 weekdays
+      const days = [];
+      const today = new Date();
+      
+      for (let i = 4; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        
+        // Skip weekends
+        const dayOfWeek = date.getDay();
+        if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+          days.push({
+            date: format(date, 'yyyy-MM-dd'),
+            label: format(date, 'EEE')
+          });
+        }
+      }
+      
+      // Fetch manifests for these days
+      const results = await Promise.all(
+        days.map(async ({ date, label }) => {
+          const { data, error } = await supabase
+            .from('manifests')
+            .select('pte_on_rim, pte_off_rim, otr_count, tractor_count')
+            .eq('organization_id', user?.currentOrganization?.id)
+            .eq('status', 'COMPLETED')
+            .gte('created_at', date)
+            .lt('created_at', format(addDays(new Date(date), 1), 'yyyy-MM-dd'));
+          
+          if (error) throw error;
+          
+          const ptes = (data || []).reduce((sum, m) => 
+            sum + (m.pte_on_rim || 0) + (m.pte_off_rim || 0) + 
+            (m.otr_count || 0) + (m.tractor_count || 0), 0
+          );
+          
+          return { day: label, ptes };
+        })
+      );
+      
+      return results;
     },
     enabled: !!user?.currentOrganization?.id,
   });
@@ -366,6 +415,45 @@ export default function Index() {
                         }
                       </div>
                     </div>
+                  </div>
+
+                  {/* Weekly Trend Chart */}
+                  <div className="pt-4 border-t">
+                    <div className="text-xs text-muted-foreground mb-2 text-center">This Week's Activity</div>
+                    <BarChart
+                      width={280}
+                      height={100}
+                      data={weeklyData}
+                      margin={{ top: 5, right: 10, left: 10, bottom: 5 }}
+                    >
+                      <XAxis 
+                        dataKey="day" 
+                        tick={{ fontSize: 10 }}
+                        stroke="hsl(var(--muted-foreground))"
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 10 }}
+                        stroke="hsl(var(--muted-foreground))"
+                      />
+                      <Tooltip 
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <div className="bg-popover border border-border rounded-lg px-2 py-1 text-xs shadow-lg">
+                                <p className="font-semibold">{payload[0].payload.day}</p>
+                                <p className="text-muted-foreground">{payload[0].value} PTEs</p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Bar 
+                        dataKey="ptes" 
+                        fill="hsl(var(--brand-recycling))" 
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </BarChart>
                   </div>
 
                   {/* Additional Metrics */}
