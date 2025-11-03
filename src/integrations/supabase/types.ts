@@ -2892,6 +2892,63 @@ export type Database = {
         }
         Relationships: []
       }
+      system_updates: {
+        Row: {
+          created_at: string
+          deployed_by: string | null
+          id: string
+          impacted_tables: string[] | null
+          module_name: string
+          notes: string | null
+          organization_id: string
+          status: string
+          test_results: Json | null
+          timestamp: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deployed_by?: string | null
+          id?: string
+          impacted_tables?: string[] | null
+          module_name: string
+          notes?: string | null
+          organization_id: string
+          status: string
+          test_results?: Json | null
+          timestamp?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deployed_by?: string | null
+          id?: string
+          impacted_tables?: string[] | null
+          module_name?: string
+          notes?: string | null
+          organization_id?: string
+          status?: string
+          test_results?: Json | null
+          timestamp?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_updates_deployed_by_fkey"
+            columns: ["deployed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_updates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_organization_roles: {
         Row: {
           created_at: string

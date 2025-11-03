@@ -16,7 +16,8 @@ import {
   Recycle,
   LogOut,
   Plus,
-  LayoutDashboard
+  LayoutDashboard,
+  Rocket
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -124,6 +125,7 @@ export function AppSidebar() {
     { id: 'integrations', label: 'Integrations', icon: CreditCard, path: '/integrations', roles: ['admin'] as const },
     { id: 'signatures', label: 'Signatures', icon: PenTool, path: '/receiver-signatures', roles: ['admin', 'ops_manager'] as const },
     { id: 'receivers', label: 'Receivers', icon: Building, path: '/receivers', roles: ['admin', 'ops_manager'] as const },
+    { id: 'deployment', label: 'Deployment', icon: Rocket, path: '/deployment', roles: ['admin'] as const },
   ];
 
   // Super admin (creator) sees everything - no other user has this privilege

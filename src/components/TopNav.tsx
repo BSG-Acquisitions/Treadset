@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSandboxMode } from '@/contexts/SandboxModeContext';
 import { Link, useLocation } from 'react-router-dom';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -33,6 +34,7 @@ interface TopNavProps {
 
 export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
   const { user, signOut, hasAnyRole } = useAuth();
+  const { isSandboxMode } = useSandboxMode();
   const location = useLocation();
   const { notifications, unreadCount, markAsRead, markAllAsRead, isMarkingAllAsRead } = useNotifications();
   const analyzePatterns = useAnalyzePickupPatterns();
@@ -89,6 +91,13 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
               className="flex-shrink-0"
             />
           </Link>
+          
+          {isSandboxMode && (
+            <Badge variant="destructive" className="flex items-center gap-1 animate-pulse">
+              <Bell className="h-3 w-3" />
+              TEST MODE
+            </Badge>
+          )}
         </div>
 
         {/* Center - Live Search */}

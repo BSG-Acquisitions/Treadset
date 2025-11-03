@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { SandboxModeProvider } from "@/contexts/SandboxModeContext";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/AppLayout";
@@ -53,6 +54,7 @@ import DriverPaymentSuccess from "./pages/driver/PaymentSuccess";
 import DriverPaymentCancelled from "./pages/driver/PaymentCancelled";
 import Manifests from "./pages/Manifests";
 import BackfillManifestPdfs from "./pages/BackfillManifestPdfs";
+import DeploymentDashboard from "./pages/DeploymentDashboard";
 
 const queryClient = new QueryClient();
 
@@ -61,9 +63,10 @@ const App = () => (
     <ThemeProvider>
       <TooltipProvider>
         <AuthProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
+          <SandboxModeProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
           <Routes>
             {/* Public Routes - No Authentication Required */}
             <Route path="/public-book" element={<PublicBook />} />
@@ -292,10 +295,18 @@ const App = () => (
             <Route path="/hauler-rates" element={<ProtectedRoute roles={['admin', 'ops_manager']}><HaulerRates /></ProtectedRoute>} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
             <Route path="/payment-cancelled" element={<PaymentCancelled />} />
+            <Route path="/deployment" element={
+              <ProtectedRoute roles={['admin']}>
+                <AppLayout>
+                  <DeploymentDashboard />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
+          </SandboxModeProvider>
       </AuthProvider>
     </TooltipProvider>
     </ThemeProvider>
