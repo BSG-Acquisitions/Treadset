@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Bell, Menu, User, Settings, Package, BarChart3, UserCheck, Home, Users, MapPin, DollarSign, CreditCard, PenTool, Truck, Building, FileText, PackageOpen } from 'lucide-react';
+import { Search, Bell, Menu, User, Settings, Package, BarChart3, UserCheck, Home, Users, MapPin, DollarSign, CreditCard, PenTool, Truck, Building, FileText, PackageOpen, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -22,6 +22,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TreadSetLogo } from '@/components/TreadSetLogo';
 import { OrganizationSwitcher } from '@/components/auth/OrganizationSwitcher';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useAnalyzePickupPatterns } from '@/hooks/usePickupPatterns';
 import { formatDistanceToNow } from 'date-fns';
 import { LiveSearch } from '@/components/LiveSearch';
 
@@ -34,6 +35,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
   const { user, signOut, hasAnyRole } = useAuth();
   const location = useLocation();
   const { notifications, unreadCount, markAsRead, markAllAsRead, isMarkingAllAsRead } = useNotifications();
+  const analyzePatterns = useAnalyzePickupPatterns();
 
   const getCurrentTab = () => {
     if (location.pathname === '/') return 'dashboard';
@@ -230,6 +232,16 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                     <FileText className="h-4 w-4" />
                     Manifests
                   </Link>
+                </DropdownMenuItem>
+              )}
+              {hasAnyRole(['admin', 'ops_manager', 'sales']) && (
+                <DropdownMenuItem 
+                  onClick={() => analyzePatterns.mutate()}
+                  disabled={analyzePatterns.isPending}
+                  className="flex items-center gap-2"
+                >
+                  <TrendingUp className="h-4 w-4" />
+                  {analyzePatterns.isPending ? 'Analyzing...' : 'Analyze Pickup Patterns'}
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />

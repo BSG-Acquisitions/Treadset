@@ -15,7 +15,7 @@ export const useClientWorkflows = (clientId?: string) => {
         .from('client_workflows')
         .select(`
           *,
-          clients(company_name, email)
+          clients(company_name, email, phone)
         `);
       
       if (clientId) {
@@ -28,7 +28,7 @@ export const useClientWorkflows = (clientId?: string) => {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!clientId
+    enabled: clientId ? true : true // Always enabled now
   });
 };
 
