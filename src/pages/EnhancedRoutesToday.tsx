@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { FixGeocodingButton } from "@/components/FixGeocodingButton";
 import { useAssignments, usePickups, useDeletePickup } from "@/hooks/usePickups";
 import { useVehicles } from "@/hooks/useVehicles";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +8,8 @@ import { CompletePickupDialog } from "@/components/CompletePickupDialog";
 import { MovePickupDialog } from "@/components/MovePickupDialog";
 import { DriverAssignmentDropdown } from "@/components/DriverAssignmentDropdown";
 import { VehicleManagementDialog } from "@/components/VehicleManagementDialog";
+import { SchedulePickupDialog } from "@/components/SchedulePickupDialog";
+import { useGeocodeLocations } from "@/hooks/useGeocodeLocations";
 import { AddressValidationDialog } from "@/components/AddressValidationDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -41,7 +42,9 @@ import {
   MoreVertical,
   Move,
   Building,
-  Trash2
+  Trash2,
+  Settings,
+  CalendarPlus
 } from "lucide-react";
 
 import { 
@@ -61,7 +64,6 @@ import { motion } from "framer-motion";
 import { WeeklyPickupsGrid } from "@/components/routes/WeeklyPickupsGrid";
 
 import { LocationGeocodeDialog } from "@/components/locations/LocationGeocodeDialog";
-import { useGeocodeLocations } from "@/hooks/useGeocodeLocations";
 
 interface OptimizedStop {
   id: string;
@@ -110,6 +112,8 @@ export default function EnhancedRoutesToday() {
   const [aiAnalysis, setAiAnalysis] = useState<any>(null);
   const [isApplyingAI, setIsApplyingAI] = useState(false);
   const [originalEfficiency, setOriginalEfficiency] = useState<number | null>(null);
+  const [isFixingGeocoding, setIsFixingGeocoding] = useState(false);
+  const [geocodeDialogOpen, setGeocodeDialogOpen] = useState(false);
 
   // Get 7 days starting from current week
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeek, i));
@@ -174,6 +178,37 @@ export default function EnhancedRoutesToday() {
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const day = String(today.getDate()).padStart(2, '0');
     setActiveDay(`${year}-${month}-${day}`);
+  };
+
+  const fixGeocodingIssues = async () => {
+    setIsFixingGeocoding(true);
+    try {
+      toast({
+        title: "Starting geocoding fix",
+        description: "This may take a few minutes...",
+      });
+      
+      const { data, error } = await supabase.functions.invoke('fix-geocoding');
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: data.message || 'Geocoding fix completed successfully',
+      });
+      
+      // Reload the page to see updated routes
+      setTimeout(() => window.location.reload(), 2000);
+    } catch (error: any) {
+      console.error('Fix geocoding error:', error);
+      toast({
+        title: "Error",
+        description: error.message || 'Failed to fix geocoding issues',
+        variant: "destructive",
+      });
+    } finally {
+      setIsFixingGeocoding(false);
+    }
   };
 
   const fixDetroitMisGeocodes = async () => {
@@ -620,8 +655,15 @@ export default function EnhancedRoutesToday() {
                 </Button>
               </div>
               
-              <FixGeocodingButton />
-              <LocationGeocodeDialog />
+              <SchedulePickupDialog
+                trigger={
+                  <Button variant="outline" size="sm">
+                    <CalendarPlus className="h-4 w-4 mr-2" />
+                    Schedule Pickup
+                  </Button>
+                }
+              />
+              
               <VehicleManagementDialog 
                 trigger={
                   <Button variant="outline" size="sm">
@@ -641,6 +683,24 @@ export default function EnhancedRoutesToday() {
                   <><Route className="h-4 w-4 mr-2" /> Optimize</>
                 )}
               </Button>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={fixGeocodingIssues} disabled={isFixingGeocoding}>
+                    <MapPin className="h-4 w-4 mr-2" />
+                    {isFixingGeocoding ? "Fixing Geocoding..." : "Fix Geocoding"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setGeocodeDialogOpen(true)}>
+                    <MapPin className="h-4 w-4 mr-2" />
+                    Geocode Locations
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
           </div>
@@ -1188,6 +1248,11 @@ export default function EnhancedRoutesToday() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        
+        <LocationGeocodeDialog 
+          open={geocodeDialogOpen} 
+          onOpenChange={setGeocodeDialogOpen} 
+        />
         </div>
       </main>
     </div>

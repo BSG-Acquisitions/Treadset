@@ -14,10 +14,14 @@ import { useGeocodeLocations } from '@/hooks/useGeocodeLocations';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-export function LocationGeocodeDialog() {
-  const [open, setOpen] = useState(false);
+export function LocationGeocodeDialog({ open, onOpenChange }: { open?: boolean; onOpenChange?: (open: boolean) => void }) {
+  const [internalOpen, setInternalOpen] = useState(false);
   const { data: locations, isLoading, refetch } = useAllLocations();
   const { geocodeLocation, geocodeAllLocations, isLoading: isGeocoding } = useGeocodeLocations();
+
+  // Use external state if provided, otherwise use internal state
+  const isOpen = open !== undefined ? open : internalOpen;
+  const setIsOpen = onOpenChange || setInternalOpen;
 
   const locationsWithoutCoords = locations?.filter(
     (loc) => !loc.latitude || !loc.longitude
@@ -38,13 +42,15 @@ export function LocationGeocodeDialog() {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <MapPin className="h-4 w-4 mr-2" />
-          Geocode Locations
-        </Button>
-      </DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      {!open && (
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm">
+            <MapPin className="h-4 w-4 mr-2" />
+            Geocode Locations
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-2xl max-h-[80vh]">
         <DialogHeader>
           <DialogTitle>Location Geocoding</DialogTitle>
