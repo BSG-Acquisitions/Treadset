@@ -3276,6 +3276,8 @@ export type Database = {
       get_live_client_analytics: {
         Args: { p_organization_id: string; p_year?: number }
         Returns: {
+          avg_ptes_per_pickup: number
+          avg_revenue_per_pickup: number
           monthly_data: Json
           top_clients: Json
           total_clients: number

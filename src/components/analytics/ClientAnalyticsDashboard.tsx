@@ -189,17 +189,13 @@ export function ClientAnalyticsDashboard() {
                 <div className="flex justify-between items-center">
                   <div className="text-sm text-muted-foreground">Revenue per Pickup</div>
                   <div className="text-2xl font-bold">
-                    {analytics.total_pickups > 0 
-                      ? formatCurrency(analytics.total_revenue / analytics.total_pickups)
-                      : formatCurrency(0)}
+                    {formatCurrency(analytics.avg_revenue_per_pickup || 0)}
                   </div>
                 </div>
                 <div className="flex justify-between items-center">
-                  <div className="text-sm text-muted-foreground">Revenue per Tire</div>
+                  <div className="text-sm text-muted-foreground">PTEs per Pickup</div>
                   <div className="text-2xl font-bold">
-                    {totalTires > 0 
-                      ? formatCurrency(analytics.total_revenue / totalTires)
-                      : formatCurrency(0)}
+                    {formatNumber(Math.round(analytics.avg_ptes_per_pickup || 0))}
                   </div>
                 </div>
               </CardContent>

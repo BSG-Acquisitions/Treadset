@@ -25,6 +25,8 @@ interface LiveAnalytics {
   total_otr: number;
   total_tractor: number;
   total_weight_tons: number;
+  avg_revenue_per_pickup: number;
+  avg_ptes_per_pickup: number;
   monthly_data: MonthlyData[];
   top_clients: TopClient[];
 }
@@ -59,6 +61,8 @@ export const useLiveClientAnalytics = (year: number = new Date().getFullYear()) 
           total_otr: 0,
           total_tractor: 0,
           total_weight_tons: 0,
+          avg_revenue_per_pickup: 0,
+          avg_ptes_per_pickup: 0,
           monthly_data: [],
           top_clients: []
         };
@@ -74,6 +78,8 @@ export const useLiveClientAnalytics = (year: number = new Date().getFullYear()) 
         total_otr: Number(result.total_otr || 0),
         total_tractor: Number(result.total_tractor || 0),
         total_weight_tons: Number(result.total_weight_tons || 0),
+        avg_revenue_per_pickup: Number(result.avg_revenue_per_pickup || 0),
+        avg_ptes_per_pickup: Number(result.avg_ptes_per_pickup || 0),
         monthly_data: (result.monthly_data as unknown as MonthlyData[]) || [],
         top_clients: (result.top_clients as unknown as TopClient[]) || []
       };
