@@ -691,17 +691,22 @@ export default function Index() {
               </div>
               <RowCarousel
                 title=""
-                items={todayPickups.map(pickup => ({
-                  id: pickup.id,
-                  name: pickup.client?.company_name || 'Unknown Client',
-                  capacity: pickup.pte_count || 0,
-                  lastPickup: pickup.pickup_date,
-                  revenue: pickup.computed_revenue || 0,
-                  pickupsThisMonth: 0, // Will be populated from client data if available
-                  status: pickup.status === 'completed' ? 'active' : 
-                   pickup.status === 'overdue' ? 'overdue' : 'scheduled',
-                  address: pickup.location?.address || 'Detroit Metro Area'
-                }))}
+                items={todayPickups.map(pickup => {
+                  // Find the actual client data for this pickup
+                  const clientData = clients.find(c => c.id === pickup.client_id);
+                  
+                  return {
+                    id: pickup.client_id, // Use client_id, not pickup.id
+                    name: pickup.client?.company_name || 'Unknown Client',
+                    capacity: pickup.pte_count || 0,
+                    lastPickup: clientData?.last_pickup_at || pickup.pickup_date,
+                    revenue: clientData?.lifetime_revenue || pickup.computed_revenue || 0,
+                    pickupsThisMonth: clientData?.pickups_count || 0,
+                    status: pickup.status === 'completed' ? 'active' : 
+                     pickup.status === 'overdue' ? 'overdue' : 'scheduled',
+                    address: pickup.location?.address || 'Detroit Metro Area'
+                  };
+                })}
               />
             </CardContent>
           </Card>
