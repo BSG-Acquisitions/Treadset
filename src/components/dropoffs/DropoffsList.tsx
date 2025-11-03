@@ -31,6 +31,8 @@ import {
 import { format, isWithinInterval, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays } from "date-fns";
 import type { Database } from "@/integrations/supabase/types";
 import { useGenerateDropoffManifest } from "@/hooks/useDropoffManifest";
+import { EditDropoffDialog } from "./EditDropoffDialog";
+import { useState } from "react";
 
 type Dropoff = Database["public"]["Tables"]["dropoffs"]["Row"] & {
   dropoff_customers?: {
@@ -57,6 +59,7 @@ interface DropopffsListProps {
 
 export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListProps) => {
   const generateManifest = useGenerateDropoffManifest();
+  const [editDropoff, setEditDropoff] = useState<Dropoff | null>(null);
   
   const filteredDropoffs = dropoffs.filter(dropoff => 
     dropoff.dropoff_customers?.contact_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -273,7 +276,7 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setEditDropoff(dropoff)}>
                       <Edit className="h-4 w-4 mr-2" />
                       Edit Drop-off
                     </DropdownMenuItem>
@@ -304,8 +307,9 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
   };
 
   return (
-    <div className="space-y-4">
-      {groupedDropoffs.map(([period, dropoffList]) => (
+    <>
+      <div className="space-y-4">
+        {groupedDropoffs.map(([period, dropoffList]) => (
         <Collapsible key={period} defaultOpen>
           <div className="rounded-md border">
             <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-accent transition-colors">
@@ -326,6 +330,13 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
           </div>
         </Collapsible>
       ))}
-    </div>
+      </div>
+
+      <EditDropoffDialog 
+        open={!!editDropoff}
+        onOpenChange={(open) => !open && setEditDropoff(null)}
+        dropoff={editDropoff}
+      />
+    </>
   );
 };

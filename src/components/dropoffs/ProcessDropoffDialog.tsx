@@ -215,7 +215,10 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
             <Label className="text-base font-medium">Tire Counts</Label>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="pte">PTE Count</Label>
+                <Label htmlFor="pte" className="flex items-center gap-2">
+                  PTE Count
+                  <span className="text-xs text-muted-foreground font-normal">(Passenger)</span>
+                </Label>
                 <Input
                   id="pte"
                   type="number"
@@ -223,13 +226,16 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
                   onChange={(e) => setPteCount(e.target.value)}
                   placeholder="0"
                 />
-                <div className="text-sm text-muted-foreground">
-                  ${ptePrice}/tire
+                <div className="text-xs text-muted-foreground">
+                  ${ptePrice}/tire • Car/Light Truck
                 </div>
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="otr">OTR Count</Label>
+                <Label htmlFor="otr" className="flex items-center gap-2">
+                  OTR Count
+                  <span className="text-xs text-muted-foreground font-normal">(Off-Road)</span>
+                </Label>
                 <Input
                   id="otr"
                   type="number"
@@ -237,13 +243,16 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
                   onChange={(e) => setOtrCount(e.target.value)}
                   placeholder="0"
                 />
-                <div className="text-sm text-muted-foreground">
-                  ${otrPrice}/tire
+                <div className="text-xs text-muted-foreground">
+                  ${otrPrice}/tire • Heavy Equipment
                 </div>
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="tractor">Tractor Count</Label>
+                <Label htmlFor="tractor" className="flex items-center gap-2">
+                  Semi Tires
+                  <span className="text-xs text-muted-foreground font-normal">(Tractor)</span>
+                </Label>
                 <Input
                   id="tractor"
                   type="number"
@@ -251,8 +260,8 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
                   onChange={(e) => setTractorCount(e.target.value)}
                   placeholder="0"
                 />
-                <div className="text-sm text-muted-foreground">
-                  ${tractorPrice}/tire
+                <div className="text-xs text-muted-foreground">
+                  ${tractorPrice}/tire • 18-Wheeler/Semi
                 </div>
               </div>
             </div>
