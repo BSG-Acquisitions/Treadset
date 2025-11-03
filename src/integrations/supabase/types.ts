@@ -526,6 +526,66 @@ export type Database = {
         }
         Relationships: []
       }
+      data_quality_flags: {
+        Row: {
+          created_at: string
+          detected_at: string
+          id: string
+          issue: string
+          notes: string | null
+          organization_id: string
+          record_id: string
+          record_type: string
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          detected_at?: string
+          id?: string
+          issue: string
+          notes?: string | null
+          organization_id: string
+          record_id: string
+          record_type: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          detected_at?: string
+          id?: string
+          issue?: string
+          notes?: string | null
+          organization_id?: string
+          record_id?: string
+          record_type?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_quality_flags_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "data_quality_flags_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dropoff_customers: {
         Row: {
           city: string | null

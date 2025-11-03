@@ -57,6 +57,7 @@ import BackfillManifestPdfs from "./pages/BackfillManifestPdfs";
 import DeploymentDashboard from "./pages/DeploymentDashboard";
 import NotificationTest from "./pages/NotificationTest";
 import ManifestRemindersTest from "./pages/ManifestRemindersTest";
+import DataQuality from "./pages/DataQuality";
 
 const queryClient = new QueryClient();
 
@@ -315,6 +316,13 @@ const App = () => (
               <ProtectedRoute roles={['admin', 'receptionist']}>
                 <AppLayout>
                   <ManifestRemindersTest />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/data-quality" element={
+              <ProtectedRoute roles={['admin']}>
+                <AppLayout>
+                  <DataQuality />
                 </AppLayout>
               </ProtectedRoute>
             } />

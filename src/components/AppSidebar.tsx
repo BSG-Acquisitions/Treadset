@@ -17,7 +17,8 @@ import {
   LogOut,
   Plus,
   LayoutDashboard,
-  Rocket
+  Rocket,
+  AlertTriangle
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -122,6 +123,7 @@ export function AppSidebar() {
 
   const adminItems = [
     { id: 'settings', label: 'Settings', icon: Settings, path: '/settings', roles: ['admin', 'ops_manager'] as const },
+    { id: 'data-quality', label: 'Data Quality', icon: AlertTriangle, path: '/data-quality', roles: ['admin'] as const },
     { id: 'integrations', label: 'Integrations', icon: CreditCard, path: '/integrations', roles: ['admin'] as const },
     { id: 'signatures', label: 'Signatures', icon: PenTool, path: '/receiver-signatures', roles: ['admin', 'ops_manager'] as const },
     { id: 'receivers', label: 'Receivers', icon: Building, path: '/receivers', roles: ['admin', 'ops_manager'] as const },
