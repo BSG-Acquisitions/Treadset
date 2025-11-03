@@ -165,6 +165,77 @@ export type Database = {
           },
         ]
       }
+      client_health_scores: {
+        Row: {
+          avg_revenue_per_pickup: number | null
+          client_id: string
+          created_at: string
+          days_since_last_pickup: number | null
+          id: string
+          last_calculated_at: string
+          organization_id: string
+          risk_level: string | null
+          score: number
+          total_pickups: number | null
+          updated_at: string
+        }
+        Insert: {
+          avg_revenue_per_pickup?: number | null
+          client_id: string
+          created_at?: string
+          days_since_last_pickup?: number | null
+          id?: string
+          last_calculated_at?: string
+          organization_id: string
+          risk_level?: string | null
+          score: number
+          total_pickups?: number | null
+          updated_at?: string
+        }
+        Update: {
+          avg_revenue_per_pickup?: number | null
+          client_id?: string
+          created_at?: string
+          days_since_last_pickup?: number | null
+          id?: string
+          last_calculated_at?: string
+          organization_id?: string
+          risk_level?: string | null
+          score?: number
+          total_pickups?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_health_scores_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_health_scores_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_monthly_entity_rollup"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "client_health_scores_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_revenue_summary"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "client_health_scores_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_pricing_overrides: {
         Row: {
           client_id: string
@@ -1423,6 +1494,67 @@ export type Database = {
           },
         ]
       }
+      manifest_alerts_beta: {
+        Row: {
+          alert_type: string
+          created_at: string
+          days_overdue: number | null
+          id: string
+          manifest_id: string
+          organization_id: string
+          priority: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          alert_type: string
+          created_at?: string
+          days_overdue?: number | null
+          id?: string
+          manifest_id: string
+          organization_id: string
+          priority?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string
+          days_overdue?: number | null
+          id?: string
+          manifest_id?: string
+          organization_id?: string
+          priority?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manifest_alerts_beta_manifest_id_fkey"
+            columns: ["manifest_id"]
+            isOneToOne: false
+            referencedRelation: "manifests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manifest_alerts_beta_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manifest_alerts_beta_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       manifests: {
         Row: {
           acroform_pdf_path: string | null
@@ -1753,6 +1885,65 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      notifications_beta: {
+        Row: {
+          action_link: string | null
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          organization_id: string
+          priority: string | null
+          related_id: string | null
+          related_type: string | null
+          role_visibility: string[] | null
+          title: string
+          type: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          action_link?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          organization_id: string
+          priority?: string | null
+          related_id?: string | null
+          related_type?: string | null
+          role_visibility?: string[] | null
+          title: string
+          type?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          action_link?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          organization_id?: string
+          priority?: string | null
+          related_id?: string | null
+          related_type?: string | null
+          role_visibility?: string[] | null
+          title?: string
+          type?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_beta_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       organization_settings: {
         Row: {

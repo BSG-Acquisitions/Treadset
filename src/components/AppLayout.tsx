@@ -2,7 +2,6 @@ import { ReactNode } from 'react';
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { TopNav } from "@/components/TopNav";
-import { SandboxModeBanner } from "@/components/SandboxModeBanner";
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -43,9 +42,6 @@ export function AppLayout({ children }: AppLayoutProps) {
           </main>
         </div>
       </div>
-      
-      {/* Floating TEST MODE indicator */}
-      <SandboxModeBanner />
     </SidebarProvider>
   );
 }

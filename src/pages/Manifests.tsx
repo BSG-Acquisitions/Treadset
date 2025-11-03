@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useManifests } from '@/hooks/useManifests';
 import { useClient } from '@/hooks/useClients';
+import { ManifestAlertsList } from '@/components/ManifestAlertsList';
 import { format } from 'date-fns';
 import { FileText, Clock, CheckCircle, CreditCard, ArrowLeft, MapPin, User, Calendar, Receipt, Search, X } from 'lucide-react';
 import { ManifestPDFControls } from '@/components/ManifestPDFControls';
@@ -126,6 +127,8 @@ export default function Manifests() {
             </div>
           </div>
         </div>
+
+        <ManifestAlertsList />
 
         {/* Manifests List */}
         <Card>

@@ -4,10 +4,12 @@ import { useClient } from "@/hooks/useClients";
 import { useLocations } from "@/hooks/useLocations";
 import { useInvoices, useCompletedPickups } from "@/hooks/useFinance";
 import { usePaymentHistory } from "@/hooks/usePaymentHistory";
+import { useClientHealthScores } from "@/hooks/useClientHealthScores";
 import { CreateInvoiceDialog } from "@/components/finance/CreateInvoiceDialog";
 import { RecordPaymentDialog } from "@/components/finance/RecordPaymentDialog";
 import { PaymentDialog } from "@/components/PaymentDialog";
 import { SchedulePickupDialog } from "@/components/SchedulePickupDialog";
+import { ClientHealthBadge } from "@/components/ClientHealthBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -22,6 +24,8 @@ export default function ClientDetail() {
   const { data: invoices = [] } = useInvoices(id);
   const { data: completedPickups = [] } = useCompletedPickups(id);
   const { data: paymentHistory = [] } = usePaymentHistory(id!);
+  const { healthScores } = useClientHealthScores(id);
+  const clientHealth = healthScores.find(h => h.client_id === id);
 
   useEffect(() => {
     document.title = client ? `${client.company_name} – Client – TreadSet` : "Client – TreadSet";
@@ -54,7 +58,15 @@ export default function ClientDetail() {
         <div className="mb-8">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">{client.company_name}</h1>
+              <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
+                {client.company_name}
+                {clientHealth && (
+                  <ClientHealthBadge 
+                    score={clientHealth.score} 
+                    riskLevel={clientHealth.risk_level}
+                  />
+                )}
+              </h1>
               <p className="text-muted-foreground">
                 Last pickup: {client.last_pickup_at ? new Date(client.last_pickup_at).toLocaleDateString() : 'Never'}
               </p>

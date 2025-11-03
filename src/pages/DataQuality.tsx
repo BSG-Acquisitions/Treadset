@@ -114,7 +114,10 @@ const DataQuality = () => {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Data Quality Dashboard</h1>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            Data Quality Dashboard
+            <Badge variant="outline" className="text-xs">Beta</Badge>
+          </h1>
           <p className="text-muted-foreground">
             Monitor and review data quality issues across your organization
           </p>

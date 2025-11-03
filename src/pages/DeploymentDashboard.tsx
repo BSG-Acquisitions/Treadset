@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useSystemUpdates } from '@/hooks/useSystemUpdates';
-import { useSandboxMode } from '@/contexts/SandboxModeContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -28,7 +27,6 @@ import { format } from 'date-fns';
 
 const DeploymentDashboard = () => {
   const { updates, isLoading, updateStatus } = useSystemUpdates();
-  const { isSandboxMode, toggleSandboxMode } = useSandboxMode();
   const [showDeployDialog, setShowDeployDialog] = useState(false);
 
   const verifiedModules = updates.filter(u => u.status === 'verified');
@@ -45,11 +43,6 @@ const DeploymentDashboard = () => {
           status: 'live',
           notes: `Deployed at ${new Date().toISOString()}`,
         });
-      }
-
-      // Exit sandbox mode
-      if (isSandboxMode) {
-        toggleSandboxMode();
       }
 
       toast.success('All verified modules deployed successfully!');
@@ -108,12 +101,6 @@ const DeploymentDashboard = () => {
           </p>
         </div>
         <div className="flex gap-3">
-          <Button 
-            variant={isSandboxMode ? "default" : "outline"}
-            onClick={toggleSandboxMode}
-          >
-            {isSandboxMode ? '✓ Sandbox Mode' : 'Production Mode'}
-          </Button>
           {verifiedModules.length > 0 && (
             <Button 
               onClick={() => setShowDeployDialog(true)}

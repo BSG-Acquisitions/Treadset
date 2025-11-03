@@ -4,7 +4,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { SandboxModeProvider } from "@/contexts/SandboxModeContext";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/AppLayout";
@@ -58,7 +57,6 @@ import DeploymentDashboard from "./pages/DeploymentDashboard";
 import NotificationTest from "./pages/NotificationTest";
 import ManifestRemindersTest from "./pages/ManifestRemindersTest";
 import DataQuality from "./pages/DataQuality";
-import SandboxOverview from "./pages/SandboxOverview";
 
 const queryClient = new QueryClient();
 
@@ -67,7 +65,6 @@ const App = () => (
     <ThemeProvider>
       <TooltipProvider>
         <AuthProvider>
-          <SandboxModeProvider>
             <Toaster />
             <Sonner />
             <BrowserRouter>
@@ -299,13 +296,6 @@ const App = () => (
             <Route path="/hauler-rates" element={<ProtectedRoute roles={['admin', 'ops_manager']}><HaulerRates /></ProtectedRoute>} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
             <Route path="/payment-cancelled" element={<PaymentCancelled />} />
-            <Route path="/sandbox" element={
-              <ProtectedRoute roles={['admin']}>
-                <AppLayout>
-                  <SandboxOverview />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
             <Route path="/deployment" element={
               <ProtectedRoute roles={['admin']}>
                 <AppLayout>
@@ -338,7 +328,6 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
-          </SandboxModeProvider>
       </AuthProvider>
     </TooltipProvider>
     </ThemeProvider>
