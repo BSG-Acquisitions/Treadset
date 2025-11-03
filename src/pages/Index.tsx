@@ -95,45 +95,56 @@ export default function Index() {
       
       if (error) throw error;
       
-      // Group by month
-      const byMonth: Record<string, number> = {};
+      // Group by month with date tracking for sorting
+      const byMonth: Record<string, { ptes: number; date: Date }> = {};
       (data || []).forEach((manifest) => {
-        const month = format(new Date(manifest.created_at), 'MMM yy');
+        const manifestDate = new Date(manifest.created_at);
+        const monthKey = format(manifestDate, 'MMM yy');
         const ptes = (manifest.pte_on_rim || 0) + (manifest.pte_off_rim || 0) + 
                      (manifest.otr_count || 0) + (manifest.tractor_count || 0);
-        byMonth[month] = (byMonth[month] || 0) + ptes;
+        
+        if (!byMonth[monthKey]) {
+          byMonth[monthKey] = { ptes: 0, date: manifestDate };
+        }
+        byMonth[monthKey].ptes += ptes;
       });
       
-      return Object.entries(byMonth).map(([month, ptes]) => ({ month, ptes }));
+      // Convert to array and sort chronologically (oldest to newest)
+      return Object.entries(byMonth)
+        .map(([month, data]) => ({ month, ptes: data.ptes, date: data.date }))
+        .sort((a, b) => a.date.getTime() - b.date.getTime())
+        .slice(-6) // Take last 6 months
+        .map(({ month, ptes }) => ({ month, ptes }));
     },
     enabled: !!user?.currentOrganization?.id,
   });
 
-  // Fetch this week's daily stats for PTE goal chart
+  // Fetch this week's daily stats for PTE goal chart (current week Mon-Fri only)
   const { data: weeklyData = [] } = useQuery({
     queryKey: ['weekly-stats', user?.currentOrganization?.id, format(new Date(), 'yyyy-MM-dd')],
     queryFn: async () => {
-      // Get last 5 weekdays (Mon-Fri)
-      const days = [];
       const today = new Date();
-      let daysAdded = 0;
-      let lookbackDays = 0;
+      const todayDay = today.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
       
-      // Go back up to 10 days to find 5 weekdays
-      while (daysAdded < 5 && lookbackDays < 10) {
-        const date = new Date(today);
-        date.setDate(date.getDate() - lookbackDays);
+      // Calculate Monday of current week
+      const daysFromMonday = todayDay === 0 ? 6 : todayDay - 1; // If Sunday, go back 6 days
+      const monday = new Date(today);
+      monday.setDate(today.getDate() - daysFromMonday);
+      
+      // Build array of weekdays from Monday up to today (or Friday, whichever comes first)
+      const days = [];
+      for (let i = 0; i < 5; i++) { // Mon-Fri
+        const date = new Date(monday);
+        date.setDate(monday.getDate() + i);
         
-        const dayOfWeek = date.getDay();
-        // Only weekdays (Mon=1 to Fri=5)
-        if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-          days.unshift({
+        // Only include days up to today
+        if (date <= today) {
+          days.push({
             date: format(date, 'yyyy-MM-dd'),
-            label: format(date, 'EEE')
+            label: format(date, 'EEE'),
+            dateObj: date
           });
-          daysAdded++;
         }
-        lookbackDays++;
       }
       
       // Fetch data for each day
@@ -366,32 +377,33 @@ export default function Index() {
 
                 {/* Monthly Trend Chart */}
                 <div className="space-y-2">
-                  <div className="text-xs font-medium text-muted-foreground">6-Month Recycling Trend</div>
-                  <ResponsiveContainer width="100%" height={100}>
+                  <div className="text-xs font-medium text-muted-foreground">6-Month Recycling Trend (PTEs)</div>
+                  <ResponsiveContainer width="100%" height={140}>
                     <LineChart
-                      data={monthlyData?.slice(-6) || []}
-                      margin={{ top: 5, right: 10, left: 10, bottom: 20 }}
+                      data={monthlyData || []}
+                      margin={{ top: 10, right: 15, left: 0, bottom: 30 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
                       <XAxis 
                         dataKey="month" 
-                        tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                        tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                         angle={-45}
                         textAnchor="end"
-                        height={40}
+                        height={50}
+                        stroke="hsl(var(--border))"
                       />
                       <YAxis 
-                        tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                        label={{ value: 'PTEs', angle: -90, position: 'insideLeft', style: { fontSize: 10, fill: 'hsl(var(--muted-foreground))' } }}
-                        width={40}
+                        tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                        stroke="hsl(var(--border))"
+                        width={50}
                       />
                       <Line 
                         type="monotone" 
                         dataKey="ptes" 
                         stroke="hsl(var(--brand-recycling))" 
-                        strokeWidth={2.5}
-                        dot={{ fill: 'hsl(var(--brand-recycling))', r: 3 }}
-                        activeDot={{ r: 5 }}
+                        strokeWidth={3}
+                        dot={{ fill: 'hsl(var(--brand-recycling))', r: 4, strokeWidth: 2, stroke: 'hsl(var(--card))' }}
+                        activeDot={{ r: 6 }}
                       />
                       <Tooltip 
                         content={({ active, payload }) => {
@@ -399,7 +411,7 @@ export default function Index() {
                             return (
                               <div className="bg-popover border border-border rounded-lg px-3 py-2 shadow-lg">
                                 <p className="font-semibold text-sm">{payload[0].payload.month}</p>
-                                <p className="text-brand-recycling font-bold">{payload[0].value?.toLocaleString()} PTEs</p>
+                                <p className="text-brand-recycling font-bold text-base">{payload[0].value?.toLocaleString()} PTEs</p>
                               </div>
                             );
                           }
@@ -461,29 +473,36 @@ export default function Index() {
 
                   {/* Weekly Trend Chart */}
                   <div className="pt-4 border-t space-y-2">
-                    <div className="text-xs font-medium text-muted-foreground">This Week's Activity (Target: 2,600/day)</div>
-                    <ResponsiveContainer width="100%" height={120}>
+                    <div className="text-xs font-medium text-muted-foreground">This Week's Activity (Target: 2,600 PTEs/day)</div>
+                    <ResponsiveContainer width="100%" height={140}>
                       <BarChart
                         data={weeklyData}
-                        margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
+                        margin={{ top: 10, right: 15, left: 0, bottom: 5 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
                         <XAxis 
                           dataKey="day" 
-                          tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                          tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
                           stroke="hsl(var(--border))"
                         />
                         <YAxis 
-                          tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                          tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                           stroke="hsl(var(--border))"
-                          label={{ value: 'PTEs', angle: -90, position: 'insideLeft', style: { fontSize: 10, fill: 'hsl(var(--muted-foreground))' } }}
-                          width={35}
+                          width={50}
+                          domain={[0, 'dataMax']}
                         />
                         <ReferenceLine 
                           y={2600} 
                           stroke="hsl(var(--brand-primary))" 
-                          strokeDasharray="3 3"
-                          label={{ value: 'Daily Target', position: 'right', fontSize: 9, fill: 'hsl(var(--brand-primary))' }}
+                          strokeDasharray="5 5"
+                          strokeWidth={2}
+                          label={{ 
+                            value: 'Target: 2,600', 
+                            position: 'top', 
+                            fontSize: 10, 
+                            fill: 'hsl(var(--brand-primary))',
+                            fontWeight: 600
+                          }}
                         />
                         <Tooltip 
                           content={({ active, payload }) => {
@@ -491,12 +510,13 @@ export default function Index() {
                               const value = payload[0].value as number;
                               const target = 2600;
                               const diff = value - target;
+                              const percentage = ((value / target) * 100).toFixed(0);
                               return (
                                 <div className="bg-popover border border-border rounded-lg px-3 py-2 shadow-lg">
                                   <p className="font-semibold text-sm">{payload[0].payload.day}</p>
-                                  <p className="text-brand-recycling font-bold">{value?.toLocaleString()} PTEs</p>
-                                  <p className={`text-xs ${diff >= 0 ? 'text-green-600' : 'text-amber-600'}`}>
-                                    {diff >= 0 ? '+' : ''}{diff} vs target
+                                  <p className="text-brand-recycling font-bold text-base">{value?.toLocaleString()} PTEs</p>
+                                  <p className={`text-xs font-medium ${diff >= 0 ? 'text-green-600' : 'text-amber-600'}`}>
+                                    {percentage}% of target ({diff >= 0 ? '+' : ''}{diff})
                                   </p>
                                 </div>
                               );
@@ -507,7 +527,7 @@ export default function Index() {
                         <Bar 
                           dataKey="ptes" 
                           fill="hsl(var(--brand-recycling))" 
-                          radius={[4, 4, 0, 0]}
+                          radius={[6, 6, 0, 0]}
                         />
                       </BarChart>
                     </ResponsiveContainer>
