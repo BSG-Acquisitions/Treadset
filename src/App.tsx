@@ -58,6 +58,7 @@ import DeploymentDashboard from "./pages/DeploymentDashboard";
 import NotificationTest from "./pages/NotificationTest";
 import ManifestRemindersTest from "./pages/ManifestRemindersTest";
 import DataQuality from "./pages/DataQuality";
+import SandboxOverview from "./pages/SandboxOverview";
 
 const queryClient = new QueryClient();
 
@@ -298,6 +299,13 @@ const App = () => (
             <Route path="/hauler-rates" element={<ProtectedRoute roles={['admin', 'ops_manager']}><HaulerRates /></ProtectedRoute>} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
             <Route path="/payment-cancelled" element={<PaymentCancelled />} />
+            <Route path="/sandbox" element={
+              <ProtectedRoute roles={['admin']}>
+                <AppLayout>
+                  <SandboxOverview />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
             <Route path="/deployment" element={
               <ProtectedRoute roles={['admin']}>
                 <AppLayout>
