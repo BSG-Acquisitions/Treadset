@@ -196,6 +196,36 @@ export default function Index() {
     enabled: !!user?.currentOrganization?.id,
   });
   
+  // Pickups this month by client (live)
+  const { data: pickupsThisMonth = [] } = useQuery({
+    queryKey: ['pickups-this-month', user?.currentOrganization?.id, format(new Date(), 'yyyy-MM')],
+    queryFn: async () => {
+      const start = new Date();
+      start.setDate(1);
+      start.setHours(0,0,0,0);
+      const end = new Date(start);
+      end.setMonth(start.getMonth() + 1);
+
+      const { data, error } = await supabase
+        .from('pickups')
+        .select('client_id, pickup_date, status')
+        .eq('organization_id', user?.currentOrganization?.id)
+        .gte('pickup_date', format(start, 'yyyy-MM-dd'))
+        .lt('pickup_date', format(end, 'yyyy-MM-dd'))
+        .in('status', ['completed','in_progress','scheduled']);
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user?.currentOrganization?.id,
+  });
+
+  const pickupsThisMonthMap = (pickupsThisMonth || []).reduce((acc: Record<string, number>, p: any) => {
+    if (!p.client_id) return acc;
+    acc[p.client_id] = (acc[p.client_id] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  
   // Extract clients data from response
   const clientsData = Array.isArray(clientsResponse) ? clientsResponse : (clientsResponse?.data || []);
   const totalActiveClientsCount = Array.isArray(clientsResponse) ? clientsResponse.length : (clientsResponse?.count || 0);
@@ -692,16 +722,21 @@ export default function Index() {
               <RowCarousel
                 title=""
                 items={todayPickups.map(pickup => {
-                  // Find the actual client data for this pickup
                   const clientData = clients.find(c => c.id === pickup.client_id);
-                  
+                  const todayStr = format(new Date(), 'yyyy-MM-dd');
+                  const lastPickupIso = (clientData?.last_pickup_at
+                    ? clientData.last_pickup_at
+                    : (pickup.pickup_date === todayStr
+                        ? new Date().toISOString()
+                        : `${pickup.pickup_date}T12:00:00`));
+
                   return {
-                    id: pickup.client_id, // Use client_id, not pickup.id
+                    id: pickup.client_id,
                     name: pickup.client?.company_name || 'Unknown Client',
                     capacity: pickup.pte_count || 0,
-                    lastPickup: clientData?.last_pickup_at || pickup.pickup_date,
+                    lastPickup: lastPickupIso,
                     revenue: clientData?.lifetime_revenue || pickup.computed_revenue || 0,
-                    pickupsThisMonth: clientData?.pickups_count || 0,
+                    pickupsThisMonth: pickupsThisMonthMap[pickup.client_id] || 0,
                     status: pickup.status === 'completed' ? 'active' : 
                      pickup.status === 'overdue' ? 'overdue' : 'scheduled',
                     address: pickup.location?.address || 'Detroit Metro Area'
