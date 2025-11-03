@@ -879,6 +879,23 @@ export function DriverManifestCreationWizard({
         }
       });
 
+      // 4a. Save the initial PDF path (generator + hauler signatures only)
+      const { data: pdfPathData } = await supabase
+        .from('manifests')
+        .select('acroform_pdf_path')
+        .eq('id', manifest.id)
+        .single();
+      
+      if (pdfPathData?.acroform_pdf_path) {
+        await supabase
+          .from('manifests')
+          .update({ 
+            initial_pdf_path: pdfPathData.acroform_pdf_path 
+          })
+          .eq('id', manifest.id);
+        console.log('[DRIVER_WIZARD] Saved initial PDF path:', pdfPathData.acroform_pdf_path);
+      }
+
       // 5. Email the initial manifest to client
       if (pickupData.client.email) {
         console.log('📧 Attempting to send manifest email to:', pickupData.client.email);

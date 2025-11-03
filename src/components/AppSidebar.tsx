@@ -86,6 +86,7 @@ export function AppSidebar() {
       { id: 'dropoffs', label: 'Drop-offs', icon: PackageOpen, path: '/dropoffs', roles: ['admin', 'ops_manager', 'sales'] as const },
     ],
     reporting: [
+      { id: 'manifests', label: 'Manifests', icon: FileText, path: '/manifests', roles: ['admin', 'ops_manager', 'dispatcher'] as const },
       { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics', roles: ['admin', 'ops_manager'] as const },
       { id: 'reports', label: 'Reports', icon: FileText, path: '/reports', roles: ['admin', 'ops_manager'] as const },
       { id: 'michigan-reports', label: 'Michigan Reports', icon: Recycle, path: '/michigan-reports', roles: ['admin', 'ops_manager'] as const },
@@ -114,6 +115,7 @@ export function AppSidebar() {
     { id: 'hauler-manifests', label: 'My Manifests', icon: FileText, path: '/hauler-manifests', roles: ['hauler'] as const },
     { id: 'hauler-manifest-create', label: 'Create Manifest', icon: Plus, path: '/hauler-manifest-create', roles: ['hauler'] as const },
     { id: 'hauler-rates', label: 'Hauler Rates', icon: DollarSign, path: '/hauler-rates', roles: ['admin', 'ops_manager'] as const },
+    { id: 'manifests', label: 'Manifests', icon: FileText, path: '/manifests', roles: ['admin', 'ops_manager', 'dispatcher'] as const },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics', roles: ['admin', 'ops_manager'] as const },
     { id: 'reports', label: 'Reports', icon: FileText, path: '/reports', roles: ['admin', 'ops_manager'] as const },
     { id: 'michigan-reports', label: 'Michigan Reports', icon: Recycle, path: '/michigan-reports', roles: ['admin', 'ops_manager'] as const },

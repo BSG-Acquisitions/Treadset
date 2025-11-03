@@ -46,6 +46,7 @@ export interface Manifest {
   driver_signature_png_path?: string;
   pdf_path?: string;
   acroform_pdf_path?: string;
+  initial_pdf_path?: string;
   pdf_bytes_hash?: string;
   
   // Payment information

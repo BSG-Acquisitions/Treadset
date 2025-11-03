@@ -190,6 +190,7 @@ export default function Manifests() {
                             <ManifestPDFControls
                               manifestId={manifest.id}
                               acroformPdfPath={manifest.acroform_pdf_path}
+                              initialPdfPath={manifest.initial_pdf_path}
                               clientEmails={manifest.client?.email ? [manifest.client.email] : []}
                               className="text-xs"
                             />

@@ -1390,6 +1390,7 @@ export type Database = {
           hauler_id: string | null
           hauler_signed_at: string | null
           id: string
+          initial_pdf_path: string | null
           location_id: string | null
           manifest_number: string
           net_weight_lbs: number | null
@@ -1453,6 +1454,7 @@ export type Database = {
           hauler_id?: string | null
           hauler_signed_at?: string | null
           id?: string
+          initial_pdf_path?: string | null
           location_id?: string | null
           manifest_number: string
           net_weight_lbs?: number | null
@@ -1516,6 +1518,7 @@ export type Database = {
           hauler_id?: string | null
           hauler_signed_at?: string | null
           id?: string
+          initial_pdf_path?: string | null
           location_id?: string | null
           manifest_number?: string
           net_weight_lbs?: number | null
