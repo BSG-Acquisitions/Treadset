@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
+import { sanitizeUUID } from "@/lib/uuidHelpers";
 
 type Pickup = Database["public"]["Tables"]["pickups"]["Row"];
 type Assignment = Database["public"]["Tables"]["assignments"]["Row"];
@@ -44,14 +45,14 @@ export const useSchedulePickupWithDriver = () => {
         .from('pickups')
         .insert({
           client_id: data.clientId,
-          location_id: data.locationId,
+          location_id: sanitizeUUID(data.locationId),
           organization_id: organizationId,
           pickup_date: data.pickupDate,
           pte_count: data.pteCount,
           otr_count: data.otrCount,
           tractor_count: data.tractorCount,
           preferred_window: data.preferredWindow,
-          notes: data.notes
+          notes: data.notes && data.notes.trim() !== '' ? data.notes : null
         })
         .select()
         .single();
@@ -63,9 +64,9 @@ export const useSchedulePickupWithDriver = () => {
         .from('assignments')
         .insert({
           pickup_id: pickup.id,
-          vehicle_id: data.vehicleId || null,
-          hauler_id: data.haulerId || null,
-          driver_id: data.driverId || null,
+          vehicle_id: sanitizeUUID(data.vehicleId),
+          hauler_id: sanitizeUUID(data.haulerId),
+          driver_id: sanitizeUUID(data.driverId),
           organization_id: organizationId,
           scheduled_date: data.pickupDate,
           status: 'assigned',

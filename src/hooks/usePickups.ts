@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
+import { sanitizeUUID } from "@/lib/uuidHelpers";
 
 type Pickup = Database["public"]["Tables"]["pickups"]["Row"];
 type PickupInsert = Database["public"]["Tables"]["pickups"]["Insert"];
@@ -149,14 +150,14 @@ export const useSchedulePickup = () => {
         .from('pickups')
         .insert({
           client_id: data.clientId,
-          location_id: data.locationId,
+          location_id: sanitizeUUID(data.locationId),
           organization_id: orgData,
           pickup_date: data.pickupDate,
           pte_count: data.pteCount,
           otr_count: data.otrCount,
           tractor_count: data.tractorCount,
           preferred_window: data.preferredWindow,
-          notes: data.notes
+          notes: data.notes && data.notes.trim() !== '' ? data.notes : null
         })
         .select()
         .single();
@@ -172,7 +173,7 @@ export const useSchedulePickup = () => {
         const { data: plannerResult, error: plannerError } = await supabase.functions.invoke('route-planner', {
           body: {
             clientId: data.clientId,
-            locationId: data.locationId,
+            locationId: sanitizeUUID(data.locationId),
             pickupDate: data.pickupDate,
             pteCount: data.pteCount,
             preferredWindow: data.preferredWindow

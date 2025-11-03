@@ -104,7 +104,7 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
     resolver: zodResolver(scheduleWithDriverSchema),
     defaultValues: {
       clientId: defaultClientId || "",
-      locationId: "",
+      locationId: undefined,
       truckSelection: "",
       pickupDate: new Date(),
       pteCount: 0,
@@ -136,7 +136,7 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
       
       await schedulePickup.mutateAsync({
         clientId: data.clientId,
-        locationId: data.locationId,
+        locationId: data.locationId || undefined,
         vehicleId: isVehicle ? selectedTruck.vehicleId : undefined,
         haulerId: !isVehicle ? selectedTruck.haulerId : undefined,
         driverId: driverId,
@@ -157,7 +157,7 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
   const handleClientChange = (clientId: string) => {
     setSelectedClientId(clientId);
     form.setValue("clientId", clientId);
-    form.setValue("locationId", ""); // Will be auto-filled by useEffect
+    form.setValue("locationId", undefined); // Will be auto-filled by useEffect
   };
 
   // Auto-select location if client has locations (first one by default)
@@ -284,7 +284,7 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
                         )}
                       </div>
                     )}
-                    <Select onValueChange={field.onChange} value={field.value} disabled={!locations || locations.length === 0}>
+                    <Select onValueChange={field.onChange} value={field.value ?? undefined} disabled={!locations || locations.length === 0}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder={

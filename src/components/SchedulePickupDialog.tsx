@@ -116,7 +116,7 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
     resolver: zodResolver(scheduleSchema),
     defaultValues: {
       clientId: defaultClientId || "",
-      locationId: "",
+      locationId: undefined,
       pteCount: 0,
       otrCount: 0,
       tractorCount: 0,
@@ -150,7 +150,7 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
       
       await schedulePickup.mutateAsync({
         clientId: data.clientId,
-        locationId: data.locationId,
+        locationId: data.locationId || undefined,
         pickupDate: format(data.pickupDate, 'yyyy-MM-dd'),
         pteCount: data.pteCount,
         otrCount: data.otrCount,
@@ -183,7 +183,7 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
   const handleClientChange = (clientId: string) => {
     setSelectedClientId(clientId);
     form.setValue("clientId", clientId);
-    form.setValue("locationId", ""); // Will be auto-filled by useEffect
+    form.setValue("locationId", undefined); // Will be auto-filled by useEffect
   };
 
   // Auto-select location if client has locations (first one by default)
@@ -306,11 +306,11 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
                          )}
                        </div>
                      )}
-                     <Select 
-                       onValueChange={field.onChange} 
-                       value={field.value}
-                       disabled={!selectedClientId || !locations || locations.length === 0}
-                     >
+                      <Select 
+                        onValueChange={field.onChange} 
+                        value={field.value ?? undefined}
+                        disabled={!selectedClientId || !locations || locations.length === 0}
+                      >
                        <FormControl>
                          <SelectTrigger>
                            <SelectValue placeholder={
