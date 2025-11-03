@@ -22,10 +22,12 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { TreadSetLogo } from '@/components/TreadSetLogo';
 import { OrganizationSwitcher } from '@/components/auth/OrganizationSwitcher';
-import { useNotifications } from '@/hooks/useNotifications';
+import { useEnhancedNotifications } from '@/hooks/useEnhancedNotifications';
+import { useContextualNotifications } from '@/hooks/useContextualNotifications';
 import { useAnalyzePickupPatterns } from '@/hooks/usePickupPatterns';
 import { formatDistanceToNow } from 'date-fns';
 import { LiveSearch } from '@/components/LiveSearch';
+import { EnhancedNotificationCenter } from '@/components/notifications/EnhancedNotificationCenter';
 
 interface TopNavProps {
   onMenuToggle?: () => void;
@@ -36,7 +38,8 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
   const { user, signOut, hasAnyRole } = useAuth();
   const { isSandboxMode } = useSandboxMode();
   const location = useLocation();
-  const { notifications, unreadCount, markAsRead, markAllAsRead, isMarkingAllAsRead } = useNotifications();
+  const { unreadCount } = useEnhancedNotifications();
+  useContextualNotifications(); // Enable background checks
   const analyzePatterns = useAnalyzePickupPatterns();
 
   const getCurrentTab = () => {
@@ -115,64 +118,15 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
             <PopoverTrigger asChild>
               <Button variant="ghost" size="sm" className="relative hover:bg-brand-primary/10 transition-colors" aria-label="Notifications">
                 <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-brand-tire-black/70" />
-                <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs bg-brand-accent flex items-center justify-center min-w-[20px]">
-                  {unreadCount > 0 ? unreadCount : null}
-                </Badge>
+                {unreadCount > 0 && (
+                  <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs bg-brand-accent flex items-center justify-center min-w-[20px] animate-pulse">
+                    {unreadCount}
+                  </Badge>
+                )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80 p-0" align="end">
-              <div className="border-b border-border p-4">
-                <h3 className="font-semibold text-foreground">Notifications</h3>
-                <p className="text-sm text-muted-foreground">
-                  {unreadCount > 0 ? `You have ${unreadCount} unread notifications` : 'No unread notifications'}
-                </p>
-              </div>
-              <div className="max-h-64 overflow-y-auto">
-                {notifications.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-muted-foreground">
-                    No notifications yet
-                  </div>
-                ) : (
-                  notifications.slice(0, 10).map((notification) => (
-                    <div 
-                      key={notification.id}
-                      className="p-3 border-b border-border/50 hover:bg-muted/50 cursor-pointer"
-                      onClick={() => !notification.is_read && markAsRead(notification.id)}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
-                          notification.is_read ? 'bg-muted' : 'bg-brand-accent'
-                        }`}></div>
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-sm font-medium ${
-                            notification.is_read ? 'text-muted-foreground' : 'text-foreground'
-                          }`}>
-                            {notification.title}
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {notification.message}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-              {unreadCount > 0 && (
-                <div className="border-t border-border p-3">
-                  <Button 
-                    variant="ghost" 
-                    className="w-full text-sm"
-                    onClick={() => markAllAsRead()}
-                    disabled={isMarkingAllAsRead}
-                  >
-                    {isMarkingAllAsRead ? 'Marking as read...' : 'Mark all as read'}
-                  </Button>
-                </div>
-              )}
+            <PopoverContent className="w-[420px] p-0" align="end">
+              <EnhancedNotificationCenter />
             </PopoverContent>
           </Popover>
 

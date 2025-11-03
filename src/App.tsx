@@ -55,6 +55,7 @@ import DriverPaymentCancelled from "./pages/driver/PaymentCancelled";
 import Manifests from "./pages/Manifests";
 import BackfillManifestPdfs from "./pages/BackfillManifestPdfs";
 import DeploymentDashboard from "./pages/DeploymentDashboard";
+import NotificationTest from "./pages/NotificationTest";
 
 const queryClient = new QueryClient();
 
@@ -299,6 +300,13 @@ const App = () => (
               <ProtectedRoute roles={['admin']}>
                 <AppLayout>
                   <DeploymentDashboard />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/test/notifications" element={
+              <ProtectedRoute roles={['admin']}>
+                <AppLayout>
+                  <NotificationTest />
                 </AppLayout>
               </ProtectedRoute>
             } />

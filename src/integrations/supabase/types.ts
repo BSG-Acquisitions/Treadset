@@ -1645,39 +1645,48 @@ export type Database = {
       }
       notifications: {
         Row: {
+          action_link: string | null
           created_at: string
           id: string
           is_read: boolean
           message: string
           organization_id: string
+          priority: string | null
           related_id: string | null
           related_type: string | null
+          role_visibility: string[] | null
           title: string
           type: string
           updated_at: string
           user_id: string | null
         }
         Insert: {
+          action_link?: string | null
           created_at?: string
           id?: string
           is_read?: boolean
           message: string
           organization_id: string
+          priority?: string | null
           related_id?: string | null
           related_type?: string | null
+          role_visibility?: string[] | null
           title: string
           type?: string
           updated_at?: string
           user_id?: string | null
         }
         Update: {
+          action_link?: string | null
           created_at?: string
           id?: string
           is_read?: boolean
           message?: string
           organization_id?: string
+          priority?: string | null
           related_id?: string | null
           related_type?: string | null
+          role_visibility?: string[] | null
           title?: string
           type?: string
           updated_at?: string
