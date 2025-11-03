@@ -24,6 +24,7 @@ import { TreadSetLogo } from '@/components/TreadSetLogo';
 import { OrganizationSwitcher } from '@/components/auth/OrganizationSwitcher';
 import { useEnhancedNotifications } from '@/hooks/useEnhancedNotifications';
 import { useContextualNotifications } from '@/hooks/useContextualNotifications';
+import { useManifestReminders } from '@/hooks/useManifestReminders';
 import { useAnalyzePickupPatterns } from '@/hooks/usePickupPatterns';
 import { formatDistanceToNow } from 'date-fns';
 import { LiveSearch } from '@/components/LiveSearch';
@@ -40,6 +41,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
   const location = useLocation();
   const { unreadCount } = useEnhancedNotifications();
   useContextualNotifications(); // Enable background checks
+  useManifestReminders(); // Enable manifest reminder checks
   const analyzePatterns = useAnalyzePickupPatterns();
 
   const getCurrentTab = () => {

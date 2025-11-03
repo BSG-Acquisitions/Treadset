@@ -56,6 +56,7 @@ import Manifests from "./pages/Manifests";
 import BackfillManifestPdfs from "./pages/BackfillManifestPdfs";
 import DeploymentDashboard from "./pages/DeploymentDashboard";
 import NotificationTest from "./pages/NotificationTest";
+import ManifestRemindersTest from "./pages/ManifestRemindersTest";
 
 const queryClient = new QueryClient();
 
@@ -307,6 +308,13 @@ const App = () => (
               <ProtectedRoute roles={['admin']}>
                 <AppLayout>
                   <NotificationTest />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/test/manifest-reminders" element={
+              <ProtectedRoute roles={['admin', 'receptionist']}>
+                <AppLayout>
+                  <ManifestRemindersTest />
                 </AppLayout>
               </ProtectedRoute>
             } />

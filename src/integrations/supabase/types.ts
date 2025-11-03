@@ -3400,6 +3400,7 @@ export type Database = {
         | "sales"
         | "client"
         | "hauler"
+        | "receptionist"
       direction: "inbound" | "outbound" | "internal"
       end_use:
         | "reuse"
@@ -3597,6 +3598,7 @@ export const Constants = {
         "sales",
         "client",
         "hauler",
+        "receptionist",
       ],
       direction: ["inbound", "outbound", "internal"],
       end_use: [

@@ -5,7 +5,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-type AppRole = 'admin' | 'ops_manager' | 'dispatcher' | 'driver' | 'sales' | 'client';
+type AppRole = 'admin' | 'ops_manager' | 'dispatcher' | 'driver' | 'sales' | 'client' | 'receptionist';
 
 export interface RoleCheckResult {
   authorized: boolean;
