@@ -160,13 +160,25 @@ export function DriverManifestCreationWizard({
   useEffect(() => {
     if (!manualWeightOverride) {
       const totalPTE = computeTotalPTE(form.getValues());
+      
       // Michigan conversion: 89 PTE = 1 ton, 1 ton = 2000 lbs
       const tons = totalPTE / 89;
-      const pounds = tons * 2000;
-      const calculatedGross = Math.round(pounds * 10) / 10; // Round to 1 decimal
+      const grossPounds = tons * 2000;
+      const calculatedGross = Math.round(grossPounds * 10) / 10; // Round to 1 decimal
       
+      // For scrap tires, gross weight IS the net weight (tires only, no vehicle)
+      // Tare weight defaults to 0.0 for scrap tire pickups
       form.setValue('gross_weight_lbs', calculatedGross, { shouldValidate: false });
-      // Tare weight remains 0 unless manually entered by driver
+      form.setValue('tare_weight_lbs', 0, { shouldValidate: false });
+      
+      console.log('[WEIGHT_CALC] Auto-calculated weights:', {
+        totalPTE,
+        tons: tons.toFixed(3),
+        grossLbs: calculatedGross,
+        tareLbs: 0,
+        netLbs: calculatedGross,
+        formula: `${totalPTE} PTE ÷ 89 = ${tons.toFixed(3)} tons × 2000 = ${calculatedGross} lbs`
+      });
     }
   }, [
     form.watch('pte_off_rim'),
@@ -713,16 +725,36 @@ export function DriverManifestCreationWizard({
       let finalGross = gross;
       let finalTare = tare;
       
-      // If auto mode, never auto-calc tare; compute gross only if needed
-      if (!manualWeightOverride && gross <= 0) {
+      // If auto mode, compute weights from PTE using Michigan rules
+      if (!manualWeightOverride) {
         const computedTons = totalPteForPdf / 89; // Michigan rule: 89 PTE = 1 ton
-        finalGross = Math.round((computedTons * 2000) * 10) / 10; // Convert to lbs
-      }
-      if (!manualWeightOverride && tare <= 0) {
-        finalTare = 0; // Default tare to 0.0 unless manually entered
+        finalGross = Math.round((computedTons * 2000) * 10) / 10; // Convert to lbs, round to 1 decimal
+        finalTare = 0; // Scrap tire pickups: tare is always 0 (tires only, no vehicle weight)
       }
       
+      // Net weight = Gross - Tare (for scrap tires with tare=0, net=gross)
       const finalNet = Math.max(0, finalGross - finalTare);
+      
+      // Validation: Ensure net weight makes sense
+      if (finalNet > finalGross) {
+        toast({
+          title: 'Weight Calculation Error',
+          description: `Net weight (${finalNet} lbs) cannot exceed gross weight (${finalGross} lbs). Please check your entries.`,
+          variant: 'destructive',
+        });
+        setIsSubmitting(false);
+        isSubmittingRef.current = false;
+        return;
+      }
+      
+      console.log('[MANIFEST_SUBMIT] Final weight calculations:', {
+        totalPTE: totalPteForPdf,
+        finalGross,
+        finalTare,
+        finalNet,
+        autoMode: !manualWeightOverride,
+        formula: `${totalPteForPdf} PTE ÷ 89 × 2000 = ${finalGross} lbs`
+      });
       const tonsFromPte = calcTonsFromPTE();
       const tonsFromNet = finalNet > 0 ? Math.round((finalNet / 2000) * 100) / 100 : 0;
       const resolvedTons = Number(data.weight_tons_manual || 0) > 0 
@@ -1237,13 +1269,17 @@ export function DriverManifestCreationWizard({
                         <FormControl>
                           <Input 
                             type="number" 
-                            placeholder={manualWeightOverride ? "Enter tare weight" : "Auto-calc (15% of gross)"}
+                            step="0.1"
+                            placeholder={manualWeightOverride ? "Enter tare weight" : "0.0 (Tires only)"}
                             {...field} 
                             onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
                             readOnly={!manualWeightOverride}
                             className={!manualWeightOverride ? 'bg-muted cursor-not-allowed' : ''}
                           />
                         </FormControl>
+                        <FormDescription className="text-xs">
+                          For scrap tire pickups, tare is typically 0 (weighing tires only, not vehicle)
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -1258,9 +1294,18 @@ export function DriverManifestCreationWizard({
                       const gross = Number(v.gross_weight_lbs || 0);
                       const tare = Number(v.tare_weight_lbs || 0);
                       const net = Math.max(0, gross - tare);
+                      
+                      // Validation warning if net > gross (shouldn't happen)
+                      if (tare > gross && gross > 0) {
+                        return <span className="text-destructive">⚠️ Error: Tare exceeds Gross</span>;
+                      }
+                      
                       return net.toFixed(1);
                     })()}
                   </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Net = Gross - Tare {!manualWeightOverride && "(For tires only, Net = Gross)"}
+                  </p>
                 </div>
 
                 <FormField
