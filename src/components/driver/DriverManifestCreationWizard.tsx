@@ -18,6 +18,7 @@ import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { CollectPaymentWithCard } from "@/components/driver/CollectPaymentWithCard";
 import SignatureCanvas from "react-signature-canvas";
 import { pteToTons, MICHIGAN_CONVERSIONS } from "@/lib/michigan-conversions";
@@ -28,7 +29,8 @@ import {
   ChevronRight,
   ChevronLeft,
   PenTool,
-  CheckCircle
+  CheckCircle,
+  FileText
 } from "lucide-react";
 
 // Validation schema - tire counts, printed names, and optional weights
@@ -91,6 +93,7 @@ export function DriverManifestCreationWizard({
   const [calculatedTotal, setCalculatedTotal] = useState(0);
   const [offlineMethod, setOfflineMethod] = useState<'CASH' | 'CHECK'>('CASH');
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [requiresInvoice, setRequiresInvoice] = useState(false);
   
   // Use ref for more reliable duplicate prevention
   const isSubmittingRef = useRef(false);
@@ -732,7 +735,7 @@ export function DriverManifestCreationWizard({
         finalTare = 0; // Scrap tire pickups: tare is always 0 (tires only, no vehicle weight)
       }
       
-      // Net weight = Gross - Tare (for scrap tires with tare=0, net=gross)
+        // Net weight = Gross - Tare (for scrap tires with tare=0, net=gross)
       const finalNet = Math.max(0, finalGross - finalTare);
       
       // Validation: Ensure net weight makes sense
@@ -792,7 +795,8 @@ export function DriverManifestCreationWizard({
         gross_weight_lbs: finalGross,
         tare_weight_lbs: finalTare,
         net_weight_lbs: finalNet,
-        payment_method: 'INVOICE' as const,
+        payment_method: requiresInvoice ? ('INVOICE' as const) : ('CARD' as const),
+        payment_status: requiresInvoice ? ('PENDING' as const) : ('PENDING' as const),
         status: 'AWAITING_RECEIVER_SIGNATURE' as const,
       };
 
@@ -905,7 +909,9 @@ export function DriverManifestCreationWizard({
 
       toast({
         title: "Success",
-        description: "Manifest created successfully!",
+        description: requiresInvoice 
+          ? "Manifest created - marked for invoicing"
+          : "Manifest created successfully with generator and hauler signatures",
       });
 
       // Update pickup status to completed
@@ -937,10 +943,22 @@ export function DriverManifestCreationWizard({
         // Don't block the flow if this fails
       }
 
-      // Store manifest ID and move to payment step
+      // Store manifest ID and mark as created
       setCreatedManifestId(manifest.id);
       setManifestCreated(true);
-      setStep(step + 1); // Move to payment step
+      
+      // Skip payment step if invoice customer, otherwise proceed to payment
+      if (requiresInvoice) {
+        // Complete the wizard for invoice customers
+        if (onComplete) {
+          onComplete();
+        } else {
+          navigate("/driver/manifests");
+        }
+      } else {
+        // Move to payment step for non-invoice customers
+        setStep(step + 1);
+      }
     } catch (error: any) {
       console.error("Error creating manifest:", error);
       toast({
@@ -1610,6 +1628,38 @@ export function DriverManifestCreationWizard({
                   </CardContent>
                 </Card>
               )}
+
+              {/* Invoice Customer Option */}
+              <Card className="border-amber-500/50">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-start gap-3 flex-1">
+                      <FileText className="h-5 w-5 text-amber-600 mt-0.5" />
+                      <div className="space-y-1">
+                        <Label htmlFor="invoice-toggle" className="text-base font-semibold cursor-pointer">
+                          Invoice Customer
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          Mark this customer to be invoiced instead of collecting payment now
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      id="invoice-toggle"
+                      checked={requiresInvoice}
+                      onCheckedChange={setRequiresInvoice}
+                    />
+                  </div>
+                  {requiresInvoice && (
+                    <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-md border border-amber-200 dark:border-amber-800">
+                      <p className="text-sm text-amber-900 dark:text-amber-100 flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        Payment step will be skipped. Billing will invoice this customer.
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           </div>
         );

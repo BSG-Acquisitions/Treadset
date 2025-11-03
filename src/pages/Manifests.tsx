@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { useManifests } from '@/hooks/useManifests';
 import { useClient } from '@/hooks/useClients';
 import { format } from 'date-fns';
-import { FileText, Clock, CheckCircle, CreditCard, ArrowLeft, MapPin, User, Calendar } from 'lucide-react';
+import { FileText, Clock, CheckCircle, CreditCard, ArrowLeft, MapPin, User, Calendar, Receipt } from 'lucide-react';
 import { ManifestPDFControls } from '@/components/ManifestPDFControls';
 
 export default function Manifests() {
@@ -133,6 +133,12 @@ export default function Manifests() {
                           <Badge variant={getStatusColor(manifest.status)}>
                             {manifest.status.replace(/_/g, ' ')}
                           </Badge>
+                          {manifest.payment_method === 'INVOICE' && manifest.payment_status === 'PENDING' && (
+                            <Badge variant="default" className="bg-amber-500 hover:bg-amber-600 text-white">
+                              <Receipt className="h-3 w-3 mr-1" />
+                              Requires Invoice
+                            </Badge>
+                          )}
                         </div>
                         
                         {/* Client and Location info */}
@@ -199,9 +205,18 @@ export default function Manifests() {
                           ${manifest.total.toFixed(2)}
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          {manifest.payment_status === 'SUCCEEDED' ? 'Paid' : 
-                           manifest.payment_status === 'PENDING' ? 'Pending' :
-                           manifest.payment_method}
+                          {manifest.payment_method === 'INVOICE' && manifest.payment_status === 'PENDING' ? (
+                            <span className="text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1">
+                              <Receipt className="h-3.5 w-3.5" />
+                              To Be Invoiced
+                            </span>
+                          ) : manifest.payment_status === 'SUCCEEDED' ? (
+                            'Paid'
+                          ) : manifest.payment_status === 'PENDING' ? (
+                            'Pending'
+                          ) : (
+                            manifest.payment_method
+                          )}
                         </div>
                       </div>
                       
