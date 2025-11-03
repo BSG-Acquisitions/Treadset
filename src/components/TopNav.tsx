@@ -224,6 +224,14 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                   </Link>
                 </DropdownMenuItem>
               )}
+              {hasAnyRole(['admin', 'ops_manager', 'dispatcher']) && (
+                <DropdownMenuItem asChild>
+                  <Link to="/manifests" className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Manifests
+                  </Link>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem 
                 onClick={signOut}
