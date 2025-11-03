@@ -14,6 +14,7 @@ import { CapacityGauge } from "@/components/CapacityGauge";
 import { RowCarousel } from "@/components/RowCarousel";
 
 import { StatsCard } from "@/components/enhanced/StatsCard";
+import { ProjectedRevenueWidget } from "@/components/dashboard/ProjectedRevenueWidget";
 import { format, addDays } from "date-fns";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -617,6 +618,11 @@ export default function Index() {
               </div>
             </CardContent>
           </Card>
+        </SlideUp>
+
+        {/* Projected Revenue Widget */}
+        <SlideUp delay={0.35}>
+          <ProjectedRevenueWidget />
         </SlideUp>
 
         {/* Quick Actions */}
