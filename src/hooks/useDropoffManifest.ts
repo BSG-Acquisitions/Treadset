@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useManifestIntegration } from "@/hooks/useManifestIntegration";
 import type { Database } from "@/integrations/supabase/types";
+import { sanitizeUUID } from "@/lib/uuidHelpers";
 
 type Dropoff = Database["public"]["Tables"]["dropoffs"]["Row"] & {
   dropoff_customers?: {
@@ -71,11 +72,11 @@ export const useGenerateDropoffManifest = () => {
       }
 
       // Use the hauler from the dropoff if specified, otherwise default to BSG
-      let haulerId: string;
+      let haulerId: string | null = null;
       
       if (dropoff.hauler_id) {
         // Use the hauler selected for this dropoff
-        haulerId = dropoff.hauler_id;
+        haulerId = sanitizeUUID(dropoff.hauler_id);
       } else {
         // Default to BSG Tire Recycling as the hauler
         const { data: haulerRow, error: haulerError } = await supabase
@@ -97,11 +98,11 @@ export const useGenerateDropoffManifest = () => {
       const manifestData = {
         manifest_number: manifestNumber as string,
         organization_id: orgId as string,
-        client_id: clientId, // Use the default dropoff client
-        hauler_id: haulerId, // Use selected hauler or default to BSG
+        client_id: sanitizeUUID(clientId), // Use the default dropoff client
+        hauler_id: sanitizeUUID(haulerId), // Use selected hauler or default to BSG
         location_id: null,
         pickup_id: null,
-        dropoff_id: dropoff.id, // Link to the dropoff
+        dropoff_id: sanitizeUUID(dropoff.id), // Link to the dropoff
         pte_off_rim: dropoff.pte_count || 0,
         pte_on_rim: 0,
         commercial_17_5_19_5_off: 0,

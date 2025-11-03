@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useManifestIntegration } from "@/hooks/useManifestIntegration";
 import { useSendManifestEmail } from "@/hooks/useSendManifestEmail";
 import { MICHIGAN_CONVERSIONS } from "@/lib/michigan-conversions";
+import { sanitizeUUID } from "@/lib/uuidHelpers";
 
 interface CreateHaulerManifestData {
   hauler_customer_id: string;
@@ -154,8 +155,8 @@ export const useHaulerManifests = (haulerId?: string) => {
       const manifestData = {
         manifest_number: manifestNumber as string,
         organization_id: orgId,
-        client_id: clientId,
-        hauler_id: haulerId,
+        client_id: sanitizeUUID(clientId),
+        hauler_id: sanitizeUUID(haulerId),
         pte_off_rim: data.pte_off_rim || 0,
         pte_on_rim: data.pte_on_rim || 0,
         commercial_17_5_19_5_off: data.commercial_17_5_19_5_off || 0,
