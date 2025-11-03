@@ -1,20 +1,33 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { useManifests } from '@/hooks/useManifests';
 import { useClient } from '@/hooks/useClients';
 import { format } from 'date-fns';
-import { FileText, Clock, CheckCircle, CreditCard, ArrowLeft, MapPin, User, Calendar, Receipt } from 'lucide-react';
+import { FileText, Clock, CheckCircle, CreditCard, ArrowLeft, MapPin, User, Calendar, Receipt, Search, X } from 'lucide-react';
 import { ManifestPDFControls } from '@/components/ManifestPDFControls';
 
 export default function Manifests() {
   const [searchParams] = useSearchParams();
   const clientId = searchParams.get('client');
+  const [searchQuery, setSearchQuery] = useState('');
   
   const { data: client } = useClient(clientId || '');
   const { data: manifests = [], isLoading } = useManifests(clientId || undefined);
+
+  // Filter manifests by search query
+  const filteredManifests = manifests.filter(manifest => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      manifest.manifest_number?.toLowerCase().includes(query) ||
+      manifest.client?.company_name?.toLowerCase().includes(query) ||
+      manifest.location?.address?.toLowerCase().includes(query)
+    );
+  });
 
   useEffect(() => {
     if (client) {
@@ -80,14 +93,36 @@ export default function Manifests() {
             </Button>
           )}
           
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold text-foreground">
                 {client ? `${client.company_name} Manifests` : 'All Manifests'}
               </h1>
               <p className="text-muted-foreground mt-1">
-                {manifests.length} {manifests.length === 1 ? 'manifest' : 'manifests'} found
+                {filteredManifests.length} {filteredManifests.length === 1 ? 'manifest' : 'manifests'} found
+                {searchQuery && ` matching "${searchQuery}"`}
               </p>
+            </div>
+
+            {/* Search Input */}
+            <div className="relative w-full md:w-96">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by client, manifest #, or location..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 pr-9"
+              />
+              {searchQuery && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                  onClick={() => setSearchQuery('')}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -104,19 +139,32 @@ export default function Manifests() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {manifests.length === 0 ? (
+            {filteredManifests.length === 0 ? (
               <div className="text-center py-12 bg-muted/20 rounded-lg border-2 border-dashed">
                 <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground/30" />
                 <p className="text-lg font-medium text-muted-foreground mb-2">
-                  No manifests found
+                  {searchQuery ? 'No manifests found' : 'No manifests found'}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Manifests will appear here once created
+                  {searchQuery 
+                    ? `No manifests match "${searchQuery}". Try a different search term.`
+                    : 'Manifests will appear here once created'
+                  }
                 </p>
+                {searchQuery && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-4"
+                    onClick={() => setSearchQuery('')}
+                  >
+                    Clear Search
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="space-y-4">
-                {manifests.map((manifest) => (
+                {filteredManifests.map((manifest) => (
                   <div
                     key={manifest.id}
                     className="flex flex-col md:flex-row md:items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors gap-4"
