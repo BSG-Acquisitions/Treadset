@@ -165,6 +165,74 @@ export type Database = {
           },
         ]
       }
+      client_engagement_beta: {
+        Row: {
+          client_id: string
+          contact_frequency: number | null
+          created_at: string
+          engagement_score: number | null
+          id: string
+          last_contact_date: string | null
+          organization_id: string
+          response_rate: number | null
+          risk_status: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          contact_frequency?: number | null
+          created_at?: string
+          engagement_score?: number | null
+          id?: string
+          last_contact_date?: string | null
+          organization_id: string
+          response_rate?: number | null
+          risk_status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          contact_frequency?: number | null
+          created_at?: string
+          engagement_score?: number | null
+          id?: string
+          last_contact_date?: string | null
+          organization_id?: string
+          response_rate?: number | null
+          risk_status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_engagement_beta_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_engagement_beta_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_monthly_entity_rollup"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "client_engagement_beta_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_revenue_summary"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "client_engagement_beta_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_health_scores: {
         Row: {
           avg_revenue_per_pickup: number | null
@@ -1945,6 +2013,53 @@ export type Database = {
           },
         ]
       }
+      operational_metrics_beta: {
+        Row: {
+          avg_completion_time_hours: number | null
+          completed_on_time: number | null
+          created_at: string
+          driver_utilization_pct: number | null
+          id: string
+          metric_date: string
+          organization_id: string
+          route_efficiency_score: number | null
+          total_pickups: number | null
+          updated_at: string
+        }
+        Insert: {
+          avg_completion_time_hours?: number | null
+          completed_on_time?: number | null
+          created_at?: string
+          driver_utilization_pct?: number | null
+          id?: string
+          metric_date: string
+          organization_id: string
+          route_efficiency_score?: number | null
+          total_pickups?: number | null
+          updated_at?: string
+        }
+        Update: {
+          avg_completion_time_hours?: number | null
+          completed_on_time?: number | null
+          created_at?: string
+          driver_utilization_pct?: number | null
+          id?: string
+          metric_date?: string
+          organization_id?: string
+          route_efficiency_score?: number | null
+          total_pickups?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operational_metrics_beta_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_settings: {
         Row: {
           created_at: string
@@ -2177,6 +2292,74 @@ export type Database = {
           template_name?: string
         }
         Relationships: []
+      }
+      pickup_patterns_beta: {
+        Row: {
+          avg_days_between_pickups: number | null
+          client_id: string
+          confidence_score: number | null
+          created_at: string
+          id: string
+          organization_id: string
+          pattern_type: string
+          predicted_next_pickup: string | null
+          seasonal_trend: Json | null
+          updated_at: string
+        }
+        Insert: {
+          avg_days_between_pickups?: number | null
+          client_id: string
+          confidence_score?: number | null
+          created_at?: string
+          id?: string
+          organization_id: string
+          pattern_type: string
+          predicted_next_pickup?: string | null
+          seasonal_trend?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          avg_days_between_pickups?: number | null
+          client_id?: string
+          confidence_score?: number | null
+          created_at?: string
+          id?: string
+          organization_id?: string
+          pattern_type?: string
+          predicted_next_pickup?: string | null
+          seasonal_trend?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pickup_patterns_beta_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pickup_patterns_beta_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_monthly_entity_rollup"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "pickup_patterns_beta_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_revenue_summary"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "pickup_patterns_beta_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pickups: {
         Row: {
@@ -2776,6 +2959,50 @@ export type Database = {
             columns: ["submitted_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      revenue_forecasts_beta: {
+        Row: {
+          based_on_months: number | null
+          confidence_level: string | null
+          created_at: string
+          forecast_month: string
+          growth_rate: number | null
+          id: string
+          organization_id: string
+          predicted_revenue: number | null
+          updated_at: string
+        }
+        Insert: {
+          based_on_months?: number | null
+          confidence_level?: string | null
+          created_at?: string
+          forecast_month: string
+          growth_rate?: number | null
+          id?: string
+          organization_id: string
+          predicted_revenue?: number | null
+          updated_at?: string
+        }
+        Update: {
+          based_on_months?: number | null
+          confidence_level?: string | null
+          created_at?: string
+          forecast_month?: string
+          growth_rate?: number | null
+          id?: string
+          organization_id?: string
+          predicted_revenue?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "revenue_forecasts_beta_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
