@@ -801,14 +801,39 @@ export default function EnhancedRoutesToday() {
                                   <span className="text-xs text-muted-foreground truncate">{pickup.location?.name || pickup.location?.address || 'No address'}</span>
                                 </div>
                                 <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                                  <span>PTE {pickup.pte_count}</span>
+                                  <span>PTE {(() => {
+                                    const manifests = Array.isArray(pickup.manifests) ? pickup.manifests : [];
+                                    if (pickup.status === 'completed' && manifests.length > 0) {
+                                      const manifest = manifests[0];
+                                      return (manifest.pte_on_rim || 0) + (manifest.pte_off_rim || 0);
+                                    }
+                                    return pickup.pte_count || 0;
+                                  })()}</span>
                                   <span>•</span>
-                                  <span>OTR {pickup.otr_count}</span>
+                                  <span>OTR {(() => {
+                                    const manifests = Array.isArray(pickup.manifests) ? pickup.manifests : [];
+                                    if (pickup.status === 'completed' && manifests.length > 0) {
+                                      return manifests[0].otr_count || 0;
+                                    }
+                                    return pickup.otr_count || 0;
+                                  })()}</span>
                                   <span>•</span>
-                                  <span>Tractor {pickup.tractor_count}</span>
+                                  <span>Tractor {(() => {
+                                    const manifests = Array.isArray(pickup.manifests) ? pickup.manifests : [];
+                                    if (pickup.status === 'completed' && manifests.length > 0) {
+                                      return manifests[0].tractor_count || 0;
+                                    }
+                                    return pickup.tractor_count || 0;
+                                  })()}</span>
                                 </div>
                                 <div className="text-xs font-semibold">
-                                  ${pickup.computed_revenue?.toFixed(2) || '0.00'}
+                                  ${(() => {
+                                    const manifests = Array.isArray(pickup.manifests) ? pickup.manifests : [];
+                                    if (pickup.status === 'completed' && manifests.length > 0) {
+                                      return (manifests[0].total || 0).toFixed(2);
+                                    }
+                                    return (pickup.computed_revenue || 0).toFixed(2);
+                                  })()}
                                 </div>
                               </div>
                               

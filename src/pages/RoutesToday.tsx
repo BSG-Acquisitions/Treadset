@@ -253,9 +253,9 @@ export default function RoutesToday() {
                                   <div className="flex justify-between">
                                     <span className="text-muted-foreground">PTE:</span>
                                     <span>{(() => {
-                                      // If manifest exists, use manifest counts
+                                      // For completed pickups, prioritize manifest data
                                       const manifests = Array.isArray(pickup.manifests) ? pickup.manifests : [];
-                                      if (manifests.length > 0) {
+                                      if (pickup.status === 'completed' && manifests.length > 0) {
                                         const manifest = manifests[0];
                                         return (manifest.pte_on_rim || 0) + (manifest.pte_off_rim || 0);
                                       }
@@ -267,7 +267,7 @@ export default function RoutesToday() {
                                     <span className="text-muted-foreground">OTR:</span>
                                     <span>{(() => {
                                       const manifests = Array.isArray(pickup.manifests) ? pickup.manifests : [];
-                                      if (manifests.length > 0) {
+                                      if (pickup.status === 'completed' && manifests.length > 0) {
                                         return manifests[0].otr_count || 0;
                                       }
                                       return pickup.otr_count || 0;
@@ -277,7 +277,7 @@ export default function RoutesToday() {
                                     <span className="text-muted-foreground">Tractor:</span>
                                     <span>{(() => {
                                       const manifests = Array.isArray(pickup.manifests) ? pickup.manifests : [];
-                                      if (manifests.length > 0) {
+                                      if (pickup.status === 'completed' && manifests.length > 0) {
                                         return manifests[0].tractor_count || 0;
                                       }
                                       return pickup.tractor_count || 0;
@@ -286,9 +286,9 @@ export default function RoutesToday() {
                                   <div className="flex justify-between pt-1 border-t">
                                     <span className="text-muted-foreground">Revenue:</span>
                                     <span className="font-semibold">${(() => {
-                                      // Use manifest total if available, otherwise use pickup estimate
+                                      // For completed pickups, use manifest total
                                       const manifests = Array.isArray(pickup.manifests) ? pickup.manifests : [];
-                                      if (manifests.length > 0) {
+                                      if (pickup.status === 'completed' && manifests.length > 0) {
                                         return (manifests[0].total || 0).toFixed(2);
                                       }
                                       return (pickup.computed_revenue || 0).toFixed(2);
