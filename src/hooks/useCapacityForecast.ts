@@ -48,8 +48,20 @@ export const useCapacityForecast = (organizationId?: string) => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['capacity-forecast'] });
+    onSuccess: async (_data, orgId) => {
+      try {
+        // Bust server-side capacity cache so next query fetches fresh preview rows
+        await supabase
+          .from('capacity_cache' as any)
+          .delete()
+          .eq('organization_id', orgId as string)
+          .eq('cache_key', 'capacity_forecast');
+      } catch (e) {
+        console.warn('Failed to clear capacity cache', e);
+      }
+      // Invalidate and refetch the react-query cache
+      await queryClient.invalidateQueries({ queryKey: ['capacity-forecast'] });
+      await queryClient.refetchQueries({ queryKey: ['capacity-forecast'] });
     },
   });
 
