@@ -135,7 +135,7 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
   }, {});
 
   return (
-    <div className="flex flex-col border-r border-gray-300 last:border-r-0 h-[600px]">
+    <div className="flex flex-col border-r border-gray-300 last:border-r-0 h-full">
       {/* Day Header */}
       <div className={`text-center py-4 border-b-2 border-gray-300 flex-shrink-0 ${isToday ? 'bg-[#5b8f4d] text-white' : 'bg-white text-gray-800'}`}>
         <div className={`font-semibold text-base mb-1 ${isToday ? 'text-white' : 'text-gray-900'}`}>
@@ -279,7 +279,7 @@ export function WeeklyPickupsGrid({ currentWeek, onMovePickup }: WeeklyPickupsGr
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeek, i));
 
   return (
-    <div className="grid grid-cols-7 border border-gray-300 rounded-lg overflow-hidden bg-white shadow-sm h-[600px]">
+    <div className="grid grid-cols-7 border border-gray-300 rounded-lg overflow-hidden bg-white shadow-sm h-[calc(100vh-280px)] min-h-[600px]">
       {weekDays.map((day) => (
         <DayColumn key={day.toISOString()} day={day} onMovePickup={onMovePickup} />
       ))}
