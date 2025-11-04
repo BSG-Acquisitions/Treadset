@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useManifests } from "@/hooks/useManifests";
+import { useSendManifestEmail } from "@/hooks/useSendManifestEmail";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,12 +10,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ReceiverSignatureDialog } from "./ReceiverSignatureDialog";
 import { format, subDays, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
-import { Clock, FileText, Signature, Search, Calendar, Filter, ChevronDown, ChevronRight } from "lucide-react";
+import { Clock, FileText, Signature, Search, Calendar, Filter, ChevronDown, ChevronRight, Mail } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { ManifestPDFControls } from "@/components/ManifestPDFControls";
 import { EmailDeliveryStatus } from "@/components/EmailDeliveryStatus";
+import { useToast } from "@/hooks/use-toast";
 
 export const ManifestReceiversView = () => {
   const { data: manifests, isLoading } = useManifests();
@@ -23,6 +25,8 @@ export const ManifestReceiversView = () => {
   const queryClient = useQueryClient();
   const [clientNames, setClientNames] = useState<Record<string, string>>({});
   const [manifestClientNames, setManifestClientNames] = useState<Record<string, string>>({});
+  const { mutate: sendEmail, isPending: isSendingEmail } = useSendManifestEmail();
+  const { toast } = useToast();
   
   // Filters and search
   const [searchTerm, setSearchTerm] = useState("");
@@ -219,6 +223,29 @@ export const ManifestReceiversView = () => {
   const handleAddReceiverSignature = (manifestId: string) => {
     setSelectedManifest(manifestId);
     setDialogOpen(true);
+  };
+
+  const handleResendEmail = async (manifestId: string, manifestNumber: string) => {
+    sendEmail(
+      { manifestId },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Email sent",
+            description: `Manifest ${manifestNumber} has been emailed successfully.`,
+          });
+          // Refresh the manifests to update email status
+          queryClient.invalidateQueries({ queryKey: ['manifests'] });
+        },
+        onError: (error: any) => {
+          toast({
+            title: "Email failed",
+            description: error?.message || "Failed to send email. Please try again.",
+            variant: "destructive",
+          });
+        },
+      }
+    );
   };
   if (isLoading) {
     return (
@@ -577,24 +604,37 @@ export const ManifestReceiversView = () => {
                                     format(new Date(manifest.receiver_signed_at), 'MMM d, h:mm a') : 'N/A'
                                   }
                                 </TableCell>
-                                <TableCell>
-                                  <EmailDeliveryStatus
-                                    emailStatus={manifest.email_status}
-                                    emailSentAt={manifest.email_sent_at}
-                                    emailSentTo={manifest.email_sent_to}
-                                    emailError={manifest.email_error}
-                                  />
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  {manifest.acroform_pdf_path && (
-                                    <ManifestPDFControls
-                                      manifestId={manifest.id}
-                                      acroformPdfPath={manifest.acroform_pdf_path}
-                                      clientEmails={[]}
-                                      className="inline-flex"
-                                    />
-                                  )}
-                                </TableCell>
+                                 <TableCell>
+                                   <EmailDeliveryStatus
+                                     emailStatus={manifest.email_status}
+                                     emailSentAt={manifest.email_sent_at}
+                                     emailSentTo={manifest.email_sent_to}
+                                     emailError={manifest.email_error}
+                                   />
+                                 </TableCell>
+                                 <TableCell className="text-right">
+                                   <div className="flex items-center justify-end gap-2">
+                                     {(!manifest.email_status || manifest.email_status === 'failed') && (
+                                       <Button
+                                         size="sm"
+                                         variant="outline"
+                                         onClick={() => handleResendEmail(manifest.id, manifest.manifest_number)}
+                                         disabled={isSendingEmail}
+                                       >
+                                         <Mail className="h-4 w-4 mr-2" />
+                                         Resend Email
+                                       </Button>
+                                     )}
+                                     {manifest.acroform_pdf_path && (
+                                       <ManifestPDFControls
+                                         manifestId={manifest.id}
+                                         acroformPdfPath={manifest.acroform_pdf_path}
+                                         clientEmails={[]}
+                                         className="inline-flex"
+                                       />
+                                     )}
+                                   </div>
+                                 </TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
@@ -646,21 +686,34 @@ export const ManifestReceiversView = () => {
                                       <Badge variant="secondary" className="text-xs">Complete</Badge>
                                     </div>
                                     
-                                    {manifest.receiver_signed_at && (
-                                      <p className="text-xs text-muted-foreground">
-                                        {format(new Date(manifest.receiver_signed_at), 'MMM d, h:mm a')}
-                                      </p>
-                                    )}
-                                    
-                                    {manifest.acroform_pdf_path && (
-                                      <ManifestPDFControls
-                                        manifestId={manifest.id}
-                                        acroformPdfPath={manifest.acroform_pdf_path}
-                                        clientEmails={[]}
-                                        className="w-full"
-                                      />
-                                    )}
-                                  </div>
+                                     {manifest.receiver_signed_at && (
+                                       <p className="text-xs text-muted-foreground">
+                                         {format(new Date(manifest.receiver_signed_at), 'MMM d, h:mm a')}
+                                       </p>
+                                     )}
+                                     
+                                     {(!manifest.email_status || manifest.email_status === 'failed') && (
+                                       <Button
+                                         size="sm"
+                                         variant="outline"
+                                         className="w-full"
+                                         onClick={() => handleResendEmail(manifest.id, manifest.manifest_number)}
+                                         disabled={isSendingEmail}
+                                       >
+                                         <Mail className="h-4 w-4 mr-2" />
+                                         Resend Email
+                                       </Button>
+                                     )}
+                                     
+                                     {manifest.acroform_pdf_path && (
+                                       <ManifestPDFControls
+                                         manifestId={manifest.id}
+                                         acroformPdfPath={manifest.acroform_pdf_path}
+                                         clientEmails={[]}
+                                         className="w-full"
+                                       />
+                                     )}
+                                   </div>
                                 </CardContent>
                               </Card>
                             ))}
