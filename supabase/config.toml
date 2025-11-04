@@ -119,3 +119,6 @@ verify_jwt = false
 
 [functions.generate-ai-insights]
 verify_jwt = false
+
+[functions.calculate-driver-performance]
+verify_jwt = false

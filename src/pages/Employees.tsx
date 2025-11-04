@@ -1,9 +1,11 @@
 import { useEmployees } from '@/hooks/useEmployees';
 import { CreateEmployeeDialog } from '@/components/employees/CreateEmployeeDialog';
 import { EditEmployeeDialog } from '@/components/employees/EditEmployeeDialog';
+import { DriverPerformanceTable } from '@/components/driver/DriverPerformanceTable';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Table,
   TableBody,
@@ -44,6 +46,7 @@ const ROLE_ICONS: Record<string, typeof Shield> = {
 
 export default function EmployeesPage() {
   const { data: employees = [], isLoading, error } = useEmployees();
+  const { hasAnyRole } = useAuth();
 
   const activeEmployees = employees.filter(emp => emp.isActive);
   const inactiveEmployees = employees.filter(emp => !emp.isActive);
@@ -122,6 +125,13 @@ export default function EmployeesPage() {
             change={-2.1}
           />
         </div>
+
+        {/* Driver Performance Analytics - Admin/Ops Only */}
+        {hasAnyRole(['admin', 'ops_manager']) && (
+          <div className="mb-8">
+            <DriverPerformanceTable />
+          </div>
+        )}
 
         {/* Enhanced Employees Table */}
         <Card className="border-border/20 shadow-elevation-lg bg-gradient-to-br from-card to-card-hover">

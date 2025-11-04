@@ -885,6 +885,84 @@ export type Database = {
           },
         ]
       }
+      driver_performance_beta: {
+        Row: {
+          avg_mileage_per_stop: number | null
+          avg_pickup_duration_minutes: number | null
+          avg_stops_per_day: number | null
+          calculation_period_end: string
+          calculation_period_start: string
+          completed_assignments: number | null
+          created_at: string
+          daily_stops_trend: Json | null
+          driver_id: string
+          id: string
+          last_calculated_at: string
+          on_time_arrivals: number | null
+          on_time_rate: number | null
+          on_time_trend: Json | null
+          organization_id: string
+          total_assignments: number | null
+          total_miles_driven: number | null
+          updated_at: string
+        }
+        Insert: {
+          avg_mileage_per_stop?: number | null
+          avg_pickup_duration_minutes?: number | null
+          avg_stops_per_day?: number | null
+          calculation_period_end: string
+          calculation_period_start: string
+          completed_assignments?: number | null
+          created_at?: string
+          daily_stops_trend?: Json | null
+          driver_id: string
+          id?: string
+          last_calculated_at?: string
+          on_time_arrivals?: number | null
+          on_time_rate?: number | null
+          on_time_trend?: Json | null
+          organization_id: string
+          total_assignments?: number | null
+          total_miles_driven?: number | null
+          updated_at?: string
+        }
+        Update: {
+          avg_mileage_per_stop?: number | null
+          avg_pickup_duration_minutes?: number | null
+          avg_stops_per_day?: number | null
+          calculation_period_end?: string
+          calculation_period_start?: string
+          completed_assignments?: number | null
+          created_at?: string
+          daily_stops_trend?: Json | null
+          driver_id?: string
+          id?: string
+          last_calculated_at?: string
+          on_time_arrivals?: number | null
+          on_time_rate?: number | null
+          on_time_trend?: Json | null
+          organization_id?: string
+          total_assignments?: number | null
+          total_miles_driven?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_performance_beta_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_performance_beta_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dropoff_customers: {
         Row: {
           city: string | null
