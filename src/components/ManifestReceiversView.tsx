@@ -614,7 +614,7 @@ export const ManifestReceiversView = () => {
                                  </TableCell>
                                  <TableCell className="text-right">
                                    <div className="flex items-center justify-end gap-2">
-                                     {(!manifest.email_status || manifest.email_status === 'failed') && (
+                                     {(!manifest.email_status || ['not_sent','failed','bounced'].includes(manifest.email_status)) && (
                                        <Button
                                          size="sm"
                                          variant="outline"
@@ -683,7 +683,7 @@ export const ManifestReceiversView = () => {
                                              emailError={manifest.email_error}
                                              className="text-xs"
                                            />
-                                           {(!manifest.email_status || manifest.email_status === 'failed') && (
+                                           {(!manifest.email_status || ['not_sent','failed','bounced'].includes(manifest.email_status)) && (
                                              <Button
                                                size="sm"
                                                variant="outline"
