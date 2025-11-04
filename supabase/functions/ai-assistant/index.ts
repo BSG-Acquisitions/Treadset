@@ -254,7 +254,7 @@ Return ONLY valid JSON.`
 
       case 'revenue_forecast': {
         const { data, error } = await supabase
-          .from('revenue_forecasts_beta')
+          .from('revenue_forecasts')
           .select('*')
           .eq('organization_id', organizationId)
           .order('forecast_date', { ascending: false })
@@ -277,7 +277,7 @@ Return ONLY valid JSON.`
         const riskLevel = parsedQuery.parameters.risk_level || 'high';
         
         const { data, error } = await supabase
-          .from('client_risk_scores_beta')
+          .from('client_risk_scores')
           .select(`
             *,
             clients(company_name, email, phone)
@@ -302,7 +302,7 @@ Return ONLY valid JSON.`
 
     // Log the query
     const executionTime = Date.now() - startTime;
-    await supabase.from('ai_query_logs_beta').insert({
+    await supabase.from('ai_query_logs').insert({
       user_id: userId,
       organization_id: organizationId,
       query_text: query,
@@ -333,7 +333,7 @@ Return ONLY valid JSON.`
       const supabase = createClient(supabaseUrl, supabaseKey);
       
       if (userId && organizationId) {
-        await supabase.from('ai_query_logs_beta').insert({
+        await supabase.from('ai_query_logs').insert({
           user_id: userId,
           organization_id: organizationId,
           query_text: query,

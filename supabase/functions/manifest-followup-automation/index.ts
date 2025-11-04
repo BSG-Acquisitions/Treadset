@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
 
       // Check if task already exists
       const { data: existingTask } = await supabase
-        .from('manifest_tasks_beta')
+        .from('manifest_tasks')
         .select('*')
         .eq('manifest_id', manifest.id)
         .eq('status', 'pending')
@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
 
         // Create task
         const { data: newTask, error: taskError } = await supabase
-          .from('manifest_tasks_beta')
+          .from('manifest_tasks')
           .insert({
             manifest_id: manifest.id,
             organization_id: manifest.organization_id,
@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
         tasksCreated++;
 
         // Record followup
-        await supabase.from('manifest_followups_beta').insert({
+        await supabase.from('manifest_followups').insert({
           manifest_id: manifest.id,
           task_id: taskId,
           organization_id: manifest.organization_id,
@@ -138,7 +138,7 @@ Deno.serve(async (req) => {
             related_id: manifest.id,
           });
 
-          await supabase.from('manifest_followups_beta').insert({
+          await supabase.from('manifest_followups').insert({
             manifest_id: manifest.id,
             task_id: taskId,
             organization_id: manifest.organization_id,
@@ -161,7 +161,7 @@ Deno.serve(async (req) => {
 
         if (opsManager) {
           await supabase
-            .from('manifest_tasks_beta')
+            .from('manifest_tasks')
             .update({
               assigned_to: opsManager.user_id,
               assigned_role: 'ops_manager',
@@ -172,7 +172,7 @@ Deno.serve(async (req) => {
             })
             .eq('id', taskId);
 
-          await supabase.from('manifest_followups_beta').insert({
+          await supabase.from('manifest_followups').insert({
             manifest_id: manifest.id,
             task_id: taskId,
             organization_id: manifest.organization_id,
@@ -200,7 +200,7 @@ Deno.serve(async (req) => {
       // Day 7: High Priority Alert
       if (daysSince >= 7 && existingTask && escalationLevel < 2) {
         await supabase
-          .from('manifest_tasks_beta')
+          .from('manifest_tasks')
           .update({
             priority: 'high',
             escalation_level: 2,
@@ -229,7 +229,7 @@ Deno.serve(async (req) => {
           });
         }
 
-        await supabase.from('manifest_followups_beta').insert({
+        await supabase.from('manifest_followups').insert({
           manifest_id: manifest.id,
           task_id: taskId,
           organization_id: manifest.organization_id,
@@ -246,7 +246,7 @@ Deno.serve(async (req) => {
       module_name: 'manifest_followup_automation',
       status: 'live',
       notes: `Processed ${incompleteManifests?.length || 0} manifests. Created ${tasksCreated} tasks, escalated ${tasksEscalated}, sent ${alertsSent} high-priority alerts.`,
-      impacted_tables: ['manifest_tasks_beta', 'manifest_followups_beta', 'notifications'],
+      impacted_tables: ['manifest_tasks', 'manifest_followups', 'notifications'],
     });
 
     console.log(`Automation complete: ${tasksCreated} created, ${tasksEscalated} escalated, ${alertsSent} alerts`);

@@ -21,7 +21,7 @@ export const useClientRiskScores = () => {
     queryKey: ['client-risk-scores'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('client_risk_scores_beta' as any)
+        .from('client_risk_scores')
         .select('*')
         .order('risk_score', { ascending: false });
 
@@ -36,7 +36,7 @@ export const useClientRiskScore = (clientId: string) => {
     queryKey: ['client-risk-score', clientId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('client_risk_scores_beta' as any)
+        .from('client_risk_scores')
         .select('*')
         .eq('client_id', clientId)
         .single();

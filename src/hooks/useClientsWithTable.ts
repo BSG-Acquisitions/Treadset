@@ -26,7 +26,7 @@ export const useClientsWithTable = ({ tableState }: UseClientsWithTableOptions) 
           pricing_tier:pricing_tier_id(name, rate),
           locations(id, address, access_notes),
           pickups(count),
-          risk_score:client_risk_scores_beta(risk_score, risk_level, pickup_frequency_decline, avg_payment_delay_days, contact_gap_ratio)
+          risk_score:client_risk_scores(risk_score, risk_level, pickup_frequency_decline, avg_payment_delay_days, contact_gap_ratio)
         `, { count: 'exact' });
 
       // Apply search across key fields

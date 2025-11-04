@@ -6,7 +6,7 @@ export const usePickupPatternsBeta = (clientId?: string) => {
     queryKey: ['pickup-patterns-beta', clientId],
     queryFn: async () => {
       let query = supabase
-        .from('pickup_patterns_beta')
+        .from('pickup_patterns')
         .select('*')
         .order('confidence_score', { ascending: false });
 

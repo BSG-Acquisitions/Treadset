@@ -13,10 +13,10 @@ export interface AIInsight {
 
 export const useAIInsights = (limit = 7) => {
   return useQuery({
-    queryKey: ['ai-insights-beta', limit],
+    queryKey: ['ai-insights', limit],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('ai_insights_beta')
+        .from('ai_insights')
         .select('*')
         .order('generated_at', { ascending: false })
         .limit(limit);
@@ -40,7 +40,7 @@ export const useGenerateInsights = () => {
       return data;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['ai-insights-beta'] });
+      queryClient.invalidateQueries({ queryKey: ['ai-insights'] });
       toast.success('AI Insights generated', {
         description: `Generated ${data.count} insight${data.count !== 1 ? 's' : ''}`,
       });

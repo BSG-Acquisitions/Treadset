@@ -22,7 +22,7 @@ export const useManifestAlerts = () => {
     queryKey: ['manifest-alerts-beta'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('manifest_alerts_beta')
+        .from('manifest_alerts')
         .select('*')
         .is('resolved_at', null)
         .order('priority', { ascending: false })
@@ -45,7 +45,7 @@ export const useManifestAlerts = () => {
         .single();
 
       const { data, error } = await supabase
-        .from('manifest_alerts_beta')
+        .from('manifest_alerts')
         .update({
           resolved_at: new Date().toISOString(),
           resolved_by: userData?.id,

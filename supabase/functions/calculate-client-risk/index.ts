@@ -148,7 +148,7 @@ Deno.serve(async (req) => {
 
     // Upsert risk score
     const { error: upsertError } = await supabase
-      .from('client_risk_scores_beta')
+      .from('client_risk_scores')
       .upsert(riskData, {
         onConflict: 'client_id',
       });

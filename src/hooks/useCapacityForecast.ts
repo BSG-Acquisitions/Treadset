@@ -10,7 +10,7 @@ export const useCapacityForecast = (organizationId?: string) => {
       if (!organizationId) throw new Error('Organization ID required');
 
       const { data, error } = await supabase
-        .from('capacity_preview_beta')
+        .from('capacity_preview')
         .select('*')
         .eq('organization_id', organizationId)
         .order('forecast_date', { ascending: true });

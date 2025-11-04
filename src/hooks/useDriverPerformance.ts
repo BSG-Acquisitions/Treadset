@@ -34,7 +34,7 @@ export const useDriverPerformance = () => {
     queryFn: async () => {
       // Get the most recent calculation period for each driver
       const { data, error } = await supabase
-        .from('driver_performance_beta')
+        .from('driver_performance')
         .select(`
           *,
           driver:users!driver_id(

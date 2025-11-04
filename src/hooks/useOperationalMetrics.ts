@@ -6,7 +6,7 @@ export const useOperationalMetrics = (startDate?: string, endDate?: string) => {
     queryKey: ['operational-metrics-beta', startDate, endDate],
     queryFn: async () => {
       let query = supabase
-        .from('operational_metrics_beta')
+        .from('operational_metrics')
         .select('*')
         .order('metric_date', { ascending: false });
 

@@ -14,7 +14,7 @@ export type Database = {
   }
   public: {
     Tables: {
-      ai_insights_beta: {
+      ai_insights: {
         Row: {
           created_at: string
           generated_at: string
@@ -49,7 +49,7 @@ export type Database = {
           },
         ]
       }
-      ai_query_logs_beta: {
+      ai_query_logs: {
         Row: {
           created_at: string
           error_message: string | null
@@ -254,7 +254,7 @@ export type Database = {
           },
         ]
       }
-      capacity_preview_beta: {
+      capacity_preview: {
         Row: {
           capacity_percentage: number | null
           capacity_status: string | null
@@ -298,7 +298,7 @@ export type Database = {
           },
         ]
       }
-      client_engagement_beta: {
+      client_engagement: {
         Row: {
           client_id: string
           contact_frequency: number | null
@@ -488,7 +488,7 @@ export type Database = {
         }
         Relationships: []
       }
-      client_risk_scores_beta: {
+      client_risk_scores: {
         Row: {
           avg_payment_delay_days: number | null
           client_id: string
@@ -929,7 +929,7 @@ export type Database = {
           },
         ]
       }
-      driver_performance_beta: {
+      driver_performance: {
         Row: {
           avg_mileage_per_stop: number | null
           avg_pickup_duration_minutes: number | null
@@ -1498,7 +1498,7 @@ export type Database = {
           },
         ]
       }
-      hauler_reliability_beta: {
+      hauler_reliability: {
         Row: {
           accurate_manifests: number
           created_at: string
@@ -1917,7 +1917,7 @@ export type Database = {
           },
         ]
       }
-      manifest_alerts_beta: {
+      manifest_alerts: {
         Row: {
           alert_type: string
           created_at: string
@@ -1978,7 +1978,7 @@ export type Database = {
           },
         ]
       }
-      manifest_followups_beta: {
+      manifest_followups: {
         Row: {
           action_type: string
           assigned_to: string | null
@@ -2045,12 +2045,12 @@ export type Database = {
             foreignKeyName: "manifest_followups_beta_task_id_fkey"
             columns: ["task_id"]
             isOneToOne: false
-            referencedRelation: "manifest_tasks_beta"
+            referencedRelation: "manifest_tasks"
             referencedColumns: ["id"]
           },
         ]
       }
-      manifest_tasks_beta: {
+      manifest_tasks: {
         Row: {
           assigned_role: Database["public"]["Enums"]["app_role"]
           assigned_to: string | null
@@ -2520,7 +2520,7 @@ export type Database = {
           },
         ]
       }
-      operational_metrics_beta: {
+      operational_metrics: {
         Row: {
           avg_completion_time_hours: number | null
           completed_on_time: number | null
@@ -2800,7 +2800,7 @@ export type Database = {
         }
         Relationships: []
       }
-      pickup_patterns_beta: {
+      pickup_patterns: {
         Row: {
           avg_days_between_pickups: number | null
           client_id: string
@@ -3470,7 +3470,7 @@ export type Database = {
           },
         ]
       }
-      revenue_forecasts_beta: {
+      revenue_forecasts: {
         Row: {
           based_on_months: number | null
           confidence_level: string | null

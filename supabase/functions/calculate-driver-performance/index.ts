@@ -182,7 +182,7 @@ serve(async (req) => {
 
         // Insert or update performance record
         const { data: existing } = await supabase
-          .from('driver_performance_beta')
+          .from('driver_performance')
           .select('id')
           .eq('driver_id', driverId)
           .eq('organization_id', org.id)
@@ -209,12 +209,12 @@ serve(async (req) => {
 
         if (existing) {
           await supabase
-            .from('driver_performance_beta')
+            .from('driver_performance')
             .update(performanceData)
             .eq('id', existing.id);
         } else {
           await supabase
-            .from('driver_performance_beta')
+            .from('driver_performance')
             .insert(performanceData);
         }
 

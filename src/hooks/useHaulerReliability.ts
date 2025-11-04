@@ -24,7 +24,7 @@ export const useHaulerReliability = () => {
     queryKey: ['hauler-reliability'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('hauler_reliability_beta')
+        .from('hauler_reliability')
         .select('*')
         .order('reliability_score', { ascending: false });
 

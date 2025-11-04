@@ -34,7 +34,7 @@ export const useManifestTasks = () => {
     queryKey: ['manifest-tasks'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('manifest_tasks_beta')
+        .from('manifest_tasks')
         .select(`
           *,
           manifests(
@@ -70,7 +70,7 @@ export const useManifestTasks = () => {
 
       // Get task details
       const { data: task } = await supabase
-        .from('manifest_tasks_beta')
+        .from('manifest_tasks')
         .select('manifest_id, organization_id')
         .eq('id', taskId)
         .single();
@@ -79,7 +79,7 @@ export const useManifestTasks = () => {
 
       // Update task status
       const { error: updateError } = await supabase
-        .from('manifest_tasks_beta')
+        .from('manifest_tasks')
         .update({
           status: 'resolved',
           resolved_at: new Date().toISOString(),
@@ -91,7 +91,7 @@ export const useManifestTasks = () => {
       if (updateError) throw updateError;
 
       // Record followup
-      await supabase.from('manifest_followups_beta').insert({
+      await supabase.from('manifest_followups').insert({
         manifest_id: task.manifest_id,
         task_id: taskId,
         organization_id: task.organization_id,

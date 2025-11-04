@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
       };
     });
 
-    // Store forecasts in revenue_forecasts_beta table
+    // Store forecasts in revenue_forecasts table
     const { data: orgData } = await supabaseClient
       .from('organizations')
       .select('id')
@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
     if (orgData) {
       // Delete old forecasts
       await supabaseClient
-        .from('revenue_forecasts_beta')
+        .from('revenue_forecasts')
         .delete()
         .eq('organization_id', orgData.id);
 
@@ -136,7 +136,7 @@ Deno.serve(async (req) => {
       }));
 
       const { error: insertError } = await supabaseClient
-        .from('revenue_forecasts_beta')
+        .from('revenue_forecasts')
         .insert(forecastsToInsert);
 
       if (insertError) throw insertError;

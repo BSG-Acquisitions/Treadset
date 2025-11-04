@@ -6,7 +6,7 @@ export const useClientEngagement = (clientId?: string) => {
     queryKey: ['client-engagement-beta', clientId],
     queryFn: async () => {
       let query = supabase
-        .from('client_engagement_beta')
+        .from('client_engagement')
         .select('*')
         .order('engagement_score', { ascending: false });
 

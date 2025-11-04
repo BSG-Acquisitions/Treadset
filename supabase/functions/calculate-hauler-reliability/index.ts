@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
       if (totalDropoffs === 0) {
         // No data yet, set default scores
         await supabase
-          .from('hauler_reliability_beta')
+          .from('hauler_reliability')
           .upsert({
             hauler_id: hauler.id,
             organization_id: hauler.organization_id,
@@ -136,7 +136,7 @@ Deno.serve(async (req) => {
 
       // Upsert reliability score
       const { error: upsertError } = await supabase
-        .from('hauler_reliability_beta')
+        .from('hauler_reliability')
         .upsert({
           hauler_id: hauler.id,
           organization_id: hauler.organization_id,
@@ -164,7 +164,7 @@ Deno.serve(async (req) => {
       module_name: 'hauler_reliability_calculation',
       status: 'live',
       notes: `Calculated reliability scores for ${scoresCalculated} haulers. Composite scoring: On-time (40%), Manifest accuracy (30%), Payment promptness (30%).`,
-      impacted_tables: ['hauler_reliability_beta'],
+      impacted_tables: ['hauler_reliability'],
     });
 
     console.log(`Reliability calculation complete: ${scoresCalculated} haulers processed`);

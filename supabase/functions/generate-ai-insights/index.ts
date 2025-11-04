@@ -33,21 +33,21 @@ serve(async (req) => {
       // Fetch data from all intelligence modules
       const [revenueData, riskData, reliabilityData, assignmentData] = await Promise.all([
         supabase
-          .from('revenue_forecasts_beta')
+          .from('revenue_forecasts')
           .select('*')
           .eq('organization_id', org.id)
           .order('forecast_month', { ascending: false })
           .limit(3),
         
         supabase
-          .from('client_risk_scores_beta')
+          .from('client_risk_scores')
           .select('*')
           .eq('organization_id', org.id)
           .order('risk_score', { ascending: false })
           .limit(5),
         
         supabase
-          .from('hauler_reliability_beta')
+          .from('hauler_reliability')
           .select('*')
           .eq('organization_id', org.id)
           .order('reliability_score', { ascending: true })
@@ -119,7 +119,7 @@ Format as bullet points with key insights.`,
 
       // Store insight
       const { data: insight, error: insertError } = await supabase
-        .from('ai_insights_beta')
+        .from('ai_insights')
         .insert({
           organization_id: org.id,
           summary_text: summaryText,

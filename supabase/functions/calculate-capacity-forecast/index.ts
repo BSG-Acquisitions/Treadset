@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
 
     // Delete existing forecasts for this organization in the date range
     await supabase
-      .from('capacity_preview_beta')
+      .from('capacity_preview')
       .delete()
       .eq('organization_id', organization_id)
       .gte('forecast_date', today.toISOString().split('T')[0])
@@ -126,7 +126,7 @@ Deno.serve(async (req) => {
 
     // Insert new forecasts
     const { error: insertError } = await supabase
-      .from('capacity_preview_beta')
+      .from('capacity_preview')
       .insert(forecasts);
 
     if (insertError) {
