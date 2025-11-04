@@ -144,4 +144,16 @@ verify_jwt = false
 [functions.archive-old-logs]
 verify_jwt = false
 
+[functions.api-performance-monitor]
+verify_jwt = false
+
+[functions.warmup-critical-functions]
+verify_jwt = false
+
+[functions.cache-cleanup]
+verify_jwt = false
+
+[functions.compute-daily-metrics]
+verify_jwt = false
+
 [auth]
