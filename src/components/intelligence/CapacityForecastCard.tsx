@@ -72,20 +72,26 @@ export const CapacityForecastCard = () => {
   const maxVolume = Math.max(...forecasts.map(f => f.predicted_tire_volume));
   const dynamicMax = Math.ceil(maxVolume * 1.2);
   
-  const chartData = forecasts.map((f) => {
-    const date = parseISO(f.forecast_date);
-    const dayOfWeek = date.getDay(); // 0=Sun, 6=Sat
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    
-    return {
-      date: format(date, 'EEE'),
-      fullDate: format(date, 'MMM d'),
-      volume: f.predicted_tire_volume,
-      capacity: f.capacity_percentage,
-      status: f.capacity_status,
-      isWeekend,
-    };
-  });
+  // Sort forecasts by day of week (Monday=1, Sunday=7) for consistent display
+  const chartData = forecasts
+    .map((f) => {
+      const date = parseISO(f.forecast_date);
+      const dayOfWeek = date.getDay(); // 0=Sun, 6=Sat
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      // Convert to Monday-first order (Mon=1, Sun=7)
+      const sortOrder = dayOfWeek === 0 ? 7 : dayOfWeek;
+      
+      return {
+        date: format(date, 'EEE'),
+        fullDate: format(date, 'MMM d'),
+        volume: f.predicted_tire_volume,
+        capacity: f.capacity_percentage,
+        status: f.capacity_status,
+        isWeekend,
+        sortOrder,
+      };
+    })
+    .sort((a, b) => a.sortOrder - b.sortOrder);
 
   const getBarColor = (status: string, isWeekend: boolean) => {
     if (isWeekend) return 'hsl(var(--muted))';
