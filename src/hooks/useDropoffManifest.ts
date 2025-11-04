@@ -54,15 +54,15 @@ export const useGenerateDropoffManifest = () => {
       if (existingClient) {
         clientId = existingClient.id;
       } else {
-        // Create a default client for dropoffs
+        // Create a default client for dropoffs (without email - emails come from dropoff_customers)
         const { data: newClient, error: createClientError } = await supabase
           .from('clients')
           .insert({
             organization_id: orgId,
             company_name: 'Dropoff Customers',
             contact_name: 'Various Customers',
-            email: 'dropoffs@bsgtires.com',
-            notes: 'Default client for dropoff manifests'
+            email: null, // No email - actual emails come from dropoff_customers table
+            notes: 'Default client for dropoff manifests. Actual customer details in dropoff_customers table.'
           })
           .select('id')
           .single();

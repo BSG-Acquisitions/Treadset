@@ -246,18 +246,38 @@ export const ManifestReceiversView = () => {
       if (!to && manifest?.client_id) {
         const { data: client, error: clientErr } = await supabase
           .from('clients')
-          .select('email')
+          .select('email, company_name')
           .eq('id', manifest.client_id)
           .maybeSingle();
-        if (!clientErr && client?.email) {
-          to = client.email;
+        
+        if (!clientErr && client) {
+          // If this is a dropoff manifest, fetch dropoff customer email
+          if (client.company_name === 'Dropoff Customers') {
+            const { data: dropoff, error: dropoffErr } = await supabase
+              .from('dropoffs')
+              .select(`
+                dropoff_customer_id,
+                dropoff_customers (
+                  email,
+                  company_name
+                )
+              `)
+              .eq('manifest_id', manifestId)
+              .maybeSingle();
+            
+            if (!dropoffErr && dropoff?.dropoff_customers?.email) {
+              to = dropoff.dropoff_customers.email;
+            }
+          } else if (client?.email) {
+            to = client.email;
+          }
         }
       }
 
       if (!to) {
         toast({
           title: 'Missing recipient',
-          description: 'No email on file for this client. Please add an email and try again.',
+          description: 'No email on file for this customer. Please add an email and try again.',
           variant: 'destructive',
         });
         return;
