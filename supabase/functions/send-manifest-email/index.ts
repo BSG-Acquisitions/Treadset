@@ -238,7 +238,7 @@ serve(async (req) => {
 
     // Send email via Resend
     const emailPayload: any = {
-      from: "BSG Tire Recycling <onboarding@resend.dev>",
+      from: "BSG Tire Recycling <noreply@bsgtires.com>",
       to: toList,
       subject,
       html,

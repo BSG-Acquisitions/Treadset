@@ -24,7 +24,7 @@ const handler = async (req: Request): Promise<Response> => {
     const { email, resetUrl, companyName = "BSG Tire Recycling" }: PasswordResetEmailRequest = await req.json();
 
     const emailResponse = await resend.emails.send({
-      from: `BSG Tire Recycling <onboarding@resend.dev>`,
+      from: `BSG Tire Recycling <noreply@bsgtires.com>`,
       to: [email],
       subject: `Reset Your BSG Tire Recycling Password`,
       html: `
