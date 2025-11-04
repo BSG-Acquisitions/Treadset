@@ -465,7 +465,7 @@ export default function Index() {
               title="Tires Recycled This Week"
               value={weeklyTireStats ? `${weeklyTireStats.toLocaleString()} PTEs` : '0 PTEs'}
               icon={<Recycle className="w-5 h-5" />}
-              variant="accent"
+              variant="primary"
               change={weeklyTireStats && weeklyTireStats > 0 ? 15.2 : 0}
               changeLabel="Monday - today"
             />
@@ -476,7 +476,7 @@ export default function Index() {
               title="Tires Recycled This Month"
               value={monthlyTireStats ? `${monthlyTireStats.toLocaleString()} PTEs` : '0 PTEs'}
               icon={<Recycle className="w-5 h-5" />}
-              variant="warning"
+              variant="success"
               change={monthlyTireStats && monthlyTireStats > 0 ? 22.4 : 0}
               changeLabel="month to date"
             />
