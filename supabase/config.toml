@@ -125,3 +125,23 @@ verify_jwt = false
 
 [functions.calculate-capacity-forecast]
 verify_jwt = false
+
+[functions.calculate-revenue-forecast]
+verify_jwt = false
+
+[functions.calculate-client-risk]
+verify_jwt = false
+
+[functions.calculate-hauler-reliability]
+verify_jwt = false
+
+[functions.manifest-followup-automation]
+verify_jwt = false
+
+[functions.system-health-check]
+verify_jwt = false
+
+[functions.archive-old-logs]
+verify_jwt = false
+
+[auth]

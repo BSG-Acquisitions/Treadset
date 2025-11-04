@@ -25,25 +25,28 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    const trainingStart = Date.now();
+
     // Get organization settings for default rates
     const { data: orgSettings } = await supabaseClient
       .from('organization_settings')
-      .select('default_pte_rate, default_otr_rate, default_tractor_rate')
+      .select('default_pte_rate, default_otr_rate, default_tractor_rate, organization_id')
       .single();
 
     const pteRate = orgSettings?.default_pte_rate || 25.00;
     const otrRate = orgSettings?.default_otr_rate || 45.00;
     const tractorRate = orgSettings?.default_tractor_rate || 35.00;
 
-    // Get last 6 months of completed manifests for forecasting
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    // Use last 12 months of data for improved model training
+    const twelveMonthsAgo = new Date();
+    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+    const dataRangeStart = twelveMonthsAgo.toISOString().split('T')[0];
 
     const { data: manifests, error: manifestError } = await supabaseClient
       .from('manifests')
       .select('created_at, total, pte_on_rim, pte_off_rim, otr_count, tractor_count')
       .in('status', ['COMPLETED', 'AWAITING_RECEIVER_SIGNATURE'])
-      .gte('created_at', sixMonthsAgo.toISOString())
+      .gte('created_at', twelveMonthsAgo.toISOString())
       .order('created_at', { ascending: true });
 
     if (manifestError) throw manifestError;
@@ -140,6 +143,39 @@ Deno.serve(async (req) => {
         .insert(forecastsToInsert);
 
       if (insertError) throw insertError;
+
+      // Log model training metrics
+      const trainingDuration = Date.now() - trainingStart;
+      const actualRevenues = revenues.slice(-3); // Last 3 months actual
+      const predictedRevenue = forecasts[0].predicted_revenue;
+      const mae = Math.abs(actualRevenues[actualRevenues.length - 1] - predictedRevenue);
+      const mape = (mae / actualRevenues[actualRevenues.length - 1]) * 100;
+
+      await supabaseClient.from('model_training_logs').insert({
+        organization_id: orgData.id,
+        model_name: 'revenue_forecast',
+        model_version: 'v2.0-12month',
+        data_range_start: dataRangeStart,
+        data_range_end: new Date().toISOString().split('T')[0],
+        records_used: manifests?.length || 0,
+        performance_metrics: {
+          mae: Math.round(mae * 100) / 100,
+          mape: Math.round(mape * 100) / 100,
+          growth_rate: Math.round(growthRate * 100) / 100,
+          seasonal_weight: Math.round(seasonalWeight * 100) / 100,
+          confidence_levels: forecasts.map(f => f.confidence_level)
+        },
+        hyperparameters: {
+          lookback_months: 12,
+          seasonal_adjustment: true,
+          pte_rate: pteRate,
+          otr_rate: otrRate,
+          tractor_rate: tractorRate
+        },
+        training_duration_ms: trainingDuration,
+        deployed: true,
+        notes: 'Enhanced with 12-month historical data and seasonal adjustment'
+      });
     }
 
     return new Response(
@@ -151,6 +187,7 @@ Deno.serve(async (req) => {
           growthRate: Math.round(growthRate * 100) / 100,
           dataPoints: revenues.length,
           seasonalWeight: Math.round(seasonalWeight * 100) / 100,
+          training_duration_ms: Date.now() - trainingStart
         }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
