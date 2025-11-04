@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_insights_beta: {
+        Row: {
+          created_at: string
+          generated_at: string
+          id: string
+          insights_data: Json | null
+          organization_id: string
+          summary_text: string
+        }
+        Insert: {
+          created_at?: string
+          generated_at?: string
+          id?: string
+          insights_data?: Json | null
+          organization_id: string
+          summary_text: string
+        }
+        Update: {
+          created_at?: string
+          generated_at?: string
+          id?: string
+          insights_data?: Json | null
+          organization_id?: string
+          summary_text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_insights_beta_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_query_logs_beta: {
         Row: {
           created_at: string

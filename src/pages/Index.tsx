@@ -26,6 +26,7 @@ import { useRealtimeUpdates } from "@/hooks/useRealtimeUpdates";
 import { SchedulePickupWithDriverDialog } from "@/components/SchedulePickupWithDriverDialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { AIInsightsCard } from "@/components/intelligence/AIInsightsCard";
 
 export default function Index() {
   const navigate = useNavigate();
@@ -379,9 +380,18 @@ export default function Index() {
           </SlideUp>
         </StaggerList>
 
+        {/* AI Insights - Admin & Ops Manager only */}
+        {hasAnyRole(['admin', 'ops_manager']) && (
+          <SlideUp delay={0.25}>
+            <div className="mb-8">
+              <AIInsightsCard />
+            </div>
+          </SlideUp>
+        )}
+
         {/* Client Followups - Prominent section for sales team */}
         {hasAnyRole(['admin', 'ops_manager', 'sales']) && (
-          <SlideUp delay={0.25}>
+          <SlideUp delay={0.3}>
             <div className="mb-8">
               <FollowupWorkflows />
             </div>

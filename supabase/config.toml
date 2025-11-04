@@ -113,3 +113,9 @@ verify_jwt = false
 
 [functions.ensure-manifest-pdf]
 verify_jwt = false
+
+[functions.ai-assistant]
+verify_jwt = false
+
+[functions.generate-ai-insights]
+verify_jwt = false
