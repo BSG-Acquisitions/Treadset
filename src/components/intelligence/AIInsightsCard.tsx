@@ -1,9 +1,10 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useAIInsights, useGenerateInsights } from '@/hooks/useAIInsights';
-import { Brain, ChevronDown, RefreshCw, Sparkles } from 'lucide-react';
+import { Brain, ChevronDown, RefreshCw, Sparkles, Info } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useState } from 'react';
 
@@ -52,6 +53,21 @@ export const AIInsightsCard = () => {
               <Sparkles className="h-3 w-3" />
               Daily
             </Badge>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs max-w-xs">
+                    <strong>Data source:</strong> ai_insights table<br/>
+                    <strong>Analysis from:</strong> assignments, client_risk_scores, hauler_reliability<br/>
+                    <strong>Auto-refresh:</strong> Every 15 minutes<br/>
+                    <strong>Generation:</strong> AI-powered daily summaries
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           <Button
             variant="ghost"

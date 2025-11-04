@@ -33,6 +33,7 @@ export const useAIInsights = (limit = 7) => {
 
       return data;
     },
+    refetchInterval: 15 * 60 * 1000, // Refresh every 15 minutes
   });
 };
 

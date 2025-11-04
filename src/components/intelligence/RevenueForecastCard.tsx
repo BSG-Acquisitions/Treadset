@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { DollarSign, TrendingUp } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { DollarSign, TrendingUp, Info } from 'lucide-react';
 import { useRevenueForecasts } from '@/hooks/useRevenueForecasts';
 
 export const RevenueForecastCard = () => {
@@ -18,8 +19,23 @@ export const RevenueForecastCard = () => {
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <DollarSign className="h-4 w-4" />
             Revenue Forecast
+            <Badge variant="outline" className="text-xs">Beta</Badge>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs max-w-xs">
+                    <strong>Data source:</strong> revenue_forecasts table<br/>
+                    <strong>Based on:</strong> client_summaries (8-week patterns)<br/>
+                    <strong>Cache:</strong> 6-hour TTL<br/>
+                    <strong>Auto-refresh:</strong> Every 15 minutes
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </CardTitle>
-          <Badge variant="outline" className="text-xs">Beta</Badge>
         </div>
         <CardDescription>AI-powered revenue predictions</CardDescription>
       </CardHeader>

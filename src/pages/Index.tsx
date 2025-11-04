@@ -2,8 +2,8 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Clock, MapPin, Users, TrendingUp, Package, Truck, Recycle, BarChart3, CheckCircle2, User } from "lucide-react";
-import { LineChart, Line, BarChart, Bar, Tooltip, XAxis, YAxis, CartesianGrid, ReferenceLine, ResponsiveContainer } from "recharts";
+import { Info, CalendarDays, Clock, MapPin, Users, TrendingUp, Package, Truck, Recycle, BarChart3, CheckCircle2, User } from "lucide-react";
+import { LineChart, Line, BarChart, Bar, Tooltip as ChartTooltip, XAxis, YAxis, CartesianGrid, ReferenceLine, ResponsiveContainer } from "recharts";
 import { usePickups } from "@/hooks/usePickups";
 import { useClients } from "@/hooks/useClients";
 import { useVehicles } from "@/hooks/useVehicles";
@@ -12,6 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { CapacityGauge } from "@/components/CapacityGauge";
 import { RowCarousel } from "@/components/RowCarousel";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { StatsCard } from "@/components/enhanced/StatsCard";
 import { ProjectedRevenueWidget } from "@/components/dashboard/ProjectedRevenueWidget";
@@ -410,6 +411,21 @@ export default function Index() {
                 <CardTitle className="flex items-center gap-2">
                   <Recycle className="w-5 h-5 text-brand-recycling" />
                   Environmental Impact
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs max-w-xs">
+                          <strong>Data source:</strong> manifests table<br/>
+                          <strong>Period:</strong> Last 6 months<br/>
+                          <strong>Filter:</strong> status = COMPLETED<br/>
+                          <strong>Updates:</strong> Real-time
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6 space-y-4">
@@ -450,7 +466,7 @@ export default function Index() {
                         dot={{ fill: 'hsl(var(--brand-recycling))', r: 4, strokeWidth: 2, stroke: 'hsl(var(--card))' }}
                         activeDot={{ r: 6 }}
                       />
-                      <Tooltip 
+                      <ChartTooltip 
                         content={({ active, payload }) => {
                           if (active && payload && payload.length) {
                             return (
@@ -485,6 +501,21 @@ export default function Index() {
                 <CardTitle className="flex items-center gap-2">
                   <CheckCircle2 className="w-5 h-5 text-brand-recycling" />
                   Daily PTE Goal
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs max-w-xs">
+                          <strong>Data source:</strong> manifests + dropoffs tables<br/>
+                          <strong>Filter:</strong> Today, status = COMPLETED<br/>
+                          <strong>Calculation:</strong> Sum of all PTE counts<br/>
+                          <strong>Updates:</strong> Real-time
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </CardTitle>
                 <CardDescription>Progress toward 2,600 PTEs daily target</CardDescription>
               </CardHeader>
@@ -518,7 +549,24 @@ export default function Index() {
 
                   {/* Weekly Trend Chart */}
                   <div className="pt-4 border-t space-y-2">
-                    <div className="text-xs font-medium text-muted-foreground">This Week's Activity (Target: 2,600 PTEs/day)</div>
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-medium text-muted-foreground">This Week's Activity (Target: 2,600 PTEs/day)</div>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-xs max-w-xs">
+                              <strong>Data source:</strong> pickups + manifests tables<br/>
+                              <strong>Period:</strong> Current week (Mon-today)<br/>
+                              <strong>Scale:</strong> 0-5,000 PTEs<br/>
+                              <strong>Updates:</strong> Real-time
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                     <ResponsiveContainer width="100%" height={140}>
                       <BarChart
                         data={weeklyData}
@@ -534,7 +582,7 @@ export default function Index() {
                           tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                           stroke="hsl(var(--border))"
                           width={50}
-                          domain={[0, 'dataMax']}
+                          domain={[0, 5000]}
                         />
                         <ReferenceLine 
                           y={2600} 

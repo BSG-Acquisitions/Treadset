@@ -1,16 +1,19 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, RefreshCw } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { TrendingUp, RefreshCw, Info } from 'lucide-react';
 import { useCapacityForecast } from '@/hooks/useCapacityForecast';
 import { useAuth } from '@/contexts/AuthContext';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer, Cell } from 'recharts';
 import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 
 export const CapacityForecastCard = () => {
   const { user } = useAuth();
-  const { data: forecasts, isLoading, generateForecast, isGenerating } = useCapacityForecast(user?.currentOrganization?.id);
+  const capacityQuery = useCapacityForecast(user?.currentOrganization?.id);
+  const { data: forecasts, isLoading, generateForecast, isGenerating } = capacityQuery;
+  const dataUpdatedAt = capacityQuery.dataUpdatedAt;
 
   const handleRefresh = async () => {
     if (!user?.currentOrganization?.id) return;
@@ -32,6 +35,20 @@ export const CapacityForecastCard = () => {
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
               Capacity Forecast (7 Days)
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="text-xs max-w-xs">
+                      Data source: capacity_preview table<br/>
+                      Based on 8-week historical PTE averages<br/>
+                      Refreshes: Every 15 minutes
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </CardTitle>
             <Button
               variant="outline"
@@ -45,21 +62,33 @@ export const CapacityForecastCard = () => {
           <CardDescription>Predictive load analysis</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">No forecast data available</p>
+          <p className="text-sm text-muted-foreground">Generating forecast from historical data...</p>
         </CardContent>
       </Card>
     );
   }
 
-  const chartData = forecasts.map((f) => ({
-    date: format(parseISO(f.forecast_date), 'EEE'),
-    fullDate: format(parseISO(f.forecast_date), 'MMM d'),
-    volume: f.predicted_tire_volume,
-    capacity: f.capacity_percentage,
-    status: f.capacity_status,
-  }));
+  // Calculate dynamic scale from forecasts (max = 20% above highest value)
+  const maxVolume = Math.max(...forecasts.map(f => f.predicted_tire_volume));
+  const dynamicMax = Math.ceil(maxVolume * 1.2);
+  
+  const chartData = forecasts.map((f) => {
+    const date = parseISO(f.forecast_date);
+    const dayOfWeek = date.getDay(); // 0=Sun, 6=Sat
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    
+    return {
+      date: format(date, 'EEE'),
+      fullDate: format(date, 'MMM d'),
+      volume: f.predicted_tire_volume,
+      capacity: f.capacity_percentage,
+      status: f.capacity_status,
+      isWeekend,
+    };
+  });
 
-  const getBarColor = (status: string) => {
+  const getBarColor = (status: string, isWeekend: boolean) => {
+    if (isWeekend) return 'hsl(var(--muted))';
     switch (status) {
       case 'critical': return 'hsl(var(--destructive))';
       case 'warning': return 'hsl(var(--warning))';
@@ -67,8 +96,8 @@ export const CapacityForecastCard = () => {
     }
   };
 
-  const maxVolume = Math.max(...forecasts.map(f => f.predicted_tire_volume));
   const avgCapacity = forecasts.reduce((sum, f) => sum + (f.capacity_percentage || 0), 0) / forecasts.length;
+  const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt) : new Date();
 
   return (
     <Card>
@@ -78,8 +107,24 @@ export const CapacityForecastCard = () => {
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
               Capacity Forecast (7 Days)
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="text-xs max-w-xs">
+                      <strong>Data source:</strong> capacity_preview table<br/>
+                      <strong>Calculation:</strong> 8-week historical avg (pickups + manifests)<br/>
+                      <strong>Scale:</strong> 0 - {dynamicMax.toLocaleString()} PTEs<br/>
+                      <strong>Last updated:</strong> {format(lastUpdated, 'MMM d, h:mm a')}<br/>
+                      <strong>Auto-refresh:</strong> Every 15 minutes
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </CardTitle>
-            <CardDescription>Predictive load analysis</CardDescription>
+            <CardDescription>Predictive load analysis (Mon-Sun)</CardDescription>
           </div>
           <Button
             variant="outline"
@@ -96,7 +141,7 @@ export const CapacityForecastCard = () => {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <p className="text-xs text-muted-foreground">Peak Day</p>
-            <p className="text-lg font-semibold">{maxVolume} PTEs</p>
+            <p className="text-lg font-semibold">{maxVolume.toLocaleString()} PTEs</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Avg Capacity</p>
@@ -114,16 +159,18 @@ export const CapacityForecastCard = () => {
             <YAxis 
               tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
               label={{ value: 'PTEs', angle: -90, position: 'insideLeft', style: { fontSize: 12 } }}
+              domain={[0, dynamicMax]}
             />
-            <Tooltip
+            <ChartTooltip
               content={({ active, payload }) => {
                 if (active && payload && payload.length) {
                   const data = payload[0].payload;
                   return (
                     <div className="bg-popover border border-border rounded-lg p-3 shadow-lg">
                       <p className="font-semibold text-sm">{data.fullDate}</p>
-                      <p className="text-sm">Volume: {data.volume} PTEs</p>
+                      <p className="text-sm">Volume: {data.volume.toLocaleString()} PTEs</p>
                       <p className="text-sm">Capacity: {data.capacity.toFixed(1)}%</p>
+                      {data.isWeekend && <p className="text-xs text-muted-foreground mt-1">Weekend</p>}
                       <Badge 
                         variant={data.status === 'critical' ? 'destructive' : data.status === 'warning' ? 'secondary' : 'default'}
                         className="mt-1"
@@ -138,14 +185,14 @@ export const CapacityForecastCard = () => {
             />
             <Bar dataKey="volume" radius={[4, 4, 0, 0]}>
               {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={getBarColor(entry.status)} />
+                <Cell key={`cell-${index}`} fill={getBarColor(entry.status, entry.isWeekend)} />
               ))}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
 
         <div className="flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 rounded" style={{ backgroundColor: 'hsl(var(--success))' }}></div>
               <span className="text-muted-foreground">&lt; 80%</span>
@@ -157,6 +204,10 @@ export const CapacityForecastCard = () => {
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 rounded" style={{ backgroundColor: 'hsl(var(--destructive))' }}></div>
               <span className="text-muted-foreground">&gt; 95%</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 rounded" style={{ backgroundColor: 'hsl(var(--muted))' }}></div>
+              <span className="text-muted-foreground">Weekend</span>
             </div>
           </div>
         </div>

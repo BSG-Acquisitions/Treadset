@@ -36,6 +36,7 @@ export const useCapacityForecast = (organizationId?: string) => {
     },
     enabled: !!organizationId,
     staleTime: 2 * 60 * 60 * 1000, // 2 hours
+    refetchInterval: 15 * 60 * 1000, // Refresh every 15 minutes
   });
 
   const generateForecast = useMutation({
