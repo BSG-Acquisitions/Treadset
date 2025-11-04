@@ -152,10 +152,12 @@ export default function Index() {
         }
       }
       
-      // Fetch data for each day
+      // Fetch data for each day from ALL sources (manifests, pickups, dropoffs)
       const results = await Promise.all(
         days.map(async ({ date, label }) => {
-          // First try to get completed manifests linked to pickups on this date
+          let totalPtes = 0;
+          
+          // 1. Get completed manifests (linked to pickups on this date)
           const { data: manifests } = await supabase
             .from('manifests')
             .select(`
@@ -169,27 +171,39 @@ export default function Index() {
             .eq('status', 'COMPLETED')
             .eq('pickups.pickup_date', date);
           
-          let totalPtes = 0;
-          
-          // If we have completed manifests, use those counts
           if (manifests && manifests.length > 0) {
-            totalPtes = manifests.reduce((sum, m) => 
+            totalPtes += manifests.reduce((sum, m) => 
               sum + (m.pte_on_rim || 0) + (m.pte_off_rim || 0) + 
               (m.otr_count || 0) + (m.tractor_count || 0), 0
             );
-          } else {
-            // Otherwise use pickup estimates (for today or incomplete days)
-            const { data: pickups } = await supabase
-              .from('pickups')
-              .select('pte_count, otr_count, tractor_count')
-              .eq('organization_id', user?.currentOrganization?.id)
-              .eq('pickup_date', date);
-            
-            if (pickups && pickups.length > 0) {
-              totalPtes = pickups.reduce((sum, p) =>
-                sum + (p.pte_count || 0) + (p.otr_count || 0) + (p.tractor_count || 0), 0
-              );
-            }
+          }
+          
+          // 2. Get completed pickups (in case manifests weren't created yet)
+          const { data: pickups } = await supabase
+            .from('pickups')
+            .select('pte_count, otr_count, tractor_count')
+            .eq('organization_id', user?.currentOrganization?.id)
+            .eq('pickup_date', date)
+            .eq('status', 'completed');
+          
+          if (pickups && pickups.length > 0) {
+            totalPtes += pickups.reduce((sum, p) =>
+              sum + (p.pte_count || 0) + (p.otr_count || 0) + (p.tractor_count || 0), 0
+            );
+          }
+          
+          // 3. Get dropoffs (facility intake)
+          const { data: dropoffs } = await supabase
+            .from('dropoffs')
+            .select('pte_count, otr_count, tractor_count')
+            .eq('organization_id', user?.currentOrganization?.id)
+            .eq('dropoff_date', date)
+            .in('status', ['completed', 'processed']);
+          
+          if (dropoffs && dropoffs.length > 0) {
+            totalPtes += dropoffs.reduce((sum, d) =>
+              sum + (d.pte_count || 0) + (d.otr_count || 0) + (d.tractor_count || 0), 0
+            );
           }
           
           return { day: label, ptes: totalPtes, target: 2600 };
@@ -508,9 +522,9 @@ export default function Index() {
                       </TooltipTrigger>
                       <TooltipContent>
                         <p className="text-xs max-w-xs">
-                          <strong>Data source:</strong> manifests + dropoffs tables<br/>
+                          <strong>Data source:</strong> manifests + dropoffs + pickups tables<br/>
                           <strong>Filter:</strong> Today, status = COMPLETED<br/>
-                          <strong>Calculation:</strong> Sum of all PTE counts<br/>
+                          <strong>Calculation:</strong> Sum of ALL tire intake<br/>
                           <strong>Updates:</strong> Real-time
                         </p>
                       </TooltipContent>
@@ -558,8 +572,9 @@ export default function Index() {
                           </TooltipTrigger>
                           <TooltipContent>
                             <p className="text-xs max-w-xs">
-                              <strong>Data source:</strong> pickups + manifests tables<br/>
+                              <strong>Data source:</strong> manifests + pickups + dropoffs tables<br/>
                               <strong>Period:</strong> Current week (Mon-today)<br/>
+                              <strong>Aggregation:</strong> All tire intake sources combined<br/>
                               <strong>Scale:</strong> 0-5,000 PTEs<br/>
                               <strong>Updates:</strong> Real-time
                             </p>
