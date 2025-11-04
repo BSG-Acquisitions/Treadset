@@ -1,4 +1,5 @@
 import { useEnhancedNotifications, EnhancedNotification } from '@/hooks/useEnhancedNotifications';
+import { useManifestTasks } from '@/hooks/useManifestTasks';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -14,6 +15,7 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
+import { ManifestTaskActions } from './ManifestTaskActions';
 
 const getPriorityColor = (priority?: string) => {
   switch (priority) {
@@ -61,9 +63,11 @@ interface NotificationItemProps {
   notification: EnhancedNotification;
   onMarkAsRead: (id: string) => void;
   onActionClick: (link: string) => void;
+  manifestTasks: any[];
 }
 
-const NotificationItem = ({ notification, onMarkAsRead, onActionClick }: NotificationItemProps) => {
+const NotificationItem = ({ notification, onMarkAsRead, onActionClick, manifestTasks }: NotificationItemProps) => {
+  const relatedTask = manifestTasks.find(t => t.manifest_id === notification.related_id);
   return (
     <Card 
       className={`mb-2 cursor-pointer transition-all hover:shadow-md ${
@@ -93,12 +97,24 @@ const NotificationItem = ({ notification, onMarkAsRead, onActionClick }: Notific
               {notification.message}
             </p>
             
-            <div className="flex items-center justify-between">
+            <div className="space-y-2">
               <span className="text-xs text-muted-foreground">
                 {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
               </span>
               
-              {notification.action_link && (
+              {/* One-click actions for manifest tasks */}
+              {notification.related_type === 'manifest' && notification.related_id && relatedTask && (
+                <div className="mt-2">
+                  <ManifestTaskActions
+                    taskId={relatedTask.id}
+                    manifestId={notification.related_id}
+                    manifestNumber={relatedTask.manifests?.manifest_number || ''}
+                  />
+                </div>
+              )}
+              
+              {/* Fallback to standard action link */}
+              {notification.action_link && !relatedTask && (
                 <Button
                   size="sm"
                   variant="outline"
@@ -127,6 +143,7 @@ const NotificationItem = ({ notification, onMarkAsRead, onActionClick }: Notific
 
 export const EnhancedNotificationCenter = () => {
   const { notifications, unreadCount, markAsRead, markAllAsRead, isMarkingAllAsRead } = useEnhancedNotifications();
+  const { tasks } = useManifestTasks();
   const navigate = useNavigate();
 
   const handleActionClick = (link: string) => {
@@ -174,6 +191,7 @@ export const EnhancedNotificationCenter = () => {
                 notification={notification}
                 onMarkAsRead={markAsRead}
                 onActionClick={handleActionClick}
+                manifestTasks={tasks}
               />
             ))
           )}

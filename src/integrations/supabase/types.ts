@@ -1694,6 +1694,158 @@ export type Database = {
           },
         ]
       }
+      manifest_followups_beta: {
+        Row: {
+          action_type: string
+          assigned_to: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          manifest_id: string
+          organization_id: string
+          performed_by: string | null
+          task_id: string | null
+        }
+        Insert: {
+          action_type: string
+          assigned_to?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          manifest_id: string
+          organization_id: string
+          performed_by?: string | null
+          task_id?: string | null
+        }
+        Update: {
+          action_type?: string
+          assigned_to?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          manifest_id?: string
+          organization_id?: string
+          performed_by?: string | null
+          task_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manifest_followups_beta_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manifest_followups_beta_manifest_id_fkey"
+            columns: ["manifest_id"]
+            isOneToOne: false
+            referencedRelation: "manifests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manifest_followups_beta_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manifest_followups_beta_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manifest_followups_beta_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "manifest_tasks_beta"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      manifest_tasks_beta: {
+        Row: {
+          assigned_role: Database["public"]["Enums"]["app_role"]
+          assigned_to: string | null
+          created_at: string
+          days_overdue: number
+          escalation_level: number
+          id: string
+          manifest_id: string
+          notes: string | null
+          organization_id: string
+          priority: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_role?: Database["public"]["Enums"]["app_role"]
+          assigned_to?: string | null
+          created_at?: string
+          days_overdue?: number
+          escalation_level?: number
+          id?: string
+          manifest_id: string
+          notes?: string | null
+          organization_id: string
+          priority?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_role?: Database["public"]["Enums"]["app_role"]
+          assigned_to?: string | null
+          created_at?: string
+          days_overdue?: number
+          escalation_level?: number
+          id?: string
+          manifest_id?: string
+          notes?: string | null
+          organization_id?: string
+          priority?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manifest_tasks_beta_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manifest_tasks_beta_manifest_id_fkey"
+            columns: ["manifest_id"]
+            isOneToOne: false
+            referencedRelation: "manifests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manifest_tasks_beta_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manifest_tasks_beta_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       manifests: {
         Row: {
           acroform_pdf_path: string | null
