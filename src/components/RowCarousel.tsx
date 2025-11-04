@@ -62,9 +62,9 @@ export function RowCarousel({ title, items, viewAllLink }: RowCarouselProps) {
           className="w-full"
         >
           <CarouselContent className="ml-2">
-            {items.map((item) => (
+            {items.map((item, index) => (
               <CarouselItem 
-                key={item.id} 
+                key={`${item.id}-${index}`}
                 className="pl-2 basis-full sm:basis-1/2 lg:basis-1/3 xl:basis-1/4 2xl:basis-1/5"
               >
                  <div className="h-full">
