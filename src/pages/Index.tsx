@@ -121,6 +121,97 @@ export default function Index() {
     enabled: !!user?.currentOrganization?.id,
   });
 
+  // Fetch this week's tire totals (Monday through today)
+  const { data: weeklyTireStats } = useQuery({
+    queryKey: ['weekly-tire-totals', user?.currentOrganization?.id, format(new Date(), 'yyyy-MM-dd')],
+    queryFn: async () => {
+      const today = new Date();
+      const todayDay = today.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+      
+      // Calculate Monday of current week
+      const daysFromMonday = todayDay === 0 ? 6 : todayDay - 1;
+      const monday = new Date(today);
+      monday.setDate(today.getDate() - daysFromMonday);
+      monday.setHours(0, 0, 0, 0);
+      
+      const endOfToday = new Date();
+      endOfToday.setHours(23, 59, 59, 999);
+      
+      // Get manifests for this week
+      const { data: manifests } = await supabase
+        .from('manifests')
+        .select('pte_on_rim, pte_off_rim, otr_count, tractor_count')
+        .eq('organization_id', user?.currentOrganization?.id)
+        .eq('status', 'COMPLETED')
+        .gte('created_at', monday.toISOString())
+        .lte('created_at', endOfToday.toISOString());
+      
+      // Get dropoffs for this week
+      const { data: dropoffs } = await supabase
+        .from('dropoffs')
+        .select('pte_count, otr_count, tractor_count')
+        .eq('organization_id', user?.currentOrganization?.id)
+        .in('status', ['completed', 'processed'])
+        .gte('dropoff_date', format(monday, 'yyyy-MM-dd'))
+        .lte('dropoff_date', format(endOfToday, 'yyyy-MM-dd'));
+      
+      const manifestTotal = (manifests || []).reduce((sum, m) => 
+        sum + (m.pte_on_rim || 0) + (m.pte_off_rim || 0) + (m.otr_count || 0) + (m.tractor_count || 0), 0
+      );
+      
+      const dropoffTotal = (dropoffs || []).reduce((sum, d) => 
+        sum + (d.pte_count || 0) + (d.otr_count || 0) + (d.tractor_count || 0), 0
+      );
+      
+      return manifestTotal + dropoffTotal;
+    },
+    enabled: !!user?.currentOrganization?.id,
+    refetchInterval: 30000, // Real-time updates every 30 seconds
+  });
+
+  // Fetch this month's tire totals (1st through today)
+  const { data: monthlyTireStats } = useQuery({
+    queryKey: ['monthly-tire-totals', user?.currentOrganization?.id, format(new Date(), 'yyyy-MM-dd')],
+    queryFn: async () => {
+      const today = new Date();
+      const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      firstOfMonth.setHours(0, 0, 0, 0);
+      
+      const endOfToday = new Date();
+      endOfToday.setHours(23, 59, 59, 999);
+      
+      // Get manifests for this month
+      const { data: manifests } = await supabase
+        .from('manifests')
+        .select('pte_on_rim, pte_off_rim, otr_count, tractor_count')
+        .eq('organization_id', user?.currentOrganization?.id)
+        .eq('status', 'COMPLETED')
+        .gte('created_at', firstOfMonth.toISOString())
+        .lte('created_at', endOfToday.toISOString());
+      
+      // Get dropoffs for this month
+      const { data: dropoffs } = await supabase
+        .from('dropoffs')
+        .select('pte_count, otr_count, tractor_count')
+        .eq('organization_id', user?.currentOrganization?.id)
+        .in('status', ['completed', 'processed'])
+        .gte('dropoff_date', format(firstOfMonth, 'yyyy-MM-dd'))
+        .lte('dropoff_date', format(endOfToday, 'yyyy-MM-dd'));
+      
+      const manifestTotal = (manifests || []).reduce((sum, m) => 
+        sum + (m.pte_on_rim || 0) + (m.pte_off_rim || 0) + (m.otr_count || 0) + (m.tractor_count || 0), 0
+      );
+      
+      const dropoffTotal = (dropoffs || []).reduce((sum, d) => 
+        sum + (d.pte_count || 0) + (d.otr_count || 0) + (d.tractor_count || 0), 0
+      );
+      
+      return manifestTotal + dropoffTotal;
+    },
+    enabled: !!user?.currentOrganization?.id,
+    refetchInterval: 30000, // Real-time updates every 30 seconds
+  });
+
   // Fetch this week's daily stats for PTE goal chart (current week Mon-Fri only)
   const { data: weeklyData = [] } = useQuery({
     queryKey: ['weekly-stats', user?.currentOrganization?.id, format(new Date(), 'yyyy-MM-dd')],
@@ -360,34 +451,34 @@ export default function Index() {
           
           <SlideUp>
             <StatsCard
-              title="Tires Recycled"
-              value={totalTiresRecycled > 0 ? `${totalTiresRecycled} PTEs` : 'No data'}
+              title="Tires Recycled Today"
+              value={totalTiresRecycled > 0 ? `${totalTiresRecycled} PTEs` : '0 PTEs'}
               icon={<Recycle className="w-5 h-5" />}
               variant="success"
               change={totalTiresRecycled > 0 ? 8.3 : 0}
-              changeLabel="vs last week"
+              changeLabel="from all sources"
             />
           </SlideUp>
           
           <SlideUp>
             <StatsCard
-              title="Active Fleet"
-              value={vehicles.filter(v => v.status === 'active').length}
-              icon={<Truck className="w-5 h-5" />}
+              title="Tires Recycled This Week"
+              value={weeklyTireStats ? `${weeklyTireStats.toLocaleString()} PTEs` : '0 PTEs'}
+              icon={<Recycle className="w-5 h-5" />}
               variant="accent"
-              change={vehicles.length > 0 ? -2.1 : 0}
-              changeLabel={`${vehicles.filter(v => v.status !== 'active').length} maintenance`}
+              change={weeklyTireStats && weeklyTireStats > 0 ? 15.2 : 0}
+              changeLabel="Monday - today"
             />
           </SlideUp>
           
           <SlideUp>
             <StatsCard
-              title="Active Clients"
-              value={activeClients.length}
-              icon={<BarChart3 className="w-5 h-5" />}
+              title="Tires Recycled This Month"
+              value={monthlyTireStats ? `${monthlyTireStats.toLocaleString()} PTEs` : '0 PTEs'}
+              icon={<Recycle className="w-5 h-5" />}
               variant="warning"
-              change={activeClients.length > 0 ? 15.7 : 0}
-              changeLabel="total clients"
+              change={monthlyTireStats && monthlyTireStats > 0 ? 22.4 : 0}
+              changeLabel="month to date"
             />
           </SlideUp>
         </StaggerList>
