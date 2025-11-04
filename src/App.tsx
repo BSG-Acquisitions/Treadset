@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/AppLayout";
+import { AIAssistant } from "@/components/AIAssistant";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import ClientDetail from "./pages/ClientDetail";
@@ -335,6 +336,7 @@ const App = () => (
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <AIAssistant />
         </BrowserRouter>
       </AuthProvider>
     </TooltipProvider>

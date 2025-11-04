@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_query_logs_beta: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          execution_time_ms: number | null
+          id: string
+          organization_id: string
+          query_text: string
+          query_type: string | null
+          response_summary: string | null
+          success: boolean
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          execution_time_ms?: number | null
+          id?: string
+          organization_id: string
+          query_text: string
+          query_type?: string | null
+          response_summary?: string | null
+          success?: boolean
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          execution_time_ms?: number | null
+          id?: string
+          organization_id?: string
+          query_text?: string
+          query_type?: string | null
+          response_summary?: string | null
+          success?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_query_logs_beta_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_query_logs_beta_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assignments: {
         Row: {
           actual_arrival: string | null
