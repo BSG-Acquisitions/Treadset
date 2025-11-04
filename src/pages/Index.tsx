@@ -136,40 +136,38 @@ export default function Index() {
       const monday = new Date(today);
       monday.setDate(today.getDate() - daysFromMonday);
       
-      // Build array of weekdays from Monday up to today (or Friday, whichever comes first)
+      // Build array of ALL weekdays (Monday-Friday) regardless of current day
       const days = [];
       for (let i = 0; i < 5; i++) { // Mon-Fri
         const date = new Date(monday);
         date.setDate(monday.getDate() + i);
         
-        // Only include days up to today
-        if (date <= today) {
-          days.push({
-            date: format(date, 'yyyy-MM-dd'),
-            label: format(date, 'EEE'),
-            dateObj: date
-          });
-        }
+        days.push({
+          date: format(date, 'yyyy-MM-dd'),
+          label: format(date, 'EEE'),
+          dateObj: date
+        });
       }
       
       // Fetch data for each day from ALL sources (manifests, pickups, dropoffs)
       const results = await Promise.all(
-        days.map(async ({ date, label }) => {
+        days.map(async ({ date, label, dateObj }) => {
           let totalPtes = 0;
           
-          // 1. Get completed manifests (linked to pickups on this date)
+          // Calculate date range for this day (start and end of day)
+          const startOfDay = new Date(dateObj);
+          startOfDay.setHours(0, 0, 0, 0);
+          const endOfDay = new Date(dateObj);
+          endOfDay.setHours(23, 59, 59, 999);
+          
+          // 1. Get completed manifests created on this date
           const { data: manifests } = await supabase
             .from('manifests')
-            .select(`
-              pte_on_rim, 
-              pte_off_rim, 
-              otr_count, 
-              tractor_count,
-              pickup:pickups!inner(pickup_date)
-            `)
+            .select('pte_on_rim, pte_off_rim, otr_count, tractor_count')
             .eq('organization_id', user?.currentOrganization?.id)
             .eq('status', 'COMPLETED')
-            .eq('pickups.pickup_date', date);
+            .gte('created_at', startOfDay.toISOString())
+            .lte('created_at', endOfDay.toISOString());
           
           if (manifests && manifests.length > 0) {
             totalPtes += manifests.reduce((sum, m) => 

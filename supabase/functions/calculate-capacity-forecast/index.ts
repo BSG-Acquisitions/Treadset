@@ -31,99 +31,60 @@ Deno.serve(async (req) => {
 
     console.log(`Calculating capacity forecast for organization: ${organization_id}`);
 
-    // Get organization settings for truck capacity (26-foot box truck = 500 PTEs)
-    const { data: orgSettings } = await supabase
-      .from('organization_settings')
-      .select('avg_truck_capacity_ptes')
-      .eq('organization_id', organization_id)
-      .single();
+    // Truck capacity: 1000 PTEs (2 trips x 500 PTEs per trip)
+    const truckCapacity = 1000;
 
-    const truckCapacity = orgSettings?.avg_truck_capacity_ptes || 500;
+    // Get historical PICKUP data ONLY from last 90 days to analyze day-of-week patterns
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    const ninetyDaysAgoStr = ninetyDaysAgo.toISOString().split('T')[0];
 
-    // Get historical data from ALL sources from last 30 days to establish baseline
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
-
-    // 1. Get completed pickups
-    const { data: historicalPickups } = await supabase
-      .from('pickups')
-      .select('pickup_date, pte_count, otr_count, tractor_count')
-      .eq('organization_id', organization_id)
-      .gte('pickup_date', thirtyDaysAgoStr)
-      .eq('status', 'completed');
-
-    // 2. Get completed manifests (linked to pickups)
+    // Get completed manifests (actual pickups with tire counts)
     const { data: historicalManifests } = await supabase
       .from('manifests')
-      .select('created_at, pte_on_rim, pte_off_rim, otr_count, tractor_count')
+      .select('created_at, pte_on_rim, pte_off_rim, otr_count, tractor_count, pickup:pickups!inner(pickup_date)')
       .eq('organization_id', organization_id)
-      .gte('created_at', thirtyDaysAgoStr)
+      .gte('created_at', ninetyDaysAgoStr)
       .eq('status', 'COMPLETED');
 
-    // 3. Get dropoffs (facility intake)
-    const { data: historicalDropoffs } = await supabase
-      .from('dropoffs')
-      .select('dropoff_date, pte_count, otr_count, tractor_count')
-      .eq('organization_id', organization_id)
-      .gte('dropoff_date', thirtyDaysAgoStr)
-      .in('status', ['completed', 'processed']);
-
-    // Calculate average daily volume from ALL sources
-    const dailyVolumes: Record<string, number> = {};
+    // Group by day of week (0=Sun, 1=Mon, ..., 6=Sat)
+    const dayOfWeekVolumes: Record<number, number[]> = {
+      0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: []
+    };
     
-    // Add pickups
-    (historicalPickups || []).forEach((pickup: any) => {
-      const date = pickup.pickup_date;
-      const volume = (pickup.pte_count || 0) + (pickup.otr_count || 0) + (pickup.tractor_count || 0);
-      dailyVolumes[date] = (dailyVolumes[date] || 0) + volume;
-    });
-
-    // Add manifests
     (historicalManifests || []).forEach((manifest: any) => {
-      const date = manifest.created_at.split('T')[0];
+      const date = new Date(manifest.created_at);
+      const dayOfWeek = date.getDay();
       const volume = (manifest.pte_on_rim || 0) + (manifest.pte_off_rim || 0) + 
                      (manifest.otr_count || 0) + (manifest.tractor_count || 0);
-      dailyVolumes[date] = (dailyVolumes[date] || 0) + volume;
+      dayOfWeekVolumes[dayOfWeek].push(volume);
     });
 
-    // Add dropoffs
-    (historicalDropoffs || []).forEach((dropoff: any) => {
-      const date = dropoff.dropoff_date;
-      const volume = (dropoff.pte_count || 0) + (dropoff.otr_count || 0) + (dropoff.tractor_count || 0);
-      dailyVolumes[date] = (dailyVolumes[date] || 0) + volume;
+    // Calculate average volume per day of week
+    const avgByDayOfWeek: Record<number, number> = {};
+    Object.entries(dayOfWeekVolumes).forEach(([day, volumes]) => {
+      const dayNum = parseInt(day);
+      avgByDayOfWeek[dayNum] = volumes.length > 0
+        ? volumes.reduce((sum, vol) => sum + vol, 0) / volumes.length
+        : 400; // Default fallback
     });
 
-    const avgDailyVolume = Object.values(dailyVolumes).length > 0
-      ? Object.values(dailyVolumes).reduce((sum, vol) => sum + vol, 0) / Object.values(dailyVolumes).length
-      : 300; // Default fallback based on typical daily intake
+    console.log(`Day-of-week averages:`, avgByDayOfWeek);
 
-    console.log(`Historical analysis: ${Object.keys(dailyVolumes).length} days, avg ${Math.round(avgDailyVolume)} PTEs/day`);
-
-    // Get scheduled/planned intake for next 7 days from ALL sources
+    // Get scheduled PICKUPS for next 7 days
     const today = new Date();
     const sevenDaysFromNow = new Date();
     sevenDaysFromNow.setDate(today.getDate() + 7);
     const todayStr = today.toISOString().split('T')[0];
     const sevenDaysStr = sevenDaysFromNow.toISOString().split('T')[0];
 
-    // 1. Scheduled pickups
     const { data: scheduledPickups } = await supabase
       .from('pickups')
-      .select('pickup_date, pte_count, otr_count, tractor_count')
+      .select('pickup_date, pte_count, otr_count, tractor_count, client_id')
       .eq('organization_id', organization_id)
       .gte('pickup_date', todayStr)
       .lte('pickup_date', sevenDaysStr)
       .in('status', ['scheduled', 'assigned']);
-
-    // 2. Scheduled dropoffs
-    const { data: scheduledDropoffs } = await supabase
-      .from('dropoffs')
-      .select('dropoff_date, pte_count, otr_count, tractor_count')
-      .eq('organization_id', organization_id)
-      .gte('dropoff_date', todayStr)
-      .lte('dropoff_date', sevenDaysStr)
-      .in('status', ['scheduled', 'pending']);
 
     // Calculate predictions for next 7 days
     const forecasts = [];
@@ -132,24 +93,17 @@ Deno.serve(async (req) => {
       const forecastDate = new Date();
       forecastDate.setDate(today.getDate() + i);
       const dateStr = forecastDate.toISOString().split('T')[0];
+      const dayOfWeek = forecastDate.getDay();
 
-      // Sum scheduled intake from all sources for this date
-      let scheduledForDate = 0;
-
-      // Add scheduled pickups
-      scheduledForDate += (scheduledPickups || [])
+      // Sum scheduled pickups for this date
+      const scheduledForDate = (scheduledPickups || [])
         .filter((p: any) => p.pickup_date === dateStr)
         .reduce((sum, p: any) => sum + (p.pte_count || 0) + (p.otr_count || 0) + (p.tractor_count || 0), 0);
 
-      // Add scheduled dropoffs
-      scheduledForDate += (scheduledDropoffs || [])
-        .filter((d: any) => d.dropoff_date === dateStr)
-        .reduce((sum, d: any) => sum + (d.pte_count || 0) + (d.otr_count || 0) + (d.tractor_count || 0), 0);
-
-      // If no scheduled intake, use historical average with slight variation
+      // If pickups scheduled, use that. Otherwise use day-of-week average
       const predictedVolume = scheduledForDate > 0 
         ? scheduledForDate 
-        : Math.round(avgDailyVolume * (0.9 + Math.random() * 0.2)); // ±10% variation
+        : Math.round(avgByDayOfWeek[dayOfWeek] || 400);
 
       const capacityPercentage = (predictedVolume / truckCapacity) * 100;
       
@@ -195,9 +149,9 @@ Deno.serve(async (req) => {
         success: true,
         forecasts,
         summary: {
-          avgDailyVolume: Math.round(avgDailyVolume),
           truckCapacity,
-          daysAnalyzed: Object.keys(dailyVolumes).length,
+          dayOfWeekAverages: avgByDayOfWeek,
+          historicalManifests: (historicalManifests || []).length,
         },
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
