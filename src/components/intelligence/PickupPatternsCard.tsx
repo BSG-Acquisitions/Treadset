@@ -1,14 +1,14 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, Calendar } from 'lucide-react';
-import { usePickupPatternsBeta } from '@/hooks/usePickupPatternsBeta';
+import { usePickupPatterns } from '@/hooks/usePickupPatterns';
 
 interface PickupPatternsCardProps {
   clientId?: string;
 }
 
 export const PickupPatternsCard = ({ clientId }: PickupPatternsCardProps) => {
-  const { data: patterns, isLoading } = usePickupPatternsBeta(clientId);
+  const { data: patterns, isLoading } = usePickupPatterns(clientId);
 
   if (isLoading) return null;
   if (!patterns || patterns.length === 0) return null;
