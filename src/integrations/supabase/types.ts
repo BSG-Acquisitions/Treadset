@@ -355,6 +355,77 @@ export type Database = {
         }
         Relationships: []
       }
+      client_risk_scores_beta: {
+        Row: {
+          avg_payment_delay_days: number | null
+          client_id: string
+          contact_gap_ratio: number | null
+          created_at: string
+          id: string
+          last_calculated_at: string
+          organization_id: string
+          pickup_frequency_decline: number | null
+          risk_level: string
+          risk_score: number
+          updated_at: string
+        }
+        Insert: {
+          avg_payment_delay_days?: number | null
+          client_id: string
+          contact_gap_ratio?: number | null
+          created_at?: string
+          id?: string
+          last_calculated_at?: string
+          organization_id: string
+          pickup_frequency_decline?: number | null
+          risk_level: string
+          risk_score: number
+          updated_at?: string
+        }
+        Update: {
+          avg_payment_delay_days?: number | null
+          client_id?: string
+          contact_gap_ratio?: number | null
+          created_at?: string
+          id?: string
+          last_calculated_at?: string
+          organization_id?: string
+          pickup_frequency_decline?: number | null
+          risk_level?: string
+          risk_score?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_risk_scores_beta_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_risk_scores_beta_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "mv_monthly_entity_rollup"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "client_risk_scores_beta_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "mv_revenue_summary"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "client_risk_scores_beta_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_summaries: {
         Row: {
           average_pickup_size: number | null

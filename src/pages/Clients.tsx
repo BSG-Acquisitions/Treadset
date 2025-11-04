@@ -13,9 +13,11 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Upload, Download, Edit, AlertTriangle, MailWarning, Trash2 } from "lucide-react";
+import { Plus, Upload, Download, Edit, AlertTriangle, MailWarning, Trash2, RefreshCw } from "lucide-react";
 import { SchedulePickupDialog } from "@/components/SchedulePickupDialog";
 import { CreateClientDialog } from "@/components/CreateClientDialog";
+import { ClientRiskBadge } from "@/components/ClientRiskBadge";
+import { useCalculateClientRisk } from "@/hooks/useClientRisk";
 
 
 import type { Database } from "@/integrations/supabase/types";
@@ -33,6 +35,13 @@ type Client = {
   pricing_tier: { name: string } | null;
   locations: { id?: string; address?: string; access_notes?: string }[];
   pickups: { count: number }[];
+  risk_score: {
+    risk_score: number;
+    risk_level: 'low' | 'medium' | 'high';
+    pickup_frequency_decline: number | null;
+    avg_payment_delay_days: number | null;
+    contact_gap_ratio: number | null;
+  }[] | null;
 } & Database["public"]["Tables"]["clients"]["Row"];
 
 export default function Clients() {
@@ -49,23 +58,36 @@ export default function Clients() {
   const { data: clientsData, isLoading } = useClientsWithTable({ tableState: tableState.state });
   const { data: pricingTiers = [] } = usePricingTiers();
   const deleteClient = useDeleteClient();
+  const calculateRisk = useCalculateClientRisk();
 
   // Count clients without emails
   const clientsWithoutEmail = clientsData?.data?.filter(client => !client.email) || [];
   const missingEmailCount = clientsWithoutEmail.length;
 
-  const columns: Column<Client>[] = [
+  const columns: Column<any>[] = [
     {
       key: 'company_name',
       title: 'Company',
       sortable: true,
       render: (value, row) => (
-        <Link 
-          to={`/clients/${row.id}`}
-          className="font-medium text-primary hover:underline"
-        >
-          {value}
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link 
+            to={`/clients/${row.id}`}
+            className="font-medium text-primary hover:underline"
+          >
+            {value}
+          </Link>
+          {row.risk_score?.[0] && (
+            <ClientRiskBadge 
+              score={row.risk_score[0].risk_score}
+              riskLevel={row.risk_score[0].risk_level}
+              pickupDecline={row.risk_score[0].pickup_frequency_decline}
+              paymentDelay={row.risk_score[0].avg_payment_delay_days}
+              contactGap={row.risk_score[0].contact_gap_ratio}
+              size="sm"
+            />
+          )}
+        </div>
       )
     },
     {
@@ -117,6 +139,40 @@ export default function Clients() {
           </div>
         ) : (
           <span className="text-muted-foreground text-sm">No address</span>
+        );
+      }
+    },
+    {
+      key: 'risk_score',
+      title: 'Churn Risk',
+      sortable: false,
+      render: (value, row) => {
+        const riskData = row.risk_score?.[0];
+        if (!riskData) {
+          return (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => calculateRisk.mutate(row.id)}
+              disabled={calculateRisk.isPending}
+            >
+              <RefreshCw className={`h-3 w-3 ${calculateRisk.isPending ? 'animate-spin' : ''}`} />
+            </Button>
+          );
+        }
+        return (
+          <div className="flex items-center gap-2">
+            <span className="font-medium">{riskData.risk_score}</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => calculateRisk.mutate(row.id)}
+              disabled={calculateRisk.isPending}
+              className="h-6 w-6 p-0"
+            >
+              <RefreshCw className={`h-3 w-3 ${calculateRisk.isPending ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
         );
       }
     },
