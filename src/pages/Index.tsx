@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Info, CalendarDays, Clock, MapPin, Users, TrendingUp, Package, Truck, Recycle, BarChart3, CheckCircle2, User } from "lucide-react";
+import { Info, CalendarDays, Clock, TrendingUp, Package, Truck, Recycle, BarChart3, CheckCircle2 } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, Tooltip as ChartTooltip, XAxis, YAxis, CartesianGrid, ReferenceLine, ResponsiveContainer } from "recharts";
 import { usePickups } from "@/hooks/usePickups";
 import { useClients } from "@/hooks/useClients";
@@ -11,7 +11,6 @@ import { useTodaysDropoffs } from "@/hooks/useDropoffs";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { CapacityGauge } from "@/components/CapacityGauge";
-import { RowCarousel } from "@/components/RowCarousel";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { StatsCard } from "@/components/enhanced/StatsCard";
@@ -689,137 +688,12 @@ export default function Index() {
           <ProjectedRevenueWidget />
         </SlideUp>
 
-        {/* Quick Actions */}
-        <SlideUp delay={0.4}>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
-          {hasAnyRole(['admin', 'ops_manager', 'dispatcher']) && (
-            <Card className="interactive-card border-brand-primary/20 bg-gradient-to-br from-card to-brand-primary/5">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5 text-brand-primary" />
-                  Route Management
-                </CardTitle>
-                <CardDescription>
-                  View and optimize today's delivery routes
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button asChild variant="outline" className="w-full border-brand-primary/30 text-brand-primary hover:bg-brand-primary/10">
-                  <Link to="/routes/today">View Routes</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          )}
+        {/* Quick Actions removed - navigation available in sidebar/top nav */}
 
-          {hasAnyRole(['admin', 'ops_manager', 'sales']) && (
-            <Card className="interactive-card border-brand-secondary/20 bg-gradient-to-br from-card to-brand-secondary/5">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-brand-secondary" />
-                  Client Portal
-                </CardTitle>
-                <CardDescription>
-                  Manage clients and service agreements
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button asChild variant="outline" className="w-full border-brand-secondary/30 text-brand-secondary hover:bg-brand-secondary/10">
-                  <Link to="/clients">Manage Clients</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-
-          {hasAnyRole(['admin', 'ops_manager', 'sales']) && (
-            <Card className="interactive-card border-brand-accent/20 bg-gradient-to-br from-card to-brand-accent/5">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="h-5 w-5 text-brand-accent" />
-                  Quick Booking
-                </CardTitle>
-                <CardDescription>
-                  Schedule new tire pickup services
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button asChild variant="outline" className="w-full border-brand-accent/30 text-brand-accent hover:bg-brand-accent/10">
-                  <Link to="/book">Book Pickup</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-
-          {hasAnyRole(['admin', 'ops_manager']) && (
-            <Card className="interactive-card border-brand-recycling/20 bg-gradient-to-br from-card to-brand-recycling/5">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5 text-brand-recycling" />
-                  Analytics Dashboard
-                </CardTitle>
-                <CardDescription>
-                  View comprehensive 2025 analytics and trends
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button asChild variant="outline" className="w-full border-brand-recycling/30 text-brand-recycling hover:bg-brand-recycling/10">
-                  <Link to="/analytics">View Analytics</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-          </div>
-        </SlideUp>
-
-        {/* Today's Activity */}
-        {todayPickups.length > 0 && (
-          <SlideUp delay={0.5}>
-            <Card className="border-border/20 shadow-elevation-lg bg-gradient-to-br from-card to-card-hover mb-8">
-            <CardHeader className="border-b border-border/10">
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-brand-primary" />
-                Today's Pickup Activity
-              </CardTitle>
-              <CardDescription>
-                Live updates on pickup progress and client engagement
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="mb-4">
-                <span className="text-sm text-muted-foreground">
-                  {todayPickups.length} pickups scheduled for today
-                </span>
-              </div>
-              <RowCarousel
-                title=""
-                items={todayPickups.map(pickup => {
-                  const clientData = clients.find(c => c.id === pickup.client_id);
-                  const todayStr = format(new Date(), 'yyyy-MM-dd');
-                  const lastPickupIso = (clientData?.last_pickup_at
-                    ? clientData.last_pickup_at
-                    : (pickup.pickup_date === todayStr
-                        ? new Date().toISOString()
-                        : `${pickup.pickup_date}T12:00:00`));
-
-                  return {
-                    id: pickup.client_id,
-                    name: pickup.client?.company_name || 'Unknown Client',
-                    capacity: pickup.pte_count || 0,
-                    lastPickup: lastPickupIso,
-                    revenue: clientData?.lifetime_revenue || pickup.computed_revenue || 0,
-                    pickupsThisMonth: pickupsThisMonthMap[pickup.client_id] || 0,
-                    status: pickup.status === 'completed' ? 'active' : 
-                     pickup.status === 'overdue' ? 'overdue' : 'scheduled',
-                    address: pickup.location?.address || 'Detroit Metro Area'
-                  };
-                })}
-              />
-            </CardContent>
-          </Card>
-          </SlideUp>
-        )}
+        {/* Today's Pickup Activity removed - stats shown in top cards */}
 
         {/* Fleet Status */}
-        <SlideUp delay={0.6}>
+        <SlideUp delay={0.4}>
           <Card className="border-border/20 shadow-elevation-lg bg-gradient-to-br from-card to-secondary/5 mb-8">
             <CardHeader className="border-b border-border/10">
               <CardTitle className="flex items-center gap-2">
