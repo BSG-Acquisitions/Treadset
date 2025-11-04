@@ -146,12 +146,13 @@ export default function Index() {
         .gte('created_at', monday.toISOString())
         .lte('created_at', endOfToday.toISOString());
       
-      // Get dropoffs for this week
+      // Get dropoffs WITHOUT manifests (to avoid double-counting)
       const { data: dropoffs } = await supabase
         .from('dropoffs')
         .select('pte_count, otr_count, tractor_count')
         .eq('organization_id', user?.currentOrganization?.id)
         .in('status', ['completed', 'processed'])
+        .is('manifest_id', null)
         .gte('dropoff_date', format(monday, 'yyyy-MM-dd'))
         .lte('dropoff_date', format(endOfToday, 'yyyy-MM-dd'));
       
@@ -189,12 +190,13 @@ export default function Index() {
         .gte('created_at', firstOfMonth.toISOString())
         .lte('created_at', endOfToday.toISOString());
       
-      // Get dropoffs for this month
+      // Get dropoffs WITHOUT manifests (to avoid double-counting)
       const { data: dropoffs } = await supabase
         .from('dropoffs')
         .select('pte_count, otr_count, tractor_count')
         .eq('organization_id', user?.currentOrganization?.id)
         .in('status', ['completed', 'processed'])
+        .is('manifest_id', null)
         .gte('dropoff_date', format(firstOfMonth, 'yyyy-MM-dd'))
         .lte('dropoff_date', format(endOfToday, 'yyyy-MM-dd'));
       
@@ -278,12 +280,13 @@ export default function Index() {
             );
           }
           
-          // 3. Get dropoffs (facility intake)
+          // 3. Get dropoffs WITHOUT manifests (to avoid double-counting)
           const { data: dropoffs } = await supabase
             .from('dropoffs')
             .select('pte_count, otr_count, tractor_count')
             .eq('organization_id', user?.currentOrganization?.id)
             .eq('dropoff_date', date)
+            .is('manifest_id', null)
             .in('status', ['completed', 'processed']);
           
           if (dropoffs && dropoffs.length > 0) {

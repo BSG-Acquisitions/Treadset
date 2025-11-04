@@ -120,6 +120,7 @@ export const useTodaysDropoffs = () => {
           dropoff_customers(contact_name, company_name, customer_type)
         `)
         .eq('dropoff_date', today)
+        .is('manifest_id', null)
         .order('dropoff_time', { ascending: false });
       
       if (error) throw error;
