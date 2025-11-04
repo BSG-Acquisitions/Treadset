@@ -2741,6 +2741,36 @@ export type Database = {
         }
         Relationships: []
       }
+      performance_logs: {
+        Row: {
+          created_at: string | null
+          execution_time_ms: number
+          id: string
+          optimization_applied: string | null
+          query_name: string
+          query_params: Json | null
+          rows_returned: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          execution_time_ms: number
+          id?: string
+          optimization_applied?: string | null
+          query_name: string
+          query_params?: Json | null
+          rows_returned?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          execution_time_ms?: number
+          id?: string
+          optimization_applied?: string | null
+          query_name?: string
+          query_params?: Json | null
+          rows_returned?: number | null
+        }
+        Relationships: []
+      }
       pickup_patterns: {
         Row: {
           avg_days_between_pickups: number | null
@@ -4305,6 +4335,16 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      log_slow_query: {
+        Args: {
+          p_execution_time_ms: number
+          p_optimization?: string
+          p_query_name: string
+          p_query_params?: Json
+          p_rows_returned?: number
+        }
+        Returns: string
       }
       refresh_reporting_views: { Args: never; Returns: undefined }
       show_limit: { Args: never; Returns: number }

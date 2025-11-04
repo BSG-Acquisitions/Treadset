@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { measureQuery } from "@/lib/performance/queryPerformance";
 
 interface MonthlyData {
   month: number;
@@ -42,17 +43,25 @@ export const useLiveClientAnalytics = (year: number = new Date().getFullYear()) 
         throw new Error('No organization found');
       }
 
-      const { data, error } = await supabase.rpc('get_live_client_analytics', {
-        p_organization_id: organizationId,
-        p_year: year
-      });
+      const { data: rpcData } = await measureQuery(
+        'live_client_analytics_rpc',
+        async () => {
+          const { data, error } = await supabase.rpc('get_live_client_analytics', {
+            p_organization_id: organizationId,
+            p_year: year
+          });
 
-      if (error) {
-        console.error('Error fetching live analytics:', error);
-        throw error;
-      }
+          if (error) {
+            console.error('Error fetching live analytics:', error);
+            throw error;
+          }
 
-      if (!data || data.length === 0) {
+          return data;
+        },
+        { organizationId, year }
+      );
+
+      if (!rpcData || rpcData.length === 0) {
         return {
           total_clients: 0,
           total_pickups: 0,
@@ -68,7 +77,7 @@ export const useLiveClientAnalytics = (year: number = new Date().getFullYear()) 
         };
       }
 
-      const result = data[0];
+      const result = rpcData[0];
       
       return {
         total_clients: Number(result.total_clients || 0),

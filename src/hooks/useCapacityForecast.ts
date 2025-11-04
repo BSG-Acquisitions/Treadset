@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { measureQuery } from '@/lib/performance/queryPerformance';
 
 export const useCapacityForecast = (organizationId?: string) => {
   const queryClient = useQueryClient();
@@ -9,13 +10,21 @@ export const useCapacityForecast = (organizationId?: string) => {
     queryFn: async () => {
       if (!organizationId) throw new Error('Organization ID required');
 
-      const { data, error } = await supabase
-        .from('capacity_preview')
-        .select('*')
-        .eq('organization_id', organizationId)
-        .order('forecast_date', { ascending: true });
+      const { data } = await measureQuery(
+        'capacity_forecast_fetch',
+        async () => {
+          const { data, error } = await supabase
+            .from('capacity_preview')
+            .select('*')
+            .eq('organization_id', organizationId)
+            .order('forecast_date', { ascending: true });
 
-      if (error) throw error;
+          if (error) throw error;
+          return data;
+        },
+        { organizationId }
+      );
+
       return data;
     },
     enabled: !!organizationId,
