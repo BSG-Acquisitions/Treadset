@@ -22,12 +22,9 @@ export default defineConfig(({ mode }) => ({
   build: {
     // Optimize bundle size
     target: 'esnext',
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: mode === 'production',
-        drop_debugger: true,
-      },
+    minify: 'esbuild',
+    esbuild: {
+      drop: mode === 'production' ? ['console', 'debugger'] : [],
     },
     // Code splitting
     rollupOptions: {
