@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { measureQuery } from '@/lib/performance/queryPerformance';
+import { getCachedCapacity } from '@/lib/performance/smartCache';
 
 export const useCapacityForecast = (organizationId?: string) => {
   const queryClient = useQueryClient();
@@ -10,24 +11,31 @@ export const useCapacityForecast = (organizationId?: string) => {
     queryFn: async () => {
       if (!organizationId) throw new Error('Organization ID required');
 
-      const { data } = await measureQuery(
-        'capacity_forecast_fetch',
+      return await getCachedCapacity(
+        organizationId,
         async () => {
-          const { data, error } = await supabase
-            .from('capacity_preview')
-            .select('*')
-            .eq('organization_id', organizationId)
-            .order('forecast_date', { ascending: true });
+          const { data } = await measureQuery(
+            'capacity_forecast_fetch',
+            async () => {
+              const { data, error } = await supabase
+                .from('capacity_preview')
+                .select('*')
+                .eq('organization_id', organizationId)
+                .order('forecast_date', { ascending: true });
 
-          if (error) throw error;
+              if (error) throw error;
+              return data;
+            },
+            { organizationId }
+          );
+
           return data;
         },
-        { organizationId }
+        { ttlHours: 2 }
       );
-
-      return data;
     },
     enabled: !!organizationId,
+    staleTime: 2 * 60 * 60 * 1000, // 2 hours
   });
 
   const generateForecast = useMutation({
