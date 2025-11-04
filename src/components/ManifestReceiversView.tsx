@@ -669,40 +669,40 @@ export const ManifestReceiversView = () => {
                               <Card key={manifest.id}>
                                 <CardContent className="p-4">
                                    <div className="space-y-2">
-                                    <div className="flex items-start justify-between">
-                                      <div className="space-y-2">
-                                        <Badge variant="outline" className="mb-1">
-                                          {manifest.manifest_number}
-                                        </Badge>
-                                        <h3 className="font-medium text-sm">{manifestClientNames[manifest.id] || clientNames[manifest.client_id] || 'Unknown'}</h3>
-                                        <EmailDeliveryStatus
-                                          emailStatus={manifest.email_status}
-                                          emailSentAt={manifest.email_sent_at}
-                                          emailSentTo={manifest.email_sent_to}
-                                          emailError={manifest.email_error}
-                                          className="text-xs"
-                                        />
-                                      </div>
-                                      <Badge variant="secondary" className="text-xs">Complete</Badge>
-                                    </div>
-                                    
+                                     <div className="flex items-start justify-between">
+                                       <div className="space-y-2">
+                                         <Badge variant="outline" className="mb-1">
+                                           {manifest.manifest_number}
+                                         </Badge>
+                                         <h3 className="font-medium text-sm">{manifestClientNames[manifest.id] || clientNames[manifest.client_id] || 'Unknown'}</h3>
+                                         <div className="flex items-center gap-2">
+                                           <EmailDeliveryStatus
+                                             emailStatus={manifest.email_status}
+                                             emailSentAt={manifest.email_sent_at}
+                                             emailSentTo={manifest.email_sent_to}
+                                             emailError={manifest.email_error}
+                                             className="text-xs"
+                                           />
+                                           {(!manifest.email_status || manifest.email_status === 'failed') && (
+                                             <Button
+                                               size="sm"
+                                               variant="outline"
+                                               onClick={() => handleResendEmail(manifest.id, manifest.manifest_number)}
+                                               disabled={isSendingEmail}
+                                             >
+                                               <Mail className="h-4 w-4 mr-1" />
+                                               Resend
+                                             </Button>
+                                           )}
+                                         </div>
+                                       </div>
+                                       <Badge variant="secondary" className="text-xs">Complete</Badge>
+                                     </div>
+                                     
                                      {manifest.receiver_signed_at && (
                                        <p className="text-xs text-muted-foreground">
                                          {format(new Date(manifest.receiver_signed_at), 'MMM d, h:mm a')}
                                        </p>
-                                     )}
-                                     
-                                     {(!manifest.email_status || manifest.email_status === 'failed') && (
-                                       <Button
-                                         size="sm"
-                                         variant="outline"
-                                         className="w-full"
-                                         onClick={() => handleResendEmail(manifest.id, manifest.manifest_number)}
-                                         disabled={isSendingEmail}
-                                       >
-                                         <Mail className="h-4 w-4 mr-2" />
-                                         Resend Email
-                                       </Button>
                                      )}
                                      
                                      {manifest.acroform_pdf_path && (
