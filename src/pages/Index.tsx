@@ -27,9 +27,7 @@ import { useRealtimeUpdates } from "@/hooks/useRealtimeUpdates";
 import { SchedulePickupWithDriverDialog } from "@/components/SchedulePickupWithDriverDialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { AIInsightsCard } from "@/components/intelligence/AIInsightsCard";
-import { RevenueForecastCard } from "@/components/intelligence/RevenueForecastCard";
-import { CapacityForecastCard } from "@/components/intelligence/CapacityForecastCard";
+// Intelligence components moved to /intelligence page
 
 export default function Index() {
   const navigate = useNavigate();
@@ -395,16 +393,7 @@ export default function Index() {
           </SlideUp>
         </StaggerList>
 
-        {/* AI Insights - Admin & Ops Manager only */}
-        {hasAnyRole(['admin', 'ops_manager']) && (
-          <SlideUp delay={0.25}>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
-              <AIInsightsCard />
-              <RevenueForecastCard />
-              <CapacityForecastCard />
-            </div>
-          </SlideUp>
-        )}
+        {/* AI Insights moved to /intelligence page - available in sidebar/settings */}
 
         {/* Client Followups - Prominent section for sales team */}
         {hasAnyRole(['admin', 'ops_manager', 'sales']) && (

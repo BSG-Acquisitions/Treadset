@@ -3,54 +3,74 @@ import { Badge } from '@/components/ui/badge';
 import { PickupPatternsCard } from '@/components/intelligence/PickupPatternsCard';
 import { RevenueForecastCard } from '@/components/intelligence/RevenueForecastCard';
 import { OperationalMetricsCard } from '@/components/intelligence/OperationalMetricsCard';
-import { Brain, TrendingUp } from 'lucide-react';
+import { AIInsightsCard } from '@/components/intelligence/AIInsightsCard';
+import { CapacityForecastCard } from '@/components/intelligence/CapacityForecastCard';
+import { Brain, TrendingUp, Zap } from 'lucide-react';
+import { FadeIn } from '@/components/motion/FadeIn';
+import { SlideUp } from '@/components/motion/SlideUp';
+import { useEffect } from 'react';
 
 const IntelligenceDashboard = () => {
+  useEffect(() => {
+    document.title = 'Intelligence Dashboard – TreadSet';
+  }, []);
+
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
-            <Brain className="h-8 w-8" />
-            Intelligence Dashboard
-            <Badge variant="outline" className="text-xs">Beta</Badge>
-          </h1>
-          <p className="text-muted-foreground">
-            AI-powered insights and predictions for your business
-          </p>
-        </div>
-      </div>
-
-      <Card className="border-blue-500/50 bg-blue-50/50 dark:bg-blue-950/20">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-blue-600" />
-            <CardTitle className="text-blue-700 dark:text-blue-400">
-              Phase 2: Intelligence Modules Active
-            </CardTitle>
+    <div className="space-y-8">
+      {/* Header */}
+      <FadeIn>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-3">
+              <Brain className="h-8 w-8 text-brand-primary" />
+              <h1 className="text-3xl font-bold text-foreground">Intelligence Dashboard</h1>
+              <Badge variant="secondary" className="text-xs">Beta</Badge>
+            </div>
+            <p className="text-muted-foreground mt-2">
+              AI-powered insights and predictive analytics to help you make data-driven decisions
+            </p>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <p className="text-sm text-muted-foreground">
-            ✓ Pickup Pattern Intelligence — Detects recurring schedules
-          </p>
-          <p className="text-sm text-muted-foreground">
-            ✓ Revenue Forecasting — Predicts future revenue trends
-          </p>
-          <p className="text-sm text-muted-foreground">
-            ✓ Client Engagement Tracking — Monitors interaction patterns
-          </p>
-          <p className="text-sm text-muted-foreground">
-            ✓ Operational Efficiency Metrics — Tracks daily performance
-          </p>
-        </CardContent>
-      </Card>
+        </div>
+      </FadeIn>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <PickupPatternsCard />
-        <RevenueForecastCard />
-        <OperationalMetricsCard />
-      </div>
+      {/* AI Insights Section */}
+      <SlideUp delay={0.1}>
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Zap className="h-5 w-5 text-brand-accent" />
+            <h2 className="text-xl font-semibold text-foreground">AI-Generated Insights</h2>
+          </div>
+          <AIInsightsCard />
+        </div>
+      </SlideUp>
+
+      {/* Forecasting Section */}
+      <SlideUp delay={0.2}>
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-brand-accent" />
+            <h2 className="text-xl font-semibold text-foreground">Forecasting & Predictions</h2>
+          </div>
+          <div className="grid gap-6 md:grid-cols-2">
+            <RevenueForecastCard />
+            <CapacityForecastCard />
+          </div>
+        </div>
+      </SlideUp>
+
+      {/* Operational Intelligence */}
+      <SlideUp delay={0.3}>
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Brain className="h-5 w-5 text-brand-accent" />
+            <h2 className="text-xl font-semibold text-foreground">Operational Intelligence</h2>
+          </div>
+          <div className="grid gap-6 md:grid-cols-2">
+            <OperationalMetricsCard />
+            <PickupPatternsCard />
+          </div>
+        </div>
+      </SlideUp>
     </div>
   );
 };
