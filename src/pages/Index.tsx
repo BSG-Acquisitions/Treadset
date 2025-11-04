@@ -597,7 +597,7 @@ export default function Index() {
                             fontWeight: 600
                           }}
                         />
-                        <Tooltip 
+                        <ChartTooltip 
                           content={({ active, payload }) => {
                             if (active && payload && payload.length) {
                               const value = payload[0].value as number;
