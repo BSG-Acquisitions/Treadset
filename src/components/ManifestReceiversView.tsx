@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ReceiverSignatureDialog } from "./ReceiverSignatureDialog";
 import { format, subDays, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
-import { Clock, FileText, Signature, Search, Calendar, Filter, ChevronDown, ChevronRight, Mail } from "lucide-react";
+import { Clock, FileText, Signature, Search, Calendar, Filter, ChevronDown, ChevronRight, Mail, Loader2 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -25,8 +25,9 @@ export const ManifestReceiversView = () => {
   const queryClient = useQueryClient();
   const [clientNames, setClientNames] = useState<Record<string, string>>({});
   const [manifestClientNames, setManifestClientNames] = useState<Record<string, string>>({});
-  const { mutate: sendEmail, isPending: isSendingEmail } = useSendManifestEmail();
+  const { mutate: sendEmail } = useSendManifestEmail();
   const { toast } = useToast();
+  const [sendingId, setSendingId] = useState<string | null>(null);
   
   // Filters and search
   const [searchTerm, setSearchTerm] = useState("");
@@ -226,15 +227,16 @@ export const ManifestReceiversView = () => {
   };
 
   const handleResendEmail = async (manifestId: string, manifestNumber: string) => {
+    const clientEmail = (manifests || []).find((m:any) => m.id === manifestId)?.client?.email || undefined;
+    setSendingId(manifestId);
     sendEmail(
-      { manifestId },
+      { manifestId, to: clientEmail },
       {
         onSuccess: () => {
           toast({
             title: "Email sent",
             description: `Manifest ${manifestNumber} has been emailed successfully.`,
           });
-          // Refresh the manifests to update email status
           queryClient.invalidateQueries({ queryKey: ['manifests'] });
         },
         onError: (error: any) => {
@@ -243,6 +245,9 @@ export const ManifestReceiversView = () => {
             description: error?.message || "Failed to send email. Please try again.",
             variant: "destructive",
           });
+        },
+        onSettled: () => {
+          setSendingId(null);
         },
       }
     );
@@ -619,9 +624,13 @@ export const ManifestReceiversView = () => {
                                          size="sm"
                                          variant="outline"
                                          onClick={() => handleResendEmail(manifest.id, manifest.manifest_number)}
-                                         disabled={isSendingEmail}
+                                         disabled={sendingId === manifest.id}
                                        >
-                                         <Mail className="h-4 w-4 mr-2" />
+                                         {sendingId === manifest.id ? (
+                                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                         ) : (
+                                           <Mail className="h-4 w-4 mr-2" />
+                                         )}
                                          Resend Email
                                        </Button>
                                      )}
@@ -688,9 +697,13 @@ export const ManifestReceiversView = () => {
                                                size="sm"
                                                variant="outline"
                                                onClick={() => handleResendEmail(manifest.id, manifest.manifest_number)}
-                                               disabled={isSendingEmail}
+                                               disabled={sendingId === manifest.id}
                                              >
-                                               <Mail className="h-4 w-4 mr-1" />
+                                               {sendingId === manifest.id ? (
+                                                 <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                               ) : (
+                                                 <Mail className="h-4 w-4 mr-1" />
+                                               )}
                                                Resend
                                              </Button>
                                            )}

@@ -12,6 +12,8 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Max-Age": "86400",
 };
 
 type SendManifestEmailRequest = {
@@ -32,8 +34,11 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let parsedBody: SendManifestEmailRequest | null = null;
+
   try {
-    const body = (await req.json()) as SendManifestEmailRequest;
+    parsedBody = (await req.json()) as SendManifestEmailRequest;
+    const body = parsedBody;
     console.log("Incoming payload", body);
 
     let toList: string[] = [];
@@ -279,15 +284,14 @@ serve(async (req) => {
     console.error("Error in send-manifest-email:", error);
     
     // Update manifest with error status if manifest_id was provided
-    if ((await req.clone().json()).manifest_id) {
-      const body = await req.clone().json();
+    if (parsedBody?.manifest_id) {
       await supabase
         .from('manifests')
         .update({
           email_status: 'failed',
           email_error: error.message ?? "Unknown error",
         })
-        .eq('id', body.manifest_id);
+        .eq('id', parsedBody.manifest_id);
     }
     
     return new Response(
