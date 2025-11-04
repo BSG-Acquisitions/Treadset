@@ -135,7 +135,7 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
   }, {});
 
   return (
-    <div className="flex flex-col border-r border-gray-300 last:border-r-0 h-full">
+    <div className="flex flex-col border-r border-gray-300 last:border-r-0 h-[calc(100vh-220px)] min-h-[700px]">
       {/* Day Header */}
       <div className={`text-center py-4 border-b-2 border-gray-300 flex-shrink-0 ${isToday ? 'bg-[#5b8f4d] text-white' : 'bg-white text-gray-800'}`}>
         <div className={`font-semibold text-base mb-1 ${isToday ? 'text-white' : 'text-gray-900'}`}>
