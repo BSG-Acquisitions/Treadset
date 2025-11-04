@@ -279,7 +279,7 @@ export function WeeklyPickupsGrid({ currentWeek, onMovePickup }: WeeklyPickupsGr
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeek, i));
 
   return (
-    <div className="grid grid-cols-7 border border-gray-300 rounded-lg overflow-hidden bg-white shadow-sm h-[calc(100vh-280px)] min-h-[600px]">
+    <div className="grid grid-cols-7 border border-gray-300 rounded-lg overflow-hidden bg-white shadow-sm h-[calc(100vh-220px)] min-h-[700px]">
       {weekDays.map((day) => (
         <DayColumn key={day.toISOString()} day={day} onMovePickup={onMovePickup} />
       ))}
