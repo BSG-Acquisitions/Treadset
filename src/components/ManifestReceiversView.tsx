@@ -227,30 +227,73 @@ export const ManifestReceiversView = () => {
   };
 
   const handleResendEmail = async (manifestId: string, manifestNumber: string) => {
-    const clientEmail = (manifests || []).find((m:any) => m.id === manifestId)?.client?.email || undefined;
-    setSendingId(manifestId);
-    sendEmail(
-      { manifestId, to: clientEmail },
-      {
-        onSuccess: () => {
-          toast({
-            title: "Email sent",
-            description: `Manifest ${manifestNumber} has been emailed successfully.`,
-          });
-          queryClient.invalidateQueries({ queryKey: ['manifests'] });
-        },
-        onError: (error: any) => {
-          toast({
-            title: "Email failed",
-            description: error?.message || "Failed to send email. Please try again.",
-            variant: "destructive",
-          });
-        },
-        onSettled: () => {
-          setSendingId(null);
-        },
+    try {
+      setSendingId(manifestId);
+
+      // Find the manifest locally first (from either list)
+      const all = (manifests || []).concat(fallbackPending || []);
+      const manifest: any = all.find((m: any) => m.id === manifestId);
+
+      // Determine recipient email in a robust way
+      let to: string | undefined = undefined;
+
+      // 1) Prefer last known recipients on the manifest record
+      if (Array.isArray(manifest?.email_sent_to) && manifest.email_sent_to.length > 0) {
+        to = manifest.email_sent_to[0];
       }
-    );
+
+      // 2) Fallback to client email via a quick lookup
+      if (!to && manifest?.client_id) {
+        const { data: client, error: clientErr } = await supabase
+          .from('clients')
+          .select('email')
+          .eq('id', manifest.client_id)
+          .maybeSingle();
+        if (!clientErr && client?.email) {
+          to = client.email;
+        }
+      }
+
+      if (!to) {
+        toast({
+          title: 'Missing recipient',
+          description: 'No email on file for this client. Please add an email and try again.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Send a single email for this manifest only
+      sendEmail(
+        { manifestId, to },
+        {
+          onSuccess: () => {
+            toast({
+              title: 'Email sent',
+              description: `Manifest ${manifestNumber} has been emailed to ${to}.`,
+            });
+            queryClient.invalidateQueries({ queryKey: ['manifests'] });
+          },
+          onError: (error: any) => {
+            toast({
+              title: 'Email failed',
+              description: error?.message || 'Failed to send email. Please try again.',
+              variant: 'destructive',
+            });
+          },
+          onSettled: () => {
+            setSendingId(null);
+          },
+        }
+      );
+    } catch (e: any) {
+      setSendingId(null);
+      toast({
+        title: 'Email failed',
+        description: e?.message || 'Unexpected error while preparing email.',
+        variant: 'destructive',
+      });
+    }
   };
   if (isLoading) {
     return (
