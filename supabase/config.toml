@@ -122,3 +122,6 @@ verify_jwt = false
 
 [functions.calculate-driver-performance]
 verify_jwt = false
+
+[functions.calculate-capacity-forecast]
+verify_jwt = false

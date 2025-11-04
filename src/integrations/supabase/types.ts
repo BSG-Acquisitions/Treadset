@@ -254,6 +254,50 @@ export type Database = {
           },
         ]
       }
+      capacity_preview_beta: {
+        Row: {
+          capacity_percentage: number | null
+          capacity_status: string | null
+          created_at: string | null
+          forecast_date: string
+          id: string
+          organization_id: string
+          predicted_tire_volume: number | null
+          predicted_truck_capacity: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          capacity_percentage?: number | null
+          capacity_status?: string | null
+          created_at?: string | null
+          forecast_date: string
+          id?: string
+          organization_id: string
+          predicted_tire_volume?: number | null
+          predicted_truck_capacity?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          capacity_percentage?: number | null
+          capacity_status?: string | null
+          created_at?: string | null
+          forecast_date?: string
+          id?: string
+          organization_id?: string
+          predicted_tire_volume?: number | null
+          predicted_truck_capacity?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "capacity_preview_beta_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_engagement_beta: {
         Row: {
           client_id: string

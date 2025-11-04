@@ -27,6 +27,8 @@ import { SchedulePickupWithDriverDialog } from "@/components/SchedulePickupWithD
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AIInsightsCard } from "@/components/intelligence/AIInsightsCard";
+import { RevenueForecastCard } from "@/components/intelligence/RevenueForecastCard";
+import { CapacityForecastCard } from "@/components/intelligence/CapacityForecastCard";
 
 export default function Index() {
   const navigate = useNavigate();
@@ -383,8 +385,10 @@ export default function Index() {
         {/* AI Insights - Admin & Ops Manager only */}
         {hasAnyRole(['admin', 'ops_manager']) && (
           <SlideUp delay={0.25}>
-            <div className="mb-8">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
               <AIInsightsCard />
+              <RevenueForecastCard />
+              <CapacityForecastCard />
             </div>
           </SlideUp>
         )}
