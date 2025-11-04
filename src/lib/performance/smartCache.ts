@@ -266,13 +266,53 @@ export async function invalidateAllCaches(organizationId: string) {
  */
 async function trackCacheMetrics(hit: boolean, responseTimeMs: number) {
   try {
-    // Fire and forget - don't block the request
-    // Note: This will be more accurate once types are regenerated
+    const { data } = await supabase.auth.getUser();
+    if (!data?.user) return;
+
+    const { data: userOrg } = await supabase
+      .from('user_organization_roles')
+      .select('organization_id')
+      .eq('user_id', data.user.id)
+      .single();
+
+    if (!userOrg) return;
+
+    // Fire and forget
+    supabase.functions.invoke('record-performance-metric', {
+      body: {
+        organizationId: userOrg.organization_id,
+        metricName: hit ? 'cache_hit' : 'cache_miss',
+        metricValue: 1,
+        metricUnit: 'count',
+        metadata: { responseTimeMs },
+      },
+    }).catch(err => console.debug('[METRICS] Failed:', err));
+
+    // Also record response time if it was a hit
+    if (hit) {
+      supabase.functions.invoke('record-performance-metric', {
+        body: {
+          organizationId: userOrg.organization_id,
+          metricName: 'cached_query_time',
+          metricValue: responseTimeMs,
+          metricUnit: 'ms',
+        },
+      }).catch(err => console.debug('[METRICS] Failed:', err));
+    } else {
+      supabase.functions.invoke('record-performance-metric', {
+        body: {
+          organizationId: userOrg.organization_id,
+          metricName: 'uncached_query_time',
+          metricValue: responseTimeMs,
+          metricUnit: 'ms',
+        },
+      }).catch(err => console.debug('[METRICS] Failed:', err));
+    }
+
     if (import.meta.env.DEV) {
       console.log(`[CACHE METRICS] ${hit ? 'HIT' : 'MISS'}: ${responseTimeMs}ms`);
     }
   } catch (error) {
-    // Don't fail the request if metrics tracking fails
     console.warn('Failed to track cache metrics:', error);
   }
 }

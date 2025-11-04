@@ -14,6 +14,7 @@ export interface QueryMetrics {
 
 /**
  * Measure and log query performance
+ * Tracks execution time and logs slow queries to performance_logs
  */
 export async function measureQuery<T>(
   queryName: string,
@@ -32,6 +33,9 @@ export async function measureQuery<T>(
       rowsReturned: Array.isArray(data) ? data.length : undefined,
       params,
     };
+
+    // Record metric for all queries
+    recordQueryMetric(queryName, executionTimeMs);
 
     // Log slow queries (>250ms) to database
     if (executionTimeMs > 250) {
@@ -53,6 +57,38 @@ export async function measureQuery<T>(
     const executionTimeMs = Math.round(performance.now() - startTime);
     console.error(`[QUERY ERROR] ${queryName}: ${executionTimeMs}ms`, error);
     throw error;
+  }
+}
+
+/**
+ * Record query execution metric (fire and forget)
+ */
+function recordQueryMetric(queryName: string, executionTimeMs: number) {
+  try {
+    supabase.auth.getUser().then(({ data }) => {
+      if (!data?.user) return;
+
+      supabase
+        .from('user_organization_roles')
+        .select('organization_id')
+        .eq('user_id', data.user.id)
+        .single()
+        .then(({ data: userOrg }) => {
+          if (!userOrg) return;
+
+          supabase.functions.invoke('record-performance-metric', {
+            body: {
+              organizationId: userOrg.organization_id,
+              metricName: 'query_execution_time',
+              metricValue: executionTimeMs,
+              metricUnit: 'ms',
+              metadata: { queryName },
+            },
+          }).catch(err => console.debug('[METRICS] Failed to record:', err));
+        });
+    });
+  } catch (error) {
+    console.debug('[METRICS] Failed to record query metric:', error);
   }
 }
 

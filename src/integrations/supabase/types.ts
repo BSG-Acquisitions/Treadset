@@ -2741,6 +2741,51 @@ export type Database = {
         }
         Relationships: []
       }
+      performance_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string
+          id: string
+          message: string
+          metric_name: string | null
+          metric_value: number | null
+          organization_id: string
+          resolved: boolean | null
+          resolved_at: string | null
+          severity: string
+          threshold: number | null
+          updated_at: string
+        }
+        Insert: {
+          alert_type: string
+          created_at?: string
+          id?: string
+          message: string
+          metric_name?: string | null
+          metric_value?: number | null
+          organization_id: string
+          resolved?: boolean | null
+          resolved_at?: string | null
+          severity?: string
+          threshold?: number | null
+          updated_at?: string
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string
+          id?: string
+          message?: string
+          metric_name?: string | null
+          metric_value?: number | null
+          organization_id?: string
+          resolved?: boolean | null
+          resolved_at?: string | null
+          severity?: string
+          threshold?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       performance_logs: {
         Row: {
           created_at: string | null
@@ -2768,6 +2813,39 @@ export type Database = {
           query_name?: string
           query_params?: Json | null
           rows_returned?: number | null
+        }
+        Relationships: []
+      }
+      performance_metrics: {
+        Row: {
+          captured_at: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          metric_name: string
+          metric_unit: string
+          metric_value: number
+          organization_id: string
+        }
+        Insert: {
+          captured_at?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          metric_name: string
+          metric_unit?: string
+          metric_value: number
+          organization_id: string
+        }
+        Update: {
+          captured_at?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          metric_name?: string
+          metric_unit?: string
+          metric_value?: number
+          organization_id?: string
         }
         Relationships: []
       }
@@ -4285,6 +4363,7 @@ export type Database = {
         Args: { pickup_row: Database["public"]["Tables"]["pickups"]["Row"] }
         Returns: number
       }
+      check_performance_thresholds: { Args: never; Returns: undefined }
       create_followup_workflows_for_inactive_clients: {
         Args: never
         Returns: number
@@ -4349,6 +4428,7 @@ export type Database = {
       refresh_reporting_views: { Args: never; Returns: undefined }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      update_system_health_metrics: { Args: never; Returns: undefined }
       user_has_role: {
         Args: {
           org_slug?: string
