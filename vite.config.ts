@@ -19,4 +19,52 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    // Optimize bundle size
+    target: 'esnext',
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: mode === 'production',
+        drop_debugger: true,
+      },
+    },
+    // Code splitting
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Vendor chunks
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select'],
+          'query-vendor': ['@tanstack/react-query'],
+          'form-vendor': ['react-hook-form', '@hookform/resolvers', 'zod'],
+          'chart-vendor': ['recharts'],
+          // Heavy libraries
+          'pdf-vendor': ['pdf-lib', 'jspdf', 'html2canvas'],
+          'map-vendor': ['mapbox-gl'],
+          'canvas-vendor': ['fabric'],
+        },
+      },
+    },
+    // Chunk size warnings
+    chunkSizeWarningLimit: 1000,
+    // Source maps for production debugging
+    sourcemap: mode === 'production' ? 'hidden' : true,
+  },
+  // Optimize dependencies
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'react-router-dom',
+      '@tanstack/react-query',
+    ],
+    exclude: [
+      'pdf-lib',
+      'jspdf',
+      'html2canvas',
+      'mapbox-gl',
+      'fabric',
+    ],
+  },
 }));
