@@ -1287,6 +1287,79 @@ export type Database = {
           },
         ]
       }
+      hauler_reliability_beta: {
+        Row: {
+          accurate_manifests: number
+          created_at: string
+          hauler_id: string
+          id: string
+          last_calculated_at: string
+          manifest_accuracy_rate: number
+          on_time_dropoffs: number
+          on_time_rate: number
+          organization_id: string
+          payment_promptness_rate: number
+          prompt_payments: number
+          reliability_score: number
+          total_dropoffs: number
+          updated_at: string
+        }
+        Insert: {
+          accurate_manifests?: number
+          created_at?: string
+          hauler_id: string
+          id?: string
+          last_calculated_at?: string
+          manifest_accuracy_rate?: number
+          on_time_dropoffs?: number
+          on_time_rate?: number
+          organization_id: string
+          payment_promptness_rate?: number
+          prompt_payments?: number
+          reliability_score: number
+          total_dropoffs?: number
+          updated_at?: string
+        }
+        Update: {
+          accurate_manifests?: number
+          created_at?: string
+          hauler_id?: string
+          id?: string
+          last_calculated_at?: string
+          manifest_accuracy_rate?: number
+          on_time_dropoffs?: number
+          on_time_rate?: number
+          organization_id?: string
+          payment_promptness_rate?: number
+          prompt_payments?: number
+          reliability_score?: number
+          total_dropoffs?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hauler_reliability_beta_hauler_id_fkey"
+            columns: ["hauler_id"]
+            isOneToOne: false
+            referencedRelation: "hauler_overlay_view"
+            referencedColumns: ["hauler_id"]
+          },
+          {
+            foreignKeyName: "hauler_reliability_beta_hauler_id_fkey"
+            columns: ["hauler_id"]
+            isOneToOne: false
+            referencedRelation: "haulers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hauler_reliability_beta_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       haulers: {
         Row: {
           city: string | null

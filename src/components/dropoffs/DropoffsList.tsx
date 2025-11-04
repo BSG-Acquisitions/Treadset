@@ -15,7 +15,8 @@ import {
   Edit,
   Receipt,
   Loader2,
-  ChevronRight
+  ChevronRight,
+  TrendingUp
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -32,6 +33,7 @@ import { format, isWithinInterval, startOfWeek, endOfWeek, startOfMonth, endOfMo
 import type { Database } from "@/integrations/supabase/types";
 import { useGenerateDropoffManifest } from "@/hooks/useDropoffManifest";
 import { EditDropoffDialog } from "./EditDropoffDialog";
+import { HaulerReliabilityBadge } from "@/components/HaulerReliabilityBadge";
 import { useState } from "react";
 
 type Dropoff = Database["public"]["Tables"]["dropoffs"]["Row"] & {
@@ -40,6 +42,9 @@ type Dropoff = Database["public"]["Tables"]["dropoffs"]["Row"] & {
     company_name?: string | null;
     email?: string | null;
     phone?: string | null;
+  } | null;
+  haulers?: {
+    hauler_name?: string | null;
   } | null;
   users?: {
     first_name?: string | null;
@@ -179,6 +184,9 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
                     <Badge variant="outline" className="text-xs">
                       {dropoff.dropoff_customers.company_name}
                     </Badge>
+                  )}
+                  {dropoff.hauler_id && (
+                    <HaulerReliabilityBadge haulerId={dropoff.hauler_id} size="sm" />
                   )}
                 </div>
                 <div className="flex items-center gap-3 text-sm text-muted-foreground">

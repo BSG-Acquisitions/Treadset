@@ -13,11 +13,13 @@ import {
   TrendingUp, 
   Calendar,
   Home,
-  Filter
+  Filter,
+  RefreshCw
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useDropoffs, useTodaysDropoffs } from "@/hooks/useDropoffs";
 import { useDropoffCustomers } from "@/hooks/useDropoffCustomers";
+import { useHaulerReliability } from "@/hooks/useHaulerReliability";
 import { ProcessDropoffDialog } from "@/components/dropoffs/ProcessDropoffDialog";
 import { DropoffCustomersList } from "@/components/dropoffs/DropoffCustomersList";
 import { CreateDropoffCustomerDialog } from "@/components/dropoffs/CreateDropoffCustomerDialog";
@@ -28,6 +30,7 @@ const Dropoffs = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFilter, setDateFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [reliabilityFilter, setReliabilityFilter] = useState("all");
   const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
   const [showProcessDialog, setShowProcessDialog] = useState(false);
   const [showCreateCustomerDialog, setShowCreateCustomerDialog] = useState(false);
@@ -35,6 +38,14 @@ const Dropoffs = () => {
   const { data: dropoffs = [], isLoading: dropoffsLoading } = useDropoffs();
   const { data: todaysDropoffs = [] } = useTodaysDropoffs();
   const { data: customers = [], isLoading: customersLoading } = useDropoffCustomers();
+  const { 
+    reliabilityScores, 
+    isLoading: reliabilityLoading,
+    calculateReliability, 
+    isCalculating,
+    getTopPerformers,
+    getNeedsAttention 
+  } = useHaulerReliability();
 
   const totalTiresDroppedToday = todaysDropoffs.reduce((sum, dropoff) => 
     sum + (dropoff.pte_count || 0) + (dropoff.otr_count || 0) + (dropoff.tractor_count || 0), 0
@@ -46,6 +57,19 @@ const Dropoffs = () => {
 
   const activeCustomers = customers.filter(c => c.customer_type === 'regular').length;
   const oneTimeCustomers = customers.filter(c => c.customer_type === 'one_time').length;
+
+  // Filter dropoffs by reliability if needed
+  const filteredDropoffs = dropoffs.filter(dropoff => {
+    if (reliabilityFilter === 'top-performers') {
+      const topPerformers = getTopPerformers();
+      return dropoff.hauler_id && topPerformers.some(p => p.hauler_id === dropoff.hauler_id);
+    }
+    if (reliabilityFilter === 'needs-attention') {
+      const needsAttention = getNeedsAttention();
+      return dropoff.hauler_id && needsAttention.some(p => p.hauler_id === dropoff.hauler_id);
+    }
+    return true;
+  });
 
   return (
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
@@ -192,9 +216,30 @@ const Dropoffs = () => {
                     <SelectItem value="pending">Pending</SelectItem>
                   </SelectContent>
                 </Select>
+
+                <Select value={reliabilityFilter} onValueChange={setReliabilityFilter}>
+                  <SelectTrigger className="w-full sm:w-48">
+                    <SelectValue placeholder="Reliability" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Haulers</SelectItem>
+                    <SelectItem value="top-performers">Top Performers (≥85)</SelectItem>
+                    <SelectItem value="needs-attention">Needs Attention (&lt;70)</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => calculateReliability(undefined)}
+                  disabled={isCalculating}
+                  title="Recalculate Reliability Scores"
+                >
+                  <RefreshCw className={`h-4 w-4 ${isCalculating ? 'animate-spin' : ''}`} />
+                </Button>
               </div>
               <DropoffsList 
-                dropoffs={dropoffs} 
+                dropoffs={filteredDropoffs} 
                 loading={dropoffsLoading}
                 searchTerm={searchTerm}
               />
