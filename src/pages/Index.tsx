@@ -402,7 +402,7 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue;
           startDate.setHours(0, 0, 0, 0);
       }
 
-      // Fetch manifests (actual completed tire counts)
+      // Fetch manifests for client pickups only (exclude dropoff-linked manifests)
       const { data: manifestsData, error: manifestsError } = await supabase
         .from('manifests')
         .select(`
@@ -420,6 +420,7 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue;
         .gte('created_at', format(startDate, 'yyyy-MM-dd') + 'T00:00:00')
         .lte('created_at', format(endDate, 'yyyy-MM-dd') + 'T23:59:59')
         .in('status', ['COMPLETED', 'AWAITING_RECEIVER_SIGNATURE'])
+        .not('client_id', 'is', null)
         .or('pte_on_rim.gt.0,pte_off_rim.gt.0,otr_count.gt.0,tractor_count.gt.0');
 
       if (manifestsError) throw manifestsError;
@@ -435,7 +436,7 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue;
         location: m.location
       })) || [];
 
-      // Fetch dropoffs (only those with tire counts > 0)
+      // Fetch dropoffs (only standalone dropoffs, not manifest-linked)
       const { data: dropoffsData, error: dropoffsError } = await supabase
         .from('dropoffs')
         .select(`
