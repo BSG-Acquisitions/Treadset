@@ -1447,7 +1447,10 @@ export function DriverManifestCreationWizard({
                   <CardContent className="space-y-3">
                     <div className="space-y-2">
                       <Label className="text-xs text-muted-foreground">Quick Select Rate</Label>
-                      <Select value={pteOffRimRate} onValueChange={setPteOffRimRate}>
+                      <Select 
+                        value={PRESET_RATES.passengerOffRim.includes(pteOffRimRate) ? pteOffRimRate : ''} 
+                        onValueChange={setPteOffRimRate}
+                      >
                         <SelectTrigger className="bg-background">
                           <SelectValue placeholder="Select preset rate" />
                         </SelectTrigger>
@@ -1468,12 +1471,7 @@ export function DriverManifestCreationWizard({
                         pattern="[0-9]*\.?[0-9]*"
                         placeholder="0.00"
                         value={pteOffRimRate}
-                        onChange={(e) => {
-                          console.log('PTE Off-Rim Input onChange:', e.target.value);
-                          setPteOffRimRate(e.target.value);
-                        }}
-                        onFocus={() => console.log('PTE Off-Rim Input focused')}
-                        onClick={() => console.log('PTE Off-Rim Input clicked')}
+                        onChange={(e) => setPteOffRimRate(e.target.value)}
                         className="text-base font-medium"
                       />
                     </div>
@@ -1497,7 +1495,10 @@ export function DriverManifestCreationWizard({
                   <CardContent className="space-y-3">
                     <div className="space-y-2">
                       <Label className="text-xs text-muted-foreground">Quick Select Rate</Label>
-                      <Select value={pteOnRimRate} onValueChange={setPteOnRimRate}>
+                      <Select 
+                        value={PRESET_RATES.passengerOnRim.includes(pteOnRimRate) ? pteOnRimRate : ''} 
+                        onValueChange={setPteOnRimRate}
+                      >
                         <SelectTrigger className="bg-background">
                           <SelectValue placeholder="Select preset rate" />
                         </SelectTrigger>
@@ -1542,7 +1543,10 @@ export function DriverManifestCreationWizard({
                   <CardContent className="space-y-3">
                     <div className="space-y-2">
                       <Label className="text-xs text-muted-foreground">Quick Select Rate</Label>
-                      <Select value={commercial_17_5_19_5_off_rate} onValueChange={setCommercial_17_5_19_5_OffRate}>
+                      <Select 
+                        value={PRESET_RATES.commercial_17_5_19_5_offRim.includes(commercial_17_5_19_5_off_rate) ? commercial_17_5_19_5_off_rate : ''} 
+                        onValueChange={setCommercial_17_5_19_5_OffRate}
+                      >
                         <SelectTrigger className="bg-background">
                           <SelectValue placeholder="Select preset rate" />
                         </SelectTrigger>
@@ -1587,7 +1591,10 @@ export function DriverManifestCreationWizard({
                   <CardContent className="space-y-3">
                     <div className="space-y-2">
                       <Label className="text-xs text-muted-foreground">Quick Select Rate</Label>
-                      <Select value={commercial_17_5_19_5_on_rate} onValueChange={setCommercial_17_5_19_5_OnRate}>
+                      <Select 
+                        value={PRESET_RATES.commercial_17_5_19_5_onRim.includes(commercial_17_5_19_5_on_rate) ? commercial_17_5_19_5_on_rate : ''} 
+                        onValueChange={setCommercial_17_5_19_5_OnRate}
+                      >
                         <SelectTrigger className="bg-background">
                           <SelectValue placeholder="Select preset rate" />
                         </SelectTrigger>
@@ -1632,7 +1639,10 @@ export function DriverManifestCreationWizard({
                   <CardContent className="space-y-3">
                     <div className="space-y-2">
                       <Label className="text-xs text-muted-foreground">Quick Select Rate</Label>
-                      <Select value={commercial_22_5_off_rate} onValueChange={setCommercial_22_5_OffRate}>
+                      <Select 
+                        value={PRESET_RATES.commercial_22_5_offRim.includes(commercial_22_5_off_rate) ? commercial_22_5_off_rate : ''} 
+                        onValueChange={setCommercial_22_5_OffRate}
+                      >
                         <SelectTrigger className="bg-background">
                           <SelectValue placeholder="Select preset rate" />
                         </SelectTrigger>
@@ -1677,7 +1687,10 @@ export function DriverManifestCreationWizard({
                   <CardContent className="space-y-3">
                     <div className="space-y-2">
                       <Label className="text-xs text-muted-foreground">Quick Select Rate</Label>
-                      <Select value={commercial_22_5_on_rate} onValueChange={setCommercial_22_5_OnRate}>
+                      <Select 
+                        value={PRESET_RATES.commercial_22_5_onRim.includes(commercial_22_5_on_rate) ? commercial_22_5_on_rate : ''} 
+                        onValueChange={setCommercial_22_5_OnRate}
+                      >
                         <SelectTrigger className="bg-background">
                           <SelectValue placeholder="Select preset rate" />
                         </SelectTrigger>
@@ -1722,7 +1735,10 @@ export function DriverManifestCreationWizard({
                   <CardContent className="space-y-3">
                     <div className="space-y-2">
                       <Label className="text-xs text-muted-foreground">Quick Select Rate</Label>
-                      <Select value={otrRate} onValueChange={setOtrRate}>
+                      <Select 
+                        value={PRESET_RATES.otr.includes(otrRate) ? otrRate : ''} 
+                        onValueChange={setOtrRate}
+                      >
                         <SelectTrigger className="bg-background">
                           <SelectValue placeholder="Select preset rate" />
                         </SelectTrigger>
