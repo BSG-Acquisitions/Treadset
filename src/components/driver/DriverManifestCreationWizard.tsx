@@ -810,7 +810,6 @@ export function DriverManifestCreationWizard({
         driver_id: assignmentData?.driver_id,
         vehicle_id: assignmentData?.vehicle_id,
         hauler_id: haulerData.id,
-        template_pdf_path: 'Michigan_Manifest_Acroform_V4.pdf',
         pte_off_rim: data.pte_off_rim,
         pte_on_rim: data.pte_on_rim,
         commercial_17_5_19_5_off: data.commercial_17_5_19_5_off,
