@@ -169,7 +169,7 @@ Deno.serve(async (req) => {
       Hauler_Date: m.hauler_signed_at ? new Date(m.hauler_signed_at).toISOString().split('T')[0] : '',
     };
 
-    const templatePath = 'Michigan_Manifest_AcroForm_V4.pdf';
+    const templatePath = 'Michigan_Manifest_Acroform_V4.pdf';
     const outputPath = `manifests/acroform-${manifestId}-${Date.now()}.pdf`;
 
     const { data: pdfResult, error: pdfError } = await supabase.functions.invoke(
