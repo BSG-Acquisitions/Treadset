@@ -402,7 +402,7 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue;
           startDate.setHours(0, 0, 0, 0);
       }
 
-      // Fetch pickups
+      // Fetch pickups (only those with tire counts > 0)
       const { data: pickupsData, error: pickupsError } = await supabase
         .from('pickups')
         .select(`
@@ -417,11 +417,12 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue;
         .eq('organization_id', user?.currentOrganization?.id)
         .gte('pickup_date', format(startDate, 'yyyy-MM-dd'))
         .lte('pickup_date', format(endDate, 'yyyy-MM-dd'))
-        .in('status', ['completed', 'in_progress']);
+        .in('status', ['completed', 'in_progress'])
+        .or('pte_count.gt.0,otr_count.gt.0,tractor_count.gt.0');
 
       if (pickupsError) throw pickupsError;
 
-      // Fetch dropoffs
+      // Fetch dropoffs (only those with tire counts > 0)
       const { data: dropoffsData, error: dropoffsError } = await supabase
         .from('dropoffs')
         .select(`
@@ -435,7 +436,8 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue;
         .eq('organization_id', user?.currentOrganization?.id)
         .gte('dropoff_date', format(startDate, 'yyyy-MM-dd'))
         .lte('dropoff_date', format(endDate, 'yyyy-MM-dd'))
-        .eq('status', 'completed');
+        .eq('status', 'completed')
+        .or('pte_count.gt.0,otr_count.gt.0,tractor_count.gt.0');
 
       if (dropoffsError) throw dropoffsError;
 
