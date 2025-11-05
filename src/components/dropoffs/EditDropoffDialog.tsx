@@ -58,9 +58,14 @@ export const EditDropoffDialog = ({ open, onOpenChange, dropoff }: EditDropoffDi
       if (error) throw error;
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['dropoffs'] });
-      await queryClient.invalidateQueries({ queryKey: ['todays-dropoffs'] });
-      await queryClient.invalidateQueries({ queryKey: ['dropoff-customers'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['dropoffs'] }),
+        queryClient.invalidateQueries({ queryKey: ['todays-dropoffs'] }),
+        queryClient.invalidateQueries({ queryKey: ['weekly-tire-totals'] }),
+        queryClient.invalidateQueries({ queryKey: ['yesterday-tire-totals'] }),
+        queryClient.invalidateQueries({ queryKey: ['monthly-tire-totals'] }),
+        queryClient.invalidateQueries({ queryKey: ['weekly-stats'] }),
+      ]);
       toast({
         title: "Success",
         description: "Drop-off updated successfully",

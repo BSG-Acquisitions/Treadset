@@ -74,6 +74,11 @@ export const useCreateDropoff = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dropoffs'] });
       queryClient.invalidateQueries({ queryKey: ['dropoff-customers'] });
+      queryClient.invalidateQueries({ queryKey: ['todays-dropoffs'] });
+      queryClient.invalidateQueries({ queryKey: ['weekly-tire-totals'] });
+      queryClient.invalidateQueries({ queryKey: ['yesterday-tire-totals'] });
+      queryClient.invalidateQueries({ queryKey: ['monthly-tire-totals'] });
+      queryClient.invalidateQueries({ queryKey: ['weekly-stats'] });
       toast({ title: "Success", description: "Drop-off processed successfully" });
     },
     onError: (error) => {
