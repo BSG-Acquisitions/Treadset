@@ -48,7 +48,6 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
     if (location.pathname.startsWith('/routes')) return 'routes';
     if (location.pathname.startsWith('/driver')) return 'driver';
     if (location.pathname === '/haulers') return 'haulers';
-    if (location.pathname === '/employees') return 'employees';
     if (location.pathname === '/analytics') return 'analytics';
     if (location.pathname === '/reports') return 'reports';
     if (location.pathname === '/dropoffs') return 'dropoffs';
@@ -60,7 +59,6 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
     { id: 'clients', label: 'Clients', icon: Users, path: '/clients', roles: ['admin', 'ops_manager', 'sales'] as const },
     { id: 'routes', label: 'Routes', icon: MapPin, path: '/routes/today', roles: ['admin', 'ops_manager', 'dispatcher'] as const },
     { id: 'driver', label: 'My Routes', icon: UserCheck, path: '/routes/driver', roles: ['driver'] as const },
-    { id: 'employees', label: 'Employees', icon: UserCheck, path: '/employees', roles: ['admin'] as const },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics', roles: ['admin', 'ops_manager'] as const },
     { id: 'reports', label: 'Reports', icon: FileText, path: '/reports', roles: ['admin', 'ops_manager'] as const },
     { id: 'dropoffs', label: 'Drop-offs', icon: PackageOpen, path: '/dropoffs', roles: ['admin', 'ops_manager', 'sales'] as const },
@@ -155,6 +153,14 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                   <Link to="/integrations" className="flex items-center gap-2">
                     <CreditCard className="h-4 w-4" />
                     Integrations
+                  </Link>
+                </DropdownMenuItem>
+              )}
+              {hasAnyRole(['admin']) && (
+                <DropdownMenuItem asChild>
+                  <Link to="/employees" className="flex items-center gap-2">
+                    <UserCheck className="h-4 w-4" />
+                    Employees
                   </Link>
                 </DropdownMenuItem>
               )}
