@@ -141,7 +141,7 @@ export default function Index() {
       // Get manifests for this week
       const { data: manifests } = await supabase
         .from('manifests')
-        .select('pte_on_rim, pte_off_rim')
+        .select('pte_on_rim, pte_off_rim, otr_count, tractor_count')
         .eq('organization_id', user?.currentOrganization?.id)
         .gte('created_at', monday.toISOString())
         .lte('created_at', endOfToday.toISOString());
@@ -155,11 +155,16 @@ export default function Index() {
         .gte('dropoff_date', format(monday, 'yyyy-MM-dd'))
         .lte('dropoff_date', format(endOfToday, 'yyyy-MM-dd'));
 
+      // Manifests: Apply Michigan PTE conversion (includes OTR and tractor)
       const manifestTotal = (manifests || []).reduce((sum, m: any) => {
-        const passengerPtes = (m.pte_on_rim || 0) + (m.pte_off_rim || 0);
-        return sum + passengerPtes;
+        return sum + calculateTotalPTE({
+          pte_count: (m.pte_on_rim || 0) + (m.pte_off_rim || 0),
+          otr_count: m.otr_count || 0,
+          tractor_count: m.tractor_count || 0,
+        });
       }, 0);
       
+      // Drop-offs: Just sum pte_count directly
       const dropoffTotal = (dropoffs || []).reduce((sum, d: any) => 
         sum + (d.pte_count || 0), 0
       );
@@ -185,7 +190,7 @@ export default function Index() {
       // Get manifests for yesterday
       const { data: manifests } = await supabase
         .from('manifests')
-        .select('pte_on_rim, pte_off_rim')
+        .select('pte_on_rim, pte_off_rim, otr_count, tractor_count')
         .eq('organization_id', user?.currentOrganization?.id)
         .gte('created_at', startOfYesterday.toISOString())
         .lte('created_at', endOfYesterday.toISOString());
@@ -199,11 +204,16 @@ export default function Index() {
         .gte('dropoff_date', format(startOfYesterday, 'yyyy-MM-dd'))
         .lte('dropoff_date', format(endOfYesterday, 'yyyy-MM-dd'));
 
+      // Manifests: Apply Michigan PTE conversion (includes OTR and tractor)
       const manifestTotal = (manifests || []).reduce((sum, m: any) => {
-        const passengerPtes = (m.pte_on_rim || 0) + (m.pte_off_rim || 0);
-        return sum + passengerPtes;
+        return sum + calculateTotalPTE({
+          pte_count: (m.pte_on_rim || 0) + (m.pte_off_rim || 0),
+          otr_count: m.otr_count || 0,
+          tractor_count: m.tractor_count || 0,
+        });
       }, 0);
 
+      // Drop-offs: Just sum pte_count directly
       const dropoffTotal = (dropoffs || []).reduce((sum, d: any) => 
         sum + (d.pte_count || 0), 0
       );
@@ -229,7 +239,7 @@ export default function Index() {
       // Get manifests for this month
       const { data: manifests } = await supabase
         .from('manifests')
-        .select('pte_on_rim, pte_off_rim, otr_count, tractor_count, commercial_17_5_19_5_off, commercial_17_5_19_5_on, commercial_22_5_off, commercial_22_5_on')
+        .select('pte_on_rim, pte_off_rim, otr_count, tractor_count')
         .eq('organization_id', user?.currentOrganization?.id)
         .gte('created_at', firstOfMonth.toISOString())
         .lte('created_at', endOfToday.toISOString());
@@ -243,19 +253,16 @@ export default function Index() {
         .gte('dropoff_date', format(firstOfMonth, 'yyyy-MM-dd'))
         .lte('dropoff_date', format(endOfToday, 'yyyy-MM-dd'));
 
+      // Manifests: Apply Michigan PTE conversion (includes OTR and tractor)
       const manifestTotal = (manifests || []).reduce((sum, m: any) => {
-        const passengerPtes = (m.pte_on_rim || 0) + (m.pte_off_rim || 0) + (m.commercial_17_5_19_5_off || 0) + (m.commercial_17_5_19_5_on || 0) + (m.commercial_22_5_off || 0) + (m.commercial_22_5_on || 0);
-        const otrPtes = (m.otr_count || 0);
-        const tractorPtes = (m.tractor_count || 0);
-        
-        // Convert to Michigan PTE
         return sum + calculateTotalPTE({
-          pte_count: passengerPtes,
-          otr_count: otrPtes,
-          tractor_count: tractorPtes,
+          pte_count: (m.pte_on_rim || 0) + (m.pte_off_rim || 0),
+          otr_count: m.otr_count || 0,
+          tractor_count: m.tractor_count || 0,
         });
       }, 0);
 
+      // Drop-offs: Just sum pte_count directly
       const dropoffTotal = (dropoffs || []).reduce((sum, d: any) => 
         sum + (d.pte_count || 0), 0
       );
@@ -447,8 +454,12 @@ const manifestStats = todaysManifests.reduce((acc: { ptes: number, pounds: numbe
   const commercial225Off = manifest.commercial_22_5_off || 0;
   const commercial225On = manifest.commercial_22_5_on || 0;
   
-  // PTE-only for tiles
-  const pteOnly = pteOnRim + pteOffRim;
+  // Apply Michigan PTE conversion (includes OTR and tractor)
+  const convertedPTE = calculateTotalPTE({
+    pte_count: pteOnRim + pteOffRim,
+    otr_count: otr,
+    tractor_count: tractor,
+  });
   
   // Calculate actual weight in pounds (each tire type has different weight)
   const weightPounds = 
@@ -459,21 +470,17 @@ const manifestStats = todaysManifests.reduce((acc: { ptes: number, pounds: numbe
     (commercial225Off + commercial225On) * 110;      // Commercial 22.5: ~110 lbs each
   
   return {
-    ptes: acc.ptes + pteOnly,
+    ptes: acc.ptes + convertedPTE,
     pounds: acc.pounds + weightPounds
   };
 }, { ptes: 0, pounds: 0 });
 
-// Calculate PTEs and weight from drop-offs (assume PTE weight for dropoffs)
+// Calculate PTEs from drop-offs (just sum pte_count directly, no conversion)
 const dropoffStats = todaysDropoffs.reduce((acc: { ptes: number, pounds: number }, dropoff: any) => {
-  const convertedPTE = calculateTotalPTE({
-    pte_count: dropoff.pte_count || 0,
-    otr_count: dropoff.otr_count || 0,
-    tractor_count: dropoff.tractor_count || 0,
-  });
+  const pteCount = dropoff.pte_count || 0;
   return {
-    ptes: acc.ptes + convertedPTE,
-    pounds: acc.pounds + (convertedPTE * 22)  // Approximation using PTE weight
+    ptes: acc.ptes + pteCount,
+    pounds: acc.pounds + (pteCount * 22)  // Approximation using PTE weight
   };
 }, { ptes: 0, pounds: 0 });
 
