@@ -333,6 +333,20 @@ export const useDeletePickup = () => {
 
       return pickupId;
     },
+    onMutate: async (pickupId: string) => {
+      // Optimistically remove the pickup from any cached pickup lists
+      await queryClient.cancelQueries({ queryKey: ['pickups'] });
+      const previous = queryClient.getQueriesData<any[]>({ queryKey: ['pickups'] });
+      previous.forEach(([key, data]) => {
+        if (Array.isArray(data)) {
+          queryClient.setQueryData(
+            key as any,
+            data.filter((p: any) => p?.id !== pickupId)
+          );
+        }
+      });
+      return { previous };
+    },
     onSuccess: async () => {
       // Invalidate all relevant queries and wait for them to complete
       await Promise.all([
@@ -355,10 +369,14 @@ export const useDeletePickup = () => {
         description: "Pickup has been removed from all schedules",
       });
     },
-    onError: (error) => {
+    onError: (error, _pickupId, context) => {
+      // Roll back optimistic updates if deletion fails
+      context?.previous?.forEach(([key, data]: [unknown, any]) => {
+        queryClient.setQueryData(key as any, data);
+      });
       toast({
         title: "Error",
-        description: error.message || "Failed to delete pickup",
+        description: (error as any)?.message || "Failed to delete pickup",
         variant: "destructive",
       });
     }
