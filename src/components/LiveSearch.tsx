@@ -31,7 +31,15 @@ export function LiveSearch() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const performSearch = async (query: string) => {
-    if (!query.trim() || !user?.id) {
+    if (!query.trim()) {
+      setResults([]);
+      return;
+    }
+
+    // Use organization from user context directly
+    const orgId = user?.currentOrganization?.id;
+    if (!orgId) {
+      console.warn('No organization ID available for search');
       setResults([]);
       return;
     }
@@ -39,30 +47,20 @@ export function LiveSearch() {
     setIsLoading(true);
     
     try {
-      // Get user's organization
-      const { data: userOrg } = await supabase
-        .from('user_organization_roles')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (!userOrg) {
-        setResults([]);
-        return;
-      }
-
       const searchResults: SearchResult[] = [];
 
       // Search clients
-      const { data: clients } = await supabase
+      const { data: clients, error: clientsError } = await supabase
         .from('clients')
         .select('id, company_name, contact_name, email')
-        .eq('organization_id', userOrg.organization_id)
+        .eq('organization_id', orgId)
         .eq('is_active', true)
         .or(`company_name.ilike.%${query}%,contact_name.ilike.%${query}%,email.ilike.%${query}%`)
         .limit(5);
 
-      if (clients) {
+      if (clientsError) {
+        console.error('Clients search error:', clientsError);
+      } else if (clients) {
         clients.forEach(client => {
           searchResults.push({
             id: client.id,
@@ -76,7 +74,7 @@ export function LiveSearch() {
       }
 
       // Search locations
-      const { data: locations } = await supabase
+      const { data: locations, error: locationsError } = await supabase
         .from('locations')
         .select(`
           id,
@@ -84,12 +82,14 @@ export function LiveSearch() {
           address,
           client:client_id(id, company_name)
         `)
-        .eq('organization_id', userOrg.organization_id)
+        .eq('organization_id', orgId)
         .eq('is_active', true)
         .or(`name.ilike.%${query}%,address.ilike.%${query}%`)
         .limit(5);
 
-      if (locations) {
+      if (locationsError) {
+        console.error('Locations search error:', locationsError);
+      } else if (locations) {
         locations.forEach(location => {
           searchResults.push({
             id: location.id,
@@ -103,7 +103,7 @@ export function LiveSearch() {
       }
 
       // Search recent pickups
-      const { data: pickups } = await supabase
+      const { data: pickups, error: pickupsError } = await supabase
         .from('pickups')
         .select(`
           id,
@@ -112,12 +112,14 @@ export function LiveSearch() {
           client:client_id(id, company_name),
           location:location_id(address)
         `)
-        .eq('organization_id', userOrg.organization_id)
+        .eq('organization_id', orgId)
         .gte('pickup_date', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
         .order('pickup_date', { ascending: false })
         .limit(3);
 
-      if (pickups) {
+      if (pickupsError) {
+        console.error('Pickups search error:', pickupsError);
+      } else if (pickups) {
         pickups.forEach(pickup => {
           if (pickup.client?.company_name.toLowerCase().includes(query.toLowerCase()) ||
               pickup.location?.address.toLowerCase().includes(query.toLowerCase())) {
@@ -133,6 +135,7 @@ export function LiveSearch() {
         });
       }
 
+      console.log(`[LIVE_SEARCH] Found ${searchResults.length} results for "${query}"`);
       setResults(searchResults);
     } catch (error) {
       console.error('Search error:', error);
@@ -160,7 +163,7 @@ export function LiveSearch() {
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [searchQuery, user?.id]);
+  }, [searchQuery, user?.currentOrganization?.id]);
 
   const handleResultClick = () => {
     setIsOpen(false);
@@ -204,7 +207,7 @@ export function LiveSearch() {
         </div>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-[90vw] max-w-[400px] p-0" 
+        className="w-[90vw] max-w-[400px] p-0 bg-card border-border shadow-lg z-50" 
         align="start"
         side="bottom"
         sideOffset={5}
