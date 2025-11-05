@@ -138,10 +138,16 @@ export default function Index() {
       const endOfToday = new Date();
       endOfToday.setHours(23, 59, 59, 999);
       
-      // Get manifests for this week
+      // Get manifests for this week WITH linked dropoffs
       const { data: manifests } = await supabase
         .from('manifests')
-        .select('pte_on_rim, pte_off_rim, otr_count, tractor_count')
+        .select(`
+          pte_on_rim, 
+          pte_off_rim, 
+          otr_count, 
+          tractor_count,
+          dropoffs!inner(pte_count, otr_count, tractor_count)
+        `)
         .eq('organization_id', user?.currentOrganization?.id)
         .eq('status', 'COMPLETED')
         .gte('created_at', monday.toISOString())
@@ -157,13 +163,23 @@ export default function Index() {
         .gte('dropoff_date', format(monday, 'yyyy-MM-dd'))
         .lte('dropoff_date', format(endOfToday, 'yyyy-MM-dd'));
       
-      const manifestTotal = (manifests || []).reduce((sum, m) =>
-        sum + calculateTotalPTE({
+      const manifestTotal = (manifests || []).reduce((sum, m) => {
+        // Manifest tire counts
+        const manifestPTE = calculateTotalPTE({
           pte_count: (m.pte_on_rim || 0) + (m.pte_off_rim || 0),
           otr_count: m.otr_count || 0,
           tractor_count: m.tractor_count || 0,
-        }), 0
-      );
+        });
+        
+        // Linked dropoff tire counts (if any)
+        const dropoffPTE = m.dropoffs ? calculateTotalPTE({
+          pte_count: m.dropoffs.pte_count || 0,
+          otr_count: m.dropoffs.otr_count || 0,
+          tractor_count: m.dropoffs.tractor_count || 0,
+        }) : 0;
+        
+        return sum + manifestPTE + dropoffPTE;
+      }, 0);
       
       const dropoffTotal = (dropoffs || []).reduce((sum, d) => 
         sum + calculateTotalPTE({
@@ -177,6 +193,7 @@ export default function Index() {
     },
     enabled: !!user?.currentOrganization?.id,
     refetchInterval: 30000, // Real-time updates every 30 seconds
+    staleTime: 0
   });
 
   // Fetch yesterday's tire totals
@@ -190,10 +207,16 @@ export default function Index() {
       const endOfYesterday = new Date(yesterday);
       endOfYesterday.setHours(23, 59, 59, 999);
       
-      // Get manifests for yesterday
+      // Get manifests for yesterday WITH linked dropoffs
       const { data: manifests } = await supabase
         .from('manifests')
-        .select('pte_on_rim, pte_off_rim, otr_count, tractor_count')
+        .select(`
+          pte_on_rim, 
+          pte_off_rim, 
+          otr_count, 
+          tractor_count,
+          dropoffs!inner(pte_count, otr_count, tractor_count)
+        `)
         .eq('organization_id', user?.currentOrganization?.id)
         .eq('status', 'COMPLETED')
         .gte('created_at', startOfYesterday.toISOString())
@@ -209,13 +232,23 @@ export default function Index() {
         .gte('dropoff_date', format(startOfYesterday, 'yyyy-MM-dd'))
         .lte('dropoff_date', format(endOfYesterday, 'yyyy-MM-dd'));
       
-      const manifestTotal = (manifests || []).reduce((sum, m) => 
-        sum + calculateTotalPTE({
+      const manifestTotal = (manifests || []).reduce((sum, m) => {
+        // Manifest tire counts
+        const manifestPTE = calculateTotalPTE({
           pte_count: (m.pte_on_rim || 0) + (m.pte_off_rim || 0),
           otr_count: m.otr_count || 0,
           tractor_count: m.tractor_count || 0,
-        }), 0
-      );
+        });
+        
+        // Linked dropoff tire counts (if any)
+        const dropoffPTE = m.dropoffs ? calculateTotalPTE({
+          pte_count: m.dropoffs.pte_count || 0,
+          otr_count: m.dropoffs.otr_count || 0,
+          tractor_count: m.dropoffs.tractor_count || 0,
+        }) : 0;
+        
+        return sum + manifestPTE + dropoffPTE;
+      }, 0);
       
       const dropoffTotal = (dropoffs || []).reduce((sum, d) => 
         sum + calculateTotalPTE({
@@ -229,6 +262,7 @@ export default function Index() {
     },
     enabled: !!user?.currentOrganization?.id,
     refetchInterval: 30000, // Real-time updates every 30 seconds
+    staleTime: 0
   });
 
   // Fetch this month's tire totals (1st through today)
@@ -242,10 +276,16 @@ export default function Index() {
       const endOfToday = new Date();
       endOfToday.setHours(23, 59, 59, 999);
       
-      // Get manifests for this month
+      // Get manifests for this month WITH linked dropoffs
       const { data: manifests } = await supabase
         .from('manifests')
-        .select('pte_on_rim, pte_off_rim, otr_count, tractor_count')
+        .select(`
+          pte_on_rim, 
+          pte_off_rim, 
+          otr_count, 
+          tractor_count,
+          dropoffs!inner(pte_count, otr_count, tractor_count)
+        `)
         .eq('organization_id', user?.currentOrganization?.id)
         .eq('status', 'COMPLETED')
         .gte('created_at', firstOfMonth.toISOString())
@@ -261,13 +301,23 @@ export default function Index() {
         .gte('dropoff_date', format(firstOfMonth, 'yyyy-MM-dd'))
         .lte('dropoff_date', format(endOfToday, 'yyyy-MM-dd'));
       
-      const manifestTotal = (manifests || []).reduce((sum, m) => 
-        sum + calculateTotalPTE({
+      const manifestTotal = (manifests || []).reduce((sum, m) => {
+        // Manifest tire counts
+        const manifestPTE = calculateTotalPTE({
           pte_count: (m.pte_on_rim || 0) + (m.pte_off_rim || 0),
           otr_count: m.otr_count || 0,
           tractor_count: m.tractor_count || 0,
-        }), 0
-      );
+        });
+        
+        // Linked dropoff tire counts (if any)
+        const dropoffPTE = m.dropoffs ? calculateTotalPTE({
+          pte_count: m.dropoffs.pte_count || 0,
+          otr_count: m.dropoffs.otr_count || 0,
+          tractor_count: m.dropoffs.tractor_count || 0,
+        }) : 0;
+        
+        return sum + manifestPTE + dropoffPTE;
+      }, 0);
       
       const dropoffTotal = (dropoffs || []).reduce((sum, d) => 
         sum + calculateTotalPTE({
@@ -281,6 +331,7 @@ export default function Index() {
     },
     enabled: !!user?.currentOrganization?.id,
     refetchInterval: 30000, // Real-time updates every 30 seconds
+    staleTime: 0
   });
 
   // Fetch this week's daily stats for PTE goal chart (current week Mon-Fri only)
