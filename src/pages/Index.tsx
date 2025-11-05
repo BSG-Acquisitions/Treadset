@@ -157,7 +157,7 @@ export default function Index() {
         .gte('dropoff_date', format(monday, 'yyyy-MM-dd'))
         .lte('dropoff_date', format(endOfToday, 'yyyy-MM-dd'));
 
-      // Get dropoffs LINKED to manifests (for fallback when manifest counts are zero)
+      // Get dropoffs LINKED to manifests (for fallback when manifest counts are missing)
       const { data: linkedDropoffs } = await supabase
         .from('dropoffs')
         .select('manifest_id, pte_count, otr_count, tractor_count')
@@ -167,26 +167,29 @@ export default function Index() {
         .gte('dropoff_date', format(monday, 'yyyy-MM-dd'))
         .lte('dropoff_date', format(endOfToday, 'yyyy-MM-dd'));
 
-      // Build fallback map: manifest_id -> PTE from linked dropoffs
-      const linkedMap = new Map<string, number>();
+      // Aggregate linked dropoffs per manifest by tire type
+      const linkedAgg = new Map<string, { pte: number; otr: number; tractor: number }>();
       (linkedDropoffs || []).forEach((d: any) => {
-        const pte = calculateTotalPTE({
-          pte_count: d.pte_count || 0,
-          otr_count: d.otr_count || 0,
-          tractor_count: d.tractor_count || 0,
-        });
         const key = d.manifest_id as string;
-        linkedMap.set(key, (linkedMap.get(key) || 0) + pte);
+        const cur = linkedAgg.get(key) || { pte: 0, otr: 0, tractor: 0 };
+        linkedAgg.set(key, {
+          pte: cur.pte + (d.pte_count || 0),
+          otr: cur.otr + (d.otr_count || 0),
+          tractor: cur.tractor + (d.tractor_count || 0),
+        });
       });
       
       const manifestTotal = (manifests || []).reduce((sum, m: any) => {
-        const manifestPTE = calculateTotalPTE({
-          pte_count: (m.pte_on_rim || 0) + (m.pte_off_rim || 0),
-          otr_count: m.otr_count || 0,
-          tractor_count: m.tractor_count || 0,
+        const linked = linkedAgg.get(m.id as string) || { pte: 0, otr: 0, tractor: 0 };
+        const combinedPassenger = (m.pte_on_rim || 0) + (m.pte_off_rim || 0) + (((m.pte_on_rim || 0) + (m.pte_off_rim || 0)) > 0 ? 0 : linked.pte);
+        const combinedOtr = (m.otr_count || 0) + ((m.otr_count || 0) > 0 ? 0 : linked.otr);
+        const combinedTractor = (m.tractor_count || 0) + ((m.tractor_count || 0) > 0 ? 0 : linked.tractor);
+        const pte = calculateTotalPTE({
+          pte_count: combinedPassenger,
+          otr_count: combinedOtr,
+          tractor_count: combinedTractor,
         });
-        const fallbackPTE = manifestPTE > 0 ? 0 : (linkedMap.get(m.id as string) || 0);
-        return sum + manifestPTE + fallbackPTE;
+        return sum + pte;
       }, 0);
       
       const dropoffTotal = (dropoffs || []).reduce((sum, d: any) => 
@@ -244,28 +247,31 @@ export default function Index() {
         .gte('dropoff_date', format(startOfYesterday, 'yyyy-MM-dd'))
         .lte('dropoff_date', format(endOfYesterday, 'yyyy-MM-dd'));
 
-      // Build fallback map: manifest_id -> PTE from linked dropoffs
-      const linkedMap = new Map<string, number>();
+      // Aggregate linked dropoffs per manifest by tire type
+      const linkedAggY = new Map<string, { pte: number; otr: number; tractor: number }>();
       (linkedDropoffs || []).forEach((d: any) => {
-        const pte = calculateTotalPTE({
-          pte_count: d.pte_count || 0,
-          otr_count: d.otr_count || 0,
-          tractor_count: d.tractor_count || 0,
-        });
         const key = d.manifest_id as string;
-        linkedMap.set(key, (linkedMap.get(key) || 0) + pte);
-      });
-      
-      const manifestTotal = (manifests || []).reduce((sum, m: any) => {
-        const manifestPTE = calculateTotalPTE({
-          pte_count: (m.pte_on_rim || 0) + (m.pte_off_rim || 0),
-          otr_count: m.otr_count || 0,
-          tractor_count: m.tractor_count || 0,
+        const cur = linkedAggY.get(key) || { pte: 0, otr: 0, tractor: 0 };
+        linkedAggY.set(key, {
+          pte: cur.pte + (d.pte_count || 0),
+          otr: cur.otr + (d.otr_count || 0),
+          tractor: cur.tractor + (d.tractor_count || 0),
         });
-        const fallbackPTE = manifestPTE > 0 ? 0 : (linkedMap.get(m.id as string) || 0);
-        return sum + manifestPTE + fallbackPTE;
+      });
+
+      const manifestTotal = (manifests || []).reduce((sum, m: any) => {
+        const linked = linkedAggY.get(m.id as string) || { pte: 0, otr: 0, tractor: 0 };
+        const combinedPassenger = (m.pte_on_rim || 0) + (m.pte_off_rim || 0) + (((m.pte_on_rim || 0) + (m.pte_off_rim || 0)) > 0 ? 0 : linked.pte);
+        const combinedOtr = (m.otr_count || 0) + ((m.otr_count || 0) > 0 ? 0 : linked.otr);
+        const combinedTractor = (m.tractor_count || 0) + ((m.tractor_count || 0) > 0 ? 0 : linked.tractor);
+        const pte = calculateTotalPTE({
+          pte_count: combinedPassenger,
+          otr_count: combinedOtr,
+          tractor_count: combinedTractor,
+        });
+        return sum + pte;
       }, 0);
-      
+
       const dropoffTotal = (dropoffs || []).reduce((sum, d: any) => 
         sum + calculateTotalPTE({
           pte_count: d.pte_count || 0,
@@ -321,28 +327,31 @@ export default function Index() {
         .gte('dropoff_date', format(firstOfMonth, 'yyyy-MM-dd'))
         .lte('dropoff_date', format(endOfToday, 'yyyy-MM-dd'));
 
-      // Build fallback map: manifest_id -> PTE from linked dropoffs
-      const linkedMap = new Map<string, number>();
+      // Aggregate linked dropoffs per manifest by tire type
+      const linkedAggM = new Map<string, { pte: number; otr: number; tractor: number }>();
       (linkedDropoffs || []).forEach((d: any) => {
-        const pte = calculateTotalPTE({
-          pte_count: d.pte_count || 0,
-          otr_count: d.otr_count || 0,
-          tractor_count: d.tractor_count || 0,
-        });
         const key = d.manifest_id as string;
-        linkedMap.set(key, (linkedMap.get(key) || 0) + pte);
-      });
-      
-      const manifestTotal = (manifests || []).reduce((sum, m: any) => {
-        const manifestPTE = calculateTotalPTE({
-          pte_count: (m.pte_on_rim || 0) + (m.pte_off_rim || 0),
-          otr_count: m.otr_count || 0,
-          tractor_count: m.tractor_count || 0,
+        const cur = linkedAggM.get(key) || { pte: 0, otr: 0, tractor: 0 };
+        linkedAggM.set(key, {
+          pte: cur.pte + (d.pte_count || 0),
+          otr: cur.otr + (d.otr_count || 0),
+          tractor: cur.tractor + (d.tractor_count || 0),
         });
-        const fallbackPTE = manifestPTE > 0 ? 0 : (linkedMap.get(m.id as string) || 0);
-        return sum + manifestPTE + fallbackPTE;
+      });
+
+      const manifestTotal = (manifests || []).reduce((sum, m: any) => {
+        const linked = linkedAggM.get(m.id as string) || { pte: 0, otr: 0, tractor: 0 };
+        const combinedPassenger = (m.pte_on_rim || 0) + (m.pte_off_rim || 0) + (((m.pte_on_rim || 0) + (m.pte_off_rim || 0)) > 0 ? 0 : linked.pte);
+        const combinedOtr = (m.otr_count || 0) + ((m.otr_count || 0) > 0 ? 0 : linked.otr);
+        const combinedTractor = (m.tractor_count || 0) + ((m.tractor_count || 0) > 0 ? 0 : linked.tractor);
+        const pte = calculateTotalPTE({
+          pte_count: combinedPassenger,
+          otr_count: combinedOtr,
+          tractor_count: combinedTractor,
+        });
+        return sum + pte;
       }, 0);
-      
+
       const dropoffTotal = (dropoffs || []).reduce((sum, d: any) => 
         sum + calculateTotalPTE({
           pte_count: d.pte_count || 0,
