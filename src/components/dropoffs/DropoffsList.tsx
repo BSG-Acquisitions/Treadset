@@ -29,13 +29,14 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { format, isWithinInterval, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays } from "date-fns";
+import { format, isWithinInterval, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, isToday, isYesterday, startOfDay } from "date-fns";
 import type { Database } from "@/integrations/supabase/types";
 import { useGenerateDropoffManifest } from "@/hooks/useDropoffManifest";
 import { EditDropoffDialog } from "./EditDropoffDialog";
 import { HaulerReliabilityBadge } from "@/components/HaulerReliabilityBadge";
 import { useState } from "react";
 import { calculateTotalPTE } from "@/lib/michigan-conversions";
+import { cn } from "@/lib/utils";
 
 type Dropoff = Database["public"]["Tables"]["dropoffs"]["Row"] & {
   dropoff_customers?: {
@@ -102,6 +103,30 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
 
     // Remove empty groups and return as array
     return Object.entries(groups).filter(([_, items]) => items.length > 0);
+  };
+
+  // Group dropoffs within "This Week" by day
+  const groupByDay = (dropoffList: Dropoff[]) => {
+    const byDay: Record<string, Dropoff[]> = {};
+    
+    dropoffList.forEach(dropoff => {
+      const date = new Date(dropoff.dropoff_date);
+      const dayKey = format(date, 'yyyy-MM-dd');
+      if (!byDay[dayKey]) {
+        byDay[dayKey] = [];
+      }
+      byDay[dayKey].push(dropoff);
+    });
+
+    // Sort by date descending
+    return Object.entries(byDay).sort((a, b) => b[0].localeCompare(a[0]));
+  };
+
+  const getDayLabel = (dateStr: string) => {
+    const date = new Date(dateStr);
+    if (isToday(date)) return 'Today';
+    if (isYesterday(date)) return 'Yesterday';
+    return format(date, 'EEEE, MMM dd');
   };
 
   const handleGenerateManifest = (dropoff: Dropoff) => {
@@ -342,6 +367,10 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
           );
           const totalRevenue = dropoffList.reduce((sum, d) => sum + (d.computed_revenue || 0), 0);
           
+          // For "This Week", group by individual days
+          const isThisWeek = period === 'This Week';
+          const dailyGroups = isThisWeek ? groupByDay(dropoffList) : [];
+          
           return (
             <Collapsible key={period} defaultOpen>
               <div className="rounded-md border">
@@ -367,7 +396,56 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <div className="p-4 pt-0 space-y-3">
-                    {dropoffList.map((dropoff) => renderDropoffCard(dropoff))}
+                    {isThisWeek ? (
+                      // Show daily breakdown for this week
+                      dailyGroups.map(([dayKey, dayDropoffs]) => {
+                        const date = new Date(dayKey);
+                        const isDayToday = isToday(date);
+                        const dayLabel = getDayLabel(dayKey);
+                        const dayTires = dayDropoffs.reduce((sum, d) => 
+                          sum + (d.pte_count || 0) + (d.otr_count || 0) + (d.tractor_count || 0), 0
+                        );
+                        const dayPTE = dayDropoffs.reduce((sum, d) => 
+                          sum + calculateTotalPTE({
+                            pte_count: d.pte_count || 0,
+                            otr_count: d.otr_count || 0,
+                            tractor_count: d.tractor_count || 0,
+                          }), 0
+                        );
+                        
+                        return (
+                          <div key={dayKey} className="space-y-2">
+                            <div className={cn(
+                              "flex items-center justify-between py-2 px-3 rounded-md",
+                              isDayToday && "bg-primary/10 border border-primary/20"
+                            )}>
+                              <div className="flex items-center gap-2">
+                                <Calendar className="h-4 w-4" />
+                                <span className={cn(
+                                  "font-medium text-sm",
+                                  isDayToday && "text-primary"
+                                )}>
+                                  {dayLabel}
+                                </span>
+                                <Badge variant="outline" className="text-xs">
+                                  {dayDropoffs.length}
+                                </Badge>
+                              </div>
+                              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                <span>{dayTires} tires</span>
+                                <span>{dayPTE} PTE</span>
+                              </div>
+                            </div>
+                            <div className="space-y-2 ml-4">
+                              {dayDropoffs.map((dropoff) => renderDropoffCard(dropoff))}
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      // Show flat list for other periods
+                      dropoffList.map((dropoff) => renderDropoffCard(dropoff))
+                    )}
                   </div>
                 </CollapsibleContent>
               </div>

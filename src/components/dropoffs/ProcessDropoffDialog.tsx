@@ -81,10 +81,17 @@ const subtotal = (Number(pteCount || 0) * ptePrice) +
         throw new Error("Please select a customer");
       }
 
+      // Get current date and time in local timezone
+      const now = new Date();
+      const localDate = now.toISOString().split('T')[0]; // YYYY-MM-DD in local timezone
+      const localTime = now.toTimeString().split(' ')[0]; // HH:MM:SS
+
       await createDropoff.mutateAsync({
         organization_id: user?.currentOrganization?.id || "", 
         dropoff_customer_id: dropoffCustomerId,
         hauler_id: haulerId || null,
+        dropoff_date: localDate, // Explicitly set local date
+        dropoff_time: localTime, // Set current time
         pte_count: Number(pteCount || 0),
         otr_count: Number(otrCount || 0),
         tractor_count: Number(tractorCount || 0),
@@ -96,7 +103,8 @@ const subtotal = (Number(pteCount || 0) * ptePrice) +
         payment_status: paymentMethod === 'invoice' ? 'pending' : 'paid',
         requires_manifest: true, // All dropoffs require manifests
         notes: notes || null,
-        status: 'completed'
+        status: 'completed',
+        processed_by: user?.id || null
       });
 
       // Reset form
