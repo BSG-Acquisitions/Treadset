@@ -1,6 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useEnhancedNotifications } from "@/hooks/useEnhancedNotifications";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface CreatePaymentParams {
   amount: number; // Amount in dollars
@@ -49,6 +51,8 @@ export const useCreatePayment = () => {
 export const useVerifyPayment = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { createNotification } = useEnhancedNotifications();
+  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async (params: VerifyPaymentParams) => {
@@ -59,12 +63,35 @@ export const useVerifyPayment = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       if (data.payment.status === 'paid') {
         toast({
           title: "Payment Successful",
           description: "Payment has been processed successfully.",
         });
+
+        // Create notification for successful payment
+        if (user?.currentOrganization) {
+          const { data: userData } = await supabase
+            .from('users')
+            .select('id')
+            .eq('auth_user_id', user.id)
+            .single();
+
+          if (userData) {
+            const amount = data.payment.amount ? `$${(data.payment.amount / 100).toFixed(2)}` : '';
+            createNotification({
+              user_id: userData.id,
+              organization_id: user.currentOrganization.id,
+              title: "Payment Received",
+              message: `Stripe payment of ${amount} was successfully processed${data.payment.description ? ` for ${data.payment.description}` : ''}.`,
+              type: 'success',
+              priority: 'medium',
+              related_type: 'payment',
+              related_id: data.payment.id,
+            });
+          }
+        }
       }
       // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: ["payments"] });
