@@ -441,7 +441,7 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue;
           location: m.location
         })) || [];
 
-      // Fetch all dropoffs (including those with manifests)
+      // Fetch standalone dropoffs (without linked manifests to avoid double-counting)
       const { data: dropoffsData, error: dropoffsError } = await supabase
         .from('dropoffs')
         .select(`
@@ -454,7 +454,8 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue;
         `)
         .eq('organization_id', user?.currentOrganization?.id)
         .gte('dropoff_date', format(startDate, 'yyyy-MM-dd'))
-        .lte('dropoff_date', format(endDate, 'yyyy-MM-dd'));
+        .lte('dropoff_date', format(endDate, 'yyyy-MM-dd'))
+        .is('manifest_id', null);
 
       if (dropoffsError) throw dropoffsError;
 
