@@ -26,7 +26,7 @@ import { useRealtimeUpdates } from "@/hooks/useRealtimeUpdates";
 import { SchedulePickupWithDriverDialog } from "@/components/SchedulePickupWithDriverDialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { calculateTotalPTE } from "@/lib/michigan-conversions";
+import { PTEBreakdownDrawer } from "@/components/debug/PTEBreakdownDrawer";
 // Intelligence components moved to /intelligence page
 
 export default function Index() {
@@ -122,7 +122,7 @@ export default function Index() {
     enabled: !!user?.currentOrganization?.id,
   });
 
-  // Fetch this week's tire totals (Monday through today)
+  // Fetch this week's tire totals (Monday through today) - UNIFIED SOURCE
   const { data: weeklyTireStats } = useQuery({
     queryKey: ['weekly-tire-totals', user?.currentOrganization?.id, format(new Date(), 'yyyy-MM-dd')],
     queryFn: async () => {
@@ -133,160 +133,90 @@ export default function Index() {
       const daysFromMonday = todayDay === 0 ? 6 : todayDay - 1;
       const monday = new Date(today);
       monday.setDate(today.getDate() - daysFromMonday);
-      monday.setHours(0, 0, 0, 0);
       
-      const endOfToday = new Date();
-      endOfToday.setHours(23, 59, 59, 999);
-      
-      // Get manifests for this week
-      const { data: manifests } = await supabase
-        .from('manifests')
-        .select('pte_on_rim, pte_off_rim, otr_count, tractor_count')
+      const { data, error } = await supabase
+        .from('recycling_events')
+        .select('pte_equivalent')
         .eq('organization_id', user?.currentOrganization?.id)
-        .gte('created_at', monday.toISOString())
-        .lte('created_at', endOfToday.toISOString());
+        .gte('event_date', format(monday, 'yyyy-MM-dd'))
+        .lte('event_date', format(today, 'yyyy-MM-dd'));
       
-      // Get ALL dropoffs (regardless of manifest_id) and only use pte_count directly
-      const { data: dropoffs } = await supabase
-        .from('dropoffs')
-        .select('pte_count')
-        .eq('organization_id', user?.currentOrganization?.id)
-        .in('status', ['completed', 'processed'])
-        .gte('dropoff_date', format(monday, 'yyyy-MM-dd'))
-        .lte('dropoff_date', format(endOfToday, 'yyyy-MM-dd'));
-
-      // Manifests: Apply Michigan PTE conversion (includes OTR and tractor)
-      const manifestTotal = (manifests || []).reduce((sum, m: any) => {
-        return sum + calculateTotalPTE({
-          pte_count: (m.pte_on_rim || 0) + (m.pte_off_rim || 0),
-          otr_count: m.otr_count || 0,
-          tractor_count: m.tractor_count || 0,
-        });
-      }, 0);
+      if (error) throw error;
       
-      // Drop-offs: Just sum pte_count directly
-      const dropoffTotal = (dropoffs || []).reduce((sum, d: any) => 
-        sum + (d.pte_count || 0), 0
-      );
-      
-      return manifestTotal + dropoffTotal;
+      return (data || []).reduce((sum, event) => sum + (event.pte_equivalent || 0), 0);
     },
     enabled: !!user?.currentOrganization?.id,
-    refetchInterval: 30000, // Real-time updates every 30 seconds
+    refetchInterval: 30000,
     staleTime: 0
   });
 
-  // Fetch yesterday's tire totals
-  const { data: yesterdayTireStats } = useQuery({
+  // Fetch yesterday's tire totals - UNIFIED SOURCE
+  const { data: yesterdayTireStats, data: yesterdayEvents } = useQuery({
     queryKey: ['yesterday-tire-totals', user?.currentOrganization?.id, format(addDays(new Date(), -1), 'yyyy-MM-dd')],
     queryFn: async () => {
-      const yesterday = addDays(new Date(), -1);
-      const startOfYesterday = new Date(yesterday);
-      startOfYesterday.setHours(0, 0, 0, 0);
+      const yesterday = format(addDays(new Date(), -1), 'yyyy-MM-dd');
       
-      const endOfYesterday = new Date(yesterday);
-      endOfYesterday.setHours(23, 59, 59, 999);
-      
-      // Get manifests for yesterday
-      const { data: manifests } = await supabase
-        .from('manifests')
-        .select('pte_on_rim, pte_off_rim, otr_count, tractor_count')
+      const { data, error } = await supabase
+        .from('recycling_events')
+        .select('*')
         .eq('organization_id', user?.currentOrganization?.id)
-        .gte('created_at', startOfYesterday.toISOString())
-        .lte('created_at', endOfYesterday.toISOString());
+        .eq('event_date', yesterday);
       
-      // Get ALL dropoffs (regardless of manifest_id) and only use pte_count directly
-      const { data: dropoffs } = await supabase
-        .from('dropoffs')
-        .select('pte_count')
-        .eq('organization_id', user?.currentOrganization?.id)
-        .in('status', ['completed', 'processed'])
-        .gte('dropoff_date', format(startOfYesterday, 'yyyy-MM-dd'))
-        .lte('dropoff_date', format(endOfYesterday, 'yyyy-MM-dd'));
-
-      console.log('\n=== YESTERDAY PTE CALCULATION ===');
-      console.log(`Found ${(manifests || []).length} manifests from yesterday`);
+      if (error) throw error;
       
-      // Manifests: Apply Michigan PTE conversion (includes OTR and tractor)
-      const manifestTotal = (manifests || []).reduce((sum, m: any) => {
-        const ptes = calculateTotalPTE({
-          pte_count: (m.pte_on_rim || 0) + (m.pte_off_rim || 0),
-          otr_count: m.otr_count || 0,
-          tractor_count: m.tractor_count || 0,
-        });
-        console.log(`  Manifest: ${m.pte_on_rim || 0} on-rim + ${m.pte_off_rim || 0} off-rim + ${m.otr_count || 0} OTR + ${m.tractor_count || 0} tractor = ${ptes} PTEs`);
-        return sum + ptes;
-      }, 0);
-
-      console.log(`Total Manifest PTEs: ${manifestTotal}`);
-      console.log(`\nFound ${(dropoffs || []).length} dropoffs from yesterday`);
-
-      // Drop-offs: Just sum pte_count directly
-      const dropoffTotal = (dropoffs || []).reduce((sum, d: any) => {
-        console.log(`  Dropoff: ${d.pte_count || 0} PTEs`);
-        return sum + (d.pte_count || 0);
-      }, 0);
+      console.log('\n=== YESTERDAY PTE CALCULATION (UNIFIED VIEW) ===');
+      console.log(`Found ${(data || []).length} total events from yesterday`);
       
-      console.log(`Total Dropoff PTEs: ${dropoffTotal}`);
-      console.log(`\n🎯 YESTERDAY GRAND TOTAL: ${manifestTotal} (manifests) + ${dropoffTotal} (dropoffs) = ${manifestTotal + dropoffTotal} PTEs\n`);
+      const manifestEvents = (data || []).filter(e => e.source_type === 'manifest');
+      const dropoffEvents = (data || []).filter(e => e.source_type === 'dropoff');
+      const pickupEvents = (data || []).filter(e => e.source_type === 'pickup');
       
-      return manifestTotal + dropoffTotal;
+      console.log(`  ${manifestEvents.length} manifests (completed)`);
+      console.log(`  ${dropoffEvents.length} dropoffs (without completed manifests)`);
+      console.log(`  ${pickupEvents.length} pickups (without any manifests)`);
+      
+      manifestEvents.forEach(e => {
+        console.log(`    Manifest ${e.source_id.slice(0, 8)}: ${e.pte_count} PTE + ${e.otr_count} OTR + ${e.tractor_count} tractor = ${e.pte_equivalent} PTEs`);
+      });
+      
+      dropoffEvents.forEach(e => {
+        console.log(`    Dropoff ${e.source_id.slice(0, 8)}: ${e.pte_count} PTE + ${e.otr_count} OTR + ${e.tractor_count} tractor = ${e.pte_equivalent} PTEs`);
+      });
+      
+      const total = (data || []).reduce((sum, event) => sum + (event.pte_equivalent || 0), 0);
+      console.log(`\n🎯 YESTERDAY TOTAL: ${total} PTEs (NO DOUBLE COUNTING)\n`);
+      
+      return total;
     },
     enabled: !!user?.currentOrganization?.id,
-    refetchInterval: 30000, // Real-time updates every 30 seconds
+    refetchInterval: 30000,
     staleTime: 0
   });
 
-  // Fetch this month's tire totals (1st through today)
+  // Fetch this month's tire totals (1st through today) - UNIFIED SOURCE
   const { data: monthlyTireStats } = useQuery({
     queryKey: ['monthly-tire-totals', user?.currentOrganization?.id, format(new Date(), 'yyyy-MM-dd')],
     queryFn: async () => {
       const today = new Date();
       const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-      firstOfMonth.setHours(0, 0, 0, 0);
       
-      const endOfToday = new Date();
-      endOfToday.setHours(23, 59, 59, 999);
-      
-      // Get manifests for this month
-      const { data: manifests } = await supabase
-        .from('manifests')
-        .select('pte_on_rim, pte_off_rim, otr_count, tractor_count')
+      const { data, error } = await supabase
+        .from('recycling_events')
+        .select('pte_equivalent')
         .eq('organization_id', user?.currentOrganization?.id)
-        .gte('created_at', firstOfMonth.toISOString())
-        .lte('created_at', endOfToday.toISOString());
+        .gte('event_date', format(firstOfMonth, 'yyyy-MM-dd'))
+        .lte('event_date', format(today, 'yyyy-MM-dd'));
       
-      // Get ALL dropoffs (regardless of manifest_id) and only use pte_count directly
-      const { data: dropoffs } = await supabase
-        .from('dropoffs')
-        .select('pte_count')
-        .eq('organization_id', user?.currentOrganization?.id)
-        .in('status', ['completed', 'processed'])
-        .gte('dropoff_date', format(firstOfMonth, 'yyyy-MM-dd'))
-        .lte('dropoff_date', format(endOfToday, 'yyyy-MM-dd'));
-
-      // Manifests: Apply Michigan PTE conversion (includes OTR and tractor)
-      const manifestTotal = (manifests || []).reduce((sum, m: any) => {
-        return sum + calculateTotalPTE({
-          pte_count: (m.pte_on_rim || 0) + (m.pte_off_rim || 0),
-          otr_count: m.otr_count || 0,
-          tractor_count: m.tractor_count || 0,
-        });
-      }, 0);
-
-      // Drop-offs: Just sum pte_count directly
-      const dropoffTotal = (dropoffs || []).reduce((sum, d: any) => 
-        sum + (d.pte_count || 0), 0
-      );
+      if (error) throw error;
       
-      return manifestTotal + dropoffTotal;
+      return (data || []).reduce((sum, event) => sum + (event.pte_equivalent || 0), 0);
     },
     enabled: !!user?.currentOrganization?.id,
-    refetchInterval: 30000, // Real-time updates every 30 seconds
+    refetchInterval: 30000,
     staleTime: 0
   });
 
-  // Fetch this week's daily stats for PTE goal chart (current week Mon-Fri only)
+  // Fetch this week's daily stats for PTE goal chart (current week Mon-Fri only) - UNIFIED SOURCE
   const { data: weeklyData = [] } = useQuery({
     queryKey: ['weekly-stats', user?.currentOrganization?.id, format(new Date(), 'yyyy-MM-dd')],
     queryFn: async () => {
@@ -294,7 +224,7 @@ export default function Index() {
       const todayDay = today.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
       
       // Calculate Monday of current week
-      const daysFromMonday = todayDay === 0 ? 6 : todayDay - 1; // If Sunday, go back 6 days
+      const daysFromMonday = todayDay === 0 ? 6 : todayDay - 1;
       const monday = new Date(today);
       monday.setDate(today.getDate() - daysFromMonday);
       
@@ -306,83 +236,32 @@ export default function Index() {
         
         days.push({
           date: format(date, 'yyyy-MM-dd'),
-          label: format(date, 'EEE'),
-          dateObj: date
+          label: format(date, 'EEE')
         });
       }
       
-      // Fetch data for each day from ALL sources (manifests, pickups, dropoffs)
-      const results = await Promise.all(
-        days.map(async ({ date, label, dateObj }) => {
-          let totalPtes = 0;
-          
-          // Calculate date range for this day (start and end of day)
-          const startOfDay = new Date(dateObj);
-          startOfDay.setHours(0, 0, 0, 0);
-          const endOfDay = new Date(dateObj);
-          endOfDay.setHours(23, 59, 59, 999);
-          
-          // 1. Get completed manifests created on this date
-          const { data: manifests } = await supabase
-            .from('manifests')
-            .select('pte_on_rim, pte_off_rim, otr_count, tractor_count')
-            .eq('organization_id', user?.currentOrganization?.id)
-            .eq('status', 'COMPLETED')
-            .gte('created_at', startOfDay.toISOString())
-            .lte('created_at', endOfDay.toISOString());
-          
-          if (manifests && manifests.length > 0) {
-            totalPtes += manifests.reduce((sum, m) => 
-              sum + calculateTotalPTE({
-                pte_count: (m.pte_on_rim || 0) + (m.pte_off_rim || 0),
-                otr_count: m.otr_count || 0,
-                tractor_count: m.tractor_count || 0,
-              }), 0
-            );
-          }
-          
-          // 2. Get completed pickups (in case manifests weren't created yet)
-          const { data: pickups } = await supabase
-            .from('pickups')
-            .select('pte_count, otr_count, tractor_count')
-            .eq('organization_id', user?.currentOrganization?.id)
-            .eq('pickup_date', date)
-            .eq('status', 'completed');
-          
-          if (pickups && pickups.length > 0) {
-            totalPtes += pickups.reduce((sum, p) =>
-              sum + calculateTotalPTE({
-                pte_count: p.pte_count || 0,
-                otr_count: p.otr_count || 0,
-                tractor_count: p.tractor_count || 0,
-              }), 0
-            );
-          }
-          
-          // 3. Get dropoffs WITHOUT manifests (to avoid double-counting)
-          const { data: dropoffs } = await supabase
-            .from('dropoffs')
-            .select('pte_count, otr_count, tractor_count')
-            .eq('organization_id', user?.currentOrganization?.id)
-            .eq('dropoff_date', date)
-            .is('manifest_id', null)
-            .in('status', ['completed', 'processed']);
-          
-          if (dropoffs && dropoffs.length > 0) {
-            totalPtes += dropoffs.reduce((sum, d) =>
-              sum + calculateTotalPTE({
-                pte_count: d.pte_count || 0,
-                otr_count: d.otr_count || 0,
-                tractor_count: d.tractor_count || 0,
-              }), 0
-            );
-          }
-          
-          return { day: label, ptes: totalPtes, target: 2600 };
-        })
-      );
+      // Fetch unified events for the entire week in one query
+      const { data: weekEvents, error } = await supabase
+        .from('recycling_events')
+        .select('event_date, pte_equivalent')
+        .eq('organization_id', user?.currentOrganization?.id)
+        .gte('event_date', format(monday, 'yyyy-MM-dd'))
+        .lte('event_date', format(today, 'yyyy-MM-dd'));
       
-      return results;
+      if (error) throw error;
+      
+      // Group by date
+      const eventsByDate = (weekEvents || []).reduce((acc, event) => {
+        acc[event.event_date] = (acc[event.event_date] || 0) + (event.pte_equivalent || 0);
+        return acc;
+      }, {} as Record<string, number>);
+      
+      // Map to chart format
+      return days.map(({ date, label }) => ({
+        day: label,
+        ptes: eventsByDate[date] || 0,
+        target: 2600
+      }));
     },
     enabled: !!user?.currentOrganization?.id,
   });
@@ -455,50 +334,37 @@ export default function Index() {
   const completedPickups = todayPickups.filter(p => p.status === 'completed');
   const overduePickups = todayPickups.filter(p => p.status === 'overdue');
   
-// Calculate PTEs and weight from manifests (where the actual tire counts are stored)
-const manifestStats = todaysManifests.reduce((acc: { ptes: number, pounds: number }, manifest: any) => {
-  const pteOnRim = manifest.pte_on_rim || 0;
-  const pteOffRim = manifest.pte_off_rim || 0;
-  const otr = manifest.otr_count || 0;
-  const tractor = manifest.tractor_count || 0;
-  const commercial17519Off = manifest.commercial_17_5_19_5_off || 0;
-  const commercial17519On = manifest.commercial_17_5_19_5_on || 0;
-  const commercial225Off = manifest.commercial_22_5_off || 0;
-  const commercial225On = manifest.commercial_22_5_on || 0;
-  
-  // Apply Michigan PTE conversion (includes OTR and tractor)
-  const convertedPTE = calculateTotalPTE({
-    pte_count: pteOnRim + pteOffRim,
-    otr_count: otr,
-    tractor_count: tractor,
+  // Calculate TODAY's PTEs from unified source (no double counting)
+  const { data: todayPTEStats = { ptes: 0, pounds: 0 } } = useQuery({
+    queryKey: ['today-pte-stats', user?.currentOrganization?.id, format(new Date(), 'yyyy-MM-dd')],
+    queryFn: async () => {
+      const today = format(new Date(), 'yyyy-MM-dd');
+      
+      const { data, error } = await supabase
+        .from('recycling_events')
+        .select('pte_count, otr_count, tractor_count, pte_equivalent')
+        .eq('organization_id', user?.currentOrganization?.id)
+        .eq('event_date', today);
+      
+      if (error) throw error;
+      
+      const ptes = (data || []).reduce((sum, e) => sum + (e.pte_equivalent || 0), 0);
+      
+      // Approximate weight calculation
+      const pounds = (data || []).reduce((sum, e) => {
+        const pteWeight = (e.pte_count || 0) * 22;
+        const otrWeight = (e.otr_count || 0) * 300;
+        const tractorWeight = (e.tractor_count || 0) * 110;
+        return sum + pteWeight + otrWeight + tractorWeight;
+      }, 0);
+      
+      return { ptes, pounds };
+    },
+    enabled: !!user?.currentOrganization?.id,
   });
   
-  // Calculate actual weight in pounds (each tire type has different weight)
-  const weightPounds = 
-    (pteOnRim + pteOffRim) * 22 +           // PTEs: ~22 lbs each
-    otr * 300 +                              // OTR: ~300 lbs each
-    tractor * 110 +                          // Tractor: ~110 lbs each
-    (commercial17519Off + commercial17519On) * 60 +  // Commercial 17.5-19.5: ~60 lbs each
-    (commercial225Off + commercial225On) * 110;      // Commercial 22.5: ~110 lbs each
-  
-  return {
-    ptes: acc.ptes + convertedPTE,
-    pounds: acc.pounds + weightPounds
-  };
-}, { ptes: 0, pounds: 0 });
-
-// Calculate PTEs from drop-offs (just sum pte_count directly, no conversion)
-const dropoffStats = todaysDropoffs.reduce((acc: { ptes: number, pounds: number }, dropoff: any) => {
-  const pteCount = dropoff.pte_count || 0;
-  return {
-    ptes: acc.ptes + pteCount,
-    pounds: acc.pounds + (pteCount * 22)  // Approximation using PTE weight
-  };
-}, { ptes: 0, pounds: 0 });
-
-// Total PTEs and pounds from all sources
-const totalTiresRecycled = manifestStats.ptes + dropoffStats.ptes;
-const totalPoundsRecycled = manifestStats.pounds + dropoffStats.pounds;
+  const totalTiresRecycled = todayPTEStats.ptes;
+  const totalPoundsRecycled = todayPTEStats.pounds;
 
 // Calculate revenue from manifests and drop-offs
 const manifestRevenue = todaysManifests.reduce((sum: number, manifest: any) => sum + (manifest.total || 0), 0);
@@ -539,6 +405,12 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue;
           </SlideUp>
           
           <SlideUp>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-semibold">Live Metrics</h2>
+              {user?.currentOrganization?.id && (
+                <PTEBreakdownDrawer organizationId={user.currentOrganization.id} />
+              )}
+            </div>
             <StatsCard
               title="Tires Recycled Yesterday"
               value={yesterdayTireStats ? `${yesterdayTireStats.toLocaleString()} PTEs` : '0 PTEs'}
