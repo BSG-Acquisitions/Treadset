@@ -64,7 +64,7 @@ export function PTEBreakdownDialog({
             <div className="text-sm font-medium text-foreground">From Pickups</div>
           </div>
           <div className="text-center p-3 rounded-lg bg-accent/5">
-            <div className="text-2xl font-bold text-accent">{dropoffPTEs}</div>
+            <div className="text-3xl font-extrabold text-foreground">{dropoffPTEs}</div>
             <div className="text-sm font-medium text-foreground">From Dropoffs</div>
           </div>
         </div>

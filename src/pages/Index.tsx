@@ -428,7 +428,8 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue;
       const pickupsData = manifestsData
         ?.filter(m => {
           const totalTires = (m.pte_on_rim || 0) + (m.pte_off_rim || 0) + (m.otr_count || 0) + (m.tractor_count || 0);
-          return totalTires > 0 && m.client; // Must have client data
+          const isDropoffPseudoClient = m.client?.company_name && /drop[- ]?off customers/i.test(m.client.company_name.trim());
+          return totalTires > 0 && m.client && !isDropoffPseudoClient;
         })
         .map(m => ({
           id: m.id,
@@ -453,8 +454,7 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue;
         `)
         .eq('organization_id', user?.currentOrganization?.id)
         .gte('dropoff_date', format(startDate, 'yyyy-MM-dd'))
-        .lte('dropoff_date', format(endDate, 'yyyy-MM-dd'))
-        .eq('status', 'completed');
+        .lte('dropoff_date', format(endDate, 'yyyy-MM-dd'));
 
       if (dropoffsError) throw dropoffsError;
 
