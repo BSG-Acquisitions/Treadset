@@ -4368,6 +4368,10 @@ export type Database = {
         Args: never
         Returns: number
       }
+      delete_pickup_cascade: {
+        Args: { p_pickup_id: string }
+        Returns: undefined
+      }
       generate_invoice_number: { Args: never; Returns: string }
       generate_manifest_number: { Args: { org_id: string }; Returns: string }
       get_current_user_organization: {

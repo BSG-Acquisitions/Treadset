@@ -307,30 +307,9 @@ export const useDeletePickup = () => {
 
   return useMutation({
     mutationFn: async (pickupId: string) => {
-      // First, delete any related manifests (set pickup_id to null instead of deleting)
-      const { error: manifestError } = await supabase
-        .from('manifests')
-        .update({ pickup_id: null })
-        .eq('pickup_id', pickupId);
-
-      if (manifestError) console.warn('Error unlinking manifests:', manifestError);
-
-      // Delete any related assignments
-      const { error: assignmentError } = await supabase
-        .from('assignments')
-        .delete()
-        .eq('pickup_id', pickupId);
-
-      if (assignmentError) throw assignmentError;
-
-      // Then delete the pickup
-      const { error: pickupError } = await supabase
-        .from('pickups')
-        .delete()
-        .eq('id', pickupId);
-
-      if (pickupError) throw pickupError;
-
+      // Perform secure cascade delete via RPC (bypasses RLS with org check)
+      const { error } = await supabase.rpc('delete_pickup_cascade', { p_pickup_id: pickupId });
+      if (error) throw error;
       return pickupId;
     },
     onMutate: async (pickupId: string) => {
