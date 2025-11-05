@@ -1463,9 +1463,9 @@ export function DriverManifestCreationWizard({
                     <div className="space-y-2">
                       <Label className="text-xs text-muted-foreground">Or Enter Custom Rate</Label>
                       <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
+                        type="text"
+                        inputMode="decimal"
+                        pattern="[0-9]*\.?[0-9]*"
                         placeholder="0.00"
                         value={pteOffRimRate}
                         onChange={(e) => setPteOffRimRate(e.target.value)}
@@ -1508,9 +1508,9 @@ export function DriverManifestCreationWizard({
                     <div className="space-y-2">
                       <Label className="text-xs text-muted-foreground">Or Enter Custom Rate</Label>
                       <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
+                        type="text"
+                        inputMode="decimal"
+                        pattern="[0-9]*\.?[0-9]*"
                         placeholder="0.00"
                         value={pteOnRimRate}
                         onChange={(e) => setPteOnRimRate(e.target.value)}
@@ -1553,9 +1553,9 @@ export function DriverManifestCreationWizard({
                     <div className="space-y-2">
                       <Label className="text-xs text-muted-foreground">Or Enter Custom Rate</Label>
                       <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
+                        type="text"
+                        inputMode="decimal"
+                        pattern="[0-9]*\.?[0-9]*"
                         placeholder="0.00"
                         value={commercial_17_5_19_5_off_rate}
                         onChange={(e) => setCommercial_17_5_19_5_OffRate(e.target.value)}
@@ -1598,9 +1598,9 @@ export function DriverManifestCreationWizard({
                     <div className="space-y-2">
                       <Label className="text-xs text-muted-foreground">Or Enter Custom Rate</Label>
                       <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
+                        type="text"
+                        inputMode="decimal"
+                        pattern="[0-9]*\.?[0-9]*"
                         placeholder="0.00"
                         value={commercial_17_5_19_5_on_rate}
                         onChange={(e) => setCommercial_17_5_19_5_OnRate(e.target.value)}
@@ -1643,9 +1643,9 @@ export function DriverManifestCreationWizard({
                     <div className="space-y-2">
                       <Label className="text-xs text-muted-foreground">Or Enter Custom Rate</Label>
                       <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
+                        type="text"
+                        inputMode="decimal"
+                        pattern="[0-9]*\.?[0-9]*"
                         placeholder="0.00"
                         value={commercial_22_5_off_rate}
                         onChange={(e) => setCommercial_22_5_OffRate(e.target.value)}
@@ -1688,9 +1688,9 @@ export function DriverManifestCreationWizard({
                     <div className="space-y-2">
                       <Label className="text-xs text-muted-foreground">Or Enter Custom Rate</Label>
                       <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
+                        type="text"
+                        inputMode="decimal"
+                        pattern="[0-9]*\.?[0-9]*"
                         placeholder="0.00"
                         value={commercial_22_5_on_rate}
                         onChange={(e) => setCommercial_22_5_OnRate(e.target.value)}
@@ -1733,9 +1733,9 @@ export function DriverManifestCreationWizard({
                     <div className="space-y-2">
                       <Label className="text-xs text-muted-foreground">Or Enter Custom Rate</Label>
                       <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
+                        type="text"
+                        inputMode="decimal"
+                        pattern="[0-9]*\.?[0-9]*"
                         placeholder="0.00"
                         value={otrRate}
                         onChange={(e) => setOtrRate(e.target.value)}
