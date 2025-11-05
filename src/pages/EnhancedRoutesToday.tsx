@@ -880,41 +880,47 @@ export default function EnhancedRoutesToday() {
                                   <MapPin className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                                   <span className="text-xs text-muted-foreground truncate">{pickup.location?.name || pickup.location?.address || 'No address'}</span>
                                 </div>
-                                <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                                  <span>PTE {(() => {
-                                    const manifests = Array.isArray(pickup.manifests) ? pickup.manifests : [];
-                                    if (pickup.status === 'completed' && manifests.length > 0) {
-                                      const manifest = manifests[0];
-                                      return (manifest.pte_on_rim || 0) + (manifest.pte_off_rim || 0);
-                                    }
-                                    return pickup.pte_count || 0;
-                                  })()}</span>
-                                  <span>•</span>
-                                  <span>OTR {(() => {
-                                    const manifests = Array.isArray(pickup.manifests) ? pickup.manifests : [];
-                                    if (pickup.status === 'completed' && manifests.length > 0) {
-                                      return manifests[0].otr_count || 0;
-                                    }
-                                    return pickup.otr_count || 0;
-                                  })()}</span>
-                                  <span>•</span>
-                                  <span>Tractor {(() => {
-                                    const manifests = Array.isArray(pickup.manifests) ? pickup.manifests : [];
-                                    if (pickup.status === 'completed' && manifests.length > 0) {
-                                      return manifests[0].tractor_count || 0;
-                                    }
-                                    return pickup.tractor_count || 0;
-                                  })()}</span>
-                                </div>
-                                <div className="text-xs font-semibold">
-                                  ${(() => {
-                                    const manifests = Array.isArray(pickup.manifests) ? pickup.manifests : [];
-                                    if (pickup.status === 'completed' && manifests.length > 0) {
-                                      return (manifests[0].total || 0).toFixed(2);
-                                    }
-                                    return (pickup.computed_revenue || 0).toFixed(2);
-                                  })()}
-                                </div>
+                                {(() => {
+                                  const manifests = Array.isArray(pickup.manifests) ? pickup.manifests : [];
+                                  const hasCompletedManifest = pickup.status === 'completed' && manifests.length > 0;
+                                  
+                                  if (hasCompletedManifest) {
+                                    const manifest = manifests[0];
+                                    const pteCount = (manifest.pte_on_rim || 0) + (manifest.pte_off_rim || 0);
+                                    const otrCount = manifest.otr_count || 0;
+                                    const tractorCount = manifest.tractor_count || 0;
+                                    
+                                    return (
+                                      <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                                        <span>PTE {pteCount}</span>
+                                        <span>•</span>
+                                        <span>OTR {otrCount}</span>
+                                        <span>•</span>
+                                        <span>Tractor {tractorCount}</span>
+                                      </div>
+                                    );
+                                  }
+                                  
+                                  return (
+                                    <div className="text-xs text-muted-foreground">
+                                      Pickup not completed yet
+                                    </div>
+                                  );
+                                })()}
+                                {(() => {
+                                  const manifests = Array.isArray(pickup.manifests) ? pickup.manifests : [];
+                                  const hasCompletedManifest = pickup.status === 'completed' && manifests.length > 0;
+                                  
+                                  if (hasCompletedManifest) {
+                                    return (
+                                      <div className="text-xs font-semibold">
+                                        ${(manifests[0].total || 0).toFixed(2)}
+                                      </div>
+                                    );
+                                  }
+                                  
+                                  return null;
+                                })()}
                               </div>
                               
                               <div className="flex gap-1 pt-1">
@@ -1070,8 +1076,6 @@ export default function EnhancedRoutesToday() {
                                           <p className="font-medium truncate text-xs">{stop.clientName}</p>
                                           <p className="text-xs text-muted-foreground truncate">📍 {stop.address}</p>
                                           <div className="flex items-center gap-1.5 mt-0.5 text-xs text-muted-foreground">
-                                            <span>{stop.pteCount} PTE</span>
-                                            <span>•</span>
                                             <span>{stop.serviceTimeMinutes} min</span>
                                           </div>
                                         </div>
