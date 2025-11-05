@@ -969,6 +969,18 @@ export function DriverManifestCreationWizard({
         })
         .eq('id', pickupId);
 
+      // Update assignment status to completed
+      if (assignmentData?.id) {
+        await supabase
+          .from('assignments')
+          .update({
+            status: 'completed',
+            actual_arrival: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', assignmentData.id);
+      }
+
       // Ensure manifest PDF is generated and linked
       console.log('🔧 Ensuring manifest PDF is generated for pickup:', pickupId);
       try {
