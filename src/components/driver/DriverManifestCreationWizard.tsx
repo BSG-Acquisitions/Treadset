@@ -79,6 +79,11 @@ export function DriverManifestCreationWizard({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pickupData, setPickupData] = useState<any>(null);
   const [haulerData, setHaulerData] = useState<any>(null);
+  
+  // Log hauler data changes for debugging
+  useEffect(() => {
+    console.log('🚛 Hauler data changed:', haulerData ? haulerData.company_name : 'NULL');
+  }, [haulerData]);
   const [assignmentData, setAssignmentData] = useState<any>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [resolvedClientId, setResolvedClientId] = useState<string | null>(null);
@@ -362,6 +367,7 @@ export function DriverManifestCreationWizard({
 
   const handleNext = async () => {
     // CRITICAL: Validate hauler at EVERY step to prevent bypassing
+    console.log('🔍 handleNext called - haulerData:', haulerData);
     if (!haulerData) {
       toast({
         title: "Missing Hauler Information",
