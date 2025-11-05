@@ -329,27 +329,51 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
   return (
     <>
       <div className="space-y-4">
-        {groupedDropoffs.map(([period, dropoffList]) => (
-        <Collapsible key={period} defaultOpen>
-          <div className="rounded-md border">
-            <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-accent transition-colors">
-              <div className="flex items-center gap-3">
-                <ChevronRight className="h-4 w-4 transition-transform [[data-state=open]>&]:rotate-90" />
-                <h3 className="font-semibold">{period}</h3>
-                <Badge variant="secondary">{dropoffList.length}</Badge>
+        {groupedDropoffs.map(([period, dropoffList]) => {
+          const totalTires = dropoffList.reduce((sum, d) => 
+            sum + (d.pte_count || 0) + (d.otr_count || 0) + (d.tractor_count || 0), 0
+          );
+          const totalPTE = dropoffList.reduce((sum, d) => 
+            sum + calculateTotalPTE({
+              pte_count: d.pte_count || 0,
+              otr_count: d.otr_count || 0,
+              tractor_count: d.tractor_count || 0,
+            }), 0
+          );
+          const totalRevenue = dropoffList.reduce((sum, d) => sum + (d.computed_revenue || 0), 0);
+          
+          return (
+            <Collapsible key={period} defaultOpen>
+              <div className="rounded-md border">
+                <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-accent transition-colors">
+                  <div className="flex items-center gap-3">
+                    <ChevronRight className="h-4 w-4 transition-transform [[data-state=open]>&]:rotate-90" />
+                    <h3 className="font-semibold">{period}</h3>
+                    <Badge variant="secondary">{dropoffList.length}</Badge>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <Package className="h-4 w-4" />
+                      {totalTires} tires
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <TrendingUp className="h-4 w-4" />
+                      {totalPTE} PTE
+                    </span>
+                    <span className="font-medium">
+                      {totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+                    </span>
+                  </div>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="p-4 pt-0 space-y-3">
+                    {dropoffList.map((dropoff) => renderDropoffCard(dropoff))}
+                  </div>
+                </CollapsibleContent>
               </div>
-              <div className="text-sm text-muted-foreground">
-                {dropoffList.reduce((sum, d) => sum + (d.computed_revenue || 0), 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
-              </div>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="p-4 pt-0 space-y-3">
-                {dropoffList.map((dropoff) => renderDropoffCard(dropoff))}
-              </div>
-            </CollapsibleContent>
-          </div>
-        </Collapsible>
-      ))}
+            </Collapsible>
+          );
+        })}
       </div>
 
       <EditDropoffDialog 

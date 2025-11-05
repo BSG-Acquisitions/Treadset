@@ -219,12 +219,12 @@ const subtotal = (Number(pteCount || 0) * ptePrice) +
 
           {/* Tire Counts */}
           <div className="space-y-4">
-            <Label className="text-base font-medium">Tire Counts</Label>
+            <Label className="text-base font-medium">Tire Counts by Type</Label>
+            <p className="text-sm text-muted-foreground">Select the tire type and enter quantity</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="pte" className="flex items-center gap-2">
-                  PTE Count
-                  <span className="text-xs text-muted-foreground font-normal">(Passenger)</span>
+                <Label htmlFor="pte" className="flex items-center gap-2 text-base">
+                  Passenger Tires
                 </Label>
                 <Input
                   id="pte"
@@ -233,15 +233,15 @@ const subtotal = (Number(pteCount || 0) * ptePrice) +
                   onChange={(e) => setPteCount(e.target.value)}
                   placeholder="0"
                 />
-                <div className="text-xs text-muted-foreground">
-                  ${ptePrice}/tire • Car/Light Truck
+                <div className="text-xs text-muted-foreground space-y-0.5">
+                  <div>${ptePrice}/tire • Car/Light Truck</div>
+                  <div className="font-medium">1 tire = 1 PTE</div>
                 </div>
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="otr" className="flex items-center gap-2">
-                  OTR Count
-                  <span className="text-xs text-muted-foreground font-normal">(Off-Road)</span>
+                <Label htmlFor="otr" className="flex items-center gap-2 text-base">
+                  OTR Tires
                 </Label>
                 <Input
                   id="otr"
@@ -250,15 +250,15 @@ const subtotal = (Number(pteCount || 0) * ptePrice) +
                   onChange={(e) => setOtrCount(e.target.value)}
                   placeholder="0"
                 />
-                <div className="text-xs text-muted-foreground">
-                  ${otrPrice}/tire • Heavy Equipment
+                <div className="text-xs text-muted-foreground space-y-0.5">
+                  <div>${otrPrice}/tire • Heavy Equipment</div>
+                  <div className="font-medium">1 tire = 15 PTE</div>
                 </div>
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="tractor" className="flex items-center gap-2">
+                <Label htmlFor="tractor" className="flex items-center gap-2 text-base">
                   Semi Tires
-                  <span className="text-xs text-muted-foreground font-normal">(Tractor)</span>
                 </Label>
                 <Input
                   id="tractor"
@@ -267,8 +267,9 @@ const subtotal = (Number(pteCount || 0) * ptePrice) +
                   onChange={(e) => setTractorCount(e.target.value)}
                   placeholder="0"
                 />
-                <div className="text-xs text-muted-foreground">
-                  ${tractorPrice}/tire • 18-Wheeler/Semi
+                <div className="text-xs text-muted-foreground space-y-0.5">
+                  <div>${tractorPrice}/tire • 18-Wheeler/Semi</div>
+                  <div className="font-medium">1 tire = 5 PTE</div>
                 </div>
               </div>
             </div>
