@@ -55,17 +55,17 @@ export function PTEBreakdownDialog({
         </DialogHeader>
 
         <div className="grid grid-cols-3 gap-4 py-4">
-          <div className="text-center">
+          <div className="text-center p-3 rounded-lg bg-primary/5">
             <div className="text-2xl font-bold text-primary">{totalPTEs}</div>
-            <div className="text-xs text-muted-foreground">Total PTEs</div>
+            <div className="text-sm font-medium text-foreground">Total PTEs</div>
           </div>
-          <div className="text-center">
+          <div className="text-center p-3 rounded-lg bg-success/5">
             <div className="text-2xl font-bold text-success">{pickupPTEs}</div>
-            <div className="text-xs text-muted-foreground">From Pickups</div>
+            <div className="text-sm font-medium text-foreground">From Pickups</div>
           </div>
-          <div className="text-center">
+          <div className="text-center p-3 rounded-lg bg-accent/5">
             <div className="text-2xl font-bold text-accent">{dropoffPTEs}</div>
-            <div className="text-xs text-muted-foreground">From Dropoffs</div>
+            <div className="text-sm font-medium text-foreground">From Dropoffs</div>
           </div>
         </div>
 

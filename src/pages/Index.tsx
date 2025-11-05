@@ -402,7 +402,7 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue;
           startDate.setHours(0, 0, 0, 0);
       }
 
-      // Fetch manifests for client pickups only (exclude dropoff-linked manifests)
+      // Fetch manifests for client pickups only
       const { data: manifestsData, error: manifestsError } = await supabase
         .from('manifests')
         .select(`
@@ -420,23 +420,27 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue;
         .gte('created_at', format(startDate, 'yyyy-MM-dd') + 'T00:00:00')
         .lte('created_at', format(endDate, 'yyyy-MM-dd') + 'T23:59:59')
         .in('status', ['COMPLETED', 'AWAITING_RECEIVER_SIGNATURE'])
-        .not('client_id', 'is', null)
-        .or('pte_on_rim.gt.0,pte_off_rim.gt.0,otr_count.gt.0,tractor_count.gt.0');
+        .not('client_id', 'is', null);
 
       if (manifestsError) throw manifestsError;
 
-      // Transform manifests to match pickup structure
-      const pickupsData = manifestsData?.map(m => ({
-        id: m.id,
-        pickup_date: format(new Date(m.signed_at || m.created_at), 'yyyy-MM-dd'),
-        pte_count: (m.pte_on_rim || 0) + (m.pte_off_rim || 0),
-        otr_count: m.otr_count || 0,
-        tractor_count: m.tractor_count || 0,
-        client: m.client,
-        location: m.location
-      })) || [];
+      // Filter and transform manifests with tire counts
+      const pickupsData = manifestsData
+        ?.filter(m => {
+          const totalTires = (m.pte_on_rim || 0) + (m.pte_off_rim || 0) + (m.otr_count || 0) + (m.tractor_count || 0);
+          return totalTires > 0 && m.client; // Must have client data
+        })
+        .map(m => ({
+          id: m.id,
+          pickup_date: format(new Date(m.signed_at || m.created_at), 'yyyy-MM-dd'),
+          pte_count: (m.pte_on_rim || 0) + (m.pte_off_rim || 0),
+          otr_count: m.otr_count || 0,
+          tractor_count: m.tractor_count || 0,
+          client: m.client,
+          location: m.location
+        })) || [];
 
-      // Fetch dropoffs (only standalone dropoffs, not manifest-linked)
+      // Fetch all dropoffs (including those with manifests)
       const { data: dropoffsData, error: dropoffsError } = await supabase
         .from('dropoffs')
         .select(`
@@ -450,17 +454,24 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue;
         .eq('organization_id', user?.currentOrganization?.id)
         .gte('dropoff_date', format(startDate, 'yyyy-MM-dd'))
         .lte('dropoff_date', format(endDate, 'yyyy-MM-dd'))
-        .eq('status', 'completed')
-        .or('pte_count.gt.0,otr_count.gt.0,tractor_count.gt.0');
+        .eq('status', 'completed');
 
       if (dropoffsError) throw dropoffsError;
 
+      // Filter dropoffs with tire counts
+      const filteredDropoffs = dropoffsData?.filter(d => {
+        const totalTires = (d.pte_count || 0) + (d.otr_count || 0) + (d.tractor_count || 0);
+        return totalTires > 0;
+      }) || [];
+
       return {
-        pickups: pickupsData || [],
-        dropoffs: dropoffsData || []
+        pickups: pickupsData,
+        dropoffs: filteredDropoffs
       };
     },
     enabled: breakdownDialog.open && !!user?.currentOrganization?.id,
+    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
+    staleTime: 0
   });
 
   return (
