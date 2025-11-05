@@ -15,8 +15,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 import { StatsCard } from "@/components/enhanced/StatsCard";
 import { ProjectedRevenueWidget } from "@/components/dashboard/ProjectedRevenueWidget";
+import { PTEBreakdownDialog } from "@/components/dashboard/PTEBreakdownDialog";
 import { format, addDays } from "date-fns";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { StaggerList } from "@/components/motion/StaggerList";
 import { FadeIn } from "@/components/motion/FadeIn";
@@ -31,6 +32,15 @@ import { supabase } from "@/integrations/supabase/client";
 export default function Index() {
   const navigate = useNavigate();
   const { user, hasAnyRole } = useAuth();
+  const [breakdownDialog, setBreakdownDialog] = useState<{
+    open: boolean;
+    title: string;
+    period: 'today' | 'yesterday' | 'week' | 'month';
+  }>({
+    open: false,
+    title: '',
+    period: 'today'
+  });
 
   useEffect(() => {
     document.title = "TreadSet Dashboard";
@@ -355,6 +365,88 @@ const manifestRevenue = todaysManifests.reduce((sum: number, manifest: any) => s
 const dropoffRevenue = todaysDropoffs.reduce((sum: number, dropoff: any) => sum + (dropoff.computed_revenue || 0), 0);
 const totalDailyRevenue = manifestRevenue + dropoffRevenue;
 
+  // Fetch detailed breakdown data for each period
+  const { data: breakdownData } = useQuery({
+    queryKey: ['pte-breakdown', breakdownDialog.period, user?.currentOrganization?.id],
+    queryFn: async () => {
+      const today = new Date();
+      let startDate: Date;
+      let endDate: Date = new Date(today);
+      endDate.setHours(23, 59, 59, 999);
+
+      switch (breakdownDialog.period) {
+        case 'today':
+          startDate = new Date(today);
+          startDate.setHours(0, 0, 0, 0);
+          break;
+        case 'yesterday':
+          startDate = new Date(today);
+          startDate.setDate(today.getDate() - 1);
+          startDate.setHours(0, 0, 0, 0);
+          endDate = new Date(startDate);
+          endDate.setHours(23, 59, 59, 999);
+          break;
+        case 'week':
+          const todayDay = today.getDay();
+          const daysFromMonday = todayDay === 0 ? 6 : todayDay - 1;
+          startDate = new Date(today);
+          startDate.setDate(today.getDate() - daysFromMonday);
+          startDate.setHours(0, 0, 0, 0);
+          break;
+        case 'month':
+          startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+          startDate.setHours(0, 0, 0, 0);
+          break;
+        default:
+          startDate = new Date(today);
+          startDate.setHours(0, 0, 0, 0);
+      }
+
+      // Fetch pickups
+      const { data: pickupsData, error: pickupsError } = await supabase
+        .from('pickups')
+        .select(`
+          id,
+          pickup_date,
+          pte_count,
+          otr_count,
+          tractor_count,
+          client:clients(company_name),
+          location:locations(name)
+        `)
+        .eq('organization_id', user?.currentOrganization?.id)
+        .gte('pickup_date', format(startDate, 'yyyy-MM-dd'))
+        .lte('pickup_date', format(endDate, 'yyyy-MM-dd'))
+        .in('status', ['completed', 'in_progress']);
+
+      if (pickupsError) throw pickupsError;
+
+      // Fetch dropoffs
+      const { data: dropoffsData, error: dropoffsError } = await supabase
+        .from('dropoffs')
+        .select(`
+          id,
+          dropoff_date,
+          pte_count,
+          otr_count,
+          tractor_count,
+          dropoff_customer:dropoff_customers(company_name, contact_name)
+        `)
+        .eq('organization_id', user?.currentOrganization?.id)
+        .gte('dropoff_date', format(startDate, 'yyyy-MM-dd'))
+        .lte('dropoff_date', format(endDate, 'yyyy-MM-dd'))
+        .eq('status', 'completed');
+
+      if (dropoffsError) throw dropoffsError;
+
+      return {
+        pickups: pickupsData || [],
+        dropoffs: dropoffsData || []
+      };
+    },
+    enabled: breakdownDialog.open && !!user?.currentOrganization?.id,
+  });
+
   return (
     <div className="min-h-screen bg-background">
       
@@ -385,6 +477,7 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue;
               variant="success"
               change={totalTiresRecycled > 0 ? 8.3 : 0}
               changeLabel="from all sources"
+              onClick={() => setBreakdownDialog({ open: true, title: 'Tires Recycled Today', period: 'today' })}
             />
           </SlideUp>
           
@@ -396,6 +489,7 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue;
               variant="primary"
               change={yesterdayTireStats && yesterdayTireStats > 0 ? 5.2 : 0}
               changeLabel="previous day"
+              onClick={() => setBreakdownDialog({ open: true, title: 'Tires Recycled Yesterday', period: 'yesterday' })}
             />
           </SlideUp>
           
@@ -407,6 +501,7 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue;
               variant="primary"
               change={weeklyTireStats && weeklyTireStats > 0 ? 15.2 : 0}
               changeLabel="Monday - today"
+              onClick={() => setBreakdownDialog({ open: true, title: 'Tires Recycled This Week', period: 'week' })}
             />
           </SlideUp>
           
@@ -418,6 +513,7 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue;
               variant="success"
               change={monthlyTireStats && monthlyTireStats > 0 ? 22.4 : 0}
               changeLabel="month to date"
+              onClick={() => setBreakdownDialog({ open: true, title: 'Tires Recycled This Month', period: 'month' })}
             />
           </SlideUp>
         </StaggerList>
@@ -752,6 +848,21 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue;
           </Card>
         </SlideUp>
       </main>
+
+      {/* PTE Breakdown Dialog */}
+      <PTEBreakdownDialog
+        open={breakdownDialog.open}
+        onOpenChange={(open) => setBreakdownDialog({ ...breakdownDialog, open })}
+        title={breakdownDialog.title}
+        pickups={breakdownData?.pickups || []}
+        dropoffs={breakdownData?.dropoffs || []}
+        totalPTEs={
+          breakdownDialog.period === 'today' ? totalTiresRecycled :
+          breakdownDialog.period === 'yesterday' ? (yesterdayTireStats || 0) :
+          breakdownDialog.period === 'week' ? (weeklyTireStats || 0) :
+          (monthlyTireStats || 0)
+        }
+      />
     </div>
   );
 }

@@ -10,6 +10,7 @@ interface StatsCardProps {
   icon?: ReactNode;
   variant?: 'default' | 'primary' | 'success' | 'warning' | 'accent';
   className?: string;
+  onClick?: () => void;
 }
 
 export function StatsCard({ 
@@ -19,7 +20,8 @@ export function StatsCard({
   changeLabel = "vs last month",
   icon, 
   variant = 'default',
-  className = ""
+  className = "",
+  onClick
 }: StatsCardProps) {
   const getVariantStyles = () => {
     switch (variant) {
@@ -73,11 +75,15 @@ export function StatsCard({
   };
 
   return (
-    <Card className={`
-      interactive-card overflow-hidden relative
-      ${styles.cardClass}
-      ${className}
-    `}>
+    <Card 
+      className={`
+        interactive-card overflow-hidden relative
+        ${styles.cardClass}
+        ${className}
+        ${onClick ? 'cursor-pointer hover:shadow-lg transition-all duration-200' : ''}
+      `}
+      onClick={onClick}
+    >
       <CardContent className="p-6">
         <div className="flex items-start justify-between">
           <div className="space-y-3">
