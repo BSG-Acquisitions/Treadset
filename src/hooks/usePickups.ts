@@ -333,14 +333,22 @@ export const useDeletePickup = () => {
 
       return pickupId;
     },
-    onSuccess: () => {
-      // Invalidate all relevant queries to update both admin and driver UIs
-      queryClient.invalidateQueries({ queryKey: ['pickups'] });
-      queryClient.invalidateQueries({ queryKey: ['assignments'] });
-      queryClient.invalidateQueries({ queryKey: ['driver-assignments'] });
-      queryClient.invalidateQueries({ queryKey: ['routes'] });
-      queryClient.invalidateQueries({ queryKey: ['optimized-routes'] });
-      queryClient.invalidateQueries({ queryKey: ['manifests'] });
+    onSuccess: async () => {
+      // Invalidate all relevant queries and wait for them to complete
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['pickups'] }),
+        queryClient.invalidateQueries({ queryKey: ['assignments'] }),
+        queryClient.invalidateQueries({ queryKey: ['driver-assignments'] }),
+        queryClient.invalidateQueries({ queryKey: ['routes'] }),
+        queryClient.invalidateQueries({ queryKey: ['optimized-routes'] }),
+        queryClient.invalidateQueries({ queryKey: ['manifests'] }),
+      ]);
+      
+      // Force immediate refetch of all active pickup queries
+      await queryClient.refetchQueries({ 
+        queryKey: ['pickups'],
+        type: 'active'
+      });
       
       toast({
         title: "Pickup Deleted",
