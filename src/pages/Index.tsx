@@ -187,7 +187,7 @@ export default function Index() {
     staleTime: 0
   });
 
-  // Fetch this week's daily stats for PTE goal chart (current week Mon-Fri only) - DIRECT LIVE
+  // Fetch this week's daily stats for PTE goal chart (current week Mon-Fri only) - MANIFEST-BASED
   const { data: weeklyData = [] } = useQuery({
     queryKey: ['weekly-stats', user?.currentOrganization?.id, format(new Date(), 'yyyy-MM-dd')],
     queryFn: async () => {
@@ -210,13 +210,14 @@ export default function Index() {
       const startDate = format(monday, 'yyyy-MM-dd');
       const endDate = format(today, 'yyyy-MM-dd');
       
-      const [pickupsResult, dropoffsResult] = await Promise.all([
+      // Use manifests (actual tire counts) + dropoffs
+      const [manifestsResult, dropoffsResult] = await Promise.all([
         supabase
-          .from('pickups')
-          .select('pte_count, pickup_date')
+          .from('manifests')
+          .select('pte_on_rim, pte_off_rim, otr_count, tractor_count, signed_at, created_at')
           .eq('organization_id', user?.currentOrganization?.id)
-          .gte('pickup_date', startDate)
-          .lte('pickup_date', endDate),
+          .gte('created_at', `${startDate}T00:00:00`)
+          .lte('created_at', `${endDate}T23:59:59`),
         supabase
           .from('dropoffs')
           .select('pte_count, dropoff_date')
@@ -225,15 +226,20 @@ export default function Index() {
           .lte('dropoff_date', endDate)
       ]);
       
-      if (pickupsResult.error) throw pickupsResult.error;
+      if (manifestsResult.error) throw manifestsResult.error;
       if (dropoffsResult.error) throw dropoffsResult.error;
       
       const ptesByDate: Record<string, number> = {};
       
-      (pickupsResult.data || []).forEach(p => {
-        ptesByDate[p.pickup_date] = (ptesByDate[p.pickup_date] || 0) + (p.pte_count || 0);
+      // Sum manifest tire counts by completion date
+      (manifestsResult.data || []).forEach(m => {
+        const completionDate = m.signed_at || m.created_at;
+        const dateKey = format(new Date(completionDate), 'yyyy-MM-dd');
+        const ptes = (m.pte_on_rim || 0) + (m.pte_off_rim || 0) + (m.otr_count || 0) + (m.tractor_count || 0);
+        ptesByDate[dateKey] = (ptesByDate[dateKey] || 0) + ptes;
       });
       
+      // Add dropoff counts
       (dropoffsResult.data || []).forEach(d => {
         ptesByDate[d.dropoff_date] = (ptesByDate[d.dropoff_date] || 0) + (d.pte_count || 0);
       });
@@ -245,6 +251,7 @@ export default function Index() {
       }));
     },
     enabled: !!user?.currentOrganization?.id,
+    refetchInterval: 30000,
   });
   
   // Pickups this month by client (live)
