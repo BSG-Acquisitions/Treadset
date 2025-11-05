@@ -28,7 +28,9 @@ export const useDropoffs = (customerId?: string) => {
       
       if (error) throw error;
       return data || [];
-    }
+    },
+    refetchOnWindowFocus: true,
+    staleTime: 0
   });
 };
 
