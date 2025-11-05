@@ -138,78 +138,33 @@ export default function Index() {
       const endOfToday = new Date();
       endOfToday.setHours(23, 59, 59, 999);
       
-      // Get manifests for this week (include all statuses to count actual intake)
+      // Get manifests for this week
       const { data: manifests } = await supabase
         .from('manifests')
-        .select('id, pte_on_rim, pte_off_rim, otr_count, tractor_count, commercial_17_5_19_5_off, commercial_17_5_19_5_on, commercial_22_5_off, commercial_22_5_on, created_at')
+        .select('pte_on_rim, pte_off_rim')
         .eq('organization_id', user?.currentOrganization?.id)
         .gte('created_at', monday.toISOString())
         .lte('created_at', endOfToday.toISOString());
       
-      // Get dropoffs WITHOUT manifests (to avoid double-counting)
+      // Get ALL dropoffs (regardless of manifest_id) and only use pte_count directly
       const { data: dropoffs } = await supabase
         .from('dropoffs')
-        .select('pte_count, otr_count, tractor_count')
+        .select('pte_count')
         .eq('organization_id', user?.currentOrganization?.id)
         .in('status', ['completed', 'processed'])
-        .is('manifest_id', null)
         .gte('dropoff_date', format(monday, 'yyyy-MM-dd'))
         .lte('dropoff_date', format(endOfToday, 'yyyy-MM-dd'));
 
-      // Get dropoffs LINKED to manifests
-      const { data: linkedDropoffs } = await supabase
-        .from('dropoffs')
-        .select('manifest_id, pte_count, otr_count, tractor_count')
-        .eq('organization_id', user?.currentOrganization?.id)
-        .in('status', ['completed', 'processed'])
-        .not('manifest_id', 'is', null)
-        .gte('dropoff_date', format(monday, 'yyyy-MM-dd'))
-        .lte('dropoff_date', format(endOfToday, 'yyyy-MM-dd'));
-
-      // Build quick lookup and also sum linked dropoffs whose manifests are outside this query (not included)
-      const linkedAgg = new Map<string, { pte: number; otr: number; tractor: number }>();
-      (linkedDropoffs || []).forEach((d: any) => {
-        const key = d.manifest_id as string;
-        const cur = linkedAgg.get(key) || { pte: 0, otr: 0, tractor: 0 };
-        linkedAgg.set(key, {
-          pte: cur.pte + (d.pte_count || 0),
-          otr: cur.otr + (d.otr_count || 0),
-          tractor: cur.tractor + (d.tractor_count || 0),
-        });
-      });
-
-      const includedManifestIds = new Set((manifests || []).map((m: any) => m.id));
-      const linkedForExcludedTotal = (linkedDropoffs || [])
-        .filter((d: any) => !includedManifestIds.has(d.manifest_id as string))
-        .reduce((sum: number, d: any) => sum + calculateTotalPTE({
-          pte_count: d.pte_count || 0,
-          otr_count: d.otr_count || 0,
-          tractor_count: d.tractor_count || 0,
-        }), 0);
-      
       const manifestTotal = (manifests || []).reduce((sum, m: any) => {
-        const linked = linkedAgg.get(m.id as string) || { pte: 0, otr: 0, tractor: 0 };
-        const passengerBase = (m.pte_on_rim || 0) + (m.pte_off_rim || 0) + (m.commercial_17_5_19_5_off || 0) + (m.commercial_17_5_19_5_on || 0) + (m.commercial_22_5_off || 0) + (m.commercial_22_5_on || 0);
-        const combinedPassenger = passengerBase + (passengerBase > 0 ? 0 : linked.pte);
-        const combinedOtr = (m.otr_count || 0) + ((m.otr_count || 0) > 0 ? 0 : linked.otr);
-        const combinedTractor = (m.tractor_count || 0) + ((m.tractor_count || 0) > 0 ? 0 : linked.tractor);
-        const pte = calculateTotalPTE({
-          pte_count: combinedPassenger,
-          otr_count: combinedOtr,
-          tractor_count: combinedTractor,
-        });
-        return sum + pte;
+        const passengerPtes = (m.pte_on_rim || 0) + (m.pte_off_rim || 0);
+        return sum + passengerPtes;
       }, 0);
       
       const dropoffTotal = (dropoffs || []).reduce((sum, d: any) => 
-        sum + calculateTotalPTE({
-          pte_count: d.pte_count || 0,
-          otr_count: d.otr_count || 0,
-          tractor_count: d.tractor_count || 0,
-        }), 0
+        sum + (d.pte_count || 0), 0
       );
       
-      return manifestTotal + dropoffTotal + linkedForExcludedTotal;
+      return manifestTotal + dropoffTotal;
     },
     enabled: !!user?.currentOrganization?.id,
     refetchInterval: 30000, // Real-time updates every 30 seconds
@@ -227,79 +182,33 @@ export default function Index() {
       const endOfYesterday = new Date(yesterday);
       endOfYesterday.setHours(23, 59, 59, 999);
       
-      // Get manifests for yesterday (include all statuses to count intake)
+      // Get manifests for yesterday
       const { data: manifests } = await supabase
         .from('manifests')
-        .select('id, pte_on_rim, pte_off_rim, otr_count, tractor_count, commercial_17_5_19_5_off, commercial_17_5_19_5_on, commercial_22_5_off, commercial_22_5_on, created_at')
+        .select('pte_on_rim, pte_off_rim')
         .eq('organization_id', user?.currentOrganization?.id)
         .gte('created_at', startOfYesterday.toISOString())
         .lte('created_at', endOfYesterday.toISOString());
       
-      // Get dropoffs WITHOUT manifests (to avoid double-counting)
+      // Get ALL dropoffs (regardless of manifest_id) and only use pte_count directly
       const { data: dropoffs } = await supabase
         .from('dropoffs')
-        .select('pte_count, otr_count, tractor_count')
+        .select('pte_count')
         .eq('organization_id', user?.currentOrganization?.id)
         .in('status', ['completed', 'processed'])
-        .is('manifest_id', null)
         .gte('dropoff_date', format(startOfYesterday, 'yyyy-MM-dd'))
         .lte('dropoff_date', format(endOfYesterday, 'yyyy-MM-dd'));
-
-      // Get dropoffs LINKED to manifests
-      const { data: linkedDropoffs } = await supabase
-        .from('dropoffs')
-        .select('manifest_id, pte_count, otr_count, tractor_count')
-        .eq('organization_id', user?.currentOrganization?.id)
-        .in('status', ['completed', 'processed'])
-        .not('manifest_id', 'is', null)
-        .gte('dropoff_date', format(startOfYesterday, 'yyyy-MM-dd'))
-        .lte('dropoff_date', format(endOfYesterday, 'yyyy-MM-dd'));
-
-      // Aggregate linked dropoffs per manifest by tire type
-      const linkedAggY = new Map<string, { pte: number; otr: number; tractor: number }>();
-      (linkedDropoffs || []).forEach((d: any) => {
-        const key = d.manifest_id as string;
-        const cur = linkedAggY.get(key) || { pte: 0, otr: 0, tractor: 0 };
-        linkedAggY.set(key, {
-          pte: cur.pte + (d.pte_count || 0),
-          otr: cur.otr + (d.otr_count || 0),
-          tractor: cur.tractor + (d.tractor_count || 0),
-        });
-      });
-
-      // Count linked dropoffs whose manifests were not included (e.g., different created_at)
-      const includedManifestIdsY = new Set((manifests || []).map((m: any) => m.id));
-      const linkedForExcludedTotalY = (linkedDropoffs || [])
-        .filter((d: any) => !includedManifestIdsY.has(d.manifest_id as string))
-        .reduce((sum: number, d: any) => sum + calculateTotalPTE({
-          pte_count: d.pte_count || 0,
-          otr_count: d.otr_count || 0,
-          tractor_count: d.tractor_count || 0,
-        }), 0);
 
       const manifestTotal = (manifests || []).reduce((sum, m: any) => {
-        const linked = linkedAggY.get(m.id as string) || { pte: 0, otr: 0, tractor: 0 };
-        const passengerBase = (m.pte_on_rim || 0) + (m.pte_off_rim || 0) + (m.commercial_17_5_19_5_off || 0) + (m.commercial_17_5_19_5_on || 0) + (m.commercial_22_5_off || 0) + (m.commercial_22_5_on || 0);
-        const combinedPassenger = passengerBase + (passengerBase > 0 ? 0 : linked.pte);
-        const combinedOtr = (m.otr_count || 0) + ((m.otr_count || 0) > 0 ? 0 : linked.otr);
-        const combinedTractor = (m.tractor_count || 0) + ((m.tractor_count || 0) > 0 ? 0 : linked.tractor);
-        const pte = calculateTotalPTE({
-          pte_count: combinedPassenger,
-          otr_count: combinedOtr,
-          tractor_count: combinedTractor,
-        });
-        return sum + pte;
+        const passengerPtes = (m.pte_on_rim || 0) + (m.pte_off_rim || 0);
+        return sum + passengerPtes;
       }, 0);
 
       const dropoffTotal = (dropoffs || []).reduce((sum, d: any) => 
-        sum + calculateTotalPTE({
-          pte_count: d.pte_count || 0,
-          otr_count: d.otr_count || 0,
-          tractor_count: d.tractor_count || 0,
-        }), 0
+        sum + (d.pte_count || 0), 0
       );
       
-      return manifestTotal + dropoffTotal + linkedForExcludedTotalY;
+      return manifestTotal + dropoffTotal;
     },
     enabled: !!user?.currentOrganization?.id,
     refetchInterval: 30000, // Real-time updates every 30 seconds
@@ -317,79 +226,41 @@ export default function Index() {
       const endOfToday = new Date();
       endOfToday.setHours(23, 59, 59, 999);
       
-      // Get manifests for this month (include all statuses to count intake)
+      // Get manifests for this month
       const { data: manifests } = await supabase
         .from('manifests')
-        .select('id, pte_on_rim, pte_off_rim, otr_count, tractor_count, commercial_17_5_19_5_off, commercial_17_5_19_5_on, commercial_22_5_off, commercial_22_5_on, created_at')
+        .select('pte_on_rim, pte_off_rim, otr_count, tractor_count, commercial_17_5_19_5_off, commercial_17_5_19_5_on, commercial_22_5_off, commercial_22_5_on')
         .eq('organization_id', user?.currentOrganization?.id)
         .gte('created_at', firstOfMonth.toISOString())
         .lte('created_at', endOfToday.toISOString());
       
-      // Get dropoffs WITHOUT manifests (to avoid double-counting)
+      // Get ALL dropoffs (regardless of manifest_id) and only use pte_count directly
       const { data: dropoffs } = await supabase
         .from('dropoffs')
-        .select('pte_count, otr_count, tractor_count')
+        .select('pte_count')
         .eq('organization_id', user?.currentOrganization?.id)
         .in('status', ['completed', 'processed'])
-        .is('manifest_id', null)
         .gte('dropoff_date', format(firstOfMonth, 'yyyy-MM-dd'))
         .lte('dropoff_date', format(endOfToday, 'yyyy-MM-dd'));
-
-      // Get dropoffs LINKED to manifests
-      const { data: linkedDropoffs } = await supabase
-        .from('dropoffs')
-        .select('manifest_id, pte_count, otr_count, tractor_count')
-        .eq('organization_id', user?.currentOrganization?.id)
-        .in('status', ['completed', 'processed'])
-        .not('manifest_id', 'is', null)
-        .gte('dropoff_date', format(firstOfMonth, 'yyyy-MM-dd'))
-        .lte('dropoff_date', format(endOfToday, 'yyyy-MM-dd'));
-
-      // Aggregate linked dropoffs per manifest by tire type
-      const linkedAggM = new Map<string, { pte: number; otr: number; tractor: number }>();
-      (linkedDropoffs || []).forEach((d: any) => {
-        const key = d.manifest_id as string;
-        const cur = linkedAggM.get(key) || { pte: 0, otr: 0, tractor: 0 };
-        linkedAggM.set(key, {
-          pte: cur.pte + (d.pte_count || 0),
-          otr: cur.otr + (d.otr_count || 0),
-          tractor: cur.tractor + (d.tractor_count || 0),
-        });
-      });
-
-      // Count linked dropoffs whose manifests were not included in the month window
-      const includedManifestIdsM = new Set((manifests || []).map((m: any) => m.id));
-      const linkedForExcludedTotalM = (linkedDropoffs || [])
-        .filter((d: any) => !includedManifestIdsM.has(d.manifest_id as string))
-        .reduce((sum: number, d: any) => sum + calculateTotalPTE({
-          pte_count: d.pte_count || 0,
-          otr_count: d.otr_count || 0,
-          tractor_count: d.tractor_count || 0,
-        }), 0);
 
       const manifestTotal = (manifests || []).reduce((sum, m: any) => {
-        const linked = linkedAggM.get(m.id as string) || { pte: 0, otr: 0, tractor: 0 };
-        const passengerBase = (m.pte_on_rim || 0) + (m.pte_off_rim || 0) + (m.commercial_17_5_19_5_off || 0) + (m.commercial_17_5_19_5_on || 0) + (m.commercial_22_5_off || 0) + (m.commercial_22_5_on || 0);
-        const combinedPassenger = passengerBase + (passengerBase > 0 ? 0 : linked.pte);
-        const combinedOtr = (m.otr_count || 0) + ((m.otr_count || 0) > 0 ? 0 : linked.otr);
-        const combinedTractor = (m.tractor_count || 0) + ((m.tractor_count || 0) > 0 ? 0 : linked.tractor);
-        const pte = calculateTotalPTE({
-          pte_count: combinedPassenger,
-          otr_count: combinedOtr,
-          tractor_count: combinedTractor,
+        const passengerPtes = (m.pte_on_rim || 0) + (m.pte_off_rim || 0) + (m.commercial_17_5_19_5_off || 0) + (m.commercial_17_5_19_5_on || 0) + (m.commercial_22_5_off || 0) + (m.commercial_22_5_on || 0);
+        const otrPtes = (m.otr_count || 0);
+        const tractorPtes = (m.tractor_count || 0);
+        
+        // Convert to Michigan PTE
+        return sum + calculateTotalPTE({
+          pte_count: passengerPtes,
+          otr_count: otrPtes,
+          tractor_count: tractorPtes,
         });
-        return sum + pte;
       }, 0);
 
       const dropoffTotal = (dropoffs || []).reduce((sum, d: any) => 
-        sum + calculateTotalPTE({
-          pte_count: d.pte_count || 0,
-          otr_count: d.otr_count || 0,
-          tractor_count: d.tractor_count || 0,
-        }), 0
+        sum + (d.pte_count || 0), 0
       );
       
-      return manifestTotal + dropoffTotal + linkedForExcludedTotalM;
+      return manifestTotal + dropoffTotal;
     },
     enabled: !!user?.currentOrganization?.id,
     refetchInterval: 30000, // Real-time updates every 30 seconds
@@ -576,12 +447,8 @@ const manifestStats = todaysManifests.reduce((acc: { ptes: number, pounds: numbe
   const commercial225Off = manifest.commercial_22_5_off || 0;
   const commercial225On = manifest.commercial_22_5_on || 0;
   
-  // Michigan PTE conversion
-  const convertedPTE = calculateTotalPTE({
-    pte_count: pteOnRim + pteOffRim + commercial17519Off + commercial17519On + commercial225Off + commercial225On,
-    otr_count: otr,
-    tractor_count: tractor,
-  });
+  // PTE-only for tiles
+  const pteOnly = pteOnRim + pteOffRim;
   
   // Calculate actual weight in pounds (each tire type has different weight)
   const weightPounds = 
@@ -592,7 +459,7 @@ const manifestStats = todaysManifests.reduce((acc: { ptes: number, pounds: numbe
     (commercial225Off + commercial225On) * 110;      // Commercial 22.5: ~110 lbs each
   
   return {
-    ptes: acc.ptes + convertedPTE,
+    ptes: acc.ptes + pteOnly,
     pounds: acc.pounds + weightPounds
   };
 }, { ptes: 0, pounds: 0 });
