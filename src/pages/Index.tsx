@@ -26,6 +26,7 @@ import { useRealtimeUpdates } from "@/hooks/useRealtimeUpdates";
 import { SchedulePickupWithDriverDialog } from "@/components/SchedulePickupWithDriverDialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { calculateTotalPTE } from "@/lib/michigan-conversions";
 // Intelligence components moved to /intelligence page
 
 export default function Index() {
@@ -156,12 +157,20 @@ export default function Index() {
         .gte('dropoff_date', format(monday, 'yyyy-MM-dd'))
         .lte('dropoff_date', format(endOfToday, 'yyyy-MM-dd'));
       
-      const manifestTotal = (manifests || []).reduce((sum, m) => 
-        sum + (m.pte_on_rim || 0) + (m.pte_off_rim || 0) + (m.otr_count || 0) + (m.tractor_count || 0), 0
+      const manifestTotal = (manifests || []).reduce((sum, m) =>
+        sum + calculateTotalPTE({
+          pte_count: (m.pte_on_rim || 0) + (m.pte_off_rim || 0),
+          otr_count: m.otr_count || 0,
+          tractor_count: m.tractor_count || 0,
+        }), 0
       );
       
       const dropoffTotal = (dropoffs || []).reduce((sum, d) => 
-        sum + (d.pte_count || 0) + (d.otr_count || 0) + (d.tractor_count || 0), 0
+        sum + calculateTotalPTE({
+          pte_count: d.pte_count || 0,
+          otr_count: d.otr_count || 0,
+          tractor_count: d.tractor_count || 0,
+        }), 0
       );
       
       return manifestTotal + dropoffTotal;
@@ -201,11 +210,19 @@ export default function Index() {
         .lte('dropoff_date', format(endOfYesterday, 'yyyy-MM-dd'));
       
       const manifestTotal = (manifests || []).reduce((sum, m) => 
-        sum + (m.pte_on_rim || 0) + (m.pte_off_rim || 0) + (m.otr_count || 0) + (m.tractor_count || 0), 0
+        sum + calculateTotalPTE({
+          pte_count: (m.pte_on_rim || 0) + (m.pte_off_rim || 0),
+          otr_count: m.otr_count || 0,
+          tractor_count: m.tractor_count || 0,
+        }), 0
       );
       
       const dropoffTotal = (dropoffs || []).reduce((sum, d) => 
-        sum + (d.pte_count || 0) + (d.otr_count || 0) + (d.tractor_count || 0), 0
+        sum + calculateTotalPTE({
+          pte_count: d.pte_count || 0,
+          otr_count: d.otr_count || 0,
+          tractor_count: d.tractor_count || 0,
+        }), 0
       );
       
       return manifestTotal + dropoffTotal;
@@ -245,11 +262,19 @@ export default function Index() {
         .lte('dropoff_date', format(endOfToday, 'yyyy-MM-dd'));
       
       const manifestTotal = (manifests || []).reduce((sum, m) => 
-        sum + (m.pte_on_rim || 0) + (m.pte_off_rim || 0) + (m.otr_count || 0) + (m.tractor_count || 0), 0
+        sum + calculateTotalPTE({
+          pte_count: (m.pte_on_rim || 0) + (m.pte_off_rim || 0),
+          otr_count: m.otr_count || 0,
+          tractor_count: m.tractor_count || 0,
+        }), 0
       );
       
       const dropoffTotal = (dropoffs || []).reduce((sum, d) => 
-        sum + (d.pte_count || 0) + (d.otr_count || 0) + (d.tractor_count || 0), 0
+        sum + calculateTotalPTE({
+          pte_count: d.pte_count || 0,
+          otr_count: d.otr_count || 0,
+          tractor_count: d.tractor_count || 0,
+        }), 0
       );
       
       return manifestTotal + dropoffTotal;
@@ -305,8 +330,11 @@ export default function Index() {
           
           if (manifests && manifests.length > 0) {
             totalPtes += manifests.reduce((sum, m) => 
-              sum + (m.pte_on_rim || 0) + (m.pte_off_rim || 0) + 
-              (m.otr_count || 0) + (m.tractor_count || 0), 0
+              sum + calculateTotalPTE({
+                pte_count: (m.pte_on_rim || 0) + (m.pte_off_rim || 0),
+                otr_count: m.otr_count || 0,
+                tractor_count: m.tractor_count || 0,
+              }), 0
             );
           }
           
@@ -320,7 +348,11 @@ export default function Index() {
           
           if (pickups && pickups.length > 0) {
             totalPtes += pickups.reduce((sum, p) =>
-              sum + (p.pte_count || 0) + (p.otr_count || 0) + (p.tractor_count || 0), 0
+              sum + calculateTotalPTE({
+                pte_count: p.pte_count || 0,
+                otr_count: p.otr_count || 0,
+                tractor_count: p.tractor_count || 0,
+              }), 0
             );
           }
           
@@ -416,52 +448,59 @@ export default function Index() {
   const completedPickups = todayPickups.filter(p => p.status === 'completed');
   const overduePickups = todayPickups.filter(p => p.status === 'overdue');
   
-  // Calculate PTEs and weight from manifests (where the actual tire counts are stored)
-  const manifestStats = todaysManifests.reduce((acc: { ptes: number, pounds: number }, manifest: any) => {
-    const pteOnRim = manifest.pte_on_rim || 0;
-    const pteOffRim = manifest.pte_off_rim || 0;
-    const otr = manifest.otr_count || 0;
-    const tractor = manifest.tractor_count || 0;
-    const commercial17519Off = manifest.commercial_17_5_19_5_off || 0;
-    const commercial17519On = manifest.commercial_17_5_19_5_on || 0;
-    const commercial225Off = manifest.commercial_22_5_off || 0;
-    const commercial225On = manifest.commercial_22_5_on || 0;
-    
-    // Calculate PTE count (all tires count as units)
-    const pteCount = pteOnRim + pteOffRim + otr + tractor + 
-                     commercial17519Off + commercial17519On + commercial225Off + commercial225On;
-    
-    // Calculate actual weight in pounds (each tire type has different weight)
-    const weightPounds = 
-      (pteOnRim + pteOffRim) * 22 +           // PTEs: ~22 lbs each
-      otr * 300 +                              // OTR: ~300 lbs each
-      tractor * 110 +                          // Tractor: ~110 lbs each
-      (commercial17519Off + commercial17519On) * 60 +  // Commercial 17.5-19.5: ~60 lbs each
-      (commercial225Off + commercial225On) * 110;      // Commercial 22.5: ~110 lbs each
-    
-    return {
-      ptes: acc.ptes + pteCount,
-      pounds: acc.pounds + weightPounds
-    };
-  }, { ptes: 0, pounds: 0 });
+// Calculate PTEs and weight from manifests (where the actual tire counts are stored)
+const manifestStats = todaysManifests.reduce((acc: { ptes: number, pounds: number }, manifest: any) => {
+  const pteOnRim = manifest.pte_on_rim || 0;
+  const pteOffRim = manifest.pte_off_rim || 0;
+  const otr = manifest.otr_count || 0;
+  const tractor = manifest.tractor_count || 0;
+  const commercial17519Off = manifest.commercial_17_5_19_5_off || 0;
+  const commercial17519On = manifest.commercial_17_5_19_5_on || 0;
+  const commercial225Off = manifest.commercial_22_5_off || 0;
+  const commercial225On = manifest.commercial_22_5_on || 0;
   
-  // Calculate PTEs and weight from drop-offs (assume PTE weight for dropoffs)
-  const dropoffStats = todaysDropoffs.reduce((acc: { ptes: number, pounds: number }, dropoff: any) => {
-    const pteCount = dropoff.pte_count || 0;
-    return {
-      ptes: acc.ptes + pteCount,
-      pounds: acc.pounds + (pteCount * 22)  // Dropoffs are typically PTEs at 22 lbs each
-    };
-  }, { ptes: 0, pounds: 0 });
+  // Michigan PTE conversion
+  const convertedPTE = calculateTotalPTE({
+    pte_count: pteOnRim + pteOffRim + commercial17519Off + commercial17519On + commercial225Off + commercial225On,
+    otr_count: otr,
+    tractor_count: tractor,
+  });
   
-  // Total PTEs and pounds from all sources
-  const totalTiresRecycled = manifestStats.ptes + dropoffStats.ptes;
-  const totalPoundsRecycled = manifestStats.pounds + dropoffStats.pounds;
+  // Calculate actual weight in pounds (each tire type has different weight)
+  const weightPounds = 
+    (pteOnRim + pteOffRim) * 22 +           // PTEs: ~22 lbs each
+    otr * 300 +                              // OTR: ~300 lbs each
+    tractor * 110 +                          // Tractor: ~110 lbs each
+    (commercial17519Off + commercial17519On) * 60 +  // Commercial 17.5-19.5: ~60 lbs each
+    (commercial225Off + commercial225On) * 110;      // Commercial 22.5: ~110 lbs each
   
-  // Calculate revenue from manifests and drop-offs
-  const manifestRevenue = todaysManifests.reduce((sum: number, manifest: any) => sum + (manifest.total || 0), 0);
-  const dropoffRevenue = todaysDropoffs.reduce((sum: number, dropoff: any) => sum + (dropoff.computed_revenue || 0), 0);
-  const totalDailyRevenue = manifestRevenue + dropoffRevenue;
+  return {
+    ptes: acc.ptes + convertedPTE,
+    pounds: acc.pounds + weightPounds
+  };
+}, { ptes: 0, pounds: 0 });
+
+// Calculate PTEs and weight from drop-offs (assume PTE weight for dropoffs)
+const dropoffStats = todaysDropoffs.reduce((acc: { ptes: number, pounds: number }, dropoff: any) => {
+  const convertedPTE = calculateTotalPTE({
+    pte_count: dropoff.pte_count || 0,
+    otr_count: dropoff.otr_count || 0,
+    tractor_count: dropoff.tractor_count || 0,
+  });
+  return {
+    ptes: acc.ptes + convertedPTE,
+    pounds: acc.pounds + (convertedPTE * 22)  // Approximation using PTE weight
+  };
+}, { ptes: 0, pounds: 0 });
+
+// Total PTEs and pounds from all sources
+const totalTiresRecycled = manifestStats.ptes + dropoffStats.ptes;
+const totalPoundsRecycled = manifestStats.pounds + dropoffStats.pounds;
+
+// Calculate revenue from manifests and drop-offs
+const manifestRevenue = todaysManifests.reduce((sum: number, manifest: any) => sum + (manifest.total || 0), 0);
+const dropoffRevenue = todaysDropoffs.reduce((sum: number, dropoff: any) => sum + (dropoff.computed_revenue || 0), 0);
+const totalDailyRevenue = manifestRevenue + dropoffRevenue;
 
   return (
     <div className="min-h-screen bg-background">
