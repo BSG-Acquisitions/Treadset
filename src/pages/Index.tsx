@@ -402,25 +402,38 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue;
           startDate.setHours(0, 0, 0, 0);
       }
 
-      // Fetch pickups (only those with tire counts > 0)
-      const { data: pickupsData, error: pickupsError } = await supabase
-        .from('pickups')
+      // Fetch manifests (actual completed tire counts)
+      const { data: manifestsData, error: manifestsError } = await supabase
+        .from('manifests')
         .select(`
           id,
-          pickup_date,
-          pte_count,
+          signed_at,
+          created_at,
+          pte_on_rim,
+          pte_off_rim,
           otr_count,
           tractor_count,
           client:clients(company_name),
           location:locations(name)
         `)
         .eq('organization_id', user?.currentOrganization?.id)
-        .gte('pickup_date', format(startDate, 'yyyy-MM-dd'))
-        .lte('pickup_date', format(endDate, 'yyyy-MM-dd'))
-        .in('status', ['completed', 'in_progress'])
-        .or('pte_count.gt.0,otr_count.gt.0,tractor_count.gt.0');
+        .gte('created_at', format(startDate, 'yyyy-MM-dd') + 'T00:00:00')
+        .lte('created_at', format(endDate, 'yyyy-MM-dd') + 'T23:59:59')
+        .in('status', ['COMPLETED', 'AWAITING_RECEIVER_SIGNATURE'])
+        .or('pte_on_rim.gt.0,pte_off_rim.gt.0,otr_count.gt.0,tractor_count.gt.0');
 
-      if (pickupsError) throw pickupsError;
+      if (manifestsError) throw manifestsError;
+
+      // Transform manifests to match pickup structure
+      const pickupsData = manifestsData?.map(m => ({
+        id: m.id,
+        pickup_date: format(new Date(m.signed_at || m.created_at), 'yyyy-MM-dd'),
+        pte_count: (m.pte_on_rim || 0) + (m.pte_off_rim || 0),
+        otr_count: m.otr_count || 0,
+        tractor_count: m.tractor_count || 0,
+        client: m.client,
+        location: m.location
+      })) || [];
 
       // Fetch dropoffs (only those with tire counts > 0)
       const { data: dropoffsData, error: dropoffsError } = await supabase
