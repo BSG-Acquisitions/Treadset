@@ -121,110 +121,66 @@ export default function Index() {
     enabled: !!user?.currentOrganization?.id,
   });
 
-  // Fetch this week's tire totals (Monday through today) - DIRECT LIVE
+  // Fetch this week's tire totals (Monday through today) - TIMEZONE ALIGNED
   const { data: weeklyTireStats } = useQuery({
     queryKey: ['weekly-tire-totals', user?.currentOrganization?.id, format(new Date(), 'yyyy-MM-dd')],
     queryFn: async () => {
-      const today = new Date();
-      const todayDay = today.getDay();
-      const daysFromMonday = todayDay === 0 ? 6 : todayDay - 1;
-      const monday = new Date(today);
-      monday.setDate(today.getDate() - daysFromMonday);
+      const { data, error } = await supabase.rpc('get_weekly_pte_totals', {
+        org_id: user?.currentOrganization?.id
+      });
       
-      const startDate = format(monday, 'yyyy-MM-dd');
-      const endDate = format(today, 'yyyy-MM-dd');
+      if (error) throw error;
       
-      const [pickupsResult, dropoffsResult] = await Promise.all([
-        supabase
-          .from('pickups')
-          .select('pte_count')
-          .eq('organization_id', user?.currentOrganization?.id)
-          .gte('pickup_date', startDate)
-          .lte('pickup_date', endDate),
-        supabase
-          .from('dropoffs')
-          .select('pte_count')
-          .eq('organization_id', user?.currentOrganization?.id)
-          .gte('dropoff_date', startDate)
-          .lte('dropoff_date', endDate)
-      ]);
+      console.log('📊 WEEKLY PTE TOTALS:');
+      console.log(`  Pickups: ${data[0]?.pickup_ptes || 0} PTEs`);
+      console.log(`  Drop-offs: ${data[0]?.dropoff_ptes || 0} PTEs`);
+      console.log(`  Combined: ${data[0]?.total_ptes || 0} PTEs`);
       
-      if (pickupsResult.error) throw pickupsResult.error;
-      if (dropoffsResult.error) throw dropoffsResult.error;
-      
-      const pickupPTEs = (pickupsResult.data || []).reduce((sum, p) => sum + (p.pte_count || 0), 0);
-      const dropoffPTEs = (dropoffsResult.data || []).reduce((sum, d) => sum + (d.pte_count || 0), 0);
-      
-      return pickupPTEs + dropoffPTEs;
+      return data[0]?.total_ptes || 0;
     },
     enabled: !!user?.currentOrganization?.id,
     refetchInterval: 30000,
     staleTime: 0
   });
 
-  // Fetch yesterday's tire totals - DIRECT LIVE
+  // Fetch yesterday's tire totals - TIMEZONE ALIGNED
   const { data: yesterdayTireStats } = useQuery({
     queryKey: ['yesterday-tire-totals', user?.currentOrganization?.id, format(addDays(new Date(), -1), 'yyyy-MM-dd')],
     queryFn: async () => {
-      const yesterday = format(addDays(new Date(), -1), 'yyyy-MM-dd');
+      const { data, error } = await supabase.rpc('get_yesterday_pte_totals', {
+        org_id: user?.currentOrganization?.id
+      });
       
-      const [pickupsResult, dropoffsResult] = await Promise.all([
-        supabase
-          .from('pickups')
-          .select('pte_count')
-          .eq('organization_id', user?.currentOrganization?.id)
-          .eq('pickup_date', yesterday),
-        supabase
-          .from('dropoffs')
-          .select('pte_count')
-          .eq('organization_id', user?.currentOrganization?.id)
-          .eq('dropoff_date', yesterday)
-      ]);
+      if (error) throw error;
       
-      if (pickupsResult.error) throw pickupsResult.error;
-      if (dropoffsResult.error) throw dropoffsResult.error;
+      console.log('📊 YESTERDAY PTE TOTALS:');
+      console.log(`  Pickups: ${data[0]?.pickup_ptes || 0} PTEs`);
+      console.log(`  Drop-offs: ${data[0]?.dropoff_ptes || 0} PTEs`);
+      console.log(`  Combined: ${data[0]?.total_ptes || 0} PTEs`);
       
-      const pickupPTEs = (pickupsResult.data || []).reduce((sum, p) => sum + (p.pte_count || 0), 0);
-      const dropoffPTEs = (dropoffsResult.data || []).reduce((sum, d) => sum + (d.pte_count || 0), 0);
-      
-      return pickupPTEs + dropoffPTEs;
+      return data[0]?.total_ptes || 0;
     },
     enabled: !!user?.currentOrganization?.id,
     refetchInterval: 30000,
     staleTime: 0
   });
 
-  // Fetch this month's tire totals (1st through today) - DIRECT LIVE
+  // Fetch this month's tire totals (1st through today) - TIMEZONE ALIGNED
   const { data: monthlyTireStats } = useQuery({
     queryKey: ['monthly-tire-totals', user?.currentOrganization?.id, format(new Date(), 'yyyy-MM-dd')],
     queryFn: async () => {
-      const today = new Date();
-      const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-      const startDate = format(firstOfMonth, 'yyyy-MM-dd');
-      const endDate = format(today, 'yyyy-MM-dd');
+      const { data, error } = await supabase.rpc('get_monthly_pte_totals', {
+        org_id: user?.currentOrganization?.id
+      });
       
-      const [pickupsResult, dropoffsResult] = await Promise.all([
-        supabase
-          .from('pickups')
-          .select('pte_count')
-          .eq('organization_id', user?.currentOrganization?.id)
-          .gte('pickup_date', startDate)
-          .lte('pickup_date', endDate),
-        supabase
-          .from('dropoffs')
-          .select('pte_count')
-          .eq('organization_id', user?.currentOrganization?.id)
-          .gte('dropoff_date', startDate)
-          .lte('dropoff_date', endDate)
-      ]);
+      if (error) throw error;
       
-      if (pickupsResult.error) throw pickupsResult.error;
-      if (dropoffsResult.error) throw dropoffsResult.error;
+      console.log('📊 MONTHLY PTE TOTALS:');
+      console.log(`  Pickups: ${data[0]?.pickup_ptes || 0} PTEs`);
+      console.log(`  Drop-offs: ${data[0]?.dropoff_ptes || 0} PTEs`);
+      console.log(`  Combined: ${data[0]?.total_ptes || 0} PTEs`);
       
-      const pickupPTEs = (pickupsResult.data || []).reduce((sum, p) => sum + (p.pte_count || 0), 0);
-      const dropoffPTEs = (dropoffsResult.data || []).reduce((sum, d) => sum + (d.pte_count || 0), 0);
-      
-      return pickupPTEs + dropoffPTEs;
+      return data[0]?.total_ptes || 0;
     },
     enabled: !!user?.currentOrganization?.id,
     refetchInterval: 30000,
@@ -359,34 +315,23 @@ export default function Index() {
   const completedPickups = todayPickups.filter(p => p.status === 'completed');
   const overduePickups = todayPickups.filter(p => p.status === 'overdue');
   
-  // Calculate TODAY's PTEs - DIRECT LIVE
+  // Calculate TODAY's PTEs - TIMEZONE ALIGNED
   const { data: todayPTEStats = { ptes: 0, pounds: 0 } } = useQuery({
     queryKey: ['today-pte-stats', user?.currentOrganization?.id, format(new Date(), 'yyyy-MM-dd')],
     queryFn: async () => {
-      const today = format(new Date(), 'yyyy-MM-dd');
+      const { data, error } = await supabase.rpc('get_today_pte_totals', {
+        org_id: user?.currentOrganization?.id
+      });
       
-      const [pickupsResult, dropoffsResult] = await Promise.all([
-        supabase
-          .from('pickups')
-          .select('pte_count')
-          .eq('organization_id', user?.currentOrganization?.id)
-          .eq('pickup_date', today),
-        supabase
-          .from('dropoffs')
-          .select('pte_count')
-          .eq('organization_id', user?.currentOrganization?.id)
-          .eq('dropoff_date', today)
-      ]);
+      if (error) throw error;
       
-      if (pickupsResult.error) throw pickupsResult.error;
-      if (dropoffsResult.error) throw dropoffsResult.error;
-      
-      const pickupPTEs = (pickupsResult.data || []).reduce((sum, p) => sum + (p.pte_count || 0), 0);
-      const dropoffPTEs = (dropoffsResult.data || []).reduce((sum, d) => sum + (d.pte_count || 0), 0);
-      const ptes = pickupPTEs + dropoffPTEs;
-      
+      const ptes = data[0]?.total_ptes || 0;
       const pounds = ptes * 22;
       
+      console.log('📊 TODAY PTE TOTALS:');
+      console.log(`  Pickups: ${data[0]?.pickup_ptes || 0} PTEs`);
+      console.log(`  Drop-offs: ${data[0]?.dropoff_ptes || 0} PTEs`);
+      console.log(`  Combined: ${ptes} PTEs`);
       console.log('Dashboard tiles recalibrated — using direct live PTE sums only.');
       
       return { ptes, pounds };

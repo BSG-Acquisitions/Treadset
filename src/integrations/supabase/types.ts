@@ -4394,6 +4394,14 @@ export type Database = {
           total_weight_tons: number
         }[]
       }
+      get_monthly_pte_totals: {
+        Args: { org_id: string }
+        Returns: {
+          dropoff_ptes: number
+          pickup_ptes: number
+          total_ptes: number
+        }[]
+      }
       get_or_create_user_preferences: {
         Args: { target_user_id: string }
         Returns: {
@@ -4418,6 +4426,30 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      get_today_pte_totals: {
+        Args: { org_id: string }
+        Returns: {
+          dropoff_ptes: number
+          pickup_ptes: number
+          total_ptes: number
+        }[]
+      }
+      get_weekly_pte_totals: {
+        Args: { org_id: string }
+        Returns: {
+          dropoff_ptes: number
+          pickup_ptes: number
+          total_ptes: number
+        }[]
+      }
+      get_yesterday_pte_totals: {
+        Args: { org_id: string }
+        Returns: {
+          dropoff_ptes: number
+          pickup_ptes: number
+          total_ptes: number
+        }[]
       }
       log_slow_query: {
         Args: {
