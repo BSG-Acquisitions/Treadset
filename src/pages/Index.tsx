@@ -204,19 +204,31 @@ export default function Index() {
         .gte('dropoff_date', format(startOfYesterday, 'yyyy-MM-dd'))
         .lte('dropoff_date', format(endOfYesterday, 'yyyy-MM-dd'));
 
+      console.log('\n=== YESTERDAY PTE CALCULATION ===');
+      console.log(`Found ${(manifests || []).length} manifests from yesterday`);
+      
       // Manifests: Apply Michigan PTE conversion (includes OTR and tractor)
       const manifestTotal = (manifests || []).reduce((sum, m: any) => {
-        return sum + calculateTotalPTE({
+        const ptes = calculateTotalPTE({
           pte_count: (m.pte_on_rim || 0) + (m.pte_off_rim || 0),
           otr_count: m.otr_count || 0,
           tractor_count: m.tractor_count || 0,
         });
+        console.log(`  Manifest: ${m.pte_on_rim || 0} on-rim + ${m.pte_off_rim || 0} off-rim + ${m.otr_count || 0} OTR + ${m.tractor_count || 0} tractor = ${ptes} PTEs`);
+        return sum + ptes;
       }, 0);
 
+      console.log(`Total Manifest PTEs: ${manifestTotal}`);
+      console.log(`\nFound ${(dropoffs || []).length} dropoffs from yesterday`);
+
       // Drop-offs: Just sum pte_count directly
-      const dropoffTotal = (dropoffs || []).reduce((sum, d: any) => 
-        sum + (d.pte_count || 0), 0
-      );
+      const dropoffTotal = (dropoffs || []).reduce((sum, d: any) => {
+        console.log(`  Dropoff: ${d.pte_count || 0} PTEs`);
+        return sum + (d.pte_count || 0);
+      }, 0);
+      
+      console.log(`Total Dropoff PTEs: ${dropoffTotal}`);
+      console.log(`\n🎯 YESTERDAY GRAND TOTAL: ${manifestTotal} (manifests) + ${dropoffTotal} (dropoffs) = ${manifestTotal + dropoffTotal} PTEs\n`);
       
       return manifestTotal + dropoffTotal;
     },
