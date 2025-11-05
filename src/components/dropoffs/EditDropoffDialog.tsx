@@ -12,6 +12,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
+import { calculateTotalPTE } from "@/lib/michigan-conversions";
 
 type Dropoff = Database["public"]["Tables"]["dropoffs"]["Row"] & {
   dropoff_customers?: {
@@ -79,9 +80,15 @@ export const EditDropoffDialog = ({ open, onOpenChange, dropoff }: EditDropoffDi
   const otrPrice = dropoff.unit_price_otr || 0;
   const tractorPrice = dropoff.unit_price_tractor || 0;
 
-  const subtotal = (Number(pteCount || 0) * ptePrice) + 
-                  (Number(otrCount || 0) * otrPrice) + 
-                  (Number(tractorCount || 0) * tractorPrice);
+const subtotal = (Number(pteCount || 0) * ptePrice) + 
+                (Number(otrCount || 0) * otrPrice) + 
+                (Number(tractorCount || 0) * tractorPrice);
+
+  const computedPTE = calculateTotalPTE({
+    pte_count: Number(pteCount || 0),
+    otr_count: Number(otrCount || 0),
+    tractor_count: Number(tractorCount || 0),
+  });
 
   const handleSubmit = async () => {
     await updateMutation.mutateAsync({
@@ -192,6 +199,10 @@ export const EditDropoffDialog = ({ open, onOpenChange, dropoff }: EditDropoffDi
                       <span>${(Number(tractorCount) * tractorPrice).toFixed(2)}</span>
                     </div>
                   )}
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Total PTE</span>
+                    <span>{computedPTE}</span>
+                  </div>
                   <Separator />
                   <div className="flex justify-between font-medium">
                     <span>Total</span>

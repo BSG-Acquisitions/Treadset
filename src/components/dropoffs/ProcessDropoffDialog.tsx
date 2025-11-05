@@ -16,6 +16,7 @@ import { useHaulers } from "@/hooks/useHaulers";
 import { useAuth } from "@/contexts/AuthContext";
 import { Calculator, FileText, CreditCard, DollarSign, Factory, Truck, Building2, Plus } from "lucide-react";
 import { CreateHaulerDialog } from "./CreateHaulerDialog";
+import { calculateTotalPTE } from "@/lib/michigan-conversions";
 
 interface ProcessDropoffDialogProps {
   open: boolean;
@@ -54,9 +55,15 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
   const otrPrice = (selectedCustomer?.pricing_tiers?.otr_rate || defaultPricingTier?.otr_rate || 0);
   const tractorPrice = (selectedCustomer?.pricing_tiers?.tractor_rate || defaultPricingTier?.tractor_rate || 0);
 
-  const subtotal = (Number(pteCount || 0) * ptePrice) + 
+const subtotal = (Number(pteCount || 0) * ptePrice) + 
                   (Number(otrCount || 0) * otrPrice) + 
                   (Number(tractorCount || 0) * tractorPrice);
+
+  const computedPTE = calculateTotalPTE({
+    pte_count: Number(pteCount || 0),
+    otr_count: Number(otrCount || 0),
+    tractor_count: Number(tractorCount || 0),
+  });
 
   useEffect(() => {
     if (selectedCustomerId) {
@@ -294,6 +301,10 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
                       <span>${(Number(tractorCount) * tractorPrice).toFixed(2)}</span>
                     </div>
                   )}
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Total PTE</span>
+                    <span>{computedPTE}</span>
+                  </div>
                   <Separator />
                   <div className="flex justify-between font-medium">
                     <span>Total</span>

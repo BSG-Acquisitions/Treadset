@@ -35,6 +35,7 @@ import { useGenerateDropoffManifest } from "@/hooks/useDropoffManifest";
 import { EditDropoffDialog } from "./EditDropoffDialog";
 import { HaulerReliabilityBadge } from "@/components/HaulerReliabilityBadge";
 import { useState } from "react";
+import { calculateTotalPTE } from "@/lib/michigan-conversions";
 
 type Dropoff = Database["public"]["Tables"]["dropoffs"]["Row"] & {
   dropoff_customers?: {
@@ -168,6 +169,11 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
 
   const renderDropoffCard = (dropoff: Dropoff) => {
     const totalTires = (dropoff.pte_count || 0) + (dropoff.otr_count || 0) + (dropoff.tractor_count || 0);
+    const totalPTE = calculateTotalPTE({
+      pte_count: dropoff.pte_count || 0,
+      otr_count: dropoff.otr_count || 0,
+      tractor_count: dropoff.tractor_count || 0,
+    });
     
     return (
       <Card key={dropoff.id} className="hover:shadow-sm transition-shadow">
@@ -216,6 +222,12 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
                 <Package className="h-4 w-4 text-muted-foreground" />
                 <span className="font-medium">{totalTires}</span>
                 <span className="text-muted-foreground">tires</span>
+              </div>
+              
+              <div className="flex items-center gap-1.5">
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium">{totalPTE}</span>
+                <span className="text-muted-foreground">PTE</span>
               </div>
               
               <div className="flex items-center gap-1.5">
