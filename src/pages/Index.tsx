@@ -141,7 +141,7 @@ export default function Index() {
       // Get manifests for this week
       const { data: manifests } = await supabase
         .from('manifests')
-        .select('pte_on_rim, pte_off_rim, otr_count, tractor_count')
+        .select('id, pte_on_rim, pte_off_rim, otr_count, tractor_count')
         .eq('organization_id', user?.currentOrganization?.id)
         .eq('status', 'COMPLETED')
         .gte('created_at', monday.toISOString())
@@ -156,17 +156,40 @@ export default function Index() {
         .is('manifest_id', null)
         .gte('dropoff_date', format(monday, 'yyyy-MM-dd'))
         .lte('dropoff_date', format(endOfToday, 'yyyy-MM-dd'));
+
+      // Get dropoffs LINKED to manifests (for fallback when manifest counts are zero)
+      const { data: linkedDropoffs } = await supabase
+        .from('dropoffs')
+        .select('manifest_id, pte_count, otr_count, tractor_count')
+        .eq('organization_id', user?.currentOrganization?.id)
+        .in('status', ['completed', 'processed'])
+        .not('manifest_id', 'is', null)
+        .gte('dropoff_date', format(monday, 'yyyy-MM-dd'))
+        .lte('dropoff_date', format(endOfToday, 'yyyy-MM-dd'));
+
+      // Build fallback map: manifest_id -> PTE from linked dropoffs
+      const linkedMap = new Map<string, number>();
+      (linkedDropoffs || []).forEach((d: any) => {
+        const pte = calculateTotalPTE({
+          pte_count: d.pte_count || 0,
+          otr_count: d.otr_count || 0,
+          tractor_count: d.tractor_count || 0,
+        });
+        const key = d.manifest_id as string;
+        linkedMap.set(key, (linkedMap.get(key) || 0) + pte);
+      });
       
-      const manifestTotal = (manifests || []).reduce((sum, m) => {
+      const manifestTotal = (manifests || []).reduce((sum, m: any) => {
         const manifestPTE = calculateTotalPTE({
           pte_count: (m.pte_on_rim || 0) + (m.pte_off_rim || 0),
           otr_count: m.otr_count || 0,
           tractor_count: m.tractor_count || 0,
         });
-        return sum + manifestPTE;
+        const fallbackPTE = manifestPTE > 0 ? 0 : (linkedMap.get(m.id as string) || 0);
+        return sum + manifestPTE + fallbackPTE;
       }, 0);
       
-      const dropoffTotal = (dropoffs || []).reduce((sum, d) => 
+      const dropoffTotal = (dropoffs || []).reduce((sum, d: any) => 
         sum + calculateTotalPTE({
           pte_count: d.pte_count || 0,
           otr_count: d.otr_count || 0,
@@ -195,7 +218,7 @@ export default function Index() {
       // Get manifests for yesterday
       const { data: manifests } = await supabase
         .from('manifests')
-        .select('pte_on_rim, pte_off_rim, otr_count, tractor_count')
+        .select('id, pte_on_rim, pte_off_rim, otr_count, tractor_count')
         .eq('organization_id', user?.currentOrganization?.id)
         .eq('status', 'COMPLETED')
         .gte('created_at', startOfYesterday.toISOString())
@@ -210,17 +233,40 @@ export default function Index() {
         .is('manifest_id', null)
         .gte('dropoff_date', format(startOfYesterday, 'yyyy-MM-dd'))
         .lte('dropoff_date', format(endOfYesterday, 'yyyy-MM-dd'));
+
+      // Get dropoffs LINKED to manifests (for fallback when manifest counts are zero)
+      const { data: linkedDropoffs } = await supabase
+        .from('dropoffs')
+        .select('manifest_id, pte_count, otr_count, tractor_count')
+        .eq('organization_id', user?.currentOrganization?.id)
+        .in('status', ['completed', 'processed'])
+        .not('manifest_id', 'is', null)
+        .gte('dropoff_date', format(startOfYesterday, 'yyyy-MM-dd'))
+        .lte('dropoff_date', format(endOfYesterday, 'yyyy-MM-dd'));
+
+      // Build fallback map: manifest_id -> PTE from linked dropoffs
+      const linkedMap = new Map<string, number>();
+      (linkedDropoffs || []).forEach((d: any) => {
+        const pte = calculateTotalPTE({
+          pte_count: d.pte_count || 0,
+          otr_count: d.otr_count || 0,
+          tractor_count: d.tractor_count || 0,
+        });
+        const key = d.manifest_id as string;
+        linkedMap.set(key, (linkedMap.get(key) || 0) + pte);
+      });
       
-      const manifestTotal = (manifests || []).reduce((sum, m) => {
+      const manifestTotal = (manifests || []).reduce((sum, m: any) => {
         const manifestPTE = calculateTotalPTE({
           pte_count: (m.pte_on_rim || 0) + (m.pte_off_rim || 0),
           otr_count: m.otr_count || 0,
           tractor_count: m.tractor_count || 0,
         });
-        return sum + manifestPTE;
+        const fallbackPTE = manifestPTE > 0 ? 0 : (linkedMap.get(m.id as string) || 0);
+        return sum + manifestPTE + fallbackPTE;
       }, 0);
       
-      const dropoffTotal = (dropoffs || []).reduce((sum, d) => 
+      const dropoffTotal = (dropoffs || []).reduce((sum, d: any) => 
         sum + calculateTotalPTE({
           pte_count: d.pte_count || 0,
           otr_count: d.otr_count || 0,
@@ -249,7 +295,7 @@ export default function Index() {
       // Get manifests for this month
       const { data: manifests } = await supabase
         .from('manifests')
-        .select('pte_on_rim, pte_off_rim, otr_count, tractor_count')
+        .select('id, pte_on_rim, pte_off_rim, otr_count, tractor_count')
         .eq('organization_id', user?.currentOrganization?.id)
         .eq('status', 'COMPLETED')
         .gte('created_at', firstOfMonth.toISOString())
@@ -264,17 +310,40 @@ export default function Index() {
         .is('manifest_id', null)
         .gte('dropoff_date', format(firstOfMonth, 'yyyy-MM-dd'))
         .lte('dropoff_date', format(endOfToday, 'yyyy-MM-dd'));
+
+      // Get dropoffs LINKED to manifests (for fallback when manifest counts are zero)
+      const { data: linkedDropoffs } = await supabase
+        .from('dropoffs')
+        .select('manifest_id, pte_count, otr_count, tractor_count')
+        .eq('organization_id', user?.currentOrganization?.id)
+        .in('status', ['completed', 'processed'])
+        .not('manifest_id', 'is', null)
+        .gte('dropoff_date', format(firstOfMonth, 'yyyy-MM-dd'))
+        .lte('dropoff_date', format(endOfToday, 'yyyy-MM-dd'));
+
+      // Build fallback map: manifest_id -> PTE from linked dropoffs
+      const linkedMap = new Map<string, number>();
+      (linkedDropoffs || []).forEach((d: any) => {
+        const pte = calculateTotalPTE({
+          pte_count: d.pte_count || 0,
+          otr_count: d.otr_count || 0,
+          tractor_count: d.tractor_count || 0,
+        });
+        const key = d.manifest_id as string;
+        linkedMap.set(key, (linkedMap.get(key) || 0) + pte);
+      });
       
-      const manifestTotal = (manifests || []).reduce((sum, m) => {
+      const manifestTotal = (manifests || []).reduce((sum, m: any) => {
         const manifestPTE = calculateTotalPTE({
           pte_count: (m.pte_on_rim || 0) + (m.pte_off_rim || 0),
           otr_count: m.otr_count || 0,
           tractor_count: m.tractor_count || 0,
         });
-        return sum + manifestPTE;
+        const fallbackPTE = manifestPTE > 0 ? 0 : (linkedMap.get(m.id as string) || 0);
+        return sum + manifestPTE + fallbackPTE;
       }, 0);
       
-      const dropoffTotal = (dropoffs || []).reduce((sum, d) => 
+      const dropoffTotal = (dropoffs || []).reduce((sum, d: any) => 
         sum + calculateTotalPTE({
           pte_count: d.pte_count || 0,
           otr_count: d.otr_count || 0,
