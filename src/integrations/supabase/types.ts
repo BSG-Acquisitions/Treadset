@@ -4357,34 +4357,10 @@ export type Database = {
         }
         Relationships: []
       }
-      recycling_events: {
-        Row: {
-          client_id: string | null
-          event_date: string | null
-          event_id: string | null
-          organization_id: string | null
-          otr_count: number | null
-          pickup_id: string | null
-          pte_count: number | null
-          pte_equivalent: number | null
-          source_id: string | null
-          source_type: string | null
-          tractor_count: number | null
-        }
-        Relationships: []
-      }
     }
     Functions: {
       calculate_pickup_revenue: {
         Args: { pickup_row: Database["public"]["Tables"]["pickups"]["Row"] }
-        Returns: number
-      }
-      calculate_total_pte: {
-        Args: {
-          p_otr_count: number
-          p_pte_count: number
-          p_tractor_count: number
-        }
         Returns: number
       }
       check_performance_thresholds: { Args: never; Returns: undefined }

@@ -26,7 +26,6 @@ import { useRealtimeUpdates } from "@/hooks/useRealtimeUpdates";
 import { SchedulePickupWithDriverDialog } from "@/components/SchedulePickupWithDriverDialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { PTEBreakdownDrawer } from "@/components/debug/PTEBreakdownDrawer";
 // Intelligence components moved to /intelligence page
 
 export default function Index() {
@@ -122,144 +121,170 @@ export default function Index() {
     enabled: !!user?.currentOrganization?.id,
   });
 
-  // Fetch this week's tire totals (Monday through today) - UNIFIED SOURCE
+  // Fetch this week's tire totals (Monday through today) - DIRECT LIVE
   const { data: weeklyTireStats } = useQuery({
     queryKey: ['weekly-tire-totals', user?.currentOrganization?.id, format(new Date(), 'yyyy-MM-dd')],
     queryFn: async () => {
       const today = new Date();
-      const todayDay = today.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
-      
-      // Calculate Monday of current week
+      const todayDay = today.getDay();
       const daysFromMonday = todayDay === 0 ? 6 : todayDay - 1;
       const monday = new Date(today);
       monday.setDate(today.getDate() - daysFromMonday);
       
-      const { data, error } = await supabase
-        .from('recycling_events')
-        .select('pte_equivalent')
-        .eq('organization_id', user?.currentOrganization?.id)
-        .gte('event_date', format(monday, 'yyyy-MM-dd'))
-        .lte('event_date', format(today, 'yyyy-MM-dd'));
+      const startDate = format(monday, 'yyyy-MM-dd');
+      const endDate = format(today, 'yyyy-MM-dd');
       
-      if (error) throw error;
+      const [pickupsResult, dropoffsResult] = await Promise.all([
+        supabase
+          .from('pickups')
+          .select('pte_count')
+          .eq('organization_id', user?.currentOrganization?.id)
+          .gte('pickup_date', startDate)
+          .lte('pickup_date', endDate),
+        supabase
+          .from('dropoffs')
+          .select('pte_count')
+          .eq('organization_id', user?.currentOrganization?.id)
+          .gte('dropoff_date', startDate)
+          .lte('dropoff_date', endDate)
+      ]);
       
-      return (data || []).reduce((sum, event) => sum + (event.pte_equivalent || 0), 0);
+      if (pickupsResult.error) throw pickupsResult.error;
+      if (dropoffsResult.error) throw dropoffsResult.error;
+      
+      const pickupPTEs = (pickupsResult.data || []).reduce((sum, p) => sum + (p.pte_count || 0), 0);
+      const dropoffPTEs = (dropoffsResult.data || []).reduce((sum, d) => sum + (d.pte_count || 0), 0);
+      
+      return pickupPTEs + dropoffPTEs;
     },
     enabled: !!user?.currentOrganization?.id,
     refetchInterval: 30000,
     staleTime: 0
   });
 
-  // Fetch yesterday's tire totals - UNIFIED SOURCE
-  const { data: yesterdayTireStats, data: yesterdayEvents } = useQuery({
+  // Fetch yesterday's tire totals - DIRECT LIVE
+  const { data: yesterdayTireStats } = useQuery({
     queryKey: ['yesterday-tire-totals', user?.currentOrganization?.id, format(addDays(new Date(), -1), 'yyyy-MM-dd')],
     queryFn: async () => {
       const yesterday = format(addDays(new Date(), -1), 'yyyy-MM-dd');
       
-      const { data, error } = await supabase
-        .from('recycling_events')
-        .select('*')
-        .eq('organization_id', user?.currentOrganization?.id)
-        .eq('event_date', yesterday);
+      const [pickupsResult, dropoffsResult] = await Promise.all([
+        supabase
+          .from('pickups')
+          .select('pte_count')
+          .eq('organization_id', user?.currentOrganization?.id)
+          .eq('pickup_date', yesterday),
+        supabase
+          .from('dropoffs')
+          .select('pte_count')
+          .eq('organization_id', user?.currentOrganization?.id)
+          .eq('dropoff_date', yesterday)
+      ]);
       
-      if (error) throw error;
+      if (pickupsResult.error) throw pickupsResult.error;
+      if (dropoffsResult.error) throw dropoffsResult.error;
       
-      console.log('\n=== YESTERDAY PTE CALCULATION (UNIFIED VIEW) ===');
-      console.log(`Found ${(data || []).length} total events from yesterday`);
+      const pickupPTEs = (pickupsResult.data || []).reduce((sum, p) => sum + (p.pte_count || 0), 0);
+      const dropoffPTEs = (dropoffsResult.data || []).reduce((sum, d) => sum + (d.pte_count || 0), 0);
       
-      const manifestEvents = (data || []).filter(e => e.source_type === 'manifest');
-      const dropoffEvents = (data || []).filter(e => e.source_type === 'dropoff');
-      const pickupEvents = (data || []).filter(e => e.source_type === 'pickup');
-      
-      console.log(`  ${manifestEvents.length} manifests (completed)`);
-      console.log(`  ${dropoffEvents.length} dropoffs (without completed manifests)`);
-      console.log(`  ${pickupEvents.length} pickups (without any manifests)`);
-      
-      manifestEvents.forEach(e => {
-        console.log(`    Manifest ${e.source_id.slice(0, 8)}: ${e.pte_count} PTE + ${e.otr_count} OTR + ${e.tractor_count} tractor = ${e.pte_equivalent} PTEs`);
-      });
-      
-      dropoffEvents.forEach(e => {
-        console.log(`    Dropoff ${e.source_id.slice(0, 8)}: ${e.pte_count} PTE + ${e.otr_count} OTR + ${e.tractor_count} tractor = ${e.pte_equivalent} PTEs`);
-      });
-      
-      const total = (data || []).reduce((sum, event) => sum + (event.pte_equivalent || 0), 0);
-      console.log(`\n🎯 YESTERDAY TOTAL: ${total} PTEs (NO DOUBLE COUNTING)\n`);
-      
-      return total;
+      return pickupPTEs + dropoffPTEs;
     },
     enabled: !!user?.currentOrganization?.id,
     refetchInterval: 30000,
     staleTime: 0
   });
 
-  // Fetch this month's tire totals (1st through today) - UNIFIED SOURCE
+  // Fetch this month's tire totals (1st through today) - DIRECT LIVE
   const { data: monthlyTireStats } = useQuery({
     queryKey: ['monthly-tire-totals', user?.currentOrganization?.id, format(new Date(), 'yyyy-MM-dd')],
     queryFn: async () => {
       const today = new Date();
       const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      const startDate = format(firstOfMonth, 'yyyy-MM-dd');
+      const endDate = format(today, 'yyyy-MM-dd');
       
-      const { data, error } = await supabase
-        .from('recycling_events')
-        .select('pte_equivalent')
-        .eq('organization_id', user?.currentOrganization?.id)
-        .gte('event_date', format(firstOfMonth, 'yyyy-MM-dd'))
-        .lte('event_date', format(today, 'yyyy-MM-dd'));
+      const [pickupsResult, dropoffsResult] = await Promise.all([
+        supabase
+          .from('pickups')
+          .select('pte_count')
+          .eq('organization_id', user?.currentOrganization?.id)
+          .gte('pickup_date', startDate)
+          .lte('pickup_date', endDate),
+        supabase
+          .from('dropoffs')
+          .select('pte_count')
+          .eq('organization_id', user?.currentOrganization?.id)
+          .gte('dropoff_date', startDate)
+          .lte('dropoff_date', endDate)
+      ]);
       
-      if (error) throw error;
+      if (pickupsResult.error) throw pickupsResult.error;
+      if (dropoffsResult.error) throw dropoffsResult.error;
       
-      return (data || []).reduce((sum, event) => sum + (event.pte_equivalent || 0), 0);
+      const pickupPTEs = (pickupsResult.data || []).reduce((sum, p) => sum + (p.pte_count || 0), 0);
+      const dropoffPTEs = (dropoffsResult.data || []).reduce((sum, d) => sum + (d.pte_count || 0), 0);
+      
+      return pickupPTEs + dropoffPTEs;
     },
     enabled: !!user?.currentOrganization?.id,
     refetchInterval: 30000,
     staleTime: 0
   });
 
-  // Fetch this week's daily stats for PTE goal chart (current week Mon-Fri only) - UNIFIED SOURCE
+  // Fetch this week's daily stats for PTE goal chart (current week Mon-Fri only) - DIRECT LIVE
   const { data: weeklyData = [] } = useQuery({
     queryKey: ['weekly-stats', user?.currentOrganization?.id, format(new Date(), 'yyyy-MM-dd')],
     queryFn: async () => {
       const today = new Date();
-      const todayDay = today.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
-      
-      // Calculate Monday of current week
+      const todayDay = today.getDay();
       const daysFromMonday = todayDay === 0 ? 6 : todayDay - 1;
       const monday = new Date(today);
       monday.setDate(today.getDate() - daysFromMonday);
       
-      // Build array of ALL weekdays (Monday-Friday) regardless of current day
       const days = [];
-      for (let i = 0; i < 5; i++) { // Mon-Fri
+      for (let i = 0; i < 5; i++) {
         const date = new Date(monday);
         date.setDate(monday.getDate() + i);
-        
         days.push({
           date: format(date, 'yyyy-MM-dd'),
           label: format(date, 'EEE')
         });
       }
       
-      // Fetch unified events for the entire week in one query
-      const { data: weekEvents, error } = await supabase
-        .from('recycling_events')
-        .select('event_date, pte_equivalent')
-        .eq('organization_id', user?.currentOrganization?.id)
-        .gte('event_date', format(monday, 'yyyy-MM-dd'))
-        .lte('event_date', format(today, 'yyyy-MM-dd'));
+      const startDate = format(monday, 'yyyy-MM-dd');
+      const endDate = format(today, 'yyyy-MM-dd');
       
-      if (error) throw error;
+      const [pickupsResult, dropoffsResult] = await Promise.all([
+        supabase
+          .from('pickups')
+          .select('pte_count, pickup_date')
+          .eq('organization_id', user?.currentOrganization?.id)
+          .gte('pickup_date', startDate)
+          .lte('pickup_date', endDate),
+        supabase
+          .from('dropoffs')
+          .select('pte_count, dropoff_date')
+          .eq('organization_id', user?.currentOrganization?.id)
+          .gte('dropoff_date', startDate)
+          .lte('dropoff_date', endDate)
+      ]);
       
-      // Group by date
-      const eventsByDate = (weekEvents || []).reduce((acc, event) => {
-        acc[event.event_date] = (acc[event.event_date] || 0) + (event.pte_equivalent || 0);
-        return acc;
-      }, {} as Record<string, number>);
+      if (pickupsResult.error) throw pickupsResult.error;
+      if (dropoffsResult.error) throw dropoffsResult.error;
       
-      // Map to chart format
+      const ptesByDate: Record<string, number> = {};
+      
+      (pickupsResult.data || []).forEach(p => {
+        ptesByDate[p.pickup_date] = (ptesByDate[p.pickup_date] || 0) + (p.pte_count || 0);
+      });
+      
+      (dropoffsResult.data || []).forEach(d => {
+        ptesByDate[d.dropoff_date] = (ptesByDate[d.dropoff_date] || 0) + (d.pte_count || 0);
+      });
+      
       return days.map(({ date, label }) => ({
         day: label,
-        ptes: eventsByDate[date] || 0,
+        ptes: ptesByDate[date] || 0,
         target: 2600
       }));
     },
@@ -334,33 +359,40 @@ export default function Index() {
   const completedPickups = todayPickups.filter(p => p.status === 'completed');
   const overduePickups = todayPickups.filter(p => p.status === 'overdue');
   
-  // Calculate TODAY's PTEs from unified source (no double counting)
+  // Calculate TODAY's PTEs - DIRECT LIVE
   const { data: todayPTEStats = { ptes: 0, pounds: 0 } } = useQuery({
     queryKey: ['today-pte-stats', user?.currentOrganization?.id, format(new Date(), 'yyyy-MM-dd')],
     queryFn: async () => {
       const today = format(new Date(), 'yyyy-MM-dd');
       
-      const { data, error } = await supabase
-        .from('recycling_events')
-        .select('pte_count, otr_count, tractor_count, pte_equivalent')
-        .eq('organization_id', user?.currentOrganization?.id)
-        .eq('event_date', today);
+      const [pickupsResult, dropoffsResult] = await Promise.all([
+        supabase
+          .from('pickups')
+          .select('pte_count')
+          .eq('organization_id', user?.currentOrganization?.id)
+          .eq('pickup_date', today),
+        supabase
+          .from('dropoffs')
+          .select('pte_count')
+          .eq('organization_id', user?.currentOrganization?.id)
+          .eq('dropoff_date', today)
+      ]);
       
-      if (error) throw error;
+      if (pickupsResult.error) throw pickupsResult.error;
+      if (dropoffsResult.error) throw dropoffsResult.error;
       
-      const ptes = (data || []).reduce((sum, e) => sum + (e.pte_equivalent || 0), 0);
+      const pickupPTEs = (pickupsResult.data || []).reduce((sum, p) => sum + (p.pte_count || 0), 0);
+      const dropoffPTEs = (dropoffsResult.data || []).reduce((sum, d) => sum + (d.pte_count || 0), 0);
+      const ptes = pickupPTEs + dropoffPTEs;
       
-      // Approximate weight calculation
-      const pounds = (data || []).reduce((sum, e) => {
-        const pteWeight = (e.pte_count || 0) * 22;
-        const otrWeight = (e.otr_count || 0) * 300;
-        const tractorWeight = (e.tractor_count || 0) * 110;
-        return sum + pteWeight + otrWeight + tractorWeight;
-      }, 0);
+      const pounds = ptes * 22;
+      
+      console.log('Dashboard tiles recalibrated — using direct live PTE sums only.');
       
       return { ptes, pounds };
     },
     enabled: !!user?.currentOrganization?.id,
+    refetchInterval: 30000,
   });
   
   const totalTiresRecycled = todayPTEStats.ptes;
@@ -405,15 +437,9 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue;
           </SlideUp>
           
           <SlideUp>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-semibold">Live Metrics</h2>
-              {user?.currentOrganization?.id && (
-                <PTEBreakdownDrawer organizationId={user.currentOrganization.id} />
-              )}
-            </div>
             <StatsCard
               title="Tires Recycled Yesterday"
-              value={yesterdayTireStats ? `${yesterdayTireStats.toLocaleString()} PTEs` : '0 PTEs'}
+              value={yesterdayTireStats ? `${yesterdayTireStats} PTEs` : '0 PTEs'}
               icon={<Recycle className="w-5 h-5" />}
               variant="primary"
               change={yesterdayTireStats && yesterdayTireStats > 0 ? 5.2 : 0}
@@ -424,7 +450,7 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue;
           <SlideUp>
             <StatsCard
               title="Tires Recycled This Week"
-              value={weeklyTireStats ? `${weeklyTireStats.toLocaleString()} PTEs` : '0 PTEs'}
+              value={weeklyTireStats ? `${weeklyTireStats} PTEs` : '0 PTEs'}
               icon={<Recycle className="w-5 h-5" />}
               variant="primary"
               change={weeklyTireStats && weeklyTireStats > 0 ? 15.2 : 0}
@@ -435,7 +461,7 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue;
           <SlideUp>
             <StatsCard
               title="Tires Recycled This Month"
-              value={monthlyTireStats ? `${monthlyTireStats.toLocaleString()} PTEs` : '0 PTEs'}
+              value={monthlyTireStats ? `${monthlyTireStats} PTEs` : '0 PTEs'}
               icon={<Recycle className="w-5 h-5" />}
               variant="success"
               change={monthlyTireStats && monthlyTireStats > 0 ? 22.4 : 0}
