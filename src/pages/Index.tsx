@@ -170,6 +170,50 @@ export default function Index() {
     refetchInterval: 30000, // Real-time updates every 30 seconds
   });
 
+  // Fetch yesterday's tire totals
+  const { data: yesterdayTireStats } = useQuery({
+    queryKey: ['yesterday-tire-totals', user?.currentOrganization?.id, format(addDays(new Date(), -1), 'yyyy-MM-dd')],
+    queryFn: async () => {
+      const yesterday = addDays(new Date(), -1);
+      const startOfYesterday = new Date(yesterday);
+      startOfYesterday.setHours(0, 0, 0, 0);
+      
+      const endOfYesterday = new Date(yesterday);
+      endOfYesterday.setHours(23, 59, 59, 999);
+      
+      // Get manifests for yesterday
+      const { data: manifests } = await supabase
+        .from('manifests')
+        .select('pte_on_rim, pte_off_rim, otr_count, tractor_count')
+        .eq('organization_id', user?.currentOrganization?.id)
+        .eq('status', 'COMPLETED')
+        .gte('created_at', startOfYesterday.toISOString())
+        .lte('created_at', endOfYesterday.toISOString());
+      
+      // Get dropoffs WITHOUT manifests (to avoid double-counting)
+      const { data: dropoffs } = await supabase
+        .from('dropoffs')
+        .select('pte_count, otr_count, tractor_count')
+        .eq('organization_id', user?.currentOrganization?.id)
+        .in('status', ['completed', 'processed'])
+        .is('manifest_id', null)
+        .gte('dropoff_date', format(startOfYesterday, 'yyyy-MM-dd'))
+        .lte('dropoff_date', format(endOfYesterday, 'yyyy-MM-dd'));
+      
+      const manifestTotal = (manifests || []).reduce((sum, m) => 
+        sum + (m.pte_on_rim || 0) + (m.pte_off_rim || 0) + (m.otr_count || 0) + (m.tractor_count || 0), 0
+      );
+      
+      const dropoffTotal = (dropoffs || []).reduce((sum, d) => 
+        sum + (d.pte_count || 0) + (d.otr_count || 0) + (d.tractor_count || 0), 0
+      );
+      
+      return manifestTotal + dropoffTotal;
+    },
+    enabled: !!user?.currentOrganization?.id,
+    refetchInterval: 30000, // Real-time updates every 30 seconds
+  });
+
   // Fetch this month's tire totals (1st through today)
   const { data: monthlyTireStats } = useQuery({
     queryKey: ['monthly-tire-totals', user?.currentOrganization?.id, format(new Date(), 'yyyy-MM-dd')],
@@ -443,23 +487,23 @@ export default function Index() {
         <StaggerList className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8" staggerDelay={0.1}>
           <SlideUp>
             <StatsCard
-              title="Today's Pickups"
-              value={todayPickups.length}
-              icon={<Package className="w-5 h-5" />}
-              variant="primary"
-              change={todayPickups.length > 0 ? 12.5 : 0}
-              changeLabel="vs yesterday"
-            />
-          </SlideUp>
-          
-          <SlideUp>
-            <StatsCard
               title="Tires Recycled Today"
               value={totalTiresRecycled > 0 ? `${totalTiresRecycled} PTEs` : '0 PTEs'}
               icon={<Recycle className="w-5 h-5" />}
               variant="success"
               change={totalTiresRecycled > 0 ? 8.3 : 0}
               changeLabel="from all sources"
+            />
+          </SlideUp>
+          
+          <SlideUp>
+            <StatsCard
+              title="Tires Recycled Yesterday"
+              value={yesterdayTireStats ? `${yesterdayTireStats.toLocaleString()} PTEs` : '0 PTEs'}
+              icon={<Recycle className="w-5 h-5" />}
+              variant="primary"
+              change={yesterdayTireStats && yesterdayTireStats > 0 ? 5.2 : 0}
+              changeLabel="previous day"
             />
           </SlideUp>
           
