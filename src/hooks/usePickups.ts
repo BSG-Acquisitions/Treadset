@@ -307,7 +307,15 @@ export const useDeletePickup = () => {
 
   return useMutation({
     mutationFn: async (pickupId: string) => {
-      // First, delete any related assignments
+      // First, delete any related manifests (set pickup_id to null instead of deleting)
+      const { error: manifestError } = await supabase
+        .from('manifests')
+        .update({ pickup_id: null })
+        .eq('pickup_id', pickupId);
+
+      if (manifestError) console.warn('Error unlinking manifests:', manifestError);
+
+      // Delete any related assignments
       const { error: assignmentError } = await supabase
         .from('assignments')
         .delete()
@@ -326,17 +334,23 @@ export const useDeletePickup = () => {
       return pickupId;
     },
     onSuccess: () => {
+      // Invalidate all relevant queries to update both admin and driver UIs
       queryClient.invalidateQueries({ queryKey: ['pickups'] });
       queryClient.invalidateQueries({ queryKey: ['assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['driver-assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['routes'] });
+      queryClient.invalidateQueries({ queryKey: ['optimized-routes'] });
+      queryClient.invalidateQueries({ queryKey: ['manifests'] });
+      
       toast({
-        title: "Success",
-        description: "Pickup deleted successfully",
+        title: "Pickup Deleted",
+        description: "Pickup has been removed from all schedules",
       });
     },
     onError: (error) => {
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to delete pickup",
         variant: "destructive",
       });
     }

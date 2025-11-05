@@ -83,7 +83,15 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
 
   const handleRemovePickup = async (pickup: any) => {
     try {
-      // Delete any assignments first
+      // First, unlink any related manifests (set pickup_id to null instead of deleting)
+      const { error: manifestError } = await supabase
+        .from('manifests')
+        .update({ pickup_id: null })
+        .eq('pickup_id', pickup.id);
+
+      if (manifestError) console.warn('Error unlinking manifests:', manifestError);
+
+      // Delete any assignments
       const { error: assignmentError } = await supabase
         .from('assignments')
         .delete()
@@ -99,20 +107,24 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
 
       if (pickupError) throw pickupError;
 
-      // Refresh data
+      // Invalidate all relevant queries to update both admin and driver UIs
       queryClient.invalidateQueries({ queryKey: ['pickups'] });
       queryClient.invalidateQueries({ queryKey: ['assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['driver-assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['routes'] });
+      queryClient.invalidateQueries({ queryKey: ['optimized-routes'] });
+      queryClient.invalidateQueries({ queryKey: ['manifests'] });
 
       toast({
-        title: "Pickup Removed",
-        description: `${pickup.client?.company_name || 'Pickup'} has been removed from the route`,
+        title: "Pickup Deleted",
+        description: `${pickup.client?.company_name || 'Pickup'} has been removed from all schedules`,
       });
 
       setPickupToDelete(null);
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to remove pickup",
+        description: error.message || "Failed to delete pickup",
         variant: "destructive",
       });
     }
