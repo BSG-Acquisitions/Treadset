@@ -170,6 +170,26 @@ export default function EnhancedRoutesToday() {
 
   const goToPreviousWeek = () => setCurrentWeek(prev => subWeeks(prev, 1));
   const goToNextWeek = () => setCurrentWeek(prev => addWeeks(prev, 1));
+  
+  // Day navigation for browsing specific dates
+  const goToPreviousDay = () => {
+    const currentDate = new Date(activeDateLocal);
+    const prevDay = subDays(currentDate, 1);
+    const year = prevDay.getFullYear();
+    const month = String(prevDay.getMonth() + 1).padStart(2, '0');
+    const day = String(prevDay.getDate()).padStart(2, '0');
+    setActiveDay(`${year}-${month}-${day}`);
+  };
+  
+  const goToNextDay = () => {
+    const currentDate = new Date(activeDateLocal);
+    const nextDay = addDays(currentDate, 1);
+    const year = nextDay.getFullYear();
+    const month = String(nextDay.getMonth() + 1).padStart(2, '0');
+    const day = String(nextDay.getDate()).padStart(2, '0');
+    setActiveDay(`${year}-${month}-${day}`);
+  };
+  
   const goToToday = () => {
     const today = new Date();
     setCurrentWeek(startOfWeek(today, { weekStartsOn: 0 }));
@@ -644,13 +664,13 @@ export default function EnhancedRoutesToday() {
             
             <div className="flex flex-wrap gap-2">
               <div className="flex gap-1">
-                <Button variant="outline" size="sm" onClick={goToPreviousWeek}>
+                <Button variant="outline" size="sm" onClick={goToPreviousDay} title="Previous day">
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <Button variant="outline" size="sm" onClick={goToToday}>
-                  Today
+                <Button variant="outline" size="sm" onClick={goToToday} className="min-w-[80px]">
+                  {format(activeDateLocal, 'MMM d') === format(new Date(), 'MMM d') ? 'Today' : format(activeDateLocal, 'MMM d')}
                 </Button>
-                <Button variant="outline" size="sm" onClick={goToNextWeek}>
+                <Button variant="outline" size="sm" onClick={goToNextDay} title="Next day">
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
