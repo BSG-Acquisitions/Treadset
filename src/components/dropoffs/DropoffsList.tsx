@@ -367,12 +367,12 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
           );
           const totalRevenue = dropoffList.reduce((sum, d) => sum + (d.computed_revenue || 0), 0);
           
-          // For "This Week", group by individual days
-          const isThisWeek = period === 'This Week';
-          const dailyGroups = isThisWeek ? groupByDay(dropoffList) : [];
+          // Group by days for This Week, Last Week, and This Month
+          const shouldGroupByDay = ['This Week', 'Last Week', 'This Month'].includes(period);
+          const dailyGroups = shouldGroupByDay ? groupByDay(dropoffList) : [];
           
           return (
-            <Collapsible key={period} defaultOpen>
+            <Collapsible key={period} defaultOpen={false}>
               <div className="rounded-md border">
                 <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-accent transition-colors">
                   <div className="flex items-center gap-3">
@@ -396,8 +396,8 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <div className="p-4 pt-0 space-y-3">
-                    {isThisWeek ? (
-                      // Show daily breakdown for this week
+                    {shouldGroupByDay ? (
+                      // Show daily breakdown
                       dailyGroups.map(([dayKey, dayDropoffs]) => {
                         const date = new Date(`${dayKey}T00:00:00`);
                         const isDayToday = isToday(date);
