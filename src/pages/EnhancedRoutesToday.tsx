@@ -4,7 +4,6 @@ import { useVehicles } from "@/hooks/useVehicles";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEnsureManifestPdf } from "@/hooks/useEnsureManifestPdf";
-import { CompleteAssignmentDialog } from "@/components/driver/CompleteAssignmentDialog";
 import { CompletePickupDialog } from "@/components/CompletePickupDialog";
 import { MovePickupDialog } from "@/components/MovePickupDialog";
 import { DriverAssignmentDropdown } from "@/components/DriverAssignmentDropdown";
@@ -101,7 +100,6 @@ export default function EnhancedRoutesToday() {
   const activeDateLocal = new Date((ay || todayYear), ((am || parseInt(todayMonth, 10)) - 1), (ad || parseInt(todayDay, 10)));
   const [optimizedRoutes, setOptimizedRoutes] = useState<OptimizedRoute[]>([]);
   const [isOptimizing, setIsOptimizing] = useState(false);
-  const [completingAssignment, setCompletingAssignment] = useState<any>(null);
   const [showDriverView, setShowDriverView] = useState(false);
   const [movePickupOpen, setMovePickupOpen] = useState(false);
   const [selectedPickupToMove, setSelectedPickupToMove] = useState<any>(null);
