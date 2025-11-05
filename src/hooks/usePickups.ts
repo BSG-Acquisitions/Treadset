@@ -334,21 +334,25 @@ export const useDeletePickup = () => {
       return pickupId;
     },
     onMutate: async (pickupId: string) => {
+      console.log('[DELETE] Starting deletion for pickup:', pickupId);
       // Optimistically remove the pickup from any cached pickup lists
       await queryClient.cancelQueries({ queryKey: ['pickups'] });
       const previous = queryClient.getQueriesData<any[]>({ queryKey: ['pickups'] });
       previous.forEach(([key, data]) => {
         if (Array.isArray(data)) {
-          queryClient.setQueryData(
-            key as any,
-            data.filter((p: any) => p?.id !== pickupId)
-          );
+          const filtered = data.filter((p: any) => p?.id !== pickupId);
+          console.log('[DELETE] Optimistically removing from cache. Before:', data.length, 'After:', filtered.length);
+          queryClient.setQueryData(key as any, filtered);
         }
       });
       return { previous };
     },
-    onSuccess: async () => {
-      // Invalidate all relevant queries and wait for them to complete
+    onSuccess: async (pickupId) => {
+      console.log('[DELETE] Database deletion successful for:', pickupId);
+      // Wait a moment for database to propagate
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Invalidate all relevant queries
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['pickups'] }),
         queryClient.invalidateQueries({ queryKey: ['assignments'] }),
@@ -358,6 +362,7 @@ export const useDeletePickup = () => {
         queryClient.invalidateQueries({ queryKey: ['manifests'] }),
       ]);
       
+      console.log('[DELETE] Refetching pickup queries...');
       // Force immediate refetch of all active pickup queries
       await queryClient.refetchQueries({ 
         queryKey: ['pickups'],
@@ -369,7 +374,8 @@ export const useDeletePickup = () => {
         description: "Pickup has been removed from all schedules",
       });
     },
-    onError: (error, _pickupId, context) => {
+    onError: (error, pickupId, context) => {
+      console.error('[DELETE] Failed to delete pickup:', pickupId, error);
       // Roll back optimistic updates if deletion fails
       context?.previous?.forEach(([key, data]: [unknown, any]) => {
         queryClient.setQueryData(key as any, data);
