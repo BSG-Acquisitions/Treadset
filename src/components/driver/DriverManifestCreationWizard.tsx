@@ -10,6 +10,7 @@ import { useCreateManifest, useUpdateManifest } from "@/hooks/useManifests";
 import { useManifestIntegration } from "@/hooks/useManifestIntegration";
 import { useSendManifestEmail } from "@/hooks/useSendManifestEmail";
 import { useHaulers } from "@/hooks/useHaulers";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -113,6 +114,7 @@ export function DriverManifestCreationWizard({
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   
   const createManifest = useCreateManifest({ toastOnSuccess: false });
   const updateManifest = useUpdateManifest();
@@ -689,24 +691,19 @@ export function DriverManifestCreationWizard({
       .eq('pickup_id', pickupId)
       .limit(1);
 
+    let manifest: any = null;
+    let isExistingManifest = false;
+
     if (checkError) {
       console.error('[DRIVER_WIZARD] Error checking for existing manifests:', checkError);
     } else if (existingManifests && existingManifests.length > 0) {
-      const existing = existingManifests[0];
+      manifest = existingManifests[0];
+      isExistingManifest = true;
+      console.log('[DRIVER_WIZARD] Using existing manifest:', manifest);
       toast({
-        title: "Manifest Already Exists",
-        description: `A manifest (${existing.manifest_number}) has already been created for this pickup.`,
-        variant: "destructive",
+        title: "Using Existing Manifest",
+        description: `Found existing manifest (${manifest.manifest_number}). Completing the pickup...`,
       });
-      console.log('[DRIVER_WIZARD] Manifest already exists:', existing);
-      
-      // If the manifest exists and is completed or awaiting receiver, proceed to payment
-      if (existing.status === 'COMPLETED' || existing.status === 'AWAITING_RECEIVER_SIGNATURE') {
-        setCreatedManifestId(existing.id);
-        setManifestCreated(true);
-        setStep(step + 1);
-      }
-      return;
     }
 
     // Set both state and ref to prevent race conditions
@@ -828,7 +825,10 @@ export function DriverManifestCreationWizard({
         status: 'AWAITING_RECEIVER_SIGNATURE' as const,
       };
 
-      const manifest = await createManifest.mutateAsync(manifestData);
+      // Only create a new manifest if one doesn't exist
+      if (!isExistingManifest) {
+        manifest = await createManifest.mutateAsync(manifestData);
+      }
 
       // 3. Update manifest with hauler, signatures, and timestamps (to-the-second precision)
       const generatorSignedAt = new Date().toISOString();
@@ -960,7 +960,7 @@ export function DriverManifestCreationWizard({
       });
 
       // Update pickup status to completed
-      await supabase
+      const { error: pickupUpdateError } = await supabase
         .from('pickups')
         .update({ 
           status: 'completed',
@@ -968,9 +968,13 @@ export function DriverManifestCreationWizard({
         })
         .eq('id', pickupId);
 
+      if (pickupUpdateError) {
+        console.error('Error updating pickup status:', pickupUpdateError);
+      }
+
       // Update assignment status to completed
       if (assignmentData?.id) {
-        await supabase
+        const { error: assignmentUpdateError } = await supabase
           .from('assignments')
           .update({
             status: 'completed',
@@ -978,7 +982,17 @@ export function DriverManifestCreationWizard({
             updated_at: new Date().toISOString()
           })
           .eq('id', assignmentData.id);
+
+        if (assignmentUpdateError) {
+          console.error('Error updating assignment status:', assignmentUpdateError);
+        }
       }
+
+      // Invalidate queries to refresh the UI
+      queryClient.invalidateQueries({ queryKey: ['pickups'] });
+      queryClient.invalidateQueries({ queryKey: ['assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['manifests'] });
+      console.log('✅ Queries invalidated - UI should refresh');
 
       // Ensure manifest PDF is generated and linked
       console.log('🔧 Ensuring manifest PDF is generated for pickup:', pickupId);
