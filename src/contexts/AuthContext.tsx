@@ -353,7 +353,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .from('user_organization_roles')
           .select('organization_id, organizations(name)')
           .eq('user_id', user.id)
-          .single();
+          .limit(1)
+          .maybeSingle();
 
         // If org name is still "New Company", redirect to onboarding
         if (orgData?.organizations?.name === 'New Company') {
