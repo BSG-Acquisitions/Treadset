@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useUpdateAssignmentStatus } from "@/hooks/useDriverWorkflow";
 import { CollectPaymentWithCard } from "@/components/driver/CollectPaymentWithCard";
+import { useEnsureManifestPdf } from "@/hooks/useEnsureManifestPdf";
 import { Upload, Camera, CreditCard, Check, DollarSign } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -46,6 +47,7 @@ export function CompleteAssignmentDialog({
   const [calculatedTotal, setCalculatedTotal] = useState(0);
   const [isCalculatingPayment, setIsCalculatingPayment] = useState(false);
   const updateStatus = useUpdateAssignmentStatus();
+  const ensureManifestPdf = useEnsureManifestPdf();
 
   const PRESET_RATES = {
     passenger: ['2.50', '2.75', '3.00', '3.25'], // unchanged
@@ -121,6 +123,14 @@ export function CompleteAssignmentDialog({
           photos: photos.length > 0 ? photos : null,
         }
       });
+      
+      // Generate manifest PDF after completing the pickup
+      if (assignment.pickup_id) {
+        await ensureManifestPdf.mutateAsync({
+          pickup_id: assignment.pickup_id,
+          force_regenerate: false
+        });
+      }
       
       // Mark as completed and show rate selector
       setIsPickupCompleted(true);

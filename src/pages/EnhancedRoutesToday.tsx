@@ -3,6 +3,7 @@ import { useAssignments, usePickups, useDeletePickup } from "@/hooks/usePickups"
 import { useVehicles } from "@/hooks/useVehicles";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import { useEnsureManifestPdf } from "@/hooks/useEnsureManifestPdf";
 import { CompleteAssignmentDialog } from "@/components/driver/CompleteAssignmentDialog";
 import { CompletePickupDialog } from "@/components/CompletePickupDialog";
 import { MovePickupDialog } from "@/components/MovePickupDialog";
@@ -127,6 +128,8 @@ export default function EnhancedRoutesToday() {
   const deletePickup = useDeletePickup();
   const queryClient = useQueryClient();
   const { geocodeLocation, isLoading: isGeocoding } = useGeocodeLocations();
+  const ensureManifestPdf = useEnsureManifestPdf();
+  const [isGeneratingMissingPdfs, setIsGeneratingMissingPdfs] = useState(false);
 
   // Real-time location updates
   useEffect(() => {
@@ -273,6 +276,51 @@ export default function EnhancedRoutesToday() {
         description: e.message || 'Unable to fix coordinates',
         variant: "destructive",
       });
+    }
+  };
+
+  const generateMissingPdfs = async () => {
+    setIsGeneratingMissingPdfs(true);
+    try {
+      // Find all completed pickups without PDFs
+      const completedWithoutPdf = pickups.filter(
+        p => p.status === 'completed' && !p.manifest_pdf_path
+      );
+
+      if (completedWithoutPdf.length === 0) {
+        toast({
+          title: "All PDFs exist",
+          description: "All completed pickups already have PDFs generated.",
+        });
+        return;
+      }
+
+      toast({
+        title: "Generating PDFs",
+        description: `Generating ${completedWithoutPdf.length} missing manifest PDFs...`,
+      });
+
+      // Generate PDFs for all missing ones
+      for (const pickup of completedWithoutPdf) {
+        await ensureManifestPdf.mutateAsync({
+          pickup_id: pickup.id,
+          force_regenerate: false,
+        });
+      }
+
+      toast({
+        title: "Success",
+        description: `Generated ${completedWithoutPdf.length} manifest PDFs`,
+      });
+    } catch (error: any) {
+      console.error('Error generating missing PDFs:', error);
+      toast({
+        title: "Error",
+        description: error.message || 'Failed to generate missing PDFs',
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingMissingPdfs(false);
     }
   };
 
@@ -718,6 +766,10 @@ export default function EnhancedRoutesToday() {
                   <DropdownMenuItem onClick={() => setGeocodeDialogOpen(true)}>
                     <MapPin className="h-4 w-4 mr-2" />
                     Geocode Locations
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={generateMissingPdfs} disabled={isGeneratingMissingPdfs}>
+                    <Package className="h-4 w-4 mr-2" />
+                    {isGeneratingMissingPdfs ? "Generating PDFs..." : "Generate Missing PDFs"}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
