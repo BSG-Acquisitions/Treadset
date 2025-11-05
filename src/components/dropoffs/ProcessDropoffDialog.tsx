@@ -17,6 +17,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Calculator, FileText, CreditCard, DollarSign, Factory, Truck, Building2, Plus } from "lucide-react";
 import { CreateHaulerDialog } from "./CreateHaulerDialog";
 import { calculateTotalPTE } from "@/lib/michigan-conversions";
+import { format } from "date-fns";
 
 interface ProcessDropoffDialogProps {
   open: boolean;
@@ -81,10 +82,10 @@ const subtotal = (Number(pteCount || 0) * ptePrice) +
         throw new Error("Please select a customer");
       }
 
-      // Get current date and time in local timezone
+      // Get current date and time in LOCAL timezone using date-fns
       const now = new Date();
-      const localDate = now.toISOString().split('T')[0]; // YYYY-MM-DD in local timezone
-      const localTime = now.toTimeString().split(' ')[0]; // HH:MM:SS
+      const localDate = format(now, 'yyyy-MM-dd');
+      const localTime = format(now, 'HH:mm:ss');
 
       await createDropoff.mutateAsync({
         organization_id: user?.currentOrganization?.id || "", 

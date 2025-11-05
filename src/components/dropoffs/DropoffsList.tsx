@@ -86,7 +86,7 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
     };
 
     dropoffList.forEach(dropoff => {
-      const date = new Date(dropoff.dropoff_date);
+      const date = new Date(`${dropoff.dropoff_date}T00:00:00`);
       
       if (isWithinInterval(date, { start: startOfWeek(now), end: endOfWeek(now) })) {
         groups['This Week'].push(dropoff);
@@ -110,7 +110,7 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
     const byDay: Record<string, Dropoff[]> = {};
     
     dropoffList.forEach(dropoff => {
-      const date = new Date(dropoff.dropoff_date);
+      const date = new Date(`${dropoff.dropoff_date}T00:00:00`);
       const dayKey = format(date, 'yyyy-MM-dd');
       if (!byDay[dayKey]) {
         byDay[dayKey] = [];
@@ -123,7 +123,7 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
   };
 
   const getDayLabel = (dateStr: string) => {
-    const date = new Date(dateStr);
+    const date = new Date(`${dateStr}T00:00:00`);
     if (isToday(date)) return 'Today';
     if (isYesterday(date)) return 'Yesterday';
     return format(date, 'EEEE, MMM dd');
@@ -223,7 +223,7 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
                 <div className="flex items-center gap-3 text-sm text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
-                    {format(new Date(dropoff.dropoff_date), 'MMM dd, yyyy')}
+                    {format(new Date(`${dropoff.dropoff_date}T00:00:00`), 'MMM dd, yyyy')}
                   </span>
                   {dropoff.dropoff_time && (
                     <span className="flex items-center gap-1">
@@ -399,7 +399,7 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
                     {isThisWeek ? (
                       // Show daily breakdown for this week
                       dailyGroups.map(([dayKey, dayDropoffs]) => {
-                        const date = new Date(dayKey);
+                        const date = new Date(`${dayKey}T00:00:00`);
                         const isDayToday = isToday(date);
                         const dayLabel = getDayLabel(dayKey);
                         const dayTires = dayDropoffs.reduce((sum, d) => 
