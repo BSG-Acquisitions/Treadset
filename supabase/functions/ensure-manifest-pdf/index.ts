@@ -110,15 +110,76 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 4. Generate the PDF using the generate-acroform-manifest function
-    console.log(`Calling generate-acroform-manifest for manifest: ${manifestId}`);
-    
+    // 4. Fetch manifest and build v4 AcroForm data, then generate the PDF
+    console.log(`Preparing AcroForm v4 payload for manifest: ${manifestId}`);
+
+    const { data: manifestRow, error: manifestFetchError } = await supabase
+      .from('manifests')
+      .select(`*, client:clients(*), hauler:haulers(*), location:locations(*)`)
+      .eq('id', manifestId)
+      .maybeSingle();
+
+    if (manifestFetchError) {
+      throw new Error(`Failed to fetch manifest ${manifestId}: ${manifestFetchError.message}`);
+    }
+
+    const m: any = manifestRow || {};
+    const v4Fields: Record<string, string> = {
+      Manifest_Number: String(m.manifest_number || ''),
+      Vehicle_Trailer: m.vehicle_trailer ? String(m.vehicle_trailer) : '',
+      // Generator
+      Generator_Name: m.client?.company_name || '',
+      Generator_Mailing_Address: m.client?.mailing_address || m.location?.address || '',
+      Generator_City: m.client?.city || '',
+      Generator_State: m.client?.state || '',
+      Generator_Zip: m.client?.zip || '',
+      Physical_Mailing_Address: m.client?.physical_address || m.client?.mailing_address || '',
+      Physical_City: m.client?.physical_city || m.client?.city || '',
+      Physical_State: m.client?.physical_state || m.client?.state || '',
+      Physical_Zip: m.client?.physical_zip || m.client?.zip || '',
+      Generator_Phone: m.client?.phone || '',
+      Generator_County: m.client?.county || '',
+      // Hauler
+      Hauler_Name: m.hauler?.hauler_name || m.hauler?.company_name || '',
+      Hauler_Address: m.hauler?.hauler_mailing_address || m.hauler?.mailing_address || '',
+      Hauler_City: m.hauler?.hauler_city || m.hauler?.city || '',
+      Hauler_State: m.hauler?.hauler_state || m.hauler?.state || '',
+      Hauler_Zip: m.hauler?.hauler_zip || m.hauler?.zip || '',
+      Hauler_Phone: m.hauler?.hauler_phone || m.hauler?.phone || '',
+      MI_SCRAP_TIRE_HAULER_REG_: m.hauler?.hauler_mi_reg || '',
+      // Tire counts
+      Passenger_Car: String((m.pte_off_rim || 0) + (m.pte_on_rim || 0)),
+      Truck: String(((m.commercial_17_5_19_5_off || 0) + (m.commercial_17_5_19_5_on || 0)) + ((m.commercial_22_5_off || 0) + (m.commercial_22_5_on || 0))),
+      Oversized: String((m.otr_count || 0) + (m.tractor_count || 0)),
+      // Weights
+      Gross: (m.gross_weight_lbs != null ? Number(m.gross_weight_lbs) : 0).toFixed(1),
+      Tare: (m.tare_weight_lbs != null ? Number(m.tare_weight_lbs) : 0).toFixed(1),
+      Net_Weight: (() => {
+        const gross = Number(m.gross_weight_lbs || 0);
+        const tare = Number(m.tare_weight_lbs || 0);
+        const net = Math.max(0, Math.round((gross - tare) * 10) / 10);
+        return net.toFixed(1);
+      })(),
+      // Signatures
+      'Generator_Signature _es_:signer:signature': m.customer_signature_png_path || '',
+      'Hauler_Signature _es_:signer:signature': m.driver_signature_png_path || '',
+      Generator_Print_Name: m.generator_print_name || '',
+      Hauler_Print_Name: m.hauler_print_name || '',
+      Generator_Date: m.generator_signed_at ? new Date(m.generator_signed_at).toISOString().split('T')[0] : '',
+      Hauler_Date: m.hauler_signed_at ? new Date(m.hauler_signed_at).toISOString().split('T')[0] : '',
+    };
+
+    const templatePath = 'Michigan_Manifest_AcroForm_V4.pdf';
+    const outputPath = `manifests/acroform-${manifestId}-${Date.now()}.pdf`;
+
     const { data: pdfResult, error: pdfError } = await supabase.functions.invoke(
       'generate-acroform-manifest',
       {
         body: {
-          manifest_id: manifestId,
-          force_regenerate: force_regenerate,
+          templatePath,
+          manifestData: v4Fields,
+          manifestId: manifestId,
+          outputPath,
         }
       }
     );
@@ -135,8 +196,8 @@ Deno.serve(async (req) => {
       .from('pickups')
       .update({
         manifest_id: manifestId,
-        manifest_pdf_path: pdfResult.pdf_path,
-        manifest_payment_status: pdfResult.payment_status || pickup.payment_status,
+        manifest_pdf_path: pdfResult?.pdfPath,
+        manifest_payment_status: pdfResult?.payment_status || pickup.payment_status,
         updated_at: new Date().toISOString(),
       })
       .eq('id', pickup_id);

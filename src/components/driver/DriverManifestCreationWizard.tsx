@@ -763,8 +763,8 @@ export function DriverManifestCreationWizard({
         finalTare = 0; // Scrap tire pickups: tare is always 0 (tires only, no vehicle weight)
       }
       
-        // Net weight = Gross - Tare (for scrap tires with tare=0, net=gross)
-      const finalNet = Math.max(0, finalGross - finalTare);
+        // Net weight = Gross - Tare (round to 0.1 lb)
+      const finalNet = Math.max(0, Math.round((finalGross - finalTare) * 10) / 10);
       
       // Validation: Ensure net weight makes sense
       if (finalNet > finalGross) {
