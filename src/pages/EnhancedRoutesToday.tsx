@@ -857,14 +857,14 @@ export default function EnhancedRoutesToday() {
                       <CardHeader className="py-3 cursor-pointer hover:bg-secondary/10 transition-colors">
                         <CardTitle className="flex items-center gap-2 text-base">
                           <Package className="h-4 w-4" />
-                          Scheduled Pickups - {format(activeDateLocal, 'EEE, MMM d')} ({pickups.length})
+                          Scheduled Pickups - {format(activeDateLocal, 'EEE, MMM d')} ({(pickups.filter((p:any) => p.status !== 'completed')).length})
                         </CardTitle>
                       </CardHeader>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <CardContent className="pt-0">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                          {pickups.map((pickup) => (
+                          { (pickups.filter((p:any) => p.status !== 'completed')).map((pickup) => (
                             <div
                               key={pickup.id}
                               className="flex flex-col gap-2 p-2 border rounded-lg hover:bg-secondary/10 transition-colors"
