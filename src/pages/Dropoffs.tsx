@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useDropoffs, useTodaysDropoffs } from "@/hooks/useDropoffs";
-import { useDropoffCustomers } from "@/hooks/useDropoffCustomers";
+import { useClients } from "@/hooks/useClients";
 import { useHaulerReliability } from "@/hooks/useHaulerReliability";
 import { ProcessDropoffDialog } from "@/components/dropoffs/ProcessDropoffDialog";
 import { DropoffCustomersList } from "@/components/dropoffs/DropoffCustomersList";
@@ -55,8 +55,8 @@ const Dropoffs = () => {
     sum + Number(dropoff.computed_revenue || 0), 0
   );
 
-  const activeCustomers = customers.filter(c => c.customer_type === 'regular').length;
-  const oneTimeCustomers = customers.filter(c => c.customer_type === 'one_time').length;
+  const activeCustomers = customers.length;
+  const oneTimeCustomers = 0; // No longer tracking customer types separately
 
   // Filter dropoffs by reliability if needed
   const filteredDropoffs = dropoffs.filter(dropoff => {

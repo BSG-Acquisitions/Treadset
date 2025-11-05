@@ -31,7 +31,6 @@ import {
 } from "@/components/ui/collapsible";
 import { format, isWithinInterval, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, isToday, isYesterday, startOfDay } from "date-fns";
 import type { Database } from "@/integrations/supabase/types";
-import { useGenerateDropoffManifest } from "@/hooks/useDropoffManifest";
 import { EditDropoffDialog } from "./EditDropoffDialog";
 import { HaulerReliabilityBadge } from "@/components/HaulerReliabilityBadge";
 import { useState } from "react";
@@ -65,7 +64,6 @@ interface DropopffsListProps {
 }
 
 export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListProps) => {
-  const generateManifest = useGenerateDropoffManifest();
   const [editDropoff, setEditDropoff] = useState<Dropoff | null>(null);
   
   const filteredDropoffs = dropoffs.filter(dropoff => 

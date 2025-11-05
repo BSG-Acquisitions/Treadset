@@ -16,13 +16,13 @@ export const useDropoffs = (customerId?: string) => {
         .from('dropoffs')
         .select(`
           *,
-          dropoff_customers(contact_name, company_name, email, phone),
+          clients(contact_name, company_name, email, phone),
           users:processed_by(first_name, last_name, email),
           pricing_tiers(name)
         `);
       
       if (customerId) {
-        query = query.eq('dropoff_customer_id', customerId);
+        query = query.eq('client_id', customerId);
       }
       
       const { data, error } = await query.order('dropoff_date', { ascending: false });
@@ -43,7 +43,7 @@ export const useDropoff = (id: string) => {
         .from('dropoffs')
         .select(`
           *,
-          dropoff_customers(contact_name, company_name, email, phone, customer_type),
+          clients(contact_name, company_name, email, phone),
           users:processed_by(first_name, last_name, email),
           pricing_tiers(name)
         `)
@@ -125,7 +125,7 @@ export const useTodaysDropoffs = () => {
         .from('dropoffs')
         .select(`
           *,
-          dropoff_customers(contact_name, company_name, customer_type)
+          clients(contact_name, company_name)
         `)
         .eq('dropoff_date', today)
         .is('manifest_id', null)

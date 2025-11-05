@@ -194,11 +194,11 @@ export const useManifestIntegration = () => {
       if (isDropoffManifest && manifestData.dropoff_id) {
         const { data: dropoffData } = await supabase
           .from('dropoffs')
-          .select('*, dropoff_customer:dropoff_customers(*)')
+          .select('*, client:clients(*)')
           .eq('id', manifestData.dropoff_id)
           .single();
         
-        const dc = dropoffData?.dropoff_customer;
+        const dc = dropoffData?.client;
         
         if (dc) {
           dropoffCustomerData = {
@@ -215,11 +215,11 @@ export const useManifestIntegration = () => {
             generator_phone: dc.phone || ''
           };
           
-          console.log('[MANIFEST_INTEGRATION] Using dropoff customer as generator:', {
+          console.log('[MANIFEST_INTEGRATION] Using client as generator:', {
             manifestId,
-            dropoffCustomerName: dc.company_name || dc.contact_name,
-            dropoffCustomerAddress: dc.mailing_address,
-            dropoffCustomerCity: dc.city,
+            clientName: dc.company_name || dc.contact_name,
+            clientAddress: dc.mailing_address,
+            clientCity: dc.city,
             isDropoffManifest
           });
         }

@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { useDropoffCustomers } from "@/hooks/useDropoffCustomers";
+import { useClients } from "@/hooks/useClients";
 import { useCreateDropoff } from "@/hooks/useDropoffs";
 import { usePricingTiers } from "@/hooks/usePricingTiers";
 import { useHaulers } from "@/hooks/useHaulers";
@@ -43,7 +43,8 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
   const [newCustomerPhone, setNewCustomerPhone] = useState("");
   const [newCustomerCompany, setNewCustomerCompany] = useState("");
 
-  const { data: customers = [], isLoading: isLoadingCustomers, error: customersError } = useDropoffCustomers();
+  const { data: clientsData, isLoading: isLoadingCustomers, error: customersError } = useClients();
+  const customers = Array.isArray(clientsData) ? clientsData : (clientsData?.data || []);
   const { data: haulers = [] } = useHaulers();
   const { data: pricingTiers = [] } = usePricingTiers();
   const createDropoff = useCreateDropoff();
@@ -52,9 +53,9 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
   const defaultPricingTier = pricingTiers.find(pt => pt.name === "Standard") || pricingTiers[0];
 
   // Calculate pricing
-  const ptePrice = (selectedCustomer?.pricing_tiers?.pte_rate || defaultPricingTier?.pte_rate || 0);
-  const otrPrice = (selectedCustomer?.pricing_tiers?.otr_rate || defaultPricingTier?.otr_rate || 0);
-  const tractorPrice = (selectedCustomer?.pricing_tiers?.tractor_rate || defaultPricingTier?.tractor_rate || 0);
+  const ptePrice = (selectedCustomer?.pricing_tier_id ? pricingTiers.find(pt => pt.id === selectedCustomer.pricing_tier_id)?.pte_rate : defaultPricingTier?.pte_rate) || 0;
+  const otrPrice = (selectedCustomer?.pricing_tier_id ? pricingTiers.find(pt => pt.id === selectedCustomer.pricing_tier_id)?.otr_rate : defaultPricingTier?.otr_rate) || 0;
+  const tractorPrice = (selectedCustomer?.pricing_tier_id ? pricingTiers.find(pt => pt.id === selectedCustomer.pricing_tier_id)?.tractor_rate : defaultPricingTier?.tractor_rate) || 0;
 
 const subtotal = (Number(pteCount || 0) * ptePrice) + 
                   (Number(otrCount || 0) * otrPrice) + 
@@ -89,7 +90,7 @@ const subtotal = (Number(pteCount || 0) * ptePrice) +
 
       await createDropoff.mutateAsync({
         organization_id: user?.currentOrganization?.id || "", 
-        dropoff_customer_id: dropoffCustomerId,
+        client_id: dropoffCustomerId,
         hauler_id: haulerId || null,
         dropoff_date: localDate, // Explicitly set local date
         dropoff_time: localTime, // Set current time
@@ -170,9 +171,6 @@ const subtotal = (Number(pteCount || 0) * ptePrice) +
                                 ({customer.company_name})
                               </span>
                             )}
-                            <Badge variant={customer.customer_type === 'regular' ? 'default' : 'secondary'} className="w-fit">
-                              {customer.customer_type}
-                            </Badge>
                           </div>
                         </SelectItem>
                       ))}

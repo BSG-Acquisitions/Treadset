@@ -17,7 +17,7 @@ interface Pickup {
 
 interface Dropoff {
   id: string;
-  dropoff_customer?: { company_name: string; contact_name: string };
+  client?: { company_name: string; contact_name: string };
   dropoff_date: string;
   pte_count?: number;
   otr_count?: number;
@@ -127,7 +127,7 @@ export function PTEBreakdownDialog({
                     <div key={dropoff.id} className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/5 transition-colors">
                       <div className="flex-1 min-w-0">
                         <div className="font-medium truncate">
-                          {dropoff.dropoff_customer?.company_name || dropoff.dropoff_customer?.contact_name || 'Unknown Customer'}
+                          {dropoff.client?.company_name || dropoff.client?.contact_name || 'Unknown Customer'}
                         </div>
                         <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                           <span className="flex items-center gap-1">

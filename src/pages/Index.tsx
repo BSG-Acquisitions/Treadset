@@ -450,7 +450,7 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue;
           pte_count,
           otr_count,
           tractor_count,
-          dropoff_customer:dropoff_customers(company_name, contact_name)
+          client:clients(company_name, contact_name)
         `)
         .eq('organization_id', user?.currentOrganization?.id)
         .gte('dropoff_date', format(startDate, 'yyyy-MM-dd'))

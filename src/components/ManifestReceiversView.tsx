@@ -193,8 +193,8 @@ export const ManifestReceiversView = () => {
             .from('dropoffs')
             .select(`
               manifest_id,
-              dropoff_customer_id,
-              dropoff_customers (
+              client_id,
+              clients (
                 company_name,
                 contact_name
               )
@@ -204,8 +204,8 @@ export const ManifestReceiversView = () => {
           
           if (!dropoffError && dropoffData) {
             dropoffData.forEach((d: any) => {
-              if (d.manifest_id && d.dropoff_customers) {
-                const name = d.dropoff_customers.company_name || d.dropoff_customers.contact_name || 'Unknown Dropoff Customer';
+              if (d.manifest_id && d.clients) {
+                const name = d.clients.company_name || d.clients.contact_name || 'Unknown Customer';
                 manifestNameMap[d.manifest_id] = name;
               }
             });
@@ -252,25 +252,9 @@ export const ManifestReceiversView = () => {
         
         if (!clientErr && client) {
           // If this is a dropoff manifest, fetch dropoff customer email
-          if (client.company_name === 'Dropoff Customers') {
-            const { data: dropoff, error: dropoffErr } = await supabase
-              .from('dropoffs')
-              .select(`
-                dropoff_customer_id,
-                dropoff_customers (
-                  email,
-                  company_name
-                )
-              `)
-              .eq('manifest_id', manifestId)
-              .maybeSingle();
-            
-            if (!dropoffErr && dropoff?.dropoff_customers?.email) {
-              to = dropoff.dropoff_customers.email;
-            }
-          } else if (client?.email) {
-            to = client.email;
-          }
+        if (!clientErr && client?.email) {
+          to = client.email;
+        }
         }
       }
 

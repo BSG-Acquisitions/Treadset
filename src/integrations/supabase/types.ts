@@ -1007,116 +1007,11 @@ export type Database = {
           },
         ]
       }
-      dropoff_customers: {
-        Row: {
-          city: string | null
-          company_name: string | null
-          contact_name: string
-          county: string | null
-          created_at: string
-          customer_type: string | null
-          email: string | null
-          id: string
-          is_active: boolean | null
-          last_dropoff_at: string | null
-          lifetime_revenue: number | null
-          mailing_address: string | null
-          notes: string | null
-          organization_id: string
-          phone: string | null
-          physical_address: string | null
-          physical_city: string | null
-          physical_state: string | null
-          physical_zip: string | null
-          pricing_tier_id: string | null
-          requires_invoicing: boolean | null
-          requires_manifest: boolean | null
-          state: string | null
-          tags: string[] | null
-          total_dropoffs: number | null
-          updated_at: string
-          zip: string | null
-        }
-        Insert: {
-          city?: string | null
-          company_name?: string | null
-          contact_name: string
-          county?: string | null
-          created_at?: string
-          customer_type?: string | null
-          email?: string | null
-          id?: string
-          is_active?: boolean | null
-          last_dropoff_at?: string | null
-          lifetime_revenue?: number | null
-          mailing_address?: string | null
-          notes?: string | null
-          organization_id: string
-          phone?: string | null
-          physical_address?: string | null
-          physical_city?: string | null
-          physical_state?: string | null
-          physical_zip?: string | null
-          pricing_tier_id?: string | null
-          requires_invoicing?: boolean | null
-          requires_manifest?: boolean | null
-          state?: string | null
-          tags?: string[] | null
-          total_dropoffs?: number | null
-          updated_at?: string
-          zip?: string | null
-        }
-        Update: {
-          city?: string | null
-          company_name?: string | null
-          contact_name?: string
-          county?: string | null
-          created_at?: string
-          customer_type?: string | null
-          email?: string | null
-          id?: string
-          is_active?: boolean | null
-          last_dropoff_at?: string | null
-          lifetime_revenue?: number | null
-          mailing_address?: string | null
-          notes?: string | null
-          organization_id?: string
-          phone?: string | null
-          physical_address?: string | null
-          physical_city?: string | null
-          physical_state?: string | null
-          physical_zip?: string | null
-          pricing_tier_id?: string | null
-          requires_invoicing?: boolean | null
-          requires_manifest?: boolean | null
-          state?: string | null
-          tags?: string[] | null
-          total_dropoffs?: number | null
-          updated_at?: string
-          zip?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_dropoff_customers_organization"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_dropoff_customers_pricing_tier"
-            columns: ["pricing_tier_id"]
-            isOneToOne: false
-            referencedRelation: "pricing_tiers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       dropoffs: {
         Row: {
+          client_id: string
           computed_revenue: number | null
           created_at: string
-          dropoff_customer_id: string
           dropoff_date: string
           dropoff_time: string | null
           hauler_id: string | null
@@ -1141,9 +1036,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          client_id: string
           computed_revenue?: number | null
           created_at?: string
-          dropoff_customer_id: string
           dropoff_date?: string
           dropoff_time?: string | null
           hauler_id?: string | null
@@ -1168,9 +1063,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          client_id?: string
           computed_revenue?: number | null
           created_at?: string
-          dropoff_customer_id?: string
           dropoff_date?: string
           dropoff_time?: string | null
           hauler_id?: string | null
@@ -1196,6 +1091,27 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "dropoffs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dropoffs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_monthly_entity_rollup"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "dropoffs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_revenue_summary"
+            referencedColumns: ["entity_id"]
+          },
+          {
             foreignKeyName: "dropoffs_hauler_id_fkey"
             columns: ["hauler_id"]
             isOneToOne: false
@@ -1207,13 +1123,6 @@ export type Database = {
             columns: ["hauler_id"]
             isOneToOne: false
             referencedRelation: "haulers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_dropoffs_dropoff_customer"
-            columns: ["dropoff_customer_id"]
-            isOneToOne: false
-            referencedRelation: "dropoff_customers"
             referencedColumns: ["id"]
           },
           {
