@@ -185,7 +185,7 @@ export function LiveSearch() {
   };
 
   return (
-    <Popover open={isOpen && (searchQuery.length > 0 || results.length > 0)} onOpenChange={setIsOpen}>
+    <Popover open={isOpen && (searchQuery.length > 0 || results.length > 0)} onOpenChange={setIsOpen} modal={false}>
       <PopoverTrigger asChild>
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -211,6 +211,8 @@ export function LiveSearch() {
         align="start"
         side="bottom"
         sideOffset={5}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onCloseAutoFocus={(e) => e.preventDefault()}
       >
         {results.length > 0 ? (
           <div className="max-h-80 overflow-y-auto">
