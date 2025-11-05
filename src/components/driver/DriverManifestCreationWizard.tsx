@@ -1468,7 +1468,12 @@ export function DriverManifestCreationWizard({
                         pattern="[0-9]*\.?[0-9]*"
                         placeholder="0.00"
                         value={pteOffRimRate}
-                        onChange={(e) => setPteOffRimRate(e.target.value)}
+                        onChange={(e) => {
+                          console.log('PTE Off-Rim Input onChange:', e.target.value);
+                          setPteOffRimRate(e.target.value);
+                        }}
+                        onFocus={() => console.log('PTE Off-Rim Input focused')}
+                        onClick={() => console.log('PTE Off-Rim Input clicked')}
                         className="text-base font-medium"
                       />
                     </div>
