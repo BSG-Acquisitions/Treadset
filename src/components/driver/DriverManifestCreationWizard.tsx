@@ -79,11 +79,6 @@ export function DriverManifestCreationWizard({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pickupData, setPickupData] = useState<any>(null);
   const [haulerData, setHaulerData] = useState<any>(null);
-  
-  // Log hauler data changes for debugging
-  useEffect(() => {
-    console.log('🚛 Hauler data changed:', haulerData ? haulerData.company_name : 'NULL');
-  }, [haulerData]);
   const [assignmentData, setAssignmentData] = useState<any>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [resolvedClientId, setResolvedClientId] = useState<string | null>(null);
@@ -367,7 +362,6 @@ export function DriverManifestCreationWizard({
 
   const handleNext = async () => {
     // CRITICAL: Validate hauler at EVERY step to prevent bypassing
-    console.log('🔍 handleNext called - haulerData:', haulerData);
     if (!haulerData) {
       toast({
         title: "Missing Hauler Information",
@@ -816,6 +810,7 @@ export function DriverManifestCreationWizard({
         driver_id: assignmentData?.driver_id,
         vehicle_id: assignmentData?.vehicle_id,
         hauler_id: haulerData.id,
+        template_pdf_path: 'Michigan_Manifest_Acroform_V4.pdf',
         pte_off_rim: data.pte_off_rim,
         pte_on_rim: data.pte_on_rim,
         commercial_17_5_19_5_off: data.commercial_17_5_19_5_off,
