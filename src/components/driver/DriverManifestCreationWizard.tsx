@@ -87,8 +87,10 @@ export function DriverManifestCreationWizard({
   const [createdManifestId, setCreatedManifestId] = useState<string | null>(null);
   const [pteOffRimRate, setPteOffRimRate] = useState<string>("");
   const [pteOnRimRate, setPteOnRimRate] = useState<string>("");
-  const [commercialOffRimRate, setCommercialOffRimRate] = useState<string>("");
-  const [commercialOnRimRate, setCommercialOnRimRate] = useState<string>("");
+  const [commercial_17_5_19_5_off_rate, setCommercial_17_5_19_5_OffRate] = useState<string>("");
+  const [commercial_17_5_19_5_on_rate, setCommercial_17_5_19_5_OnRate] = useState<string>("");
+  const [commercial_22_5_off_rate, setCommercial_22_5_OffRate] = useState<string>("");
+  const [commercial_22_5_on_rate, setCommercial_22_5_OnRate] = useState<string>("");
   const [otrRate, setOtrRate] = useState<string>("");
   const [calculatedTotal, setCalculatedTotal] = useState(0);
   const [offlineMethod, setOfflineMethod] = useState<'CASH' | 'CHECK'>('CASH');
@@ -101,8 +103,10 @@ export function DriverManifestCreationWizard({
   const PRESET_RATES = {
     passengerOffRim: ['2.50', '2.75', '3.00', '3.25', '3.50'],
     passengerOnRim: ['3.00', '3.25', '3.50', '3.75', '4.00'],
-    commercialOffRim: ['10.00', '11.00', '12.00', '13.00', '14.00', '15.00', '16.00', '17.00', '18.00', '19.00', '20.00'],
-    commercialOnRim: ['12.00', '13.00', '14.00', '15.00', '16.00', '17.00', '18.00', '19.00', '20.00', '21.00', '22.00'],
+    commercial_17_5_19_5_offRim: ['8.00', '9.00', '10.00', '11.00', '12.00', '13.00', '14.00', '15.00'],
+    commercial_17_5_19_5_onRim: ['10.00', '11.00', '12.00', '13.00', '14.00', '15.00', '16.00', '17.00'],
+    commercial_22_5_offRim: ['12.00', '13.00', '14.00', '15.00', '16.00', '17.00', '18.00', '19.00', '20.00'],
+    commercial_22_5_onRim: ['14.00', '15.00', '16.00', '17.00', '18.00', '19.00', '20.00', '21.00', '22.00'],
     otr: ['50.00', '70.00', '90.00', '110.00', '130.00', '150.00']
   };
   
@@ -202,19 +206,23 @@ export function DriverManifestCreationWizard({
       const formValues = form.getValues();
       const pteOffRimCount = formValues.pte_off_rim || 0;
       const pteOnRimCount = formValues.pte_on_rim || 0;
-      const commercialOffRimCount = (formValues.commercial_17_5_19_5_off || 0) + (formValues.commercial_22_5_off || 0);
-      const commercialOnRimCount = (formValues.commercial_17_5_19_5_on || 0) + (formValues.commercial_22_5_on || 0);
+      const commercial_17_5_19_5_off_count = formValues.commercial_17_5_19_5_off || 0;
+      const commercial_17_5_19_5_on_count = formValues.commercial_17_5_19_5_on || 0;
+      const commercial_22_5_off_count = formValues.commercial_22_5_off || 0;
+      const commercial_22_5_on_count = formValues.commercial_22_5_on || 0;
       const otrTotalCount = (formValues.otr_count || 0) + (formValues.tractor_count || 0);
 
       const pteOffRimAmount = pteOffRimCount * (parseFloat(pteOffRimRate) || 0);
       const pteOnRimAmount = pteOnRimCount * (parseFloat(pteOnRimRate) || 0);
-      const commercialOffRimAmount = commercialOffRimCount * (parseFloat(commercialOffRimRate) || 0);
-      const commercialOnRimAmount = commercialOnRimCount * (parseFloat(commercialOnRimRate) || 0);
+      const commercial_17_5_19_5_off_amount = commercial_17_5_19_5_off_count * (parseFloat(commercial_17_5_19_5_off_rate) || 0);
+      const commercial_17_5_19_5_on_amount = commercial_17_5_19_5_on_count * (parseFloat(commercial_17_5_19_5_on_rate) || 0);
+      const commercial_22_5_off_amount = commercial_22_5_off_count * (parseFloat(commercial_22_5_off_rate) || 0);
+      const commercial_22_5_on_amount = commercial_22_5_on_count * (parseFloat(commercial_22_5_on_rate) || 0);
       const otrAmount = otrTotalCount * (parseFloat(otrRate) || 0);
       
-      setCalculatedTotal(pteOffRimAmount + pteOnRimAmount + commercialOffRimAmount + commercialOnRimAmount + otrAmount);
+      setCalculatedTotal(pteOffRimAmount + pteOnRimAmount + commercial_17_5_19_5_off_amount + commercial_17_5_19_5_on_amount + commercial_22_5_off_amount + commercial_22_5_on_amount + otrAmount);
     }
-  }, [pteOffRimRate, pteOnRimRate, commercialOffRimRate, commercialOnRimRate, otrRate, step, form]);
+  }, [pteOffRimRate, pteOnRimRate, commercial_17_5_19_5_off_rate, commercial_17_5_19_5_on_rate, commercial_22_5_off_rate, commercial_22_5_on_rate, otrRate, step, form]);
 
   // Fetch pickup, assignment, and hauler data on mount
   useEffect(() => {
@@ -407,8 +415,10 @@ export function DriverManifestCreationWizard({
       const values = form.getValues();
       const pteOffRimCount = values.pte_off_rim || 0;
       const pteOnRimCount = values.pte_on_rim || 0;
-      const commercialOffRimCount = (values.commercial_17_5_19_5_off || 0) + (values.commercial_22_5_off || 0);
-      const commercialOnRimCount = (values.commercial_17_5_19_5_on || 0) + (values.commercial_22_5_on || 0);
+      const commercial_17_5_19_5_off_count = values.commercial_17_5_19_5_off || 0;
+      const commercial_17_5_19_5_on_count = values.commercial_17_5_19_5_on || 0;
+      const commercial_22_5_off_count = values.commercial_22_5_off || 0;
+      const commercial_22_5_on_count = values.commercial_22_5_on || 0;
       const otrTotalCount = (values.otr_count || 0) + (values.tractor_count || 0);
 
       // Validate that rates are set for tire types that have counts
@@ -430,19 +440,37 @@ export function DriverManifestCreationWizard({
         return;
       }
 
-      if (commercialOffRimCount > 0 && (!commercialOffRimRate || parseFloat(commercialOffRimRate) <= 0)) {
+      if (commercial_17_5_19_5_off_count > 0 && (!commercial_17_5_19_5_off_rate || parseFloat(commercial_17_5_19_5_off_rate) <= 0)) {
         toast({
           title: "Missing Rate",
-          description: "Please set a rate for Commercial Off-Rim tires",
+          description: "Please set a rate for 17.5\"/19.5\" Off-Rim tires",
           variant: "destructive",
         });
         return;
       }
 
-      if (commercialOnRimCount > 0 && (!commercialOnRimRate || parseFloat(commercialOnRimRate) <= 0)) {
+      if (commercial_17_5_19_5_on_count > 0 && (!commercial_17_5_19_5_on_rate || parseFloat(commercial_17_5_19_5_on_rate) <= 0)) {
         toast({
           title: "Missing Rate",
-          description: "Please set a rate for Commercial On-Rim tires",
+          description: "Please set a rate for 17.5\"/19.5\" On-Rim tires",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (commercial_22_5_off_count > 0 && (!commercial_22_5_off_rate || parseFloat(commercial_22_5_off_rate) <= 0)) {
+        toast({
+          title: "Missing Rate",
+          description: "Please set a rate for 22.5\" Off-Rim tires",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (commercial_22_5_on_count > 0 && (!commercial_22_5_on_rate || parseFloat(commercial_22_5_on_rate) <= 0)) {
+        toast({
+          title: "Missing Rate",
+          description: "Please set a rate for 22.5\" On-Rim tires",
           variant: "destructive",
         });
         return;
@@ -1382,16 +1410,20 @@ export function DriverManifestCreationWizard({
         const formValues = form.getValues();
         const pteOffRimCount = formValues.pte_off_rim || 0;
         const pteOnRimCount = formValues.pte_on_rim || 0;
-        const commercialOffRimCount = (formValues.commercial_17_5_19_5_off || 0) + (formValues.commercial_22_5_off || 0);
-        const commercialOnRimCount = (formValues.commercial_17_5_19_5_on || 0) + (formValues.commercial_22_5_on || 0);
+        const commercial_17_5_19_5_off_count = formValues.commercial_17_5_19_5_off || 0;
+        const commercial_17_5_19_5_on_count = formValues.commercial_17_5_19_5_on || 0;
+        const commercial_22_5_off_count = formValues.commercial_22_5_off || 0;
+        const commercial_22_5_on_count = formValues.commercial_22_5_on || 0;
         const otrTotalCount = (formValues.otr_count || 0) + (formValues.tractor_count || 0);
 
         const pteOffRimAmount = pteOffRimCount * (parseFloat(pteOffRimRate) || 0);
         const pteOnRimAmount = pteOnRimCount * (parseFloat(pteOnRimRate) || 0);
-        const commercialOffRimAmount = commercialOffRimCount * (parseFloat(commercialOffRimRate) || 0);
-        const commercialOnRimAmount = commercialOnRimCount * (parseFloat(commercialOnRimRate) || 0);
+        const commercial_17_5_19_5_off_amount = commercial_17_5_19_5_off_count * (parseFloat(commercial_17_5_19_5_off_rate) || 0);
+        const commercial_17_5_19_5_on_amount = commercial_17_5_19_5_on_count * (parseFloat(commercial_17_5_19_5_on_rate) || 0);
+        const commercial_22_5_off_amount = commercial_22_5_off_count * (parseFloat(commercial_22_5_off_rate) || 0);
+        const commercial_22_5_on_amount = commercial_22_5_on_count * (parseFloat(commercial_22_5_on_rate) || 0);
         const otrAmount = otrTotalCount * (parseFloat(otrRate) || 0);
-        const previewTotal = pteOffRimAmount + pteOnRimAmount + commercialOffRimAmount + commercialOnRimAmount + otrAmount;
+        const previewTotal = pteOffRimAmount + pteOnRimAmount + commercial_17_5_19_5_off_amount + commercial_17_5_19_5_on_amount + commercial_22_5_off_amount + commercial_22_5_on_amount + otrAmount;
 
         return (
           <div className="space-y-6">
@@ -1497,20 +1529,20 @@ export function DriverManifestCreationWizard({
                 </Card>
               )}
 
-              {commercialOffRimCount > 0 && (
+              {commercial_17_5_19_5_off_count > 0 && (
                 <Card>
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">Commercial Off-Rim ({commercialOffRimCount} tires)</CardTitle>
+                    <CardTitle className="text-sm">17.5"/19.5" Off-Rim ({commercial_17_5_19_5_off_count} tires)</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="space-y-2">
                       <Label className="text-xs text-muted-foreground">Quick Select Rate</Label>
-                      <Select value={commercialOffRimRate} onValueChange={setCommercialOffRimRate}>
+                      <Select value={commercial_17_5_19_5_off_rate} onValueChange={setCommercial_17_5_19_5_OffRate}>
                         <SelectTrigger className="bg-background">
                           <SelectValue placeholder="Select preset rate" />
                         </SelectTrigger>
                         <SelectContent className="bg-background z-50">
-                          {PRESET_RATES.commercialOffRim.map((rate) => (
+                          {PRESET_RATES.commercial_17_5_19_5_offRim.map((rate) => (
                             <SelectItem key={rate} value={rate}>
                               ${rate} per tire
                             </SelectItem>
@@ -1525,16 +1557,16 @@ export function DriverManifestCreationWizard({
                         step="0.01"
                         min="0"
                         placeholder="0.00"
-                        value={commercialOffRimRate}
-                        onChange={(e) => setCommercialOffRimRate(e.target.value)}
+                        value={commercial_17_5_19_5_off_rate}
+                        onChange={(e) => setCommercial_17_5_19_5_OffRate(e.target.value)}
                         className="text-base font-medium"
                       />
                     </div>
-                    {commercialOffRimAmount > 0 && (
+                    {commercial_17_5_19_5_off_amount > 0 && (
                       <div className="pt-2 border-t">
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-muted-foreground">Subtotal:</span>
-                          <span className="font-semibold">${commercialOffRimAmount.toFixed(2)}</span>
+                          <span className="font-semibold">${commercial_17_5_19_5_off_amount.toFixed(2)}</span>
                         </div>
                       </div>
                     )}
@@ -1542,20 +1574,20 @@ export function DriverManifestCreationWizard({
                 </Card>
               )}
 
-              {commercialOnRimCount > 0 && (
+              {commercial_17_5_19_5_on_count > 0 && (
                 <Card>
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">Commercial On-Rim ({commercialOnRimCount} tires)</CardTitle>
+                    <CardTitle className="text-sm">17.5"/19.5" On-Rim ({commercial_17_5_19_5_on_count} tires)</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="space-y-2">
                       <Label className="text-xs text-muted-foreground">Quick Select Rate</Label>
-                      <Select value={commercialOnRimRate} onValueChange={setCommercialOnRimRate}>
+                      <Select value={commercial_17_5_19_5_on_rate} onValueChange={setCommercial_17_5_19_5_OnRate}>
                         <SelectTrigger className="bg-background">
                           <SelectValue placeholder="Select preset rate" />
                         </SelectTrigger>
                         <SelectContent className="bg-background z-50">
-                          {PRESET_RATES.commercialOnRim.map((rate) => (
+                          {PRESET_RATES.commercial_17_5_19_5_onRim.map((rate) => (
                             <SelectItem key={rate} value={rate}>
                               ${rate} per tire
                             </SelectItem>
@@ -1570,16 +1602,106 @@ export function DriverManifestCreationWizard({
                         step="0.01"
                         min="0"
                         placeholder="0.00"
-                        value={commercialOnRimRate}
-                        onChange={(e) => setCommercialOnRimRate(e.target.value)}
+                        value={commercial_17_5_19_5_on_rate}
+                        onChange={(e) => setCommercial_17_5_19_5_OnRate(e.target.value)}
                         className="text-base font-medium"
                       />
                     </div>
-                    {commercialOnRimAmount > 0 && (
+                    {commercial_17_5_19_5_on_amount > 0 && (
                       <div className="pt-2 border-t">
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-muted-foreground">Subtotal:</span>
-                          <span className="font-semibold">${commercialOnRimAmount.toFixed(2)}</span>
+                          <span className="font-semibold">${commercial_17_5_19_5_on_amount.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {commercial_22_5_off_count > 0 && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">22.5" Off-Rim ({commercial_22_5_off_count} tires)</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Quick Select Rate</Label>
+                      <Select value={commercial_22_5_off_rate} onValueChange={setCommercial_22_5_OffRate}>
+                        <SelectTrigger className="bg-background">
+                          <SelectValue placeholder="Select preset rate" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background z-50">
+                          {PRESET_RATES.commercial_22_5_offRim.map((rate) => (
+                            <SelectItem key={rate} value={rate}>
+                              ${rate} per tire
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Or Enter Custom Rate</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        value={commercial_22_5_off_rate}
+                        onChange={(e) => setCommercial_22_5_OffRate(e.target.value)}
+                        className="text-base font-medium"
+                      />
+                    </div>
+                    {commercial_22_5_off_amount > 0 && (
+                      <div className="pt-2 border-t">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground">Subtotal:</span>
+                          <span className="font-semibold">${commercial_22_5_off_amount.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {commercial_22_5_on_count > 0 && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">22.5" On-Rim ({commercial_22_5_on_count} tires)</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Quick Select Rate</Label>
+                      <Select value={commercial_22_5_on_rate} onValueChange={setCommercial_22_5_OnRate}>
+                        <SelectTrigger className="bg-background">
+                          <SelectValue placeholder="Select preset rate" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background z-50">
+                          {PRESET_RATES.commercial_22_5_onRim.map((rate) => (
+                            <SelectItem key={rate} value={rate}>
+                              ${rate} per tire
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Or Enter Custom Rate</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        value={commercial_22_5_on_rate}
+                        onChange={(e) => setCommercial_22_5_OnRate(e.target.value)}
+                        className="text-base font-medium"
+                      />
+                    </div>
+                    {commercial_22_5_on_amount > 0 && (
+                      <div className="pt-2 border-t">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground">Subtotal:</span>
+                          <span className="font-semibold">${commercial_22_5_on_amount.toFixed(2)}</span>
                         </div>
                       </div>
                     )}
@@ -1910,8 +2032,10 @@ export function DriverManifestCreationWizard({
         const paymentFormValues = form.getValues();
         const paymentPteOffRimCount = paymentFormValues.pte_off_rim || 0;
         const paymentPteOnRimCount = paymentFormValues.pte_on_rim || 0;
-        const paymentCommercialOffRimCount = (paymentFormValues.commercial_17_5_19_5_off || 0) + (paymentFormValues.commercial_22_5_off || 0);
-        const paymentCommercialOnRimCount = (paymentFormValues.commercial_17_5_19_5_on || 0) + (paymentFormValues.commercial_22_5_on || 0);
+        const payment_17_5_19_5_off_count = paymentFormValues.commercial_17_5_19_5_off || 0;
+        const payment_17_5_19_5_on_count = paymentFormValues.commercial_17_5_19_5_on || 0;
+        const payment_22_5_off_count = paymentFormValues.commercial_22_5_off || 0;
+        const payment_22_5_on_count = paymentFormValues.commercial_22_5_on || 0;
         const paymentOtrTotalCount = (paymentFormValues.otr_count || 0) + (paymentFormValues.tractor_count || 0);
 
         const handleCollectPayment = async () => {
@@ -1973,16 +2097,28 @@ export function DriverManifestCreationWizard({
                     <span className="font-medium">${(paymentPteOnRimCount * parseFloat(pteOnRimRate)).toFixed(2)}</span>
                   </div>
                 )}
-                {paymentCommercialOffRimCount > 0 && parseFloat(commercialOffRimRate) > 0 && (
+                {payment_17_5_19_5_off_count > 0 && parseFloat(commercial_17_5_19_5_off_rate) > 0 && (
                   <div className="flex justify-between items-center text-sm">
-                    <span>Commercial Off-Rim ({paymentCommercialOffRimCount} × ${commercialOffRimRate})</span>
-                    <span className="font-medium">${(paymentCommercialOffRimCount * parseFloat(commercialOffRimRate)).toFixed(2)}</span>
+                    <span>17.5"/19.5" Off-Rim ({payment_17_5_19_5_off_count} × ${commercial_17_5_19_5_off_rate})</span>
+                    <span className="font-medium">${(payment_17_5_19_5_off_count * parseFloat(commercial_17_5_19_5_off_rate)).toFixed(2)}</span>
                   </div>
                 )}
-                {paymentCommercialOnRimCount > 0 && parseFloat(commercialOnRimRate) > 0 && (
+                {payment_17_5_19_5_on_count > 0 && parseFloat(commercial_17_5_19_5_on_rate) > 0 && (
                   <div className="flex justify-between items-center text-sm">
-                    <span>Commercial On-Rim ({paymentCommercialOnRimCount} × ${commercialOnRimRate})</span>
-                    <span className="font-medium">${(paymentCommercialOnRimCount * parseFloat(commercialOnRimRate)).toFixed(2)}</span>
+                    <span>17.5"/19.5" On-Rim ({payment_17_5_19_5_on_count} × ${commercial_17_5_19_5_on_rate})</span>
+                    <span className="font-medium">${(payment_17_5_19_5_on_count * parseFloat(commercial_17_5_19_5_on_rate)).toFixed(2)}</span>
+                  </div>
+                )}
+                {payment_22_5_off_count > 0 && parseFloat(commercial_22_5_off_rate) > 0 && (
+                  <div className="flex justify-between items-center text-sm">
+                    <span>22.5" Off-Rim ({payment_22_5_off_count} × ${commercial_22_5_off_rate})</span>
+                    <span className="font-medium">${(payment_22_5_off_count * parseFloat(commercial_22_5_off_rate)).toFixed(2)}</span>
+                  </div>
+                )}
+                {payment_22_5_on_count > 0 && parseFloat(commercial_22_5_on_rate) > 0 && (
+                  <div className="flex justify-between items-center text-sm">
+                    <span>22.5" On-Rim ({payment_22_5_on_count} × ${commercial_22_5_on_rate})</span>
+                    <span className="font-medium">${(payment_22_5_on_count * parseFloat(commercial_22_5_on_rate)).toFixed(2)}</span>
                   </div>
                 )}
                 {paymentOtrTotalCount > 0 && parseFloat(otrRate) > 0 && (
