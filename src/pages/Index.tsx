@@ -367,7 +367,11 @@ export default function Index() {
           
           if (dropoffs && dropoffs.length > 0) {
             totalPtes += dropoffs.reduce((sum, d) =>
-              sum + (d.pte_count || 0) + (d.otr_count || 0) + (d.tractor_count || 0), 0
+              sum + calculateTotalPTE({
+                pte_count: d.pte_count || 0,
+                otr_count: d.otr_count || 0,
+                tractor_count: d.tractor_count || 0,
+              }), 0
             );
           }
           
