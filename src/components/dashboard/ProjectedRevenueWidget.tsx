@@ -80,17 +80,17 @@ export const ProjectedRevenueWidget = () => {
 
   return (
     <Card className="border-2 shadow-xl">
-      <CardHeader className="bg-gradient-to-r from-success/70 to-success/60 border-b">
+      <CardHeader className="bg-gradient-to-r from-green-600 to-green-700 border-b">
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2 text-white">
               <TrendingUp className="h-5 w-5 text-white" />
               Projected Revenue
-              <Badge variant="outline" className="text-xs">Beta</Badge>
+              <Badge variant="outline" className="text-xs border-white text-white">Beta</Badge>
             </CardTitle>
             <CardDescription className="text-white/90">AI-powered revenue forecasting with confidence intervals</CardDescription>
           </div>
-          <Button variant="outline" size="sm" onClick={handleExportCSV}>
+          <Button variant="outline" size="sm" onClick={handleExportCSV} className="border-white text-white hover:bg-white/20">
             <Download className="h-4 w-4 mr-2" />
             Export CSV
           </Button>

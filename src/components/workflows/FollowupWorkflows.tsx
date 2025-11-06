@@ -66,7 +66,7 @@ export function FollowupWorkflows() {
   return (
     <div className="space-y-4">
       <Card className="border-2 shadow-lg">
-        <CardHeader className="bg-gradient-to-r from-success/70 to-success/60 border-b">
+        <CardHeader className="bg-gradient-to-r from-green-600 to-green-700 border-b">
           <CardTitle className="flex items-center gap-2 text-white">
             <Calendar className="h-5 w-5 text-white" />
             Client Followups ({followups.length})

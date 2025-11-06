@@ -112,10 +112,10 @@ export const InvoicePendingWidget = () => {
 
   return (
     <Card className="border-warning/20 shadow-elevation-lg bg-gradient-to-br from-card to-warning/5 border-2">
-      <CardHeader className="bg-gradient-to-r from-success/70 to-success/60 border-b">
+      <CardHeader className="bg-gradient-to-r from-green-600 to-green-700 border-b">
         <div className="flex items-center gap-3">
-          <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-warning/10">
-            <Bell className="w-5 h-5 text-warning" />
+          <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/20">
+            <Bell className="w-5 h-5 text-white" />
           </div>
           <div className="flex-1">
             <CardTitle className="flex items-center gap-2 text-lg text-white">
