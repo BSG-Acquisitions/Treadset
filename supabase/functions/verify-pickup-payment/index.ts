@@ -20,6 +20,30 @@ serve(async (req) => {
   try {
     console.log('[VERIFY-PICKUP-PAYMENT] Function started');
 
+    // Require authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
+    }
+
+    // Verify user authentication
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+
+    if (authError || !user) {
+      console.error('[VERIFY-PICKUP-PAYMENT] Authentication failed:', authError);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
+    }
+
+    console.log('[VERIFY-PICKUP-PAYMENT] User authenticated:', user.id);
+
     const { session_id, pickup_id } = await req.json();
     if (!session_id || !pickup_id) {
       throw new Error('session_id and pickup_id are required');
@@ -28,6 +52,39 @@ serve(async (req) => {
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
       apiVersion: '2025-08-27.basil',
     });
+
+    // Verify pickup belongs to user's organization
+    const { data: pickup, error: pickupError } = await supabaseClient
+      .from('pickups')
+      .select('organization_id')
+      .eq('id', pickup_id)
+      .single();
+
+    if (pickupError || !pickup) {
+      console.error('[VERIFY-PICKUP-PAYMENT] Pickup not found:', pickupError);
+      return new Response(
+        JSON.stringify({ error: 'Pickup not found' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
+      );
+    }
+
+    // Verify user has access to this pickup's organization
+    const { data: userOrg, error: orgError } = await supabaseClient
+      .from('user_organization_roles')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .eq('organization_id', pickup.organization_id)
+      .single();
+
+    if (orgError || !userOrg) {
+      console.error('[VERIFY-PICKUP-PAYMENT] User not authorized:', { userId: user.id, orgId: pickup.organization_id });
+      return new Response(
+        JSON.stringify({ error: 'Not authorized to access this pickup' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
+      );
+    }
+
+    console.log('[VERIFY-PICKUP-PAYMENT] Authorization verified');
 
     // Retrieve the session from Stripe
     const session = await stripe.checkout.sessions.retrieve(session_id);

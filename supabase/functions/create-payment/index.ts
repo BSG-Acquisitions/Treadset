@@ -1,22 +1,26 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface CreatePaymentRequest {
-  amount: number; // Amount in dollars (will be converted to cents)
-  description: string;
-  customer_email?: string;
-  customer_name?: string;
-  client_id?: string;
-  pickup_id?: string;
-  manifest_id?: string;
-  metadata?: Record<string, any>;
-}
+// Input validation schema
+const CreatePaymentSchema = z.object({
+  amount: z.number().positive().max(1000000, "Amount exceeds maximum allowed"),
+  description: z.string().min(1, "Description is required").max(500, "Description too long"),
+  customer_email: z.string().email("Invalid email format").optional(),
+  customer_name: z.string().max(200, "Name too long").optional(),
+  client_id: z.string().uuid("Invalid client ID format").optional(),
+  pickup_id: z.string().uuid("Invalid pickup ID format").optional(),
+  manifest_id: z.string().uuid("Invalid manifest ID format").optional(),
+  metadata: z.record(z.any()).optional()
+});
+
+type CreatePaymentRequest = z.infer<typeof CreatePaymentSchema>;
 
 const logStep = (step: string, details?: any) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
@@ -42,15 +46,29 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    const requestBody = await req.json() as CreatePaymentRequest;
-    const { amount, description, customer_email, customer_name, client_id, pickup_id, manifest_id, metadata } = requestBody;
-
-    logStep("Request received", { amount, description, client_id, pickup_id });
-
-    // Validate amount
-    if (!amount || amount <= 0) {
-      throw new Error("Amount must be greater than 0");
+    // Validate input
+    const requestBody = await req.json();
+    let validatedData: CreatePaymentRequest;
+    
+    try {
+      validatedData = CreatePaymentSchema.parse(requestBody);
+    } catch (error: any) {
+      logStep("Validation error", { error: error.errors });
+      return new Response(
+        JSON.stringify({ 
+          error: "Invalid input", 
+          details: error.errors 
+        }),
+        { 
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400 
+        }
+      );
     }
+
+    const { amount, description, customer_email, customer_name, client_id, pickup_id, manifest_id, metadata } = validatedData;
+
+    logStep("Request received and validated", { amount, description, client_id, pickup_id });
 
     // Convert amount to cents
     const amountInCents = Math.round(amount * 100);

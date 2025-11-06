@@ -1,29 +1,34 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { PDFDocument, PDFForm, PDFTextField, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface AcroFormFillRequest {
-  templatePath: string; // e.g., "Michigan_Manifest_AcroForm.pdf"
-  manifestData: {
-    // AcroForm field names mapped to values
-    [fieldName: string]: string;
-  };
-  manifestId?: string;
-  outputPath?: string; // Optional custom output path
-  meta?: {
-    generator_time?: string;
-    hauler_time?: string;
-    receiver_time?: string;
-    generator_signature_timestamp?: string;
-    hauler_signature_timestamp?: string;
-    receiver_signature_timestamp?: string;
-  };
-}
+// Input validation schema
+const AcroFormFillRequestSchema = z.object({
+  templatePath: z.string()
+    .min(1, "Template path is required")
+    .max(500, "Template path too long")
+    .regex(/^[a-zA-Z0-9_\-./]+$/, "Invalid characters in template path")
+    .refine(path => !path.includes('..'), "Path traversal not allowed"),
+  manifestData: z.record(z.string()),
+  manifestId: z.string().uuid("Invalid manifest ID format").optional(),
+  outputPath: z.string().max(500, "Output path too long").optional(),
+  meta: z.object({
+    generator_time: z.string().optional(),
+    hauler_time: z.string().optional(),
+    receiver_time: z.string().optional(),
+    generator_signature_timestamp: z.string().optional(),
+    hauler_signature_timestamp: z.string().optional(),
+    receiver_signature_timestamp: z.string().optional()
+  }).optional()
+});
+
+type AcroFormFillRequest = z.infer<typeof AcroFormFillRequestSchema>;
 
 const handler = async (req: Request): Promise<Response> => {
   console.log(`Method: ${req.method}`);
@@ -41,9 +46,27 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    // Parse request body
-    const body: AcroFormFillRequest = await req.json();
-    console.log('Request body:', JSON.stringify(body, null, 2));
+    // Parse and validate request body
+    const requestBody = await req.json();
+    let body: AcroFormFillRequest;
+    
+    try {
+      body = AcroFormFillRequestSchema.parse(requestBody);
+    } catch (error: any) {
+      console.error('Validation error:', error.errors);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid input',
+          details: error.errors 
+        }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+    
+    console.log('Request body validated:', JSON.stringify(body, null, 2));
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;

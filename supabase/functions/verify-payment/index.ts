@@ -20,6 +20,36 @@ serve(async (req) => {
   try {
     logStep("Function started");
 
+    // Require authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
+      );
+    }
+
+    const supabaseService = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      { auth: { persistSession: false } }
+    );
+
+    // Verify user authentication
+    const { data: { user }, error: authError } = await supabaseService.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+
+    if (authError || !user) {
+      logStep("Authentication failed", { error: authError });
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
+      );
+    }
+
+    logStep("User authenticated", { userId: user.id });
+
     const { session_id } = await req.json();
     
     if (!session_id) {
@@ -29,13 +59,43 @@ serve(async (req) => {
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
 
-    const supabaseService = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { persistSession: false } }
-    );
-
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
+
+    // First, verify the payment belongs to user's organization
+    const { data: payment, error: paymentError } = await supabaseService
+      .from("stripe_payments")
+      .select("*, organization_id")
+      .eq("stripe_session_id", session_id)
+      .single();
+
+    if (paymentError || !payment) {
+      logStep("Payment not found", { error: paymentError });
+      return new Response(
+        JSON.stringify({ error: 'Payment not found' }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 404 }
+      );
+    }
+
+    // Verify user has access to this payment's organization
+    const { data: userOrg, error: orgError } = await supabaseService
+      .from('user_organization_roles')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .eq('organization_id', payment.organization_id)
+      .single();
+
+    if (orgError || !userOrg) {
+      logStep("User not authorized for this organization", { 
+        userId: user.id, 
+        orgId: payment.organization_id 
+      });
+      return new Response(
+        JSON.stringify({ error: 'Not authorized to access this payment' }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 403 }
+      );
+    }
+
+    logStep("Authorization verified", { organizationId: payment.organization_id });
 
     // Retrieve the session from Stripe
     const session = await stripe.checkout.sessions.retrieve(session_id);
