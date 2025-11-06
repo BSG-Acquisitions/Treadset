@@ -502,10 +502,6 @@ export default function EnhancedRoutesToday() {
       });
 
       setOptimizedRoutes(reordered);
-      toast({
-        title: "AI Optimization Applied",
-        description: `Sequenced ${reordered.length || 0} routes using AI suggestions.`,
-      });
     } catch (error: any) {
       console.error('Route optimization error:', error);
       toast({
