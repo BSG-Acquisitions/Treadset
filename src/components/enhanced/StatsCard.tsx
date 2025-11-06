@@ -27,14 +27,14 @@ export function StatsCard({
     switch (variant) {
       case 'primary':
         return {
-          cardClass: 'border-brand-primary/20 bg-gradient-to-br from-card to-brand-primary/5',
-          iconBg: 'bg-brand-primary/15 text-brand-primary',
+          cardClass: 'border-brand-primary/30 bg-gradient-to-br from-brand-primary/10 to-brand-primary/20',
+          iconBg: 'bg-brand-primary/20 text-white',
           valueColor: 'text-brand-primary'
         };
       case 'success':
         return {
-          cardClass: 'border-brand-success/20 bg-gradient-to-br from-card to-brand-success/5',
-          iconBg: 'bg-brand-success/15 text-brand-success',
+          cardClass: 'border-brand-success/30 bg-gradient-to-br from-brand-success/10 to-brand-success/20',
+          iconBg: 'bg-brand-success/20 text-white',
           valueColor: 'text-brand-success'
         };
       case 'warning':
