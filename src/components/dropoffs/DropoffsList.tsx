@@ -127,9 +127,6 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
     return format(date, 'EEEE, MMM dd');
   };
 
-  const handleGenerateManifest = (dropoff: Dropoff) => {
-    generateManifest.mutate(dropoff);
-  };
 
   const getPaymentStatusColor = (status: string) => {
     switch (status) {
@@ -284,22 +281,6 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
 
             {/* Actions */}
             <div className="flex gap-2 pt-2">
-              {!dropoff.manifest_id && dropoff.requires_manifest && (
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={() => handleGenerateManifest(dropoff)}
-                  disabled={generateManifest.isPending}
-                >
-                  {generateManifest.isPending ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <FileText className="h-4 w-4 mr-2" />
-                  )}
-                  Generate Manifest
-                </Button>
-              )}
-              
               {dropoff.manifest_id && dropoff.manifest_pdf_path && (
                 <Button 
                   size="sm" 

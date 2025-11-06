@@ -21,8 +21,6 @@ import { useDropoffs, useTodaysDropoffs } from "@/hooks/useDropoffs";
 import { useClients } from "@/hooks/useClients";
 import { useHaulerReliability } from "@/hooks/useHaulerReliability";
 import { ProcessDropoffDialog } from "@/components/dropoffs/ProcessDropoffDialog";
-import { DropoffCustomersList } from "@/components/dropoffs/DropoffCustomersList";
-import { CreateDropoffCustomerDialog } from "@/components/dropoffs/CreateDropoffCustomerDialog";
 import { DropoffsList } from "@/components/dropoffs/DropoffsList";
 import { format } from "date-fns";
 
@@ -37,7 +35,8 @@ const Dropoffs = () => {
 
   const { data: dropoffs = [], isLoading: dropoffsLoading } = useDropoffs();
   const { data: todaysDropoffs = [] } = useTodaysDropoffs();
-  const { data: customers = [], isLoading: customersLoading } = useDropoffCustomers();
+  const { data: clientsData, isLoading: customersLoading } = useClients();
+  const customers = clientsData?.data || [];
   const { 
     reliabilityScores, 
     isLoading: reliabilityLoading,
@@ -56,7 +55,7 @@ const Dropoffs = () => {
   );
 
   const activeCustomers = customers.length;
-  const oneTimeCustomers = 0; // No longer tracking customer types separately
+  const oneTimeCustomers = 0;
 
   // Filter dropoffs by reliability if needed
   const filteredDropoffs = dropoffs.filter(dropoff => {
@@ -94,9 +93,11 @@ const Dropoffs = () => {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-2">
-          <Button onClick={() => setShowCreateCustomerDialog(true)} variant="outline" className="w-full sm:w-auto">
-            <Users className="mr-2 h-4 w-4" />
-            Add Customer
+          <Button asChild variant="outline" className="w-full sm:w-auto">
+            <Link to="/clients">
+              <Users className="mr-2 h-4 w-4" />
+              Manage Clients
+            </Link>
           </Button>
           <Button onClick={() => setShowProcessDialog(true)} className="w-full sm:w-auto">
             <Plus className="mr-2 h-4 w-4" />
@@ -252,25 +253,21 @@ const Dropoffs = () => {
             <CardHeader>
               <CardTitle>Drop-off Customers</CardTitle>
               <CardDescription>
-                Manage customers who bring tires for drop-off
+                All customers are now managed in the main Clients section
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center space-x-2 mb-4">
-                <Search className="h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search customers..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="flex-1"
-                />
+              <div className="text-center py-8">
+                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground mb-4">
+                  Drop-off customers are now unified with regular clients
+                </p>
+                <Button asChild variant="outline">
+                  <Link to="/clients">
+                    Go to Clients
+                  </Link>
+                </Button>
               </div>
-              <DropoffCustomersList 
-                customers={customers}
-                loading={customersLoading}
-                searchTerm={searchTerm}
-                onSelectCustomer={setSelectedCustomer}
-              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -306,11 +303,6 @@ const Dropoffs = () => {
         open={showProcessDialog}
         onOpenChange={setShowProcessDialog}
         selectedCustomerId={selectedCustomer}
-      />
-      
-      <CreateDropoffCustomerDialog 
-        open={showCreateCustomerDialog}
-        onOpenChange={setShowCreateCustomerDialog}
       />
     </div>
   );
