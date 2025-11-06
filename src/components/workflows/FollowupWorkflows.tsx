@@ -67,11 +67,11 @@ export function FollowupWorkflows() {
     <div className="space-y-4">
       <Card className="border-2 shadow-lg">
         <CardHeader className="bg-gradient-to-r from-success/70 to-success/60 border-b">
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
+          <CardTitle className="flex items-center gap-2 text-white">
+            <Calendar className="h-5 w-5 text-white" />
             Client Followups ({followups.length})
           </CardTitle>
-          <CardDescription>Clients scheduled for followup contact today</CardDescription>
+          <CardDescription className="text-white/90">Clients scheduled for followup contact today</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {followups.map((workflow) => (

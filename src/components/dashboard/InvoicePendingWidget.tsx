@@ -118,13 +118,13 @@ export const InvoicePendingWidget = () => {
             <Bell className="w-5 h-5 text-warning" />
           </div>
           <div className="flex-1">
-            <CardTitle className="flex items-center gap-2 text-lg">
+            <CardTitle className="flex items-center gap-2 text-lg text-white">
               Invoice Reminder
               <Badge variant="secondary" className="ml-2">
                 {pendingClients.length} client{pendingClients.length !== 1 ? 's' : ''}
               </Badge>
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-white/90">
               Create invoices in QuickBooks for today's pickups
             </CardDescription>
           </div>
