@@ -19,7 +19,13 @@ export const useInvoicePendingClients = () => {
     queryFn: async () => {
       if (!user?.currentOrganization?.id) return [];
 
-      // Get all manifests with INVOICE payment method and PENDING status
+      // Get TODAY's date in YYYY-MM-DD format
+      const today = new Date();
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const todayEnd = new Date(todayStart);
+      todayEnd.setDate(todayEnd.getDate() + 1);
+
+      // Get only TODAY's manifests with INVOICE payment method and PENDING status
       const { data, error } = await supabase
         .from('manifests')
         .select(`
@@ -37,6 +43,8 @@ export const useInvoicePendingClients = () => {
         .eq('organization_id', user.currentOrganization.id)
         .eq('payment_method', 'INVOICE')
         .eq('payment_status', 'PENDING')
+        .gte('created_at', todayStart.toISOString())
+        .lt('created_at', todayEnd.toISOString())
         .order('created_at', { ascending: true });
 
       if (error) {
