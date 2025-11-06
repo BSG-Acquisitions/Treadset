@@ -24,18 +24,27 @@ Deno.serve(async (req) => {
 
     const trainingStart = Date.now();
 
+    // Read optional organizationId from request body
+    const { organizationId } = await req.json().catch(() => ({ organizationId: undefined }));
+
     // Use last 12 months of data for improved model training
     const twelveMonthsAgo = new Date();
     twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
     const dataRangeStart = twelveMonthsAgo.toISOString().split('T')[0];
 
-    // Query completed pickups with actual computed revenue
-    const { data: pickups, error: pickupsError } = await supabaseClient
+    // Query completed pickups with actual revenue, scoped to org when provided
+    let pickupsQuery = supabaseClient
       .from('pickups')
-      .select('created_at, final_revenue, computed_revenue')
+      .select('created_at, final_revenue, computed_revenue, organization_id')
       .eq('status', 'completed')
       .gte('created_at', twelveMonthsAgo.toISOString())
       .order('created_at', { ascending: true });
+
+    if (organizationId) {
+      pickupsQuery = pickupsQuery.eq('organization_id', organizationId);
+    }
+
+    const { data: pickups, error: pickupsError } = await pickupsQuery;
 
     if (pickupsError) throw pickupsError;
 
@@ -102,23 +111,28 @@ Deno.serve(async (req) => {
     });
 
     // Store forecasts in revenue_forecasts table
-    const { data: orgData } = await supabaseClient
-      .from('organizations')
-      .select('id')
-      .limit(1)
-      .single();
+    let targetOrgId: string | null = organizationId || (pickups && pickups.length > 0 ? (pickups[0] as any).organization_id : null);
 
-    if (orgData) {
+    if (!targetOrgId) {
+      const { data: fallbackOrg } = await supabaseClient
+        .from('organizations')
+        .select('id')
+        .limit(1)
+        .single();
+      targetOrgId = fallbackOrg?.id || null;
+    }
+
+    if (targetOrgId) {
       // Delete old forecasts
       await supabaseClient
         .from('revenue_forecasts')
         .delete()
-        .eq('organization_id', orgData.id);
+        .eq('organization_id', targetOrgId);
 
       // Insert new forecasts
       const forecastsToInsert = forecasts.map(f => ({
         ...f,
-        organization_id: orgData.id,
+        organization_id: targetOrgId as string,
       }));
 
       const { error: insertError } = await supabaseClient
@@ -135,7 +149,7 @@ Deno.serve(async (req) => {
       const mape = (mae / actualRevenues[actualRevenues.length - 1]) * 100;
 
       await supabaseClient.from('model_training_logs').insert({
-        organization_id: orgData.id,
+        organization_id: targetOrgId,
         model_name: 'revenue_forecast',
         model_version: 'v2.0-12month',
         data_range_start: dataRangeStart,
