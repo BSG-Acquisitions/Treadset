@@ -105,20 +105,26 @@ serve(async (req) => {
         };
       }
 
+      // Skip assignments with missing data
+      if (!assignment.pickup?.client || !assignment.pickup?.location) {
+        console.warn(`Skipping assignment ${assignment.id} - missing pickup data`);
+        continue;
+      }
+
       routesByVehicle[vehicleId].stops.push({
-        client: assignment.pickup.client.company_name,
-        location: assignment.pickup.location.name,
-        address: assignment.pickup.location.address,
+        client: assignment.pickup.client.company_name || 'Unknown Client',
+        location: assignment.pickup.location.name || 'Unknown Location',
+        address: assignment.pickup.location.address || '',
         coordinates: {
-          lat: assignment.pickup.location.latitude,
-          lng: assignment.pickup.location.longitude
+          lat: assignment.pickup.location.latitude || 0,
+          lng: assignment.pickup.location.longitude || 0
         },
         items: {
-          pte: assignment.pickup.pte_count,
-          otr: assignment.pickup.otr_count,
-          tractor: assignment.pickup.tractor_count
+          pte: assignment.pickup.pte_count || 0,
+          otr: assignment.pickup.otr_count || 0,
+          tractor: assignment.pickup.tractor_count || 0
         },
-        time_window: assignment.pickup.preferred_window
+        time_window: assignment.pickup.preferred_window || ''
       });
     }
 
