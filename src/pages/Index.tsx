@@ -12,6 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { CapacityGauge } from "@/components/CapacityGauge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { calculateManifestPTE } from "@/lib/michigan-conversions";
 
 import { StatsCard } from "@/components/enhanced/StatsCard";
 import { ProjectedRevenueWidget } from "@/components/dashboard/ProjectedRevenueWidget";
@@ -99,28 +100,27 @@ export default function Index() {
       const sixMonthsAgo = new Date();
       sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
       
-      const { data, error } = await supabase
-        .from('manifests')
-        .select('pte_on_rim, pte_off_rim, otr_count, tractor_count, created_at')
-        .eq('organization_id', user?.currentOrganization?.id)
-        .eq('status', 'COMPLETED')
-        .gte('created_at', sixMonthsAgo.toISOString());
+        const { data, error } = await supabase
+          .from('manifests')
+          .select('pte_on_rim, pte_off_rim, commercial_17_5_19_5_off, commercial_17_5_19_5_on, commercial_22_5_off, commercial_22_5_on, otr_count, tractor_count, created_at')
+          .eq('organization_id', user?.currentOrganization?.id)
+          .eq('status', 'COMPLETED')
+          .gte('created_at', sixMonthsAgo.toISOString());
       
-      if (error) throw error;
-      
-      // Group by month with date tracking for sorting
-      const byMonth: Record<string, { ptes: number; date: Date }> = {};
-      (data || []).forEach((manifest) => {
-        const manifestDate = new Date(manifest.created_at);
-        const monthKey = format(manifestDate, 'MMM yy');
-        const ptes = (manifest.pte_on_rim || 0) + (manifest.pte_off_rim || 0) + 
-                     (manifest.otr_count || 0) + (manifest.tractor_count || 0);
+        if (error) throw error;
         
-        if (!byMonth[monthKey]) {
-          byMonth[monthKey] = { ptes: 0, date: manifestDate };
-        }
-        byMonth[monthKey].ptes += ptes;
-      });
+        // Group by month with date tracking for sorting
+        const byMonth: Record<string, { ptes: number; date: Date }> = {};
+        (data || []).forEach((manifest) => {
+          const manifestDate = new Date(manifest.created_at);
+          const monthKey = format(manifestDate, 'MMM yy');
+          const ptes = calculateManifestPTE(manifest as any);
+          
+          if (!byMonth[monthKey]) {
+            byMonth[monthKey] = { ptes: 0, date: manifestDate };
+          }
+          byMonth[monthKey].ptes += ptes;
+        });
       
       // Convert to array and sort chronologically (oldest to newest)
       return Object.entries(byMonth)
@@ -225,7 +225,7 @@ export default function Index() {
       const [manifestsResult, dropoffsResult] = await Promise.all([
         supabase
           .from('manifests')
-          .select('pte_on_rim, pte_off_rim, otr_count, tractor_count, signed_at, created_at')
+          .select('pte_on_rim, pte_off_rim, commercial_17_5_19_5_off, commercial_17_5_19_5_on, commercial_22_5_off, commercial_22_5_on, otr_count, tractor_count, signed_at, created_at')
           .eq('organization_id', user?.currentOrganization?.id)
           .gte('created_at', `${startDate}T00:00:00`)
           .lte('created_at', `${endDate}T23:59:59`),
@@ -246,7 +246,7 @@ export default function Index() {
       (manifestsResult.data || []).forEach(m => {
         const completionDate = m.signed_at || m.created_at;
         const dateKey = format(new Date(completionDate), 'yyyy-MM-dd');
-        const ptes = (m.pte_on_rim || 0) + (m.pte_off_rim || 0) + (m.otr_count || 0) + (m.tractor_count || 0);
+        const ptes = calculateManifestPTE(m as any);
         ptesByDate[dateKey] = (ptesByDate[dateKey] || 0) + ptes;
       });
       
@@ -365,7 +365,7 @@ export default function Index() {
 // Calculate revenue from manifests and drop-offs
 const manifestRevenue = todaysManifests.reduce((sum: number, manifest: any) => sum + (manifest.total || 0), 0);
 const dropoffRevenue = todaysDropoffs.reduce((sum: number, dropoff: any) => sum + (dropoff.computed_revenue || 0), 0);
-const totalDailyRevenue = manifestRevenue + dropoffRevenue;
+const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing code
 
   // Fetch detailed breakdown data for each period
   const { data: breakdownData } = useQuery({
@@ -413,6 +413,10 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue;
           created_at,
           pte_on_rim,
           pte_off_rim,
+          commercial_17_5_19_5_off,
+          commercial_17_5_19_5_on,
+          commercial_22_5_off,
+          commercial_22_5_on,
           otr_count,
           tractor_count,
           client:clients(company_name),
@@ -429,14 +433,14 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue;
       // Filter and transform manifests with tire counts
       const pickupsData = manifestsData
         ?.filter(m => {
-          const totalTires = (m.pte_on_rim || 0) + (m.pte_off_rim || 0) + (m.otr_count || 0) + (m.tractor_count || 0);
+          const totalPTE = calculateManifestPTE(m as any);
           const isDropoffPseudoClient = m.client?.company_name && /drop[- ]?off customers/i.test(m.client.company_name.trim());
-          return totalTires > 0 && m.client && !isDropoffPseudoClient;
+          return totalPTE > 0 && m.client && !isDropoffPseudoClient;
         })
         .map(m => ({
           id: m.id,
           pickup_date: format(new Date(m.signed_at || m.created_at), 'yyyy-MM-dd'),
-          pte_count: (m.pte_on_rim || 0) + (m.pte_off_rim || 0),
+          pte_count: calculateManifestPTE(m as any),
           otr_count: m.otr_count || 0,
           tractor_count: m.tractor_count || 0,
           client: m.client,
