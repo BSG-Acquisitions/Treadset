@@ -15,7 +15,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { calculateTotalPTE } from "@/lib/michigan-conversions";
 
 type Dropoff = Database["public"]["Tables"]["dropoffs"]["Row"] & {
-  dropoff_customers?: {
+  clients?: {
     contact_name: string;
     company_name?: string | null;
   } | null;
@@ -116,8 +116,8 @@ const subtotal = (Number(pteCount || 0) * ptePrice) +
         <DialogHeader>
           <DialogTitle>Edit Drop-off</DialogTitle>
           <DialogDescription>
-            Update tire counts and payment information for {dropoff.dropoff_customers?.contact_name}
-            {dropoff.dropoff_customers?.company_name && ` (${dropoff.dropoff_customers.company_name})`}
+            Update tire counts and payment information for {dropoff.clients?.contact_name}
+            {dropoff.clients?.company_name && ` (${dropoff.clients.company_name})`}
           </DialogDescription>
         </DialogHeader>
 
