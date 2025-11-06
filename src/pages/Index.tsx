@@ -145,9 +145,10 @@ export default function Index() {
       console.log('📊 WEEKLY PTE TOTALS:');
       console.log(`  Pickups: ${data[0]?.pickup_ptes || 0} PTEs`);
       console.log(`  Drop-offs: ${data[0]?.dropoff_ptes || 0} PTEs`);
-      console.log(`  Combined: ${data[0]?.total_ptes || 0} PTEs`);
+      const weeklyCombined = Number(data[0]?.pickup_ptes || 0) + Number(data[0]?.dropoff_ptes || 0);
+      console.log(`  Combined: ${weeklyCombined} PTEs`);
       
-      return data[0]?.total_ptes || 0;
+      return weeklyCombined;
     },
     enabled: !!user?.currentOrganization?.id,
     refetchInterval: 30000,
@@ -167,9 +168,10 @@ export default function Index() {
       console.log('📊 YESTERDAY PTE TOTALS:');
       console.log(`  Pickups: ${data[0]?.pickup_ptes || 0} PTEs`);
       console.log(`  Drop-offs: ${data[0]?.dropoff_ptes || 0} PTEs`);
-      console.log(`  Combined: ${data[0]?.total_ptes || 0} PTEs`);
+      const yesterdayCombined = Number(data[0]?.pickup_ptes || 0) + Number(data[0]?.dropoff_ptes || 0);
+      console.log(`  Combined: ${yesterdayCombined} PTEs`);
       
-      return data[0]?.total_ptes || 0;
+      return yesterdayCombined;
     },
     enabled: !!user?.currentOrganization?.id,
     refetchInterval: 30000,
@@ -189,9 +191,10 @@ export default function Index() {
       console.log('📊 MONTHLY PTE TOTALS:');
       console.log(`  Pickups: ${data[0]?.pickup_ptes || 0} PTEs`);
       console.log(`  Drop-offs: ${data[0]?.dropoff_ptes || 0} PTEs`);
-      console.log(`  Combined: ${data[0]?.total_ptes || 0} PTEs`);
+      const monthlyCombined = Number(data[0]?.pickup_ptes || 0) + Number(data[0]?.dropoff_ptes || 0);
+      console.log(`  Combined: ${monthlyCombined} PTEs`);
       
-      return data[0]?.total_ptes || 0;
+      return monthlyCombined;
     },
     enabled: !!user?.currentOrganization?.id,
     refetchInterval: 30000,
@@ -344,12 +347,14 @@ export default function Index() {
       
       if (error) throw error;
       
-      const ptes = data[0]?.total_ptes || 0;
+      const pickup = Number(data[0]?.pickup_ptes || 0);
+      const dropoff = Number(data[0]?.dropoff_ptes || 0);
+      const ptes = pickup + dropoff;
       const pounds = ptes * 22;
       
       console.log('📊 TODAY PTE TOTALS:');
-      console.log(`  Pickups: ${data[0]?.pickup_ptes || 0} PTEs`);
-      console.log(`  Drop-offs: ${data[0]?.dropoff_ptes || 0} PTEs`);
+      console.log(`  Pickups: ${pickup} PTEs`);
+      console.log(`  Drop-offs: ${dropoff} PTEs`);
       console.log(`  Combined: ${ptes} PTEs`);
       console.log('Dashboard tiles recalibrated — using direct live PTE sums only.');
       
