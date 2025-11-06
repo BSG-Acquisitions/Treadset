@@ -231,7 +231,7 @@ export default function Index() {
           .lte('created_at', `${endDate}T23:59:59`),
         supabase
           .from('dropoffs')
-          .select('pte_count, dropoff_date')
+          .select('pte_count, otr_count, tractor_count, dropoff_date')
           .eq('organization_id', user?.currentOrganization?.id)
           .gte('dropoff_date', startDate)
           .lte('dropoff_date', endDate)
@@ -252,7 +252,8 @@ export default function Index() {
       
       // Add dropoff counts
       (dropoffsResult.data || []).forEach(d => {
-        ptesByDate[d.dropoff_date] = (ptesByDate[d.dropoff_date] || 0) + (d.pte_count || 0);
+        const converted = (d.pte_count || 0) + ((d.otr_count || 0) * 15) + ((d.tractor_count || 0) * 5);
+        ptesByDate[d.dropoff_date] = (ptesByDate[d.dropoff_date] || 0) + converted;
       });
       
       return days.map(({ date, label }) => ({

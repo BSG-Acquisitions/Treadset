@@ -42,7 +42,7 @@ export function PTEBreakdownDialog({
   totalPTEs
 }: PTEBreakdownDialogProps) {
   const pickupPTEs = pickups.reduce((sum, p) => sum + (p.pte_count || 0) + (p.otr_count || 0) + (p.tractor_count || 0), 0);
-  const dropoffPTEs = dropoffs.reduce((sum, d) => sum + (d.pte_count || 0) + (d.otr_count || 0) + (d.tractor_count || 0), 0);
+  const dropoffPTEs = dropoffs.reduce((sum, d) => sum + (d.pte_count || 0) + ((d.otr_count || 0) * 15) + ((d.tractor_count || 0) * 5), 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -122,7 +122,7 @@ export function PTEBreakdownDialog({
               </div>
               <div className="space-y-2">
                 {dropoffs.map((dropoff) => {
-                  const ptes = (dropoff.pte_count || 0) + (dropoff.otr_count || 0) + (dropoff.tractor_count || 0);
+                  const ptes = (dropoff.pte_count || 0) + ((dropoff.otr_count || 0) * 15) + ((dropoff.tractor_count || 0) * 5);
                   return (
                     <div key={dropoff.id} className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/5 transition-colors">
                       <div className="flex-1 min-w-0">
