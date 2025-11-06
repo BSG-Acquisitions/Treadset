@@ -4268,6 +4268,10 @@ export type Database = {
       }
     }
     Functions: {
+      _compute_manifest_ptes: {
+        Args: { p_end: string; p_org_id: string; p_start: string }
+        Returns: number
+      }
       calculate_pickup_revenue: {
         Args: { pickup_row: Database["public"]["Tables"]["pickups"]["Row"] }
         Returns: number
