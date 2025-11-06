@@ -571,7 +571,7 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue;
         <SlideUp delay={0.3}>
           <div className="grid gap-6 lg:grid-cols-2 mb-8">
             <Card className="border-2 shadow-xl bg-gradient-to-br from-card to-secondary/10">
-              <CardHeader className="bg-gradient-to-r from-success/20 to-success/10 border-b">
+              <CardHeader className="bg-gradient-to-r from-success/70 to-success/60 border-b">
                 <CardTitle className="flex items-center gap-2">
                   <Recycle className="w-5 h-5 text-brand-recycling" />
                   Environmental Impact
@@ -661,7 +661,7 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue;
             </Card>
 
             <Card className="border-2 shadow-xl bg-gradient-to-br from-card to-brand-recycling/5">
-              <CardHeader className="bg-gradient-to-r from-success/20 to-success/10 border-b">
+              <CardHeader className="bg-gradient-to-r from-success/70 to-success/60 border-b">
                 <CardTitle className="flex items-center gap-2">
                   <CheckCircle2 className="w-5 h-5 text-brand-recycling" />
                   Daily PTE Goal
@@ -812,7 +812,7 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue;
           </div>
 
           <Card className="border-2 shadow-xl bg-gradient-to-br from-card to-card-hover mb-8">
-            <CardHeader className="bg-gradient-to-r from-success/20 to-success/10 border-b">
+            <CardHeader className="bg-gradient-to-r from-success/70 to-success/60 border-b">
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-brand-primary" />
                 Today's Operations

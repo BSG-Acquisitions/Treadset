@@ -80,7 +80,7 @@ export const ProjectedRevenueWidget = () => {
 
   return (
     <Card className="border-2 shadow-xl">
-      <CardHeader className="bg-gradient-to-r from-success/20 to-success/10 border-b">
+      <CardHeader className="bg-gradient-to-r from-success/70 to-success/60 border-b">
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
