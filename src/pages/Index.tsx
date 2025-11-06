@@ -16,6 +16,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { StatsCard } from "@/components/enhanced/StatsCard";
 import { ProjectedRevenueWidget } from "@/components/dashboard/ProjectedRevenueWidget";
 import { PTEBreakdownDialog } from "@/components/dashboard/PTEBreakdownDialog";
+import { InvoicePendingWidget } from "@/components/dashboard/InvoicePendingWidget";
 import { format, addDays } from "date-fns";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -553,6 +554,15 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue;
           <SlideUp delay={0.3}>
             <div className="mb-8">
               <FollowupWorkflows />
+            </div>
+          </SlideUp>
+        )}
+
+        {/* Invoice Pending Widget - Shows clients needing invoices */}
+        {hasAnyRole(['admin', 'ops_manager', 'sales']) && (
+          <SlideUp delay={0.35}>
+            <div className="mb-8">
+              <InvoicePendingWidget />
             </div>
           </SlideUp>
         )}
