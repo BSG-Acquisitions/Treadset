@@ -5,13 +5,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface ManifestData {
+interface PickupData {
   created_at: string;
-  total: number;
-  pte_on_rim: number;
-  pte_off_rim: number;
-  otr_count: number;
-  tractor_count: number;
+  final_revenue: number | null;
+  computed_revenue: number | null;
 }
 
 Deno.serve(async (req) => {
@@ -27,42 +24,28 @@ Deno.serve(async (req) => {
 
     const trainingStart = Date.now();
 
-    // Get organization settings for default rates
-    const { data: orgSettings } = await supabaseClient
-      .from('organization_settings')
-      .select('default_pte_rate, default_otr_rate, default_tractor_rate, organization_id')
-      .single();
-
-    const pteRate = orgSettings?.default_pte_rate || 25.00;
-    const otrRate = orgSettings?.default_otr_rate || 45.00;
-    const tractorRate = orgSettings?.default_tractor_rate || 35.00;
-
     // Use last 12 months of data for improved model training
     const twelveMonthsAgo = new Date();
     twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
     const dataRangeStart = twelveMonthsAgo.toISOString().split('T')[0];
 
-    const { data: manifests, error: manifestError } = await supabaseClient
-      .from('manifests')
-      .select('created_at, total, pte_on_rim, pte_off_rim, otr_count, tractor_count')
-      .in('status', ['COMPLETED', 'AWAITING_RECEIVER_SIGNATURE'])
+    // Query completed pickups with actual computed revenue
+    const { data: pickups, error: pickupsError } = await supabaseClient
+      .from('pickups')
+      .select('created_at, final_revenue, computed_revenue')
+      .eq('status', 'completed')
       .gte('created_at', twelveMonthsAgo.toISOString())
       .order('created_at', { ascending: true });
 
-    if (manifestError) throw manifestError;
+    if (pickupsError) throw pickupsError;
 
-    // Calculate monthly revenue totals
+    // Calculate monthly revenue totals using actual revenue from pickups
     const monthlyRevenue: { [key: string]: number } = {};
     
-    (manifests as ManifestData[])?.forEach((manifest) => {
-      const month = manifest.created_at.substring(0, 7); // YYYY-MM
-      const revenue = manifest.total > 0 
-        ? manifest.total 
-        : (
-          ((manifest.pte_on_rim || 0) + (manifest.pte_off_rim || 0)) * pteRate +
-          (manifest.otr_count || 0) * otrRate +
-          (manifest.tractor_count || 0) * tractorRate
-        );
+    pickups?.forEach((pickup: any) => {
+      const month = pickup.created_at.substring(0, 7); // YYYY-MM
+      // Use final_revenue if available, otherwise computed_revenue
+      const revenue = pickup.final_revenue || pickup.computed_revenue || 0;
       
       monthlyRevenue[month] = (monthlyRevenue[month] || 0) + revenue;
     });
@@ -157,7 +140,7 @@ Deno.serve(async (req) => {
         model_version: 'v2.0-12month',
         data_range_start: dataRangeStart,
         data_range_end: new Date().toISOString().split('T')[0],
-        records_used: manifests?.length || 0,
+        records_used: pickups?.length || 0,
         performance_metrics: {
           mae: Math.round(mae * 100) / 100,
           mape: Math.round(mape * 100) / 100,
@@ -168,13 +151,11 @@ Deno.serve(async (req) => {
         hyperparameters: {
           lookback_months: 12,
           seasonal_adjustment: true,
-          pte_rate: pteRate,
-          otr_rate: otrRate,
-          tractor_rate: tractorRate
+          revenue_source: 'actual_pickup_revenue'
         },
         training_duration_ms: trainingDuration,
         deployed: true,
-        notes: 'Enhanced with 12-month historical data and seasonal adjustment'
+        notes: 'Uses actual pickup revenue with 12-month historical data and seasonal adjustment'
       });
     }
 

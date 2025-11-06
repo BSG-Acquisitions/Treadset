@@ -18,31 +18,14 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    console.log('Starting revenue calculation for client summaries with missing revenue...');
+    console.log('Starting revenue recalculation for client summaries with missing revenue...');
 
-    // Get organization default rates
-    const { data: orgSettings, error: orgError } = await supabase
-      .from('organization_settings')
-      .select('default_pte_rate, default_otr_rate, default_tractor_rate')
-      .limit(1);
-
-    if (orgError || !orgSettings || orgSettings.length === 0) {
-      throw new Error('Could not fetch organization settings');
-    }
-
-    const settings = orgSettings[0];
-    const pteRate = settings.default_pte_rate || 25;
-    const otrRate = settings.default_otr_rate || 45;
-    const tractorRate = settings.default_tractor_rate || 35;
-
-    console.log(`Using rates: PTE=$${pteRate}, OTR=$${otrRate}, Tractor=$${tractorRate}`);
-
-    // Get all client summaries with zero revenue but non-zero PTEs
+    // Get all client summaries with zero revenue but non-zero data
     const { data: summariesWithMissingRevenue, error: fetchError } = await supabase
       .from('client_summaries')
-      .select('id, total_ptes, total_otr, total_tractor, total_revenue')
+      .select('id, client_id, year, month, total_revenue')
       .eq('total_revenue', 0)
-      .gt('total_ptes', 0);
+      .gt('total_pickups', 0);
 
     if (fetchError) {
       throw new Error(`Error fetching client summaries: ${fetchError.message}`);
@@ -64,18 +47,29 @@ serve(async (req) => {
 
     console.log(`Found ${summariesWithMissingRevenue.length} client summaries with missing revenue`);
 
-    // Calculate and update revenue for each summary
-    const updates = summariesWithMissingRevenue.map(summary => {
-      const computedRevenue = 
-        (summary.total_ptes * pteRate) +
-        (summary.total_otr * otrRate) +
-        (summary.total_tractor * tractorRate);
+    // For each summary, get actual pickup revenue for that client/period
+    const updates = [];
+    for (const summary of summariesWithMissingRevenue) {
+      const startDate = new Date(summary.year, summary.month - 1, 1);
+      const endDate = new Date(summary.year, summary.month, 0, 23, 59, 59);
 
-      return {
+      const { data: pickups } = await supabase
+        .from('pickups')
+        .select('final_revenue, computed_revenue')
+        .eq('client_id', summary.client_id)
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', endDate.toISOString());
+
+      // Sum up actual revenue from pickups
+      const actualRevenue = pickups?.reduce((sum, p) => 
+        sum + (p.final_revenue || p.computed_revenue || 0), 0
+      ) || 0;
+
+      updates.push({
         id: summary.id,
-        total_revenue: computedRevenue
-      };
-    });
+        total_revenue: actualRevenue
+      });
+    }
 
     // Batch update all summaries
     const { data: updatedSummaries, error: updateError } = await supabase
