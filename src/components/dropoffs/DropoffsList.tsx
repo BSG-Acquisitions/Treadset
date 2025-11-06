@@ -38,7 +38,7 @@ import { calculateTotalPTE } from "@/lib/michigan-conversions";
 import { cn } from "@/lib/utils";
 
 type Dropoff = Database["public"]["Tables"]["dropoffs"]["Row"] & {
-  dropoff_customers?: {
+  clients?: {
     contact_name: string;
     company_name?: string | null;
     email?: string | null;
@@ -67,8 +67,8 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
   const [editDropoff, setEditDropoff] = useState<Dropoff | null>(null);
   
   const filteredDropoffs = dropoffs.filter(dropoff => 
-    dropoff.dropoff_customers?.contact_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    dropoff.dropoff_customers?.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    dropoff.clients?.contact_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    dropoff.clients?.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     dropoff.notes?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -204,11 +204,11 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
               <div className="space-y-1 min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <h3 className="font-semibold text-base truncate">
-                    {dropoff.dropoff_customers?.contact_name || 'Unknown Customer'}
+                    {dropoff.clients?.contact_name || 'Unknown Customer'}
                   </h3>
-                  {dropoff.dropoff_customers?.company_name && (
+                  {dropoff.clients?.company_name && (
                     <Badge variant="outline" className="text-xs">
-                      {dropoff.dropoff_customers.company_name}
+                      {dropoff.clients.company_name}
                     </Badge>
                   )}
                   {dropoff.hauler_id && (
