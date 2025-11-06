@@ -204,11 +204,11 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
               <div className="space-y-1 min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <h3 className="font-semibold text-base truncate">
-                    {dropoff.clients?.contact_name || 'Unknown Customer'}
+                    {dropoff.clients?.company_name || dropoff.clients?.contact_name || 'Unknown Customer'}
                   </h3>
-                  {dropoff.clients?.company_name && (
+                  {dropoff.clients?.company_name && dropoff.clients?.contact_name && (
                     <Badge variant="outline" className="text-xs">
-                      {dropoff.clients.company_name}
+                      {dropoff.clients.contact_name}
                     </Badge>
                   )}
                   {dropoff.hauler_id && (
