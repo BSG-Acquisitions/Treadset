@@ -104,6 +104,36 @@ export function calculateTotalPTE(tires: {
 }
 
 /**
+ * Calculate total PTE from manifest tire counts (includes all tire types)
+ */
+export function calculateManifestPTE(manifest: {
+  pte_on_rim?: number;
+  pte_off_rim?: number;
+  commercial_17_5_19_5_off?: number;
+  commercial_17_5_19_5_on?: number;
+  commercial_22_5_off?: number;
+  commercial_22_5_on?: number;
+  otr_count?: number;
+  tractor_count?: number;
+}): number {
+  // Passenger tires (1 PTE each)
+  const passengerPTE = ((manifest.pte_on_rim || 0) + (manifest.pte_off_rim || 0)) * MICHIGAN_CONVERSIONS.PASSENGER_TIRE_TO_PTE;
+  
+  // Commercial/Semi tires (5 PTE each)
+  const commercialCount = (manifest.commercial_17_5_19_5_off || 0) + 
+                          (manifest.commercial_17_5_19_5_on || 0) + 
+                          (manifest.commercial_22_5_off || 0) + 
+                          (manifest.commercial_22_5_on || 0);
+  const commercialPTE = commercialCount * MICHIGAN_CONVERSIONS.SEMI_TIRE_TO_PTE;
+  
+  // OTR and Tractor tires (15 PTE for OTR, 5 PTE for tractor which is semi-sized)
+  const otrPTE = (manifest.otr_count || 0) * MICHIGAN_CONVERSIONS.OTR_TIRE_TO_PTE;
+  const tractorPTE = (manifest.tractor_count || 0) * MICHIGAN_CONVERSIONS.SEMI_TIRE_TO_PTE;
+  
+  return passengerPTE + commercialPTE + otrPTE + tractorPTE;
+}
+
+/**
  * Convert PTE to tons using Michigan's 89 PTE/ton rule
  */
 export function pteToTons(pte: number, rounding: RoundingMode = 'report'): number {

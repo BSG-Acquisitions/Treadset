@@ -62,6 +62,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format, addDays, subDays, startOfWeek, addWeeks, subWeeks } from "date-fns";
 import { motion } from "framer-motion";
 import { WeeklyPickupsGrid } from "@/components/routes/WeeklyPickupsGrid";
+import { calculateManifestPTE } from "@/lib/michigan-conversions";
 
 import { LocationGeocodeDialog } from "@/components/locations/LocationGeocodeDialog";
 
@@ -932,17 +933,25 @@ export default function EnhancedRoutesToday() {
                                   
                                   if (hasCompletedManifest) {
                                     const manifest = manifests[0];
-                                    const pteCount = (manifest.pte_on_rim || 0) + (manifest.pte_off_rim || 0);
+                                    // Calculate total PTE using ALL tire types
+                                    const totalPTE = calculateManifestPTE(manifest);
+                                    const passengerCount = (manifest.pte_on_rim || 0) + (manifest.pte_off_rim || 0);
+                                    const commercialCount = (manifest.commercial_17_5_19_5_off || 0) + 
+                                                          (manifest.commercial_17_5_19_5_on || 0) + 
+                                                          (manifest.commercial_22_5_off || 0) + 
+                                                          (manifest.commercial_22_5_on || 0);
                                     const otrCount = manifest.otr_count || 0;
                                     const tractorCount = manifest.tractor_count || 0;
                                     
                                     return (
-                                      <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                                        <span>PTE {pteCount}</span>
-                                        <span>•</span>
-                                        <span>OTR {otrCount}</span>
-                                        <span>•</span>
-                                        <span>Tractor {tractorCount}</span>
+                                      <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+                                        <span className="font-semibold">Total: {totalPTE} PTE</span>
+                                        <div className="flex flex-wrap items-center gap-1">
+                                          {passengerCount > 0 && <span>Pass: {passengerCount}</span>}
+                                          {commercialCount > 0 && <><span>•</span><span>Semi: {commercialCount}</span></>}
+                                          {otrCount > 0 && <><span>•</span><span>OTR: {otrCount}</span></>}
+                                          {tractorCount > 0 && <><span>•</span><span>Tractor: {tractorCount}</span></>}
+                                        </div>
                                       </div>
                                     );
                                   }
