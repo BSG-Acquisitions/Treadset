@@ -437,6 +437,83 @@ export type Database = {
           },
         ]
       }
+      client_pickup_patterns: {
+        Row: {
+          average_days_between_pickups: number | null
+          client_id: string
+          confidence_score: number
+          created_at: string
+          frequency: string
+          id: string
+          last_analyzed_at: string
+          last_pickup_date: string | null
+          organization_id: string
+          total_pickups_analyzed: number
+          typical_day_of_week: number | null
+          typical_week_of_month: number | null
+          updated_at: string
+        }
+        Insert: {
+          average_days_between_pickups?: number | null
+          client_id: string
+          confidence_score?: number
+          created_at?: string
+          frequency: string
+          id?: string
+          last_analyzed_at?: string
+          last_pickup_date?: string | null
+          organization_id: string
+          total_pickups_analyzed?: number
+          typical_day_of_week?: number | null
+          typical_week_of_month?: number | null
+          updated_at?: string
+        }
+        Update: {
+          average_days_between_pickups?: number | null
+          client_id?: string
+          confidence_score?: number
+          created_at?: string
+          frequency?: string
+          id?: string
+          last_analyzed_at?: string
+          last_pickup_date?: string | null
+          organization_id?: string
+          total_pickups_analyzed?: number
+          typical_day_of_week?: number | null
+          typical_week_of_month?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_pickup_patterns_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_pickup_patterns_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_monthly_entity_rollup"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "client_pickup_patterns_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_revenue_summary"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "client_pickup_patterns_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_pricing_overrides: {
         Row: {
           client_id: string

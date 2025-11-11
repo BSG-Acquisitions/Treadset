@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -6,262 +6,184 @@ const corsHeaders = {
 };
 
 interface PickupPattern {
-  clientId: string;
-  clientName: string;
-  totalPickups: number;
-  firstPickupDate: string | null;
-  lastPickupDate: string | null;
-  averageDaysBetweenPickups: number | null;
-  daysSinceLastPickup: number | null;
-  expectedNextPickup: string | null;
-  isOverdue: boolean;
-  overdueByDays: number | null;
+  client_id: string;
+  frequency: 'weekly' | 'biweekly' | 'monthly' | 'irregular';
+  confidence_score: number;
+  typical_day_of_week: number | null;
+  typical_week_of_month: number | null;
+  last_pickup_date: string;
+  average_days_between_pickups: number;
+  total_pickups_analyzed: number;
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
 
-    console.log('Starting pickup pattern analysis...');
+    const { organization_id } = await req.json();
 
-    // Get all active clients with their pickup history
-    const { data: clients, error: clientsError } = await supabase
-      .from('clients')
-      .select(`
-        id,
-        company_name,
-        pickups!pickups_client_id_fkey(
-          id,
-          pickup_date,
-          status,
-          created_at
-        )
-      `)
-      .eq('is_active', true)
-      .order('company_name');
-
-    if (clientsError) {
-      console.error('Error fetching clients:', clientsError);
-      throw clientsError;
+    if (!organization_id) {
+      return new Response(
+        JSON.stringify({ error: 'organization_id is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    console.log(`Analyzing ${clients?.length || 0} clients...`);
+    console.log(`[PATTERN_ANALYSIS] Analyzing pickup patterns for org: ${organization_id}`);
+
+    // Get all clients with at least 3 completed pickups in last 6 months
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+    const { data: clients, error: clientsError } = await supabase
+      .from('clients')
+      .select('id, company_name')
+      .eq('organization_id', organization_id)
+      .eq('is_active', true);
+
+    if (clientsError) throw clientsError;
 
     const patterns: PickupPattern[] = [];
-    const notifications: any[] = [];
-    const today = new Date();
+    let analyzed = 0;
+    let patternsFound = 0;
 
     for (const client of clients || []) {
-      const pickups = (client.pickups || [])
-        .filter((p: any) => p.status === 'completed')
-        .sort((a: any, b: any) => 
-          new Date(a.pickup_date).getTime() - new Date(b.pickup_date).getTime()
-        );
+      // Get completed pickups for this client
+      const { data: pickups, error: pickupsError } = await supabase
+        .from('pickups')
+        .select('pickup_date, status')
+        .eq('client_id', client.id)
+        .eq('organization_id', organization_id)
+        .eq('status', 'completed')
+        .gte('pickup_date', sixMonthsAgo.toISOString().split('T')[0])
+        .order('pickup_date', { ascending: true });
 
-      if (pickups.length === 0) {
-        // No pickup history - skip this client
+      if (pickupsError) throw pickupsError;
+
+      analyzed++;
+
+      // Need at least 3 pickups to detect a pattern
+      if (!pickups || pickups.length < 3) {
+        console.log(`[PATTERN_ANALYSIS] ${client.company_name}: Not enough data (${pickups?.length || 0} pickups)`);
         continue;
       }
 
-      const firstPickup = pickups[0];
-      const lastPickup = pickups[pickups.length - 1];
-      const lastPickupDate = new Date(lastPickup.pickup_date);
-      const daysSinceLastPickup = Math.floor(
-        (today.getTime() - lastPickupDate.getTime()) / (1000 * 60 * 60 * 24)
+      // Calculate days between each pickup
+      const intervals: number[] = [];
+      for (let i = 1; i < pickups.length; i++) {
+        const prev = new Date(pickups[i - 1].pickup_date);
+        const curr = new Date(pickups[i].pickup_date);
+        const daysDiff = Math.round((curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
+        intervals.push(daysDiff);
+      }
+
+      const avgInterval = intervals.reduce((sum, val) => sum + val, 0) / intervals.length;
+      const stdDev = Math.sqrt(
+        intervals.reduce((sum, val) => sum + Math.pow(val - avgInterval, 2), 0) / intervals.length
       );
 
-      // Calculate average days between pickups
-      let averageDaysBetween: number | null = null;
-      let expectedNextPickup: string | null = null;
-      let isOverdue = false;
-      let overdueByDays: number | null = null;
+      // Determine frequency and confidence
+      let frequency: 'weekly' | 'biweekly' | 'monthly' | 'irregular' = 'irregular';
+      let confidence = 0;
 
-      if (pickups.length >= 2) {
-        // Calculate intervals between consecutive pickups
-        const intervals: number[] = [];
-        for (let i = 1; i < pickups.length; i++) {
-          const prev = new Date(pickups[i - 1].pickup_date);
-          const curr = new Date(pickups[i].pickup_date);
-          const daysBetween = Math.floor(
-            (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24)
-          );
-          intervals.push(daysBetween);
-        }
-
-        // Calculate average interval
-        averageDaysBetween = Math.round(
-          intervals.reduce((sum, val) => sum + val, 0) / intervals.length
-        );
-
-        // Calculate expected next pickup date
-        const expectedDate = new Date(lastPickupDate);
-        expectedDate.setDate(expectedDate.getDate() + averageDaysBetween);
-        expectedNextPickup = expectedDate.toISOString().split('T')[0];
-
-        // Check if overdue (with 7-day grace period)
-        const gracePeriodDays = 7;
-        isOverdue = daysSinceLastPickup > (averageDaysBetween + gracePeriodDays);
-        
-        if (isOverdue) {
-          overdueByDays = daysSinceLastPickup - averageDaysBetween;
-        }
-      } else {
-        // Only one pickup - use a default 30-day interval
-        averageDaysBetween = 30;
-        const expectedDate = new Date(lastPickupDate);
-        expectedDate.setDate(expectedDate.getDate() + 30);
-        expectedNextPickup = expectedDate.toISOString().split('T')[0];
-        isOverdue = daysSinceLastPickup > 37; // 30 + 7 grace period
-        
-        if (isOverdue) {
-          overdueByDays = daysSinceLastPickup - 30;
-        }
+      // Weekly: avg 7 days ± 3 days
+      if (avgInterval >= 4 && avgInterval <= 10) {
+        frequency = 'weekly';
+        confidence = Math.max(0, 100 - (stdDev * 10)); // Lower stdDev = higher confidence
       }
+      // Biweekly: avg 14 days ± 4 days
+      else if (avgInterval >= 10 && avgInterval <= 18) {
+        frequency = 'biweekly';
+        confidence = Math.max(0, 100 - (stdDev * 8));
+      }
+      // Monthly: avg 30 days ± 7 days
+      else if (avgInterval >= 23 && avgInterval <= 37) {
+        frequency = 'monthly';
+        confidence = Math.max(0, 100 - (stdDev * 5));
+      }
+
+      // Find typical day of week (most common)
+      const dayOfWeekCounts: Record<number, number> = {};
+      for (const pickup of pickups) {
+        const day = new Date(pickup.pickup_date).getDay();
+        dayOfWeekCounts[day] = (dayOfWeekCounts[day] || 0) + 1;
+      }
+      const typicalDayOfWeek = Object.entries(dayOfWeekCounts)
+        .sort(([, a], [, b]) => b - a)[0]?.[0];
+
+      // Find typical week of month
+      const weekOfMonthCounts: Record<number, number> = {};
+      for (const pickup of pickups) {
+        const date = new Date(pickup.pickup_date);
+        const dayOfMonth = date.getDate();
+        const weekOfMonth = Math.ceil(dayOfMonth / 7);
+        weekOfMonthCounts[weekOfMonth] = (weekOfMonthCounts[weekOfMonth] || 0) + 1;
+      }
+      const typicalWeekOfMonth = Object.entries(weekOfMonthCounts)
+        .sort(([, a], [, b]) => b - a)[0]?.[0];
+
+      const lastPickupDate = pickups[pickups.length - 1].pickup_date;
 
       const pattern: PickupPattern = {
-        clientId: client.id,
-        clientName: client.company_name,
-        totalPickups: pickups.length,
-        firstPickupDate: firstPickup.pickup_date,
-        lastPickupDate: lastPickup.pickup_date,
-        averageDaysBetweenPickups: averageDaysBetween,
-        daysSinceLastPickup,
-        expectedNextPickup,
-        isOverdue,
-        overdueByDays,
+        client_id: client.id,
+        frequency,
+        confidence_score: Math.round(confidence),
+        typical_day_of_week: typicalDayOfWeek ? parseInt(typicalDayOfWeek) : null,
+        typical_week_of_month: typicalWeekOfMonth ? parseInt(typicalWeekOfMonth) : null,
+        last_pickup_date: lastPickupDate,
+        average_days_between_pickups: Math.round(avgInterval * 10) / 10,
+        total_pickups_analyzed: pickups.length,
       };
 
-      patterns.push(pattern);
-
-      // Create notification for overdue clients
-      if (isOverdue && overdueByDays) {
-        // Check if there's already a recent notification for this client
-        const { data: existingNotif } = await supabase
-          .from('notifications')
-          .select('id')
-          .eq('related_type', 'client_followup')
-          .eq('related_id', client.id)
-          .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
-          .maybeSingle();
-
-        if (!existingNotif) {
-          // Get organization_id from client
-          const { data: clientData } = await supabase
-            .from('clients')
-            .select('organization_id')
-            .eq('id', client.id)
-            .single();
-
-          if (clientData) {
-            notifications.push({
-              organization_id: clientData.organization_id,
-              type: 'warning',
-              title: `${client.company_name} Overdue for Pickup`,
-              message: `${client.company_name} hasn't been scheduled in ${daysSinceLastPickup} days. Their typical interval is ${averageDaysBetween} days. Consider reaching out to schedule their next pickup.`,
-              related_type: 'client_followup',
-              related_id: client.id,
-              created_at: new Date().toISOString(),
-            });
-          }
-        }
-      }
-
-      // Update client_workflows with the calculated pattern
-      const { data: existingWorkflow } = await supabase
-        .from('client_workflows')
-        .select('id')
-        .eq('client_id', client.id)
-        .eq('workflow_type', 'followup')
-        .maybeSingle();
-
-      if (existingWorkflow) {
-        await supabase
-          .from('client_workflows')
-          .update({
-            contact_frequency_days: averageDaysBetween,
-            last_contact_date: lastPickup.pickup_date,
-            next_contact_date: expectedNextPickup,
-            status: isOverdue ? 'overdue' : 'active',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', existingWorkflow.id);
-      } else if (averageDaysBetween && expectedNextPickup) {
-        // Get organization_id
-        const { data: clientData } = await supabase
-          .from('clients')
-          .select('organization_id')
-          .eq('id', client.id)
-          .single();
-
-        if (clientData) {
-          await supabase
-            .from('client_workflows')
-            .insert({
-              client_id: client.id,
-              organization_id: clientData.organization_id,
-              workflow_type: 'followup',
-              contact_frequency_days: averageDaysBetween,
-              last_contact_date: lastPickup.pickup_date,
-              next_contact_date: expectedNextPickup,
-              status: isOverdue ? 'overdue' : 'active',
-            });
-        }
+      // Only store patterns with reasonable confidence
+      if (frequency !== 'irregular' && confidence >= 50) {
+        patterns.push(pattern);
+        patternsFound++;
+        console.log(`[PATTERN_ANALYSIS] ${client.company_name}: ${frequency} (confidence: ${Math.round(confidence)}%)`);
+      } else {
+        console.log(`[PATTERN_ANALYSIS] ${client.company_name}: Irregular pattern (avg ${avgInterval.toFixed(1)} days)`);
       }
     }
 
-    // Insert notifications in batch
-    if (notifications.length > 0) {
-      console.log(`Creating ${notifications.length} notifications for overdue clients...`);
-      const { error: notifError } = await supabase
-        .from('notifications')
-        .insert(notifications);
+    // Upsert patterns into database
+    if (patterns.length > 0) {
+      const { error: upsertError } = await supabase
+        .from('client_pickup_patterns')
+        .upsert(
+          patterns.map(p => ({
+            ...p,
+            organization_id,
+            last_analyzed_at: new Date().toISOString(),
+          })),
+          { onConflict: 'organization_id,client_id' }
+        );
 
-      if (notifError) {
-        console.error('Error creating notifications:', notifError);
-      }
+      if (upsertError) throw upsertError;
     }
 
-    const overdueClients = patterns.filter(p => p.isOverdue);
-    
-    console.log(`Analysis complete:
-      - Total clients analyzed: ${patterns.length}
-      - Overdue clients: ${overdueClients.length}
-      - Notifications created: ${notifications.length}
-    `);
+    console.log(`[PATTERN_ANALYSIS] Complete: ${analyzed} clients analyzed, ${patternsFound} patterns found`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        summary: {
-          totalClients: patterns.length,
-          overdueClients: overdueClients.length,
-          notificationsCreated: notifications.length,
-        },
-        patterns: patterns.filter(p => p.isOverdue), // Return only overdue clients
+        clients_analyzed: analyzed,
+        patterns_found: patternsFound,
+        patterns,
       }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-  } catch (error) {
-    console.error('Error in analyze-pickup-patterns:', error);
+  } catch (error: any) {
+    console.error('[PATTERN_ANALYSIS] Error:', error);
     return new Response(
-      JSON.stringify({
-        success: false,
-        error: error.message,
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      }
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
