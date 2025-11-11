@@ -10,12 +10,21 @@ export interface EnhancedNotification {
   organization_id: string;
   title: string;
   message: string;
-  type: 'info' | 'warning' | 'success' | 'error';
+  type: 'info' | 'warning' | 'success' | 'error' | 'missing_pickup';
   priority?: 'low' | 'medium' | 'high';
   action_link?: string;
   role_visibility?: string[];
   related_type?: string;
   related_id?: string;
+  metadata?: {
+    client_id?: string;
+    client_name?: string;
+    frequency?: string;
+    typical_day?: string;
+    days_since_last_pickup?: number;
+    confidence_score?: number;
+    [key: string]: any;
+  };
   is_read: boolean;
   created_at: string;
   updated_at: string;

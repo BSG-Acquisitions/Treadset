@@ -16,6 +16,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { ManifestTaskActions } from './ManifestTaskActions';
+import { MissingPickupActions } from './MissingPickupActions';
 
 const getPriorityColor = (priority?: string) => {
   switch (priority) {
@@ -102,6 +103,16 @@ const NotificationItem = ({ notification, onMarkAsRead, onActionClick, manifestT
                 {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
               </span>
               
+              {/* Quick schedule action for missing pickup notifications */}
+              {notification.type === 'missing_pickup' && notification.metadata?.client_id && (
+                <MissingPickupActions
+                  clientId={notification.metadata.client_id}
+                  clientName={notification.metadata.client_name || 'Client'}
+                  notificationId={notification.id}
+                  onDismiss={onMarkAsRead}
+                />
+              )}
+              
               {/* One-click actions for manifest tasks */}
               {notification.related_type === 'manifest' && notification.related_id && relatedTask && (
                 <div className="mt-2">
@@ -114,7 +125,7 @@ const NotificationItem = ({ notification, onMarkAsRead, onActionClick, manifestT
               )}
               
               {/* Fallback to standard action link */}
-              {notification.action_link && !relatedTask && (
+              {notification.action_link && !relatedTask && notification.type !== 'missing_pickup' && (
                 <Button
                   size="sm"
                   variant="outline"
