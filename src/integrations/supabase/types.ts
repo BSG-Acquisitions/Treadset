@@ -4483,8 +4483,6 @@ export type Database = {
         Returns: string
       }
       refresh_reporting_views: { Args: never; Returns: undefined }
-      show_limit: { Args: never; Returns: number }
-      show_trgm: { Args: { "": string }; Returns: string[] }
       update_system_health_metrics: { Args: never; Returns: undefined }
       user_has_role: {
         Args: {

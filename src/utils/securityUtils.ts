@@ -39,6 +39,13 @@ export const generateSecureToken = (length: number = 32): string => {
 };
 
 /**
+ * Generates a cryptographically secure nonce for CSP
+ */
+export const generateNonce = (): string => {
+  return generateSecureToken(16);
+};
+
+/**
  * Validates input against common injection patterns
  */
 export const validateInput = (input: string): boolean => {
@@ -103,24 +110,62 @@ class RateLimiter {
 export const rateLimiter = new RateLimiter();
 
 /**
- * Content Security Policy helper
+ * Content Security Policy helper - Hardened version
+ * Removes unsafe-inline and unsafe-eval for enhanced security
  */
 export const applyCSP = (): void => {
   if (typeof document !== 'undefined') {
     const meta = document.createElement('meta');
     meta.httpEquiv = 'Content-Security-Policy';
+    
     meta.content = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: https:",
-      "font-src 'self' data:",
-      "connect-src 'self' https://wvjehbozyxhmgdljwsiz.supabase.co wss://wvjehbozyxhmgdljwsiz.supabase.co https://api.resend.com",
+      // No unsafe-inline or unsafe-eval for scripts - use nonces if needed
+      "script-src 'self' https://js.stripe.com https://maps.googleapis.com",
+      // Allow inline styles from same origin (Tailwind requires this)
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "img-src 'self' data: https: blob:",
+      "font-src 'self' data: https://fonts.gstatic.com",
+      "connect-src 'self' https://wvjehbozyxhmgdljwsiz.supabase.co wss://wvjehbozyxhmgdljwsiz.supabase.co https://api.stripe.com https://api.mapbox.com https://events.mapbox.com",
+      "frame-src 'self' https://js.stripe.com",
       "frame-ancestors 'none'",
-      "base-uri 'self'"
+      "base-uri 'self'",
+      "form-action 'self'",
+      "upgrade-insecure-requests"
     ].join('; ');
     
     document.head.appendChild(meta);
+  }
+};
+
+/**
+ * Apply security headers via meta tags
+ */
+export const applySecurityHeaders = (): void => {
+  if (typeof document !== 'undefined') {
+    // X-Frame-Options
+    const xFrameOptions = document.createElement('meta');
+    xFrameOptions.httpEquiv = 'X-Frame-Options';
+    xFrameOptions.content = 'DENY';
+    document.head.appendChild(xFrameOptions);
+
+    // X-Content-Type-Options
+    const xContentType = document.createElement('meta');
+    xContentType.httpEquiv = 'X-Content-Type-Options';
+    xContentType.content = 'nosniff';
+    document.head.appendChild(xContentType);
+
+    // Referrer-Policy
+    const referrerPolicy = document.createElement('meta');
+    referrerPolicy.name = 'referrer';
+    referrerPolicy.content = 'strict-origin-when-cross-origin';
+    document.head.appendChild(referrerPolicy);
+
+    // Permissions-Policy
+    const permissionsPolicy = document.createElement('meta');
+    permissionsPolicy.httpEquiv = 'Permissions-Policy';
+    permissionsPolicy.content = 'geolocation=(self), microphone=(), camera=()';
+    document.head.appendChild(permissionsPolicy);
   }
 };
 
@@ -168,4 +213,13 @@ export const secureSession = {
   clear: (): void => {
     sessionStorage.clear();
   }
+};
+
+/**
+ * Initialize all security measures
+ * Call this once when the app loads
+ */
+export const initializeSecurity = (): void => {
+  applyCSP();
+  applySecurityHeaders();
 };

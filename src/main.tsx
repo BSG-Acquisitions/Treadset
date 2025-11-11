@@ -6,6 +6,10 @@ import ErrorBoundary from './components/ErrorBoundary.tsx'
 import SecurityBoundary from './components/security/SecurityBoundary.tsx'
 import { initPerformanceObserver, logPerformanceSummary } from './lib/performance/lighthouse'
 import { preloadCriticalResources } from './lib/performance/bundleOptimization'
+import { initializeSecurity } from './utils/securityUtils'
+
+// Initialize security measures (CSP, security headers)
+initializeSecurity();
 
 // Initialize performance monitoring
 if (import.meta.env.PROD) {
