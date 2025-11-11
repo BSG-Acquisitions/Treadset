@@ -13,7 +13,7 @@ export const useContextualNotifications = () => {
     queryFn: async () => {
       const { data: userData } = await supabase
         .from('users')
-        .select('id, organizations:user_organization_roles(organization_id)')
+        .select('id, user_organization_roles(organization_id)')
         .eq('auth_user_id', user?.id)
         .single();
 
@@ -29,7 +29,7 @@ export const useContextualNotifications = () => {
         for (const manifest of manifests) {
           createNotification({
             user_id: userData.id,
-            organization_id: userData.organizations[0]?.organization_id,
+            organization_id: userData.user_organization_roles[0]?.organization_id,
             title: 'Incomplete Manifest',
             message: `Manifest ${manifest.manifest_number} for ${manifest.clients?.company_name} has been incomplete for over 24 hours`,
             type: 'warning',
@@ -54,7 +54,7 @@ export const useContextualNotifications = () => {
     queryFn: async () => {
       const { data: userData } = await supabase
         .from('users')
-        .select('id, organizations:user_organization_roles(organization_id)')
+        .select('id, user_organization_roles(organization_id)')
         .eq('auth_user_id', user?.id)
         .single();
 
@@ -75,7 +75,7 @@ export const useContextualNotifications = () => {
 
           createNotification({
             user_id: userData.id,
-            organization_id: userData.organizations[0]?.organization_id,
+            organization_id: userData.user_organization_roles[0]?.organization_id,
             title: 'Missing Client Data',
             message: `${client.company_name} is missing: ${missingFields.join(', ')}`,
             type: 'info',
@@ -100,7 +100,7 @@ export const useContextualNotifications = () => {
     queryFn: async () => {
       const { data: userData } = await supabase
         .from('users')
-        .select('id, organizations:user_organization_roles(organization_id)')
+        .select('id, user_organization_roles(organization_id)')
         .eq('auth_user_id', user?.id)
         .single();
 
@@ -126,7 +126,7 @@ export const useContextualNotifications = () => {
         for (const pickup of pickups.slice(0, 10)) {
           createNotification({
             user_id: userData.id,
-            organization_id: userData.organizations[0]?.organization_id,
+            organization_id: userData.user_organization_roles[0]?.organization_id,
             title: 'Unassigned Pickup',
             message: `Pickup for ${pickup.clients?.company_name} on ${pickup.pickup_date} needs driver assignment`,
             type: 'warning',

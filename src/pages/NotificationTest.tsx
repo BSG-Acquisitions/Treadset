@@ -54,7 +54,7 @@ const NotificationTest = () => {
     // Get user data
     const { data: userData } = await supabase
       .from('users')
-      .select('id, organizations:user_organization_roles(organization_id)')
+      .select('id, user_organization_roles(organization_id)')
       .eq('auth_user_id', user?.id)
       .single();
 
@@ -65,7 +65,7 @@ const NotificationTest = () => {
 
     createNotification({
       user_id: userData.id,
-      organization_id: userData.organizations[0]?.organization_id,
+      organization_id: userData.user_organization_roles[0]?.organization_id,
       ...notif,
       role_visibility: ['admin', 'ops_manager', 'dispatcher'],
     });
