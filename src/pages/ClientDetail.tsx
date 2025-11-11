@@ -439,99 +439,12 @@ export default function ClientDetail() {
           </CardContent>
         </Card>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Financial Management */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Financial Management
-              </CardTitle>
-               <div className="space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <CreateInvoiceDialog 
-                    clientId={client.id}
-                    trigger={
-                      <Button 
-                        size="sm" 
-                        disabled={completedPickups.length === 0}
-                        className="w-full"
-                      >
-                        <FileText className="h-4 w-4 mr-2" />
-                        Create Invoice
-                      </Button>
-                    }
-                  />
-                  <RecordPaymentDialog 
-                    clientId={client.id}
-                    trigger={
-                      <Button size="sm" variant="outline" className="w-full">
-                        <DollarSign className="h-4 w-4 mr-2" />
-                        Record Payment
-                      </Button>
-                    }
-                  />
-                </div>
-                <PaymentDialog 
-                  defaultClientId={client.id}
-                  defaultDescription={`Payment for ${client.company_name} services`}
-                  trigger={
-                    <Button size="sm" variant="default" className="w-full">
-                      <CreditCard className="h-4 w-4 mr-2" />
-                      Accept Online Payment
-                    </Button>
-                  }
-                />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <h4 className="font-medium mb-3">Recent Invoices</h4>
-              {invoices.length === 0 ? (
-                <div className="text-center py-6">
-                  <FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-2" />
-                  <p className="text-muted-foreground">No invoices found</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {invoices.slice(0, 3).map((invoice) => (
-                    <div key={invoice.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                      <div>
-                        <p className="font-medium">{invoice.invoice_number}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {invoice.issued_date && new Date(invoice.issued_date).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium">${invoice.total_amount.toFixed(2)}</p>
-                        <Badge 
-                          variant={
-                            invoice.status === 'paid' ? 'default' : 
-                            invoice.status === 'partial' ? 'secondary' : 
-                            'outline'
-                          }
-                        >
-                          {invoice.status}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                  {invoices.length > 3 && (
-                    <p className="text-sm text-muted-foreground text-center">
-                      +{invoices.length - 3} more invoices
-                    </p>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Location Management */}
-          <Card>
+        {/* Address Section */}
+        <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MapPin className="h-5 w-5" />
-                Locations ({locations.length})
+                {locations.length === 1 ? 'Address' : 'Addresses'}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -572,7 +485,6 @@ export default function ClientDetail() {
               )}
             </CardContent>
           </Card>
-        </div>
       </main>
     </div>
   );
