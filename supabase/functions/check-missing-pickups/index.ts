@@ -144,16 +144,28 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Create notification
+      // Create notification with pattern details
       const dayName = pattern.typical_day_of_week !== null 
         ? DAYS_OF_WEEK[pattern.typical_day_of_week] 
         : 'this week';
+      
+      const frequencyText = pattern.frequency === 'weekly' 
+        ? 'weekly' 
+        : pattern.frequency === 'biweekly' 
+        ? 'every 2 weeks' 
+        : 'monthly';
+      
+      const confidenceEmoji = pattern.confidence_score >= 80 
+        ? '🎯' 
+        : pattern.confidence_score >= 60 
+        ? '✓' 
+        : '~';
 
       notificationsToCreate.push({
         organization_id,
         type: 'missing_pickup',
         title: `${client.company_name} may need scheduling`,
-        message: `${client.company_name} is ${scheduleReason}. They're not currently scheduled. Would you like to schedule a pickup?`,
+        message: `${client.company_name} is ${scheduleReason}. They're not currently scheduled.\n\nPattern Details:\n• Frequency: ${frequencyText}${pattern.typical_day_of_week !== null ? ` on ${dayName}s` : ''}\n• Last pickup: ${daysSinceLastPickup} days ago\n• Confidence: ${pattern.confidence_score}% ${confidenceEmoji}`,
         priority: 'medium',
         metadata: {
           client_id: client.id,
