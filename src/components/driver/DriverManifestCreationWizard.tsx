@@ -820,6 +820,7 @@ export function DriverManifestCreationWizard({
         gross_weight_lbs: finalGross,
         tare_weight_lbs: finalTare,
         net_weight_lbs: finalNet,
+        total: calculatedTotal, // Revenue collected at pickup
         payment_method: requiresInvoice ? ('INVOICE' as const) : ('CARD' as const),
         payment_status: requiresInvoice ? ('PENDING' as const) : ('PENDING' as const),
         status: 'AWAITING_RECEIVER_SIGNATURE' as const,
