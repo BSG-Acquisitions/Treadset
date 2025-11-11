@@ -28,6 +28,7 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [pickupToDelete, setPickupToDelete] = useState<any>(null);
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
 
   const [receiverDialogOpen, setReceiverDialogOpen] = useState(false);
   const [receiverManifest, setReceiverManifest] = useState<{ id: string; number?: string } | null>(null);
@@ -129,6 +130,7 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
       });
 
       setPickupToDelete(null);
+      setDeletedIds((prev) => new Set(prev).add(pickup.id));
       
       console.log('Cache invalidation complete');
     } catch (error: any) {
@@ -147,8 +149,9 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
   ).padStart(2, "0")}`;
   const isToday = dateStr === todayStr;
 
-  // Group pickups by vehicle
-  const pickupsByVehicle = pickups.reduce((acc: any, pickup: any) => {
+  // Group pickups by vehicle (filter out locally deleted ids)
+  const visiblePickups = pickups.filter((p: any) => !deletedIds.has(p.id));
+  const pickupsByVehicle = visiblePickups.reduce((acc: any, pickup: any) => {
     const vehicleId = pickup.daily_assignments?.[0]?.vehicle_id || 'unassigned';
     if (!acc[vehicleId]) {
       acc[vehicleId] = [];
