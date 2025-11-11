@@ -17,9 +17,9 @@ export default function Manifests() {
   const clientId = searchParams.get('client');
   const [searchQuery, setSearchQuery] = useState('');
   const [openSections, setOpenSections] = useState({
-    today: true,
-    thisWeek: true,
-    lastWeek: true,
+    today: false,
+    thisWeek: false,
+    lastWeek: false,
     thisMonth: false,
     lastMonth: false,
     older: false,
