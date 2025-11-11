@@ -14,6 +14,16 @@ export interface PaymentHistoryItem {
     address: string;
     name: string | null;
   } | null;
+  manifest?: {
+    pte_on_rim: number;
+    pte_off_rim: number;
+    otr_count: number;
+    tractor_count: number;
+    commercial_17_5_19_5_on: number;
+    commercial_17_5_19_5_off: number;
+    commercial_22_5_on: number;
+    commercial_22_5_off: number;
+  } | null;
 }
 
 export const usePaymentHistory = (clientId: string) => {
@@ -31,7 +41,17 @@ export const usePaymentHistory = (clientId: string) => {
           pte_count,
           otr_count,
           tractor_count,
-          location:locations(address, name)
+          location:locations(address, name),
+          manifest:manifests!pickups_manifest_id_fkey(
+            pte_on_rim,
+            pte_off_rim,
+            otr_count,
+            tractor_count,
+            commercial_17_5_19_5_on,
+            commercial_17_5_19_5_off,
+            commercial_22_5_on,
+            commercial_22_5_off
+          )
         `)
         .eq('client_id', clientId)
         .eq('status', 'completed')

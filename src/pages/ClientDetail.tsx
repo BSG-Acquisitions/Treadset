@@ -120,7 +120,20 @@ export default function ClientDetail() {
             <CardContent>
               <div className="text-3xl font-bold text-foreground">
                 {paymentHistory.length > 0 
-                  ? (paymentHistory.reduce((sum, p) => sum + (p.pte_count + p.otr_count * 15 + p.tractor_count * 5), 0) / paymentHistory.length).toFixed(1)
+                  ? (paymentHistory.reduce((sum, p) => {
+                      const manifest = p.manifest;
+                      if (manifest) {
+                        // Calculate PTEs from manifest data
+                        const ptes = (manifest.pte_on_rim || 0) + (manifest.pte_off_rim || 0);
+                        const commercial = (manifest.commercial_17_5_19_5_on || 0) + (manifest.commercial_17_5_19_5_off || 0) +
+                                         (manifest.commercial_22_5_on || 0) + (manifest.commercial_22_5_off || 0) +
+                                         (manifest.tractor_count || 0);
+                        const otr = manifest.otr_count || 0;
+                        return sum + ptes + (commercial * 5) + (otr * 15);
+                      }
+                      // Fallback to pickup data if no manifest
+                      return sum + (p.pte_count || 0) + ((p.otr_count || 0) * 15) + ((p.tractor_count || 0) * 5);
+                    }, 0) / paymentHistory.length).toFixed(1)
                   : '0.0'
                 }
               </div>
