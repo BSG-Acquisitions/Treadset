@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Info, CalendarDays, Clock, TrendingUp, Package, Truck, Recycle, BarChart3, CheckCircle2 } from "lucide-react";
+import { Info, CalendarDays, Clock, Package, Truck, Recycle, BarChart3, CheckCircle2 } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, Tooltip as ChartTooltip, XAxis, YAxis, CartesianGrid, ReferenceLine, ResponsiveContainer } from "recharts";
 import { usePickups } from "@/hooks/usePickups";
 import { useClients } from "@/hooks/useClients";
@@ -820,41 +820,6 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
               </CardContent>
             </Card>
           </div>
-
-          <Card className="border-2 shadow-xl bg-gradient-to-br from-card to-card-hover mb-8">
-            <CardHeader className="bg-brand-success border-b">
-              <CardTitle className="flex items-center gap-2 text-white">
-                <TrendingUp className="w-5 h-5 text-white" />
-                Today's Operations
-              </CardTitle>
-              <CardDescription className="text-white/90">Real-time pickup status and progress</CardDescription>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="text-center space-y-2">
-                  <div className="text-3xl font-bold text-brand-success">{completedPickups.length}</div>
-                  <div className="text-sm text-muted-foreground">Completed</div>
-                  <Badge variant="outline" className="border-brand-success/30 text-brand-success">
-                    On Schedule
-                  </Badge>
-                </div>
-                <div className="text-center space-y-2">
-                  <div className="text-3xl font-bold text-brand-primary">{assignedPickups.length - completedPickups.length}</div>
-                  <div className="text-sm text-muted-foreground">In Progress</div>
-                  <Badge variant="outline" className="border-brand-primary/30 text-brand-primary">
-                    Active Routes
-                  </Badge>
-                </div>
-                <div className="text-center space-y-2">
-                  <div className="text-3xl font-bold text-brand-warning">{overduePickups.length}</div>
-                  <div className="text-sm text-muted-foreground">Overdue</div>
-                  <Badge variant="outline" className="border-brand-warning/30 text-brand-warning">
-                    Needs Attention
-                  </Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </SlideUp>
 
         {/* Projected Revenue Widget */}
