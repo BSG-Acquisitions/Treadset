@@ -107,28 +107,28 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
 
       if (pickupError) throw pickupError;
 
-      // Invalidate ALL pickup-related queries to force a complete refresh
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['pickups'] }),
-        queryClient.invalidateQueries({ queryKey: ['assignments'] }),
-        queryClient.invalidateQueries({ queryKey: ['driver-assignments'] }),
-        queryClient.invalidateQueries({ queryKey: ['routes'] }),
-        queryClient.invalidateQueries({ queryKey: ['optimized-routes'] }),
-        queryClient.invalidateQueries({ queryKey: ['manifests'] }),
-      ]);
-
-      // Force immediate refetch of this specific date's pickups
-      await queryClient.refetchQueries({ 
-        queryKey: ['pickups', dateStr],
-        exact: true 
-      });
-
       toast({
         title: "Pickup Deleted",
         description: `${pickup.client?.company_name || 'Pickup'} has been removed from all schedules`,
       });
 
       setPickupToDelete(null);
+
+      // Remove the cached data immediately and refetch
+      queryClient.removeQueries({ queryKey: ['pickups', dateStr], exact: true });
+      
+      // Small delay to ensure database has processed the deletion
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Invalidate all pickup-related queries and force refetch
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['pickups'], refetchType: 'active' }),
+        queryClient.invalidateQueries({ queryKey: ['assignments'] }),
+        queryClient.invalidateQueries({ queryKey: ['driver-assignments'] }),
+        queryClient.invalidateQueries({ queryKey: ['routes'] }),
+        queryClient.invalidateQueries({ queryKey: ['optimized-routes'] }),
+        queryClient.invalidateQueries({ queryKey: ['manifests'] }),
+      ]);
     } catch (error: any) {
       toast({
         title: "Error",
