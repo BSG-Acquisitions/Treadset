@@ -413,6 +413,47 @@ export function DriverManifestCreationWizard({
       }
     }
 
+    // Validate pricing step - ensure at least one rate is entered if there are tires
+    if (currentStep.key === "pricing") {
+      const values = form.getValues();
+      const pteOffRimCount = values.pte_off_rim || 0;
+      const pteOnRimCount = values.pte_on_rim || 0;
+      const commercial_17_5_19_5_off_count = values.commercial_17_5_19_5_off || 0;
+      const commercial_17_5_19_5_on_count = values.commercial_17_5_19_5_on || 0;
+      const commercial_22_5_off_count = values.commercial_22_5_off || 0;
+      const commercial_22_5_on_count = values.commercial_22_5_on || 0;
+      const otrTotalCount = (values.otr_count || 0) + (values.tractor_count || 0);
+      
+      // Check if rates are entered for tires that exist
+      const needsPteOffRimRate = pteOffRimCount > 0 && (!pteOffRimRate || parseFloat(pteOffRimRate) === 0);
+      const needsPteOnRimRate = pteOnRimCount > 0 && (!pteOnRimRate || parseFloat(pteOnRimRate) === 0);
+      const needsCommercialRate = (commercial_17_5_19_5_off_count > 0 || commercial_17_5_19_5_on_count > 0 || commercial_22_5_off_count > 0 || commercial_22_5_on_count > 0) && 
+        ((!commercial_17_5_19_5_off_rate || parseFloat(commercial_17_5_19_5_off_rate) === 0) &&
+         (!commercial_17_5_19_5_on_rate || parseFloat(commercial_17_5_19_5_on_rate) === 0) &&
+         (!commercial_22_5_off_rate || parseFloat(commercial_22_5_off_rate) === 0) &&
+         (!commercial_22_5_on_rate || parseFloat(commercial_22_5_on_rate) === 0));
+      const needsOtrRate = otrTotalCount > 0 && (!otrRate || parseFloat(otrRate) === 0);
+      
+      if (needsPteOffRimRate || needsPteOnRimRate || needsCommercialRate || needsOtrRate) {
+        toast({
+          title: "Pricing Required",
+          description: "Please enter pricing rates for all tire types before continuing. This ensures accurate revenue tracking.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Also validate that total is greater than 0
+      if (calculatedTotal <= 0) {
+        toast({
+          title: "Pricing Required",
+          description: "Total amount must be greater than $0. Please enter valid pricing rates.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     if (currentStep.key === "pricing") {
       const values = form.getValues();
       const pteOffRimCount = values.pte_off_rim || 0;
@@ -960,12 +1001,14 @@ export function DriverManifestCreationWizard({
           : "Manifest created successfully with generator and hauler signatures",
       });
 
-      // Update pickup status to completed
+      // Update pickup status to completed AND save revenue
       const { error: pickupUpdateError } = await supabase
         .from('pickups')
         .update({ 
           status: 'completed',
-          manifest_id: manifest.id 
+          manifest_id: manifest.id,
+          computed_revenue: calculatedTotal,
+          final_revenue: calculatedTotal
         })
         .eq('id', pickupId);
 
