@@ -15,7 +15,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { calculateManifestPTE } from "@/lib/michigan-conversions";
 
 import { StatsCard } from "@/components/enhanced/StatsCard";
-import { ProjectedRevenueWidget } from "@/components/dashboard/ProjectedRevenueWidget";
 import { PTEBreakdownDialog } from "@/components/dashboard/PTEBreakdownDialog";
 import { InvoicePendingWidget } from "@/components/dashboard/InvoicePendingWidget";
 import { format, addDays } from "date-fns";
@@ -820,11 +819,6 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
               </CardContent>
             </Card>
           </div>
-        </SlideUp>
-
-        {/* Projected Revenue Widget */}
-        <SlideUp delay={0.35}>
-          <ProjectedRevenueWidget />
         </SlideUp>
 
         {/* Quick Actions removed - navigation available in sidebar/top nav */}
