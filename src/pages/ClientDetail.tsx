@@ -340,6 +340,16 @@ export default function ClientDetail() {
                               <DropdownMenuItem
                                 onClick={() => updatePickupPayment.mutate({ 
                                   pickupId: payment.id, 
+                                  payment_method: 'CARD' 
+                                })}
+                                className="cursor-pointer"
+                              >
+                                <CreditCard className="h-4 w-4 mr-2" />
+                                Card
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => updatePickupPayment.mutate({ 
+                                  pickupId: payment.id, 
                                   payment_method: 'CARD_ON_FILE' 
                                 })}
                                 className="cursor-pointer"
