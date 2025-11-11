@@ -83,6 +83,8 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
 
   const handleRemovePickup = async (pickup: any) => {
     try {
+      console.log('Deleting pickup:', pickup.id, 'from date:', dateStr);
+      
       // First, unlink any related manifests (set pickup_id to null instead of deleting)
       const { error: manifestError } = await supabase
         .from('manifests')
@@ -107,29 +109,30 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
 
       if (pickupError) throw pickupError;
 
+      console.log('Pickup deleted successfully, invalidating queries...');
+
+      // CRITICAL: Remove the exact query for this date first
+      queryClient.setQueryData(['pickups', dateStr], (old: any) => {
+        if (!old) return old;
+        return old.filter((p: any) => p.id !== pickup.id);
+      });
+
+      // Then invalidate to trigger refetch
+      await queryClient.invalidateQueries({ 
+        queryKey: ['pickups'],
+        refetchType: 'all'
+      });
+
       toast({
         title: "Pickup Deleted",
         description: `${pickup.client?.company_name || 'Pickup'} has been removed from all schedules`,
       });
 
       setPickupToDelete(null);
-
-      // Remove the cached data immediately and refetch
-      queryClient.removeQueries({ queryKey: ['pickups', dateStr], exact: true });
       
-      // Small delay to ensure database has processed the deletion
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Invalidate all pickup-related queries and force refetch
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['pickups'], refetchType: 'active' }),
-        queryClient.invalidateQueries({ queryKey: ['assignments'] }),
-        queryClient.invalidateQueries({ queryKey: ['driver-assignments'] }),
-        queryClient.invalidateQueries({ queryKey: ['routes'] }),
-        queryClient.invalidateQueries({ queryKey: ['optimized-routes'] }),
-        queryClient.invalidateQueries({ queryKey: ['manifests'] }),
-      ]);
+      console.log('Cache invalidation complete');
     } catch (error: any) {
+      console.error('Delete error:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to delete pickup",
