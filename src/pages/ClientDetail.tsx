@@ -6,6 +6,7 @@ import { useInvoices, useCompletedPickups } from "@/hooks/useFinance";
 import { usePaymentHistory } from "@/hooks/usePaymentHistory";
 import { useClientHealthScores } from "@/hooks/useClientHealthScores";
 import { useUpdatePaymentStatus } from "@/hooks/useUpdatePaymentStatus";
+import { useUpdatePickupPayment } from "@/hooks/useUpdatePickupPayment";
 import { CreateInvoiceDialog } from "@/components/finance/CreateInvoiceDialog";
 import { RecordPaymentDialog } from "@/components/finance/RecordPaymentDialog";
 import { PaymentDialog } from "@/components/PaymentDialog";
@@ -15,7 +16,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, FileText, CreditCard, MapPin, Plus, Receipt, Clock, CheckCircle2, XCircle } from "lucide-react";
+import { DollarSign, FileText, CreditCard, MapPin, Plus, Receipt, Clock, CheckCircle2, XCircle, Edit2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,6 +36,9 @@ export default function ClientDetail() {
   const { healthScores } = useClientHealthScores(id);
   const clientHealth = healthScores.find(h => h.client_id === id);
   const updatePaymentStatus = useUpdatePaymentStatus();
+  const updatePickupPayment = useUpdatePickupPayment();
+  const [editingAmount, setEditingAmount] = useState<string | null>(null);
+  const [editAmount, setEditAmount] = useState<string>("");
 
   useEffect(() => {
     document.title = client ? `${client.company_name} – Client – TreadSet` : "Client – TreadSet";
@@ -245,24 +250,125 @@ export default function ClientDetail() {
                           </div>
                         </TableCell>
                         <TableCell className="text-right">
-                          <span className="text-base font-semibold">
-                            ${(payment.computed_revenue || 0).toFixed(2)}
-                          </span>
+                          {editingAmount === payment.id ? (
+                            <div className="flex items-center gap-2 justify-end">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={editAmount}
+                                onChange={(e) => setEditAmount(e.target.value)}
+                                className="w-24 h-8 text-right"
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    updatePickupPayment.mutate({
+                                      pickupId: payment.id,
+                                      computed_revenue: parseFloat(editAmount)
+                                    });
+                                    setEditingAmount(null);
+                                  } else if (e.key === 'Escape') {
+                                    setEditingAmount(null);
+                                  }
+                                }}
+                                autoFocus
+                              />
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 p-0"
+                                onClick={() => {
+                                  updatePickupPayment.mutate({
+                                    pickupId: payment.id,
+                                    computed_revenue: parseFloat(editAmount)
+                                  });
+                                  setEditingAmount(null);
+                                }}
+                              >
+                                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 p-0"
+                                onClick={() => setEditingAmount(null)}
+                              >
+                                <XCircle className="h-4 w-4 text-red-600" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setEditingAmount(payment.id);
+                                setEditAmount((payment.computed_revenue || 0).toString());
+                              }}
+                              className="text-base font-semibold hover:text-primary transition-colors flex items-center gap-2 justify-end w-full"
+                            >
+                              ${(payment.computed_revenue || 0).toFixed(2)}
+                              <Edit2 className="h-3 w-3 opacity-50" />
+                            </button>
+                          )}
                         </TableCell>
                         <TableCell className="text-center">
-                          <Badge 
-                            variant={
-                              payment.payment_method === 'CARD_ON_FILE' ? 'default' :
-                              payment.payment_method === 'CARD' ? 'default' : 
-                              payment.payment_method === 'CASH' ? 'secondary' :
-                              payment.payment_method === 'CHECK' ? 'outline' :
-                              payment.payment_method === 'INVOICE' ? 'outline' :
-                              'secondary'
-                            }
-                            className="font-medium"
-                          >
-                            {payment.payment_method === 'CARD_ON_FILE' ? 'CARD ON FILE' : payment.payment_method || 'PENDING'}
-                          </Badge>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8">
+                                <Badge 
+                                  variant={
+                                    payment.payment_method === 'CARD_ON_FILE' ? 'default' :
+                                    payment.payment_method === 'CARD' ? 'default' : 
+                                    payment.payment_method === 'CASH' ? 'secondary' :
+                                    payment.payment_method === 'CHECK' ? 'outline' :
+                                    payment.payment_method === 'INVOICE' ? 'outline' :
+                                    'secondary'
+                                  }
+                                  className="font-medium cursor-pointer"
+                                >
+                                  {payment.payment_method === 'CARD_ON_FILE' ? 'CARD ON FILE' : payment.payment_method || 'PENDING'}
+                                </Badge>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => updatePickupPayment.mutate({ 
+                                  pickupId: payment.id, 
+                                  payment_method: 'CASH' 
+                                })}
+                                className="cursor-pointer"
+                              >
+                                <DollarSign className="h-4 w-4 mr-2" />
+                                Cash
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => updatePickupPayment.mutate({ 
+                                  pickupId: payment.id, 
+                                  payment_method: 'CARD_ON_FILE' 
+                                })}
+                                className="cursor-pointer"
+                              >
+                                <CreditCard className="h-4 w-4 mr-2" />
+                                Card on File
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => updatePickupPayment.mutate({ 
+                                  pickupId: payment.id, 
+                                  payment_method: 'INVOICE' 
+                                })}
+                                className="cursor-pointer"
+                              >
+                                <FileText className="h-4 w-4 mr-2" />
+                                Invoice Later
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => updatePickupPayment.mutate({ 
+                                  pickupId: payment.id, 
+                                  payment_method: 'CHECK' 
+                                })}
+                                className="cursor-pointer"
+                              >
+                                <Receipt className="h-4 w-4 mr-2" />
+                                Check
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                         <TableCell className="text-center">
                           <DropdownMenu>
