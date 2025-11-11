@@ -37,35 +37,63 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get the scheduled client's location
+    // Get the scheduled client's basic info first
     const { data: scheduledClient, error: clientError } = await supabase
       .from('clients')
-      .select(`
-        id,
-        company_name,
-        location_id,
-        last_pickup_at,
-        location:locations(latitude, longitude, address)
-      `)
+      .select('id, company_name, location_id, last_pickup_at, physical_address, physical_city, physical_state, physical_zip')
       .eq('id', scheduledClientId)
       .single();
 
     if (clientError || !scheduledClient) {
+      console.error('Client lookup error:', clientError);
       return new Response(
-        JSON.stringify({ error: 'Client not found' }),
+        JSON.stringify({ error: 'Client not found', details: clientError?.message }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const scheduledLat = scheduledClient.location?.latitude;
-    const scheduledLng = scheduledClient.location?.longitude;
+    // Get the location data if location_id exists
+    let scheduledLat: number | null = null;
+    let scheduledLng: number | null = null;
+    let scheduledAddress = '';
 
+    if (scheduledClient.location_id) {
+      const { data: locationData } = await supabase
+        .from('locations')
+        .select('latitude, longitude, address')
+        .eq('id', scheduledClient.location_id)
+        .single();
+      
+      if (locationData) {
+        scheduledLat = locationData.latitude;
+        scheduledLng = locationData.longitude;
+        scheduledAddress = locationData.address;
+      }
+    }
+
+    // If no location data from locations table, try to get from client's physical address
     if (!scheduledLat || !scheduledLng) {
+      const address = scheduledClient.physical_address;
+      const city = scheduledClient.physical_city;
+      const state = scheduledClient.physical_state;
+      const zip = scheduledClient.physical_zip;
+      
+      if (address && city && state) {
+        scheduledAddress = `${address}, ${city}, ${state} ${zip || ''}`.trim();
+      }
+      
+      // Try to find coordinates for the client's address
+      // For now, return early if no coordinates available
       return new Response(
-        JSON.stringify({ suggestions: [], message: 'Scheduled client has no location coordinates' }),
+        JSON.stringify({ 
+          suggestions: [], 
+          message: `${scheduledClient.company_name} does not have geocoded location coordinates. Please use the "Fix Geocoding" feature on the Data Quality page to add coordinates before getting nearby suggestions.`,
+          client_name: scheduledClient.company_name
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
 
     // Get all other active clients in the organization with locations
     const { data: allClients, error: allClientsError } = await supabase
@@ -122,12 +150,12 @@ Deno.serve(async (req) => {
 
 Return 3-5 prioritized suggestions with brief reasoning.`;
 
-    const userPrompt = `The receptionist just scheduled a pickup for "${scheduledClient.company_name}" at ${scheduledClient.location.address}.
+    const userPrompt = `The receptionist just scheduled a pickup for "${scheduledClient.company_name}" at ${scheduledAddress}.
 
 Here are nearby clients within 5 miles:
 ${nearbyClients.map(c => `
 - ${c.company_name} (${c.distance.toFixed(1)} miles away)
-  Location: ${c.location.address}
+  Location: ${c.location?.address || 'Address not available'}
   Last pickup: ${c.last_pickup_at ? new Date(c.last_pickup_at).toLocaleDateString() : 'Never'}
 `).join('\n')}
 
@@ -179,10 +207,10 @@ Which 3-5 clients should we prioritize calling to schedule in the same area? Pro
       // Fall back to simple distance-based suggestions
       const fallbackSuggestions = nearbyClients.slice(0, 5).map(client => ({
         client_id: client.id,
-        company_name: client.company_name,
-        distance: client.distance,
-        last_pickup_at: client.last_pickup_at,
-        address: client.location.address,
+          company_name: client.company_name,
+          distance: client.distance,
+          last_pickup_at: client.last_pickup_at,
+          address: client.location?.address || 'Address not available',
         priority: 'medium' as const,
         reasoning: `Located ${client.distance.toFixed(1)} miles from scheduled client`
       }));
@@ -212,7 +240,7 @@ Which 3-5 clients should we prioritize calling to schedule in the same area? Pro
           company_name: client.company_name,
           distance: client.distance,
           last_pickup_at: client.last_pickup_at,
-          address: client.location.address,
+          address: client.location?.address || 'Address not available',
           priority: suggestion.priority,
           reasoning: suggestion.reasoning
         };
