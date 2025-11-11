@@ -63,6 +63,7 @@ export const useCalculateClientRisk = () => {
     onSuccess: (_, clientId) => {
       queryClient.invalidateQueries({ queryKey: ['client-risk-scores'] });
       queryClient.invalidateQueries({ queryKey: ['client-risk-score', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['clients-table'] });
       toast.success('Risk score calculated successfully');
     },
     onError: (error: Error) => {
