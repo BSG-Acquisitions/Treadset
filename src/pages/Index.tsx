@@ -2,11 +2,10 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Info, CalendarDays, Clock, Package, Truck, Recycle, BarChart3, CheckCircle2 } from "lucide-react";
+import { Info, CalendarDays, Clock, Package, Recycle, BarChart3, CheckCircle2 } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, Tooltip as ChartTooltip, XAxis, YAxis, CartesianGrid, ReferenceLine, ResponsiveContainer } from "recharts";
 import { usePickups } from "@/hooks/usePickups";
 import { useClients } from "@/hooks/useClients";
-import { useVehicles } from "@/hooks/useVehicles";
 import { useTodaysDropoffs } from "@/hooks/useDropoffs";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserMenu } from "@/components/auth/UserMenu";
@@ -72,7 +71,6 @@ export default function Index() {
   // Real data hooks - now enabled for live updates
   const { data: todayPickupsData = [] } = usePickups(format(new Date(), 'yyyy-MM-dd'));
   const { data: clientsResponse } = useClients();
-  const { data: vehiclesData = [] } = useVehicles();
   const { data: todaysDropoffs = [] } = useTodaysDropoffs();
   
   // Fetch today's manifests to get actual PTE counts
@@ -321,12 +319,6 @@ export default function Index() {
     lifetime_revenue: client.lifetime_revenue || 0,
     last_pickup_at: client.last_pickup_at,
     pickups_count: client.pickups?.[0]?.count || 0
-  }));
-  
-  const vehicles = vehiclesData.map(vehicle => ({
-    id: vehicle.id,
-    name: vehicle.name,
-    status: vehicle.is_active ? 'active' : 'maintenance'
   }));
 
   // Enhanced statistics with real BSG metrics
@@ -824,36 +816,6 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
         {/* Quick Actions removed - navigation available in sidebar/top nav */}
 
         {/* Today's Pickup Activity removed - stats shown in top cards */}
-
-        {/* Fleet Status */}
-        <SlideUp delay={0.4}>
-          <Card className="border-border/20 shadow-elevation-lg bg-gradient-to-br from-card to-secondary/5 mb-8">
-            <CardHeader className="border-b border-border/10">
-              <CardTitle className="flex items-center gap-2">
-                <Truck className="w-5 h-5 text-brand-primary" />
-                Fleet Status
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="space-y-4">
-                {vehicles.map((vehicle) => (
-                  <div key={vehicle.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/20 border border-border/10">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-3 h-3 rounded-full ${
-                        vehicle.status === 'active' ? 'bg-brand-success animate-pulse-glow' : 
-                        vehicle.status === 'maintenance' ? 'bg-brand-warning' : 'bg-muted-foreground'
-                      }`} />
-                      <span className="font-medium">{vehicle.name}</span>
-                    </div>
-                    <Badge variant={vehicle.status === 'active' ? 'default' : 'secondary'}>
-                      {vehicle.status}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </SlideUp>
       </main>
 
       {/* PTE Breakdown Dialog */}
