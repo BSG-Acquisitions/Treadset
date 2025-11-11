@@ -113,16 +113,19 @@ export default function ClientDetail() {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
-                <CreditCard className="h-5 w-5 text-destructive" />
-                Open Balance
+                <Receipt className="h-5 w-5 text-primary" />
+                Avg Tires per Pickup
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-destructive">
-                ${(client.open_balance || 0).toFixed(2)}
+              <div className="text-3xl font-bold text-foreground">
+                {paymentHistory.length > 0 
+                  ? (paymentHistory.reduce((sum, p) => sum + (p.pte_count + p.otr_count * 15 + p.tractor_count * 5), 0) / paymentHistory.length).toFixed(1)
+                  : '0.0'
+                }
               </div>
               <p className="text-sm text-muted-foreground mt-1">
-                Outstanding invoices
+                PTE equivalent per service
               </p>
             </CardContent>
           </Card>
