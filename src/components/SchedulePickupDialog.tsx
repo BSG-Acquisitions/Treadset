@@ -9,6 +9,9 @@ import { useVehicles } from "@/hooks/useVehicles";
 import { useHaulers } from "@/hooks/useHaulers";
 import { SchedulePickupWithDriverDialog } from "./SchedulePickupWithDriverDialog";
 import { useToast } from "@/hooks/use-toast";
+import { useNearbySuggestions } from "@/hooks/useNearbySuggestions";
+import { NearbyClientSuggestions } from "./NearbyClientSuggestions";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Dialog,
   DialogContent,
@@ -75,7 +78,12 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
   const [clientSearch, setClientSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [clientComboOpen, setClientComboOpen] = useState(false);
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [scheduledClientName, setScheduledClientName] = useState("");
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { suggestNearby, isLoading: isSuggestionsLoading } = useNearbySuggestions();
   
   // Debounce search
   useEffect(() => {
@@ -168,6 +176,24 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
         description: "Pickup scheduled successfully!",
       });
       
+      // Get nearby suggestions
+      const client = clients?.data.find(c => c.id === data.clientId);
+      if (client && user?.currentOrganization?.id) {
+        setScheduledClientName(client.company_name);
+        try {
+          const result = await suggestNearby({
+            scheduledClientId: data.clientId,
+            organizationId: user.currentOrganization.id
+          });
+          if (result.suggestions && result.suggestions.length > 0) {
+            setSuggestions(result.suggestions);
+            setSuggestionsOpen(true);
+          }
+        } catch (error) {
+          console.error('Failed to get suggestions:', error);
+        }
+      }
+      
       setOpen(false);
       form.reset();
     } catch (error) {
@@ -195,10 +221,11 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
 
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger}
-      </DialogTrigger>
+    <>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          {trigger}
+        </DialogTrigger>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Schedule New Pickup</DialogTitle>
@@ -565,6 +592,14 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
           </form>
         </Form>
       </DialogContent>
-    </Dialog>
+      </Dialog>
+
+      <NearbyClientSuggestions
+        open={suggestionsOpen}
+        onOpenChange={setSuggestionsOpen}
+        suggestions={suggestions}
+        scheduledClientName={scheduledClientName}
+      />
+    </>
   );
 }

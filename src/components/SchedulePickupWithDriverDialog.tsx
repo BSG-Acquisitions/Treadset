@@ -7,6 +7,10 @@ import { useClients } from "@/hooks/useClients";
 import { useLocations } from "@/hooks/useLocations";
 import { useVehicles } from "@/hooks/useVehicles";
 import { useHaulers } from "@/hooks/useHaulers";
+import { useNearbySuggestions } from "@/hooks/useNearbySuggestions";
+import { NearbyClientSuggestions } from "./NearbyClientSuggestions";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
   DialogContent,
@@ -72,6 +76,12 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
   const [selectedClientId, setSelectedClientId] = useState(defaultClientId || "");
   const [clientSearch, setClientSearch] = useState("");
   const [clientComboOpen, setClientComboOpen] = useState(false);
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [scheduledClientName, setScheduledClientName] = useState("");
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const { suggestNearby, isLoading: isSuggestionsLoading } = useNearbySuggestions();
   
   const { data: clients } = useClients({ search: clientSearch, limit: 100 });
   const { data: locations } = useLocations(selectedClientId);
@@ -147,6 +157,30 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
         preferredWindow: data.preferredWindow,
         notes: data.notes,
       });
+      
+      toast({
+        title: "Success",
+        description: "Pickup scheduled successfully!",
+      });
+
+      // Get nearby suggestions
+      const client = clients?.data?.find(c => c.id === data.clientId);
+      if (client && user?.currentOrganization?.id) {
+        setScheduledClientName(client.company_name);
+        try {
+          const result = await suggestNearby({
+            scheduledClientId: data.clientId,
+            organizationId: user.currentOrganization.id
+          });
+          if (result.suggestions && result.suggestions.length > 0) {
+            setSuggestions(result.suggestions);
+            setSuggestionsOpen(true);
+          }
+        } catch (error) {
+          console.error('Failed to get suggestions:', error);
+        }
+      }
+      
       setOpen(false);
       form.reset();
     } catch (error) {
@@ -168,10 +202,11 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
   }, [locations, selectedClientId, form]);
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger}
-      </DialogTrigger>
+    <>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          {trigger}
+        </DialogTrigger>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -541,6 +576,14 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
           </form>
         </Form>
       </DialogContent>
-    </Dialog>
+      </Dialog>
+
+      <NearbyClientSuggestions
+        open={suggestionsOpen}
+        onOpenChange={setSuggestionsOpen}
+        suggestions={suggestions}
+        scheduledClientName={scheduledClientName}
+      />
+    </>
   );
 }

@@ -156,4 +156,7 @@ verify_jwt = false
 [functions.compute-daily-metrics]
 verify_jwt = false
 
+[functions.suggest-nearby-clients]
+verify_jwt = false
+
 [auth]
