@@ -5,6 +5,7 @@ import { useLocations } from "@/hooks/useLocations";
 import { useInvoices, useCompletedPickups } from "@/hooks/useFinance";
 import { usePaymentHistory } from "@/hooks/usePaymentHistory";
 import { useClientHealthScores } from "@/hooks/useClientHealthScores";
+import { useUpdatePaymentStatus } from "@/hooks/useUpdatePaymentStatus";
 import { CreateInvoiceDialog } from "@/components/finance/CreateInvoiceDialog";
 import { RecordPaymentDialog } from "@/components/finance/RecordPaymentDialog";
 import { PaymentDialog } from "@/components/PaymentDialog";
@@ -14,7 +15,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, FileText, CreditCard, MapPin, Plus, Receipt, Clock } from "lucide-react";
+import { DollarSign, FileText, CreditCard, MapPin, Plus, Receipt, Clock, CheckCircle2, XCircle } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 
 export default function ClientDetail() {
@@ -26,6 +33,7 @@ export default function ClientDetail() {
   const { data: paymentHistory = [] } = usePaymentHistory(id!);
   const { healthScores } = useClientHealthScores(id);
   const clientHealth = healthScores.find(h => h.client_id === id);
+  const updatePaymentStatus = useUpdatePaymentStatus();
 
   useEffect(() => {
     document.title = client ? `${client.company_name} – Client – TreadSet` : "Client – TreadSet";
@@ -244,27 +252,67 @@ export default function ClientDetail() {
                         <TableCell className="text-center">
                           <Badge 
                             variant={
+                              payment.payment_method === 'CARD_ON_FILE' ? 'default' :
                               payment.payment_method === 'CARD' ? 'default' : 
                               payment.payment_method === 'CASH' ? 'secondary' :
                               payment.payment_method === 'CHECK' ? 'outline' :
+                              payment.payment_method === 'INVOICE' ? 'outline' :
                               'secondary'
                             }
                             className="font-medium"
                           >
-                            {payment.payment_method || 'PENDING'}
+                            {payment.payment_method === 'CARD_ON_FILE' ? 'CARD ON FILE' : payment.payment_method || 'PENDING'}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-center">
-                          <Badge 
-                            variant={
-                              payment.payment_status === 'SUCCEEDED' ? 'default' : 
-                              payment.payment_status === 'PENDING' ? 'secondary' : 
-                              'destructive'
-                            }
-                            className="font-medium"
-                          >
-                            {payment.payment_status || 'PENDING'}
-                          </Badge>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8">
+                                <Badge 
+                                  variant={
+                                    payment.payment_status === 'SUCCEEDED' ? 'default' : 
+                                    payment.payment_status === 'PENDING' ? 'secondary' : 
+                                    'destructive'
+                                  }
+                                  className="font-medium cursor-pointer"
+                                >
+                                  {payment.payment_status || 'PENDING'}
+                                </Badge>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => updatePaymentStatus.mutate({ 
+                                  pickupId: payment.id, 
+                                  paymentStatus: 'SUCCEEDED' 
+                                })}
+                                className="cursor-pointer"
+                              >
+                                <CheckCircle2 className="h-4 w-4 mr-2 text-green-600" />
+                                Mark as Paid
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => updatePaymentStatus.mutate({ 
+                                  pickupId: payment.id, 
+                                  paymentStatus: 'PENDING' 
+                                })}
+                                className="cursor-pointer"
+                              >
+                                <Clock className="h-4 w-4 mr-2 text-yellow-600" />
+                                Mark as Pending
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => updatePaymentStatus.mutate({ 
+                                  pickupId: payment.id, 
+                                  paymentStatus: 'FAILED' 
+                                })}
+                                className="cursor-pointer"
+                              >
+                                <XCircle className="h-4 w-4 mr-2 text-red-600" />
+                                Mark as Failed
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     ))}

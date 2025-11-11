@@ -66,6 +66,7 @@ const steps = [
   { key: "info", title: "Review Info", icon: Building },
   { key: "tires", title: "Tire Counts", icon: Package },
   { key: "pricing", title: "Pricing Preview", icon: DollarSign },
+  { key: "payment-method", title: "Payment Method", icon: DollarSign },
   { key: "signatures", title: "Signatures", icon: PenTool },
   { key: "review", title: "Review & Submit", icon: CheckCircle },
   { key: "payment", title: "Payment", icon: DollarSign },
@@ -97,6 +98,7 @@ export function DriverManifestCreationWizard({
   const [offlineMethod, setOfflineMethod] = useState<'CASH' | 'CHECK'>('CASH');
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [requiresInvoice, setRequiresInvoice] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<string>("CASH");
   
   // Use ref for more reliable duplicate prevention
   const isSubmittingRef = useRef(false);
@@ -1001,14 +1003,16 @@ export function DriverManifestCreationWizard({
           : "Manifest created successfully with generator and hauler signatures",
       });
 
-      // Update pickup status to completed AND save revenue
+      // Update pickup status to completed AND save revenue and payment info
       const { error: pickupUpdateError } = await supabase
         .from('pickups')
         .update({ 
           status: 'completed',
           manifest_id: manifest.id,
           computed_revenue: calculatedTotal,
-          final_revenue: calculatedTotal
+          final_revenue: calculatedTotal,
+          payment_method: paymentMethod,
+          payment_status: paymentMethod === 'CASH' ? 'SUCCEEDED' : 'PENDING'
         })
         .eq('id', pickupId);
 
@@ -1890,6 +1894,130 @@ export function DriverManifestCreationWizard({
                   )}
                 </CardContent>
               </Card>
+            </div>
+          </div>
+        );
+
+      case "payment-method":
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center gap-2 mb-4">
+              <DollarSign className="h-5 w-5 text-primary" />
+              <h3 className="text-lg font-semibold">Select Payment Method</h3>
+            </div>
+
+            <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
+              <p className="text-sm text-blue-900 dark:text-blue-100">
+                Select how the customer is paying for this pickup. For card on file, office staff will process the payment later.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <Card 
+                className={`cursor-pointer transition-colors hover:bg-muted/50 ${paymentMethod === 'CASH' ? 'border-primary border-2' : ''}`}
+                onClick={() => setPaymentMethod('CASH')}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className={`w-5 h-5 rounded-full border-2 mt-0.5 flex items-center justify-center ${paymentMethod === 'CASH' ? 'border-primary bg-primary' : 'border-muted-foreground'}`}>
+                      {paymentMethod === 'CASH' && <div className="w-2 h-2 rounded-full bg-white" />}
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold mb-1">Cash</h4>
+                      <p className="text-sm text-muted-foreground">Customer paid with cash on site</p>
+                      <div className="mt-2 px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-900 dark:text-green-100 rounded text-xs inline-block">
+                        Payment Complete
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card 
+                className={`cursor-pointer transition-colors hover:bg-muted/50 ${paymentMethod === 'CARD_ON_FILE' ? 'border-primary border-2' : ''}`}
+                onClick={() => setPaymentMethod('CARD_ON_FILE')}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className={`w-5 h-5 rounded-full border-2 mt-0.5 flex items-center justify-center ${paymentMethod === 'CARD_ON_FILE' ? 'border-primary bg-primary' : 'border-muted-foreground'}`}>
+                      {paymentMethod === 'CARD_ON_FILE' && <div className="w-2 h-2 rounded-full bg-white" />}
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold mb-1">Card on File</h4>
+                      <p className="text-sm text-muted-foreground">Office will charge the customer's saved card</p>
+                      <div className="mt-2 px-3 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-900 dark:text-yellow-100 rounded text-xs inline-block">
+                        Pending - Office Processing Required
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card 
+                className={`cursor-pointer transition-colors hover:bg-muted/50 ${paymentMethod === 'INVOICE' ? 'border-primary border-2' : ''}`}
+                onClick={() => setPaymentMethod('INVOICE')}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className={`w-5 h-5 rounded-full border-2 mt-0.5 flex items-center justify-center ${paymentMethod === 'INVOICE' ? 'border-primary bg-primary' : 'border-muted-foreground'}`}>
+                      {paymentMethod === 'INVOICE' && <div className="w-2 h-2 rounded-full bg-white" />}
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold mb-1">Invoice Later</h4>
+                      <p className="text-sm text-muted-foreground">Customer will be invoiced for this pickup</p>
+                      <div className="mt-2 px-3 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-900 dark:text-yellow-100 rounded text-xs inline-block">
+                        Pending - Invoice to be Sent
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card 
+                className={`cursor-pointer transition-colors hover:bg-muted/50 ${paymentMethod === 'CHECK' ? 'border-primary border-2' : ''}`}
+                onClick={() => setPaymentMethod('CHECK')}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className={`w-5 h-5 rounded-full border-2 mt-0.5 flex items-center justify-center ${paymentMethod === 'CHECK' ? 'border-primary bg-primary' : 'border-muted-foreground'}`}>
+                      {paymentMethod === 'CHECK' && <div className="w-2 h-2 rounded-full bg-white" />}
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold mb-1">Check</h4>
+                      <p className="text-sm text-muted-foreground">Customer paid with a check</p>
+                      <div className="mt-2 px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-900 dark:text-green-100 rounded text-xs inline-block">
+                        Payment Complete
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card className="bg-muted/30">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-2">
+                  <FileText className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-medium mb-1">Payment Status</p>
+                    <p className="text-muted-foreground">
+                      {paymentMethod === 'CASH' && 'Payment will be marked as COMPLETED immediately.'}
+                      {paymentMethod === 'CARD_ON_FILE' && 'Payment will be marked as PENDING until office staff processes the card charge.'}
+                      {paymentMethod === 'INVOICE' && 'Payment will be marked as PENDING until the invoice is paid.'}
+                      {paymentMethod === 'CHECK' && 'Payment will be marked as COMPLETED immediately.'}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+              <p className="text-sm text-amber-900 dark:text-amber-100 font-medium mb-1">
+                Total Amount: ${calculatedTotal.toFixed(2)}
+              </p>
+              <p className="text-xs text-amber-900/70 dark:text-amber-100/70">
+                This is the amount that {paymentMethod === 'CASH' || paymentMethod === 'CHECK' ? 'was collected' : 'will be charged'}.
+              </p>
             </div>
           </div>
         );
