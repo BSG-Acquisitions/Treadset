@@ -125,6 +125,34 @@ serve(async (req) => {
 
     logStep("Payment updated successfully", { paymentId: payment.id, status: payment.status });
 
+    // Create notification for successful payment
+    if (payment.status === 'paid') {
+      const { data: userData } = await supabaseService
+        .from('users')
+        .select('id')
+        .eq('auth_user_id', user.id)
+        .single();
+
+      if (userData) {
+        const amount = session.amount_total ? `$${(session.amount_total / 100).toFixed(2)}` : '';
+        const description = payment.description || 'payment';
+        
+        await supabaseService.from('notifications').insert({
+          user_id: userData.id,
+          organization_id: payment.organization_id,
+          title: "Payment Received",
+          message: `Stripe payment of ${amount} was successfully processed for ${description}.`,
+          type: 'success',
+          priority: 'medium',
+          related_type: 'payment',
+          related_id: payment.id,
+          is_read: false,
+        });
+        
+        logStep("Payment notification created", { userId: userData.id });
+      }
+    }
+
     return new Response(JSON.stringify({
       success: true,
       payment: payment,
