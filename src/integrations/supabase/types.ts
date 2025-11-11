@@ -3285,6 +3285,36 @@ export type Database = {
           },
         ]
       }
+      rate_limits: {
+        Row: {
+          created_at: string | null
+          endpoint: string
+          id: string
+          request_count: number
+          reset_at: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          endpoint: string
+          id?: string
+          request_count?: number
+          reset_at: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          endpoint?: string
+          id?: string
+          request_count?: number
+          reset_at?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       receivers: {
         Row: {
           collection_site_reg: string | null
@@ -4354,6 +4384,7 @@ export type Database = {
         Returns: number
       }
       check_performance_thresholds: { Args: never; Returns: undefined }
+      cleanup_expired_rate_limits: { Args: never; Returns: undefined }
       create_followup_workflows_for_inactive_clients: {
         Args: never
         Returns: number

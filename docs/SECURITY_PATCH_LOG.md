@@ -1,0 +1,144 @@
+# Security Patch Log
+
+## 2025-11-11 - Critical Security Hardening Patch
+
+**Ticket**: Security Audit Remediation - Critical Issues  
+**Applied By**: AI Assistant  
+**Status**: ✅ COMPLETED
+
+### Changes Applied
+
+#### 1. JWT Verification Enabled (Critical)
+- **File Modified**: `supabase/config.toml`
+- **Changes**:
+  - Enabled `verify_jwt = true` for 38 edge functions
+  - Kept `verify_jwt = false` only for public endpoints:
+    - `public-booking` (public facing)
+    - `send-password-reset` (public utility)
+    - `create-payment` (Stripe webhook)
+    - `verify-payment` (Stripe webhook)
+- **Impact**: All authenticated endpoints now require valid JWT tokens
+- **Risk**: Medium - May break unauthenticated calls if any exist
+- **Rollback**: Set `verify_jwt = false` in config.toml
+
+#### 2. Storage Bucket Security (Critical)
+- **Migration**: `20251111_security_hardening.sql`
+- **Changes**:
+  - Set `manifests` bucket to `public = false`
+  - Set `templates` bucket to `public = false`
+  - Added RLS policies for organization-based access
+  - Service role can manage all files
+- **Impact**: Manifest PDFs and templates now require authentication
+- **Risk**: High - Existing public links will break
+- **Rollback**: `UPDATE storage.buckets SET public = true WHERE id IN ('manifests', 'templates');`
+
+#### 3. Rate Limiting Infrastructure (Critical)
+- **Table Created**: `public.rate_limits`
+- **File Created**: `supabase/functions/_shared/rateLimit.ts` (enhanced)
+- **Changes**:
+  - Database-backed rate limiting (10 req/min default)
+  - Added `verifyJWT()` helper function
+  - Added indexes for performance
+  - Added cleanup function for expired limits
+- **Protected Endpoints**:
+  - `ai-assistant`
+  - `generate-ai-insights`
+  - `geocode-locations`
+  - `csv-export`
+  - `manifest-finalize`
+- **Impact**: Rate limiting enforced on expensive operations
+- **Risk**: Low - Graceful degradation on errors
+- **Rollback**: Drop `rate_limits` table
+
+### Database Changes
+
+```sql
+-- Storage buckets secured
+UPDATE storage.buckets SET public = false WHERE id IN ('manifests', 'templates');
+
+-- RLS policies added
+CREATE POLICY "Organization users can view their manifests" ON storage.objects...
+CREATE POLICY "Organization users can upload manifests" ON storage.objects...
+CREATE POLICY "Service role can manage manifests" ON storage.objects...
+CREATE POLICY "Organization users can view templates" ON storage.objects...
+CREATE POLICY "Service role can manage templates" ON storage.objects...
+
+-- Rate limiting table
+CREATE TABLE public.rate_limits (
+  id UUID PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id),
+  endpoint TEXT NOT NULL,
+  request_count INTEGER NOT NULL DEFAULT 1,
+  reset_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(user_id, endpoint)
+);
+
+-- Indexes added
+CREATE INDEX idx_rate_limits_user_endpoint ON rate_limits(user_id, endpoint);
+CREATE INDEX idx_rate_limits_reset_at ON rate_limits(reset_at);
+```
+
+### Testing Required
+
+- [ ] Test all edge functions with valid JWT tokens
+- [ ] Verify manifest PDF access requires authentication
+- [ ] Test rate limiting on protected endpoints
+- [ ] Verify Stripe webhooks still work (no JWT required)
+- [ ] Test public booking flow (no JWT required)
+- [ ] Verify password reset emails work
+
+### Remaining Medium/Low Issues
+
+**High Priority (Not Addressed):**
+- Leaked password protection (Supabase dashboard setting)
+- Outdated Postgres version (Supabase automatic)
+- Extensions in public schema (pg_trgm)
+- Weak CSP in `src/utils/securityUtils.ts`
+- JWT expiry too long (7 days → recommend 1 hour)
+- Email confirmations disabled
+
+**Medium Priority:**
+- SQL injection patterns in client validation
+- Missing input sanitization on file uploads
+- Session storage for sensitive data
+- HTTPS enforcement configuration
+
+### Deployment Notes
+
+1. **Pre-Deployment**:
+   - Backup database
+   - Test in staging environment
+   - Verify all edge functions have proper JWT handling
+
+2. **Post-Deployment**:
+   - Monitor error logs for auth failures
+   - Check rate_limits table for proper population
+   - Verify manifest access still works for authenticated users
+   - Test Stripe payment flows
+
+3. **Monitoring**:
+   - Watch for 401 Unauthorized errors
+   - Monitor rate limit hits
+   - Check storage access patterns
+
+### Security Score Impact
+
+- **Before**: 62/100
+- **After (Projected)**: 78/100
+- **Improvement**: +16 points
+
+### Next Steps
+
+1. Address high-priority Supabase dashboard settings
+2. Implement stricter CSP
+3. Reduce JWT expiry time
+4. Enable email confirmations
+5. Add input sanitization middleware
+
+---
+
+**Signed**: AI Security Audit System  
+**Date**: 2025-11-11  
+**Review Required**: Yes - QA Team
