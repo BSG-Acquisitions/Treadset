@@ -6,18 +6,15 @@ import { RevenueForecastCard } from '@/components/intelligence/RevenueForecastCa
 import { OperationalMetricsCard } from '@/components/intelligence/OperationalMetricsCard';
 import { AIInsightsCard } from '@/components/intelligence/AIInsightsCard';
 import { CapacityForecastCard } from '@/components/intelligence/CapacityForecastCard';
-import { Brain, TrendingUp, Zap, Clock, Bell, CheckCircle } from 'lucide-react';
+import { Brain, TrendingUp, Zap } from 'lucide-react';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { SlideUp } from '@/components/motion/SlideUp';
 import { useEffect } from 'react';
-import { usePickupPatterns } from '@/hooks/usePickupPatterns';
 
 const IntelligenceDashboard = () => {
   useEffect(() => {
     document.title = 'Intelligence Dashboard – TreadSet';
   }, []);
-
-  const { data: patterns } = usePickupPatterns();
 
   return (
     <div className="space-y-8">
@@ -37,64 +34,6 @@ const IntelligenceDashboard = () => {
         </div>
       </FadeIn>
 
-      {/* Pattern Detection Status */}
-      <FadeIn delay={0.05}>
-        <Card className="border-brand-primary/20 bg-gradient-to-br from-card to-brand-primary/5">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Brain className="h-5 w-5" />
-              Automated Pickup Pattern Detection
-            </CardTitle>
-            <CardDescription>
-              The system automatically learns client pickup schedules and notifies you when regular clients need scheduling
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-background/50 border border-border/50">
-                  <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <Clock className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">Pattern Analysis</p>
-                    <p className="text-xs text-muted-foreground">Daily at 2:00 AM</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-background/50 border border-border/50">
-                  <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <Bell className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">Missing Pickup Check</p>
-                    <p className="text-xs text-muted-foreground">Daily at 8:00 AM</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-background/50 border border-border/50">
-                  <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <CheckCircle className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">Auto Notifications</p>
-                    <p className="text-xs text-muted-foreground">In notification bell</p>
-                  </div>
-                </div>
-              </div>
-              
-              {patterns && patterns.length > 0 && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground pt-2 border-t border-border/50">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span>
-                    Currently tracking <span className="font-medium text-foreground">{patterns.length}</span> client{patterns.length !== 1 ? 's' : ''} with regular pickup patterns
-                  </span>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </FadeIn>
 
       {/* AI Insights Section */}
       <SlideUp delay={0.1}>
