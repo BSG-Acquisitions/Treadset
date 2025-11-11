@@ -43,25 +43,23 @@ export const useLiveClientAnalytics = (year: number = new Date().getFullYear()) 
         throw new Error('No organization found');
       }
 
-      const { data: rpcData } = await measureQuery(
-        'live_client_analytics_rpc',
-        async () => {
-          const { data, error } = await supabase.rpc('get_live_client_analytics', {
-            p_organization_id: organizationId,
-            p_year: year
-          });
-
-          if (error) {
-            console.error('Error fetching live analytics:', error);
-            throw error;
-          }
-
-          return data;
-        },
-        { organizationId, year }
+      // Call optimized analytics function directly
+      const { data, error } = await supabase.rpc(
+        'get_live_client_analytics_optimized' as any,
+        {
+          p_organization_id: organizationId,
+          p_year: year
+        }
       );
 
-      if (!rpcData || rpcData.length === 0) {
+      if (error) {
+        console.error('Error fetching live analytics:', error);
+        throw error;
+      }
+
+      const rpcData = data as any;
+
+      if (!rpcData || (Array.isArray(rpcData) && rpcData.length === 0)) {
         return {
           total_clients: 0,
           total_pickups: 0,
