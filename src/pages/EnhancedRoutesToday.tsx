@@ -11,6 +11,7 @@ import { VehicleManagementDialog } from "@/components/VehicleManagementDialog";
 import { SchedulePickupDialog } from "@/components/SchedulePickupDialog";
 import { useGeocodeLocations } from "@/hooks/useGeocodeLocations";
 import { AddressValidationDialog } from "@/components/AddressValidationDialog";
+import { EditPickupRevenueDialog } from "@/components/EditPickupRevenueDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -974,8 +975,18 @@ export default function EnhancedRoutesToday() {
                                       .map(parseNum)
                                       .find(v => typeof v === 'number' && !Number.isNaN(v) && v > 0) ?? 0;
                                     return (
-                                      <div className="text-xs font-semibold text-green-600">
-                                        ${revenue.toFixed(2)}
+                                      <div className="flex items-center gap-1">
+                                        <div className="text-xs font-semibold text-green-600">
+                                          ${revenue.toFixed(2)}
+                                        </div>
+                                        {revenue === 0 && (
+                                          <EditPickupRevenueDialog
+                                            pickupId={pickup.id}
+                                            manifestId={manifests[0]?.id}
+                                            clientName={pickup.client?.company_name || 'Unknown'}
+                                            currentRevenue={0}
+                                          />
+                                        )}
                                       </div>
                                     );
                                   }
