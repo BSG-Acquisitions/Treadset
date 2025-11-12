@@ -171,8 +171,39 @@ export const formatRelativeTime = (
 };
 
 /**
- * Format business hours
+ * Parse a date that may be a YYYY-MM-DD string into a local Date without TZ shift
  */
+export const parseLocalDate = (
+  date: Date | string | null | undefined
+): Date | null => {
+  if (!date) return null;
+  if (date instanceof Date) return date;
+  // Detect date-only string to avoid UTC shift
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (m) {
+    const [_, y, mo, d] = m;
+    return new Date(Number(y), Number(mo) - 1, Number(d));
+  }
+  const parsed = new Date(date);
+  return isNaN(parsed.getTime()) ? null : parsed;
+};
+
+/**
+ * Format a date (supports YYYY-MM-DD) to 'MMM d, yyyy' without TZ shift for date-only
+ */
+export const formatDateLocal = (
+  date: Date | string | null | undefined,
+  options?: Intl.DateTimeFormatOptions
+): string => {
+  const d = parseLocalDate(date);
+  if (!d) return '';
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    ...options,
+  }).format(d);
+};
 export const formatBusinessHours = (
   startTime: string | null | undefined,
   endTime: string | null | undefined

@@ -20,12 +20,8 @@ import { Badge } from "@/components/ui/badge";
 import { DollarSign, FileText, CreditCard, MapPin, Plus, Receipt, Clock, CheckCircle2, XCircle, Edit2, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { startOfWeek, startOfMonth, startOfQuarter, startOfYear, isWithinInterval } from "date-fns";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { formatDateLocal, parseLocalDate } from "@/lib/formatters";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 
 export default function ClientDetail() {
@@ -59,8 +55,8 @@ export default function ClientDetail() {
     };
 
     payments.forEach(payment => {
-      const paymentDate = new Date(payment.pickup_date);
-      
+      const parsed = parseLocalDate(payment.pickup_date);
+      const paymentDate = parsed || new Date(payment.pickup_date);
       if (isWithinInterval(paymentDate, { start: weekStart, end: now })) {
         groups.thisWeek.push(payment);
       } else if (isWithinInterval(paymentDate, { start: monthStart, end: now })) {
@@ -84,11 +80,7 @@ export default function ClientDetail() {
       {payments.map((payment) => (
         <TableRow key={payment.id} className="hover:bg-muted/30">
           <TableCell className="font-medium">
-            {new Date(payment.pickup_date).toLocaleDateString('en-US', { 
-              month: 'short', 
-              day: 'numeric', 
-              year: 'numeric' 
-            })}
+            {formatDateLocal(payment.pickup_date)}
           </TableCell>
           <TableCell>
             <div className="max-w-xs">
