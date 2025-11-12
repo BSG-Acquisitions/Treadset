@@ -967,9 +967,12 @@ export default function EnhancedRoutesToday() {
                                   const hasCompletedManifest = pickup.status === 'completed' && manifests.length > 0;
                                   
                                   if (hasCompletedManifest) {
-                                    // Prefer pickup.final_revenue, then pickup.computed_revenue, then manifest.total
-                                    const revenueRaw = pickup.final_revenue ?? pickup.computed_revenue ?? manifests[0]?.total ?? 0;
-                                    const revenue = typeof revenueRaw === 'string' ? parseFloat(revenueRaw) : (revenueRaw || 0);
+                                    // Pick first non-null and > 0: prefer manifest.total, then pickup.final_revenue, then pickup.computed_revenue
+                                    const candidates = [manifests[0]?.total, pickup.final_revenue, pickup.computed_revenue];
+                                    const parseNum = (v: any) => v === null || v === undefined ? null : (typeof v === 'string' ? parseFloat(v) : Number(v));
+                                    const revenue = candidates
+                                      .map(parseNum)
+                                      .find(v => typeof v === 'number' && !Number.isNaN(v) && v > 0) ?? 0;
                                     return (
                                       <div className="text-xs font-semibold text-green-600">
                                         ${revenue.toFixed(2)}
