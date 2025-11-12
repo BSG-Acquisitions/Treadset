@@ -415,47 +415,7 @@ export function DriverManifestCreationWizard({
       }
     }
 
-    // Validate pricing step - ensure at least one rate is entered if there are tires
-    if (currentStep.key === "pricing") {
-      const values = form.getValues();
-      const pteOffRimCount = values.pte_off_rim || 0;
-      const pteOnRimCount = values.pte_on_rim || 0;
-      const commercial_17_5_19_5_off_count = values.commercial_17_5_19_5_off || 0;
-      const commercial_17_5_19_5_on_count = values.commercial_17_5_19_5_on || 0;
-      const commercial_22_5_off_count = values.commercial_22_5_off || 0;
-      const commercial_22_5_on_count = values.commercial_22_5_on || 0;
-      const otrTotalCount = (values.otr_count || 0) + (values.tractor_count || 0);
-      
-      // Check if rates are entered for tires that exist
-      const needsPteOffRimRate = pteOffRimCount > 0 && (!pteOffRimRate || parseFloat(pteOffRimRate) === 0);
-      const needsPteOnRimRate = pteOnRimCount > 0 && (!pteOnRimRate || parseFloat(pteOnRimRate) === 0);
-      const needsCommercialRate = (commercial_17_5_19_5_off_count > 0 || commercial_17_5_19_5_on_count > 0 || commercial_22_5_off_count > 0 || commercial_22_5_on_count > 0) && 
-        ((!commercial_17_5_19_5_off_rate || parseFloat(commercial_17_5_19_5_off_rate) === 0) &&
-         (!commercial_17_5_19_5_on_rate || parseFloat(commercial_17_5_19_5_on_rate) === 0) &&
-         (!commercial_22_5_off_rate || parseFloat(commercial_22_5_off_rate) === 0) &&
-         (!commercial_22_5_on_rate || parseFloat(commercial_22_5_on_rate) === 0));
-      const needsOtrRate = otrTotalCount > 0 && (!otrRate || parseFloat(otrRate) === 0);
-      
-      if (needsPteOffRimRate || needsPteOnRimRate || needsCommercialRate || needsOtrRate) {
-        toast({
-          title: "Pricing Required",
-          description: "Please enter pricing rates for all tire types before continuing. This ensures accurate revenue tracking.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      // Also validate that total is greater than 0
-      if (calculatedTotal <= 0) {
-        toast({
-          title: "Pricing Required",
-          description: "Total amount must be greater than $0. Please enter valid pricing rates.",
-          variant: "destructive",
-        });
-        return;
-      }
-    }
-
+    // MANDATORY PRICING VALIDATION - Driver CANNOT skip this step
     if (currentStep.key === "pricing") {
       const values = form.getValues();
       const pteOffRimCount = values.pte_off_rim || 0;
@@ -466,11 +426,11 @@ export function DriverManifestCreationWizard({
       const commercial_22_5_on_count = values.commercial_22_5_on || 0;
       const otrTotalCount = (values.otr_count || 0) + (values.tractor_count || 0);
 
-      // Validate that rates are set for tire types that have counts
+      // Validate EACH tire type has a rate entered if tires exist
       if (pteOffRimCount > 0 && (!pteOffRimRate || parseFloat(pteOffRimRate) <= 0)) {
         toast({
-          title: "Missing Rate",
-          description: "Please set a rate for Passenger Off-Rim tires",
+          title: "Pricing Required - Cannot Continue",
+          description: "Please enter a rate for Passenger Off-Rim tires. Revenue entry is mandatory.",
           variant: "destructive",
         });
         return;
@@ -478,8 +438,8 @@ export function DriverManifestCreationWizard({
 
       if (pteOnRimCount > 0 && (!pteOnRimRate || parseFloat(pteOnRimRate) <= 0)) {
         toast({
-          title: "Missing Rate",
-          description: "Please set a rate for Passenger On-Rim tires",
+          title: "Pricing Required - Cannot Continue",
+          description: "Please enter a rate for Passenger On-Rim tires. Revenue entry is mandatory.",
           variant: "destructive",
         });
         return;
@@ -487,8 +447,8 @@ export function DriverManifestCreationWizard({
 
       if (commercial_17_5_19_5_off_count > 0 && (!commercial_17_5_19_5_off_rate || parseFloat(commercial_17_5_19_5_off_rate) <= 0)) {
         toast({
-          title: "Missing Rate",
-          description: "Please set a rate for 17.5\"/19.5\" Off-Rim tires",
+          title: "Pricing Required - Cannot Continue",
+          description: "Please enter a rate for Commercial 17.5-19.5 Off-Rim tires. Revenue entry is mandatory.",
           variant: "destructive",
         });
         return;
@@ -496,8 +456,8 @@ export function DriverManifestCreationWizard({
 
       if (commercial_17_5_19_5_on_count > 0 && (!commercial_17_5_19_5_on_rate || parseFloat(commercial_17_5_19_5_on_rate) <= 0)) {
         toast({
-          title: "Missing Rate",
-          description: "Please set a rate for 17.5\"/19.5\" On-Rim tires",
+          title: "Pricing Required - Cannot Continue",
+          description: "Please enter a rate for Commercial 17.5-19.5 On-Rim tires. Revenue entry is mandatory.",
           variant: "destructive",
         });
         return;
@@ -505,8 +465,8 @@ export function DriverManifestCreationWizard({
 
       if (commercial_22_5_off_count > 0 && (!commercial_22_5_off_rate || parseFloat(commercial_22_5_off_rate) <= 0)) {
         toast({
-          title: "Missing Rate",
-          description: "Please set a rate for 22.5\" Off-Rim tires",
+          title: "Pricing Required - Cannot Continue",
+          description: "Please enter a rate for Commercial 22.5 Off-Rim tires. Revenue entry is mandatory.",
           variant: "destructive",
         });
         return;
@@ -514,8 +474,8 @@ export function DriverManifestCreationWizard({
 
       if (commercial_22_5_on_count > 0 && (!commercial_22_5_on_rate || parseFloat(commercial_22_5_on_rate) <= 0)) {
         toast({
-          title: "Missing Rate",
-          description: "Please set a rate for 22.5\" On-Rim tires",
+          title: "Pricing Required - Cannot Continue",
+          description: "Please enter a rate for Commercial 22.5 On-Rim tires. Revenue entry is mandatory.",
           variant: "destructive",
         });
         return;
@@ -523,17 +483,18 @@ export function DriverManifestCreationWizard({
 
       if (otrTotalCount > 0 && (!otrRate || parseFloat(otrRate) <= 0)) {
         toast({
-          title: "Missing Rate",
-          description: "Please set a rate for OTR/Tractor tires",
+          title: "Pricing Required - Cannot Continue",
+          description: "Please enter a rate for OTR/Tractor tires. Revenue entry is mandatory.",
           variant: "destructive",
         });
         return;
       }
-
+      
+      // FINAL CHECK: Total revenue MUST be greater than $0
       if (calculatedTotal <= 0) {
         toast({
-          title: "Invalid Total",
-          description: "Total amount must be greater than $0",
+          title: "Revenue Required - Cannot Continue",
+          description: "Total amount must be greater than $0.00. Please verify all pricing rates are entered correctly.",
           variant: "destructive",
         });
         return;
