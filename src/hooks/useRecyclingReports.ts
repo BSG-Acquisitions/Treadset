@@ -38,12 +38,13 @@ export const useRecyclingReports = (year: number = new Date().getFullYear()) => 
   return useQuery({
     queryKey: ['recycling-reports', year],
     queryFn: async (): Promise<RecyclingReportsData> => {
-      // Fetch all completed manifests using signed_at (completion time)
+      // Fetch manifests using completion time when available; include awaiting receiver signatures
       const { data: manifests, error: manifestsError } = await supabase
         .from('manifests')
         .select(`
           id,
           signed_at,
+          created_at,
           pte_off_rim,
           pte_on_rim,
           commercial_17_5_19_5_off,
@@ -54,10 +55,10 @@ export const useRecyclingReports = (year: number = new Date().getFullYear()) => 
           tractor_count,
           weight_tons
         `)
-        .eq('status', 'COMPLETED')
-        .not('signed_at', 'is', null)
-        .gte('signed_at', `${year}-01-01`)
-        .lt('signed_at', `${year + 1}-01-01`)
+        .in('status', ['COMPLETED', 'AWAITING_RECEIVER_SIGNATURE'])
+        .or(
+          `and(signed_at.gte.${year}-01-01,signed_at.lt.${year + 1}-01-01),and(signed_at.is.null,created_at.gte.${year}-01-01,created_at.lt.${year + 1}-01-01)`
+        )
         .order('signed_at', { ascending: true });
 
       if (manifestsError) {
@@ -68,8 +69,8 @@ export const useRecyclingReports = (year: number = new Date().getFullYear()) => 
       // Fetch dropoffs
       const { data: dropoffs, error: dropoffsError } = await supabase
         .from('dropoffs')
-        .select('id, dropoff_date, pte_count, otr_count, tractor_count')
-        .eq('status', 'completed')
+        .select('id, dropoff_date, pte_count, otr_count, tractor_count, manifest_id')
+        .is('manifest_id', null)
         .gte('dropoff_date', `${year}-01-01`)
         .lt('dropoff_date', `${year + 1}-01-01`)
         .order('dropoff_date', { ascending: true });
