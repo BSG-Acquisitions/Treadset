@@ -29,6 +29,8 @@ export interface PaymentHistoryItem {
 export const usePaymentHistory = (clientId: string) => {
   return useQuery({
     queryKey: ['payment-history', clientId],
+    staleTime: 0, // Always fetch fresh data
+    refetchOnMount: true,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('pickups')
