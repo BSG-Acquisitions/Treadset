@@ -210,13 +210,17 @@ Format your response as JSON with this structure:
     }
 
     const aiData = await aiResponse.json();
-    const analysisText = aiData.choices[0].message.content;
+    let analysisText = aiData.choices[0].message.content;
+    
+    // Strip markdown code fences if present (```json ... ```)
+    analysisText = analysisText.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
     
     let analysis;
     try {
       analysis = JSON.parse(analysisText);
+      console.log('AI analysis parsed successfully');
     } catch (e) {
-      console.error('Failed to parse AI response as JSON:', analysisText);
+      console.error('Failed to parse AI response as JSON after cleanup:', analysisText.substring(0, 200));
       // Fallback: return as text
       analysis = {
         efficiency_score: 0,
