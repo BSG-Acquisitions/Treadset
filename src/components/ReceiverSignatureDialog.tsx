@@ -123,10 +123,20 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
       }
       
       // Convert signature to PNG blob
-      console.log('[ReceiverSignature] Converting signature to blob...');
-      const response = await fetch(signatureDataURL);
-      const blob = await response.blob();
-      
+      console.log('[ReceiverSignature] Converting signature to blob (no-fetch)...');
+      const dataURLtoBlob = (dataURL: string) => {
+        const parts = dataURL.split(',');
+        const mimeMatch = parts[0].match(/:(.*?);/);
+        const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+        const byteString = atob(parts[1] ?? '');
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        for (let i = 0; i < byteString.length; i++) {
+          ia[i] = byteString.charCodeAt(i);
+        }
+        return new Blob([ia], { type: mime });
+      };
+      const blob = dataURLtoBlob(signatureDataURL);
       // Get organization_id from manifest for proper storage path
       console.log('[ReceiverSignature] Fetching organization_id from manifest...');
       const { data: orgData, error: orgError } = await supabase
@@ -153,7 +163,7 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
       
       const { error: uploadError } = await supabase.storage
         .from('manifests')
-        .upload(uploadPath, blob);
+        .upload(uploadPath, blob, { contentType: 'image/png', upsert: false });
 
       if (uploadError) {
         console.error('[ReceiverSignature] Upload failed:', uploadError);
