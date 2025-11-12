@@ -65,35 +65,6 @@ export const useRecyclingReports = (year: number = new Date().getFullYear()) => 
         throw manifestsError;
       }
 
-      // Fetch pickups with manifests
-      const { data: pickups, error: pickupsError } = await supabase
-        .from('pickups')
-        .select(`
-          id,
-          scheduled_date,
-          manifests!inner(
-            pte_off_rim,
-            pte_on_rim,
-            commercial_17_5_19_5_off,
-            commercial_17_5_19_5_on,
-            commercial_22_5_off,
-            commercial_22_5_on,
-            otr_count,
-            tractor_count,
-            weight_tons,
-            signed_at
-          )
-        `)
-        .eq('manifests.status', 'COMPLETED')
-        .not('manifests.signed_at', 'is', null)
-        .gte('manifests.signed_at', `${year}-01-01`)
-        .lt('manifests.signed_at', `${year + 1}-01-01`);
-
-      if (pickupsError) {
-        console.error('Error fetching pickups:', pickupsError);
-        throw pickupsError;
-      }
-
       // Fetch dropoffs
       const { data: dropoffs, error: dropoffsError } = await supabase
         .from('dropoffs')
