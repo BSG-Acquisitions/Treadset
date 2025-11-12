@@ -43,9 +43,9 @@ export const useLiveClientAnalytics = (year: number = new Date().getFullYear()) 
         throw new Error('No organization found');
       }
 
-      // Call optimized analytics function directly
+      // Call analytics function directly
       const { data, error } = await supabase.rpc(
-        'get_live_client_analytics_optimized' as any,
+        'get_live_client_analytics' as any,
         {
           p_organization_id: organizationId,
           p_year: year
