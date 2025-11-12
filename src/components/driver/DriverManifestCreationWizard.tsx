@@ -886,6 +886,7 @@ export function DriverManifestCreationWizard({
       });
 
       // Also update additional fields via direct Supabase update
+      // CRITICAL: Include total field to ensure revenue is always saved
       const { error: updateError } = await supabase
         .from('manifests')
         .update({
@@ -894,6 +895,9 @@ export function DriverManifestCreationWizard({
           hauler_signed_at: haulerSignedAt,
           signed_by_name: data.generator_print_name,
           signed_by_title: data.hauler_print_name, // Store hauler's print name in title field
+          total: calculatedTotal, // MUST include total to ensure revenue is persisted
+          payment_method: requiresInvoice ? 'INVOICE' : 'CARD',
+          payment_status: requiresInvoice ? 'PENDING' : 'PENDING',
         })
         .eq('id', manifest.id);
 
