@@ -258,3 +258,77 @@ CREATE INDEX idx_rate_limits_reset_at ON rate_limits(reset_at);
 **Signed**: AI Security Audit System  
 **Date**: 2025-11-11 (Part 2)  
 **Review Required**: Yes - QA Team
+
+---
+
+## 2025-11-12 - Production Rollback: JWT Verification on Critical Functions
+
+**Ticket**: Emergency Production Fix - Restore Business-Critical Functionality  
+**Applied By**: AI Assistant  
+**Status**: ✅ COMPLETED  
+**Priority**: CRITICAL - Production Blocker
+
+### Issue Description
+
+Multiple production failures occurred after Nov 11 security hardening:
+1. Front office staff (Layla Hare) unable to complete manifests at receiver signature section
+2. Layla unable to schedule pickups (route-planner JWT verification blocking)
+3. Complete application data loss from RLS policy changes (later resolved)
+
+**User Directive**: "Anything that was implemented to cause any types of breakages in how it was originally performing from the security measures that we implemented need to be reworked, debugged, or removed in order for everything to continue to be working properly. This is a live app."
+
+### Rollback Actions
+
+#### 1. Route Planner JWT Verification Disabled (CRITICAL)
+- **File Modified**: `supabase/config.toml`
+- **Changes**:
+  - Changed `[functions.route-planner] verify_jwt = true` → `false`
+- **Reason**: Route planner is critical for pickup scheduling. JWT verification blocking legitimate scheduling operations by front office staff.
+- **Impact**: Scheduling functionality restored immediately
+- **Security Trade-off**: Route planner now publicly accessible but requires valid session for subsequent operations (pickup/assignment creation)
+
+#### 2. Manifest Generation Functions Already Public (Previous)
+- **Functions**: `generate-acroform-manifest`, `send-manifest-email`
+- **Status**: Already set to `verify_jwt = false` (Nov 12 earlier)
+- **Reason**: Required for manifest completion workflow to function
+- **Impact**: Manifest creation and emailing working correctly
+
+### Functions Currently Without JWT Verification
+
+**Public by Design:**
+- `public-booking` - Public-facing tire pickup booking
+- `send-password-reset` - Password reset emails
+- `create-payment` - Stripe webhook handler
+- `verify-payment` - Stripe payment verification
+
+**Reverted for Production Stability:**
+- `route-planner` - Pickup scheduling (Nov 12)
+- `generate-acroform-manifest` - Manifest PDF generation (Nov 12)
+- `send-manifest-email` - Manifest email delivery (Nov 12)
+
+### Lessons Learned
+
+1. **Security vs Functionality Priority**: User explicitly requires that production functionality takes precedence over security hardening
+2. **Incremental Deployment**: Security measures must be tested thoroughly in staging before production
+3. **Rollback Procedures**: All security changes must have documented, immediate rollback procedures
+4. **User Impact Assessment**: Changes to authentication must consider all user roles and workflows
+
+### Next Steps
+
+1. **Immediate**: Monitor application for any further security-related breakages
+2. **Short-term**: Implement proper JWT passing in frontend for authenticated edge function calls
+3. **Medium-term**: Re-enable JWT verification with proper testing after fixing client-side authentication
+4. **Long-term**: Establish staging environment testing protocol for all security changes
+
+### Security Score Impact
+
+- **After Critical + High Fixes**: 88/100
+- **After Production Rollback**: ~82/100 (estimated -6 points for exposed endpoints)
+- **Trade-off**: Acceptable per user requirement that app functionality is non-negotiable
+
+---
+
+**Signed**: AI Assistant  
+**Date**: 2025-11-12  
+**Review Required**: Yes - Post-incident review needed  
+**User Approval**: Explicit directive to prioritize functionality over security
