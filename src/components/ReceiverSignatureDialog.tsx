@@ -104,49 +104,71 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
       }
 
       setIsCompleting(true);
+      console.log('[ReceiverSignature] Starting completion process...');
+      
       const signatureDataURL = sigCanvas.toDataURL();
       const timestamp = new Date().toISOString();
       
       // Save signature to employee record if an employee is selected
       if (selectedEmployeeId && selectedEmployee) {
         try {
+          console.log('[ReceiverSignature] Saving signature to employee record...');
           await supabase
             .from('users')
             .update({ signature_data_url: signatureDataURL })
             .eq('id', selectedEmployeeId);
         } catch (error) {
-          console.error('Failed to save signature to employee record:', error);
+          console.error('[ReceiverSignature] Failed to save signature to employee record:', error);
         }
       }
       
       // Convert signature to PNG blob
+      console.log('[ReceiverSignature] Converting signature to blob...');
       const response = await fetch(signatureDataURL);
       const blob = await response.blob();
       
       // Get organization_id from manifest for proper storage path
-      const { data: orgData } = await supabase
+      console.log('[ReceiverSignature] Fetching organization_id from manifest...');
+      const { data: orgData, error: orgError } = await supabase
         .from('manifests')
         .select('organization_id')
         .eq('id', manifestId)
         .single();
       
+      if (orgError) {
+        console.error('[ReceiverSignature] Failed to fetch organization_id:', orgError);
+        throw new Error(`Failed to fetch organization: ${orgError.message}`);
+      }
+      
       if (!orgData?.organization_id) {
         throw new Error("Could not determine organization for manifest");
       }
       
+      console.log('[ReceiverSignature] Organization ID:', orgData.organization_id);
+      
       // Upload signature to storage with organization prefix for RLS
       const fileName = `receiver_signature_${Date.now()}.png`;
+      const uploadPath = `${orgData.organization_id}/signatures/${fileName}`;
+      console.log('[ReceiverSignature] Uploading signature to:', uploadPath);
+      
       const { error: uploadError } = await supabase.storage
         .from('manifests')
-        .upload(`${orgData.organization_id}/signatures/${fileName}`, blob);
+        .upload(uploadPath, blob);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('[ReceiverSignature] Upload failed:', uploadError);
+        throw new Error(`Storage upload failed: ${uploadError.message}`);
+      }
+      
+      console.log('[ReceiverSignature] Signature uploaded successfully');
 
       // Get selected receiver data for manifest
       if (!selectedReceiver) {
         throw new Error("Selected receiver not found");
       }
 
+      console.log('[ReceiverSignature] Updating manifest record...');
+      
       // Update manifest with receiver signature info
       // Guard: Only allow COMPLETED status when receiver signature is being added
       const updateData: any = {
@@ -162,9 +184,15 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
         .update(updateData)
         .eq('id', manifestId);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('[ReceiverSignature] Manifest update failed:', updateError);
+        throw new Error(`Failed to update manifest: ${updateError.message}`);
+      }
+      
+      console.log('[ReceiverSignature] Manifest updated successfully');
 
       // Regenerate AcroForm PDF with receiver signature and data
+      console.log('[ReceiverSignature] Regenerating PDF with receiver signature...');
       const manifestData = manifest as any;
       const overrides: Record<string, any> = {
         receiver_signature: `${orgData.organization_id}/signatures/${fileName}`,
@@ -184,11 +212,17 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
       const pdfResult = await manifestIntegration.mutateAsync({ 
         manifestId, 
         overrides 
+      }).catch((pdfError) => {
+        console.error('[ReceiverSignature] PDF generation failed:', pdfError);
+        throw new Error(`PDF generation failed: ${pdfError.message || 'Unknown error'}`);
       });
+      
+      console.log('[ReceiverSignature] PDF generated successfully:', pdfResult.pdfPath);
 
       return { success: true, pdfPath: pdfResult.pdfPath };
     },
     onSuccess: async (result) => {
+      console.log('[ReceiverSignature] Completion successful, sending email...');
       queryClient.invalidateQueries({ queryKey: ['manifests'] });
       
       // Set completion data to show success view
@@ -225,8 +259,22 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
       }
     },
     onError: (error: any) => {
-      console.error("Failed to add receiver signature:", error);
-      toast({ title: "Completion failed", description: error?.message ?? "Unable to complete manifest.", variant: "destructive" });
+      console.error("[ReceiverSignature] COMPLETION FAILED:", {
+        error,
+        message: error?.message,
+        stack: error?.stack,
+        manifestId,
+        selectedReceiverId,
+        printName
+      });
+      
+      // Show detailed error message to user
+      const errorMessage = error?.message || "Unable to complete manifest - check console for details";
+      toast({ 
+        title: "Completion failed", 
+        description: errorMessage, 
+        variant: "destructive" 
+      });
       setIsCompleting(false);
     }
   });
