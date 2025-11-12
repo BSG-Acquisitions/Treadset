@@ -38,12 +38,12 @@ export const useRecyclingReports = (year: number = new Date().getFullYear()) => 
   return useQuery({
     queryKey: ['recycling-reports', year],
     queryFn: async (): Promise<RecyclingReportsData> => {
-      // Fetch all completed manifests for the specified year
-      const { data: manifests, error } = await supabase
+      // Fetch all completed manifests using signed_at (completion time)
+      const { data: manifests, error: manifestsError } = await supabase
         .from('manifests')
         .select(`
           id,
-          created_at,
+          signed_at,
           pte_off_rim,
           pte_on_rim,
           commercial_17_5_19_5_off,
@@ -55,13 +55,57 @@ export const useRecyclingReports = (year: number = new Date().getFullYear()) => 
           weight_tons
         `)
         .eq('status', 'COMPLETED')
-        .gte('created_at', `${year}-01-01`)
-        .lt('created_at', `${year + 1}-01-01`)
-        .order('created_at', { ascending: true });
+        .not('signed_at', 'is', null)
+        .gte('signed_at', `${year}-01-01`)
+        .lt('signed_at', `${year + 1}-01-01`)
+        .order('signed_at', { ascending: true });
 
-      if (error) {
-        console.error('Error fetching recycling reports:', error);
-        throw error;
+      if (manifestsError) {
+        console.error('Error fetching manifests:', manifestsError);
+        throw manifestsError;
+      }
+
+      // Fetch pickups with manifests
+      const { data: pickups, error: pickupsError } = await supabase
+        .from('pickups')
+        .select(`
+          id,
+          scheduled_date,
+          manifests!inner(
+            pte_off_rim,
+            pte_on_rim,
+            commercial_17_5_19_5_off,
+            commercial_17_5_19_5_on,
+            commercial_22_5_off,
+            commercial_22_5_on,
+            otr_count,
+            tractor_count,
+            weight_tons,
+            signed_at
+          )
+        `)
+        .eq('manifests.status', 'COMPLETED')
+        .not('manifests.signed_at', 'is', null)
+        .gte('manifests.signed_at', `${year}-01-01`)
+        .lt('manifests.signed_at', `${year + 1}-01-01`);
+
+      if (pickupsError) {
+        console.error('Error fetching pickups:', pickupsError);
+        throw pickupsError;
+      }
+
+      // Fetch dropoffs
+      const { data: dropoffs, error: dropoffsError } = await supabase
+        .from('dropoffs')
+        .select('id, dropoff_date, pte_count, otr_count, tractor_count')
+        .eq('status', 'completed')
+        .gte('dropoff_date', `${year}-01-01`)
+        .lt('dropoff_date', `${year + 1}-01-01`)
+        .order('dropoff_date', { ascending: true });
+
+      if (dropoffsError) {
+        console.error('Error fetching dropoffs:', dropoffsError);
+        throw dropoffsError;
       }
 
       // Initialize monthly data (12 months)
@@ -99,13 +143,13 @@ export const useRecyclingReports = (year: number = new Date().getFullYear()) => 
       let totalPTE = 0;
       let totalWeight = 0;
 
-      // Process each manifest
+      // Process manifests (standalone)
       (manifests || []).forEach((manifest) => {
-        const createdDate = new Date(manifest.created_at);
-        const month = createdDate.getMonth(); // 0-based
+        const signedDate = new Date(manifest.signed_at);
+        const month = signedDate.getMonth(); // 0-based
         const quarter = Math.floor(month / 3); // 0-based
 
-        // Calculate tire counts
+        // Calculate tire counts with Michigan PTE conversions
         const pteOffRim = manifest.pte_off_rim || 0;
         const pteOnRim = manifest.pte_on_rim || 0;
         const comm175Off = manifest.commercial_17_5_19_5_off || 0;
@@ -116,8 +160,11 @@ export const useRecyclingReports = (year: number = new Date().getFullYear()) => 
         const tractor = manifest.tractor_count || 0;
         const weight = manifest.weight_tons || 0;
 
+        // Raw tire count
         const manifestTotalTires = pteOffRim + pteOnRim + comm175Off + comm175On + comm225Off + comm225On + otr + tractor;
-        const manifestPTE = pteOffRim + pteOnRim; // PTE count specifically
+        
+        // Michigan PTE conversion: passenger=1, tractor=5, OTR=15
+        const manifestPTE = (pteOffRim + pteOnRim + comm175Off + comm175On + comm225Off + comm225On) + (tractor * 5) + (otr * 15);
 
         // Update monthly data
         monthlyData[month].manifests += 1;
@@ -146,6 +193,80 @@ export const useRecyclingReports = (year: number = new Date().getFullYear()) => 
         totalTires += manifestTotalTires;
         totalPTE += manifestPTE;
         totalWeight += weight;
+      });
+
+      // Process pickups with manifests
+      (pickups || []).forEach((pickup: any) => {
+        const manifest = pickup.manifests;
+        if (!manifest || !manifest.signed_at) return;
+
+        const signedDate = new Date(manifest.signed_at);
+        const month = signedDate.getMonth();
+        const quarter = Math.floor(month / 3);
+
+        const pteOffRim = manifest.pte_off_rim || 0;
+        const pteOnRim = manifest.pte_on_rim || 0;
+        const comm175Off = manifest.commercial_17_5_19_5_off || 0;
+        const comm175On = manifest.commercial_17_5_19_5_on || 0;
+        const comm225Off = manifest.commercial_22_5_off || 0;
+        const comm225On = manifest.commercial_22_5_on || 0;
+        const otr = manifest.otr_count || 0;
+        const tractor = manifest.tractor_count || 0;
+        const weight = manifest.weight_tons || 0;
+
+        const manifestTotalTires = pteOffRim + pteOnRim + comm175Off + comm175On + comm225Off + comm225On + otr + tractor;
+        const manifestPTE = (pteOffRim + pteOnRim + comm175Off + comm175On + comm225Off + comm225On) + (tractor * 5) + (otr * 15);
+
+        monthlyData[month].manifests += 1;
+        monthlyData[month].totalTires += manifestTotalTires;
+        monthlyData[month].totalPTE += manifestPTE;
+        monthlyData[month].totalWeight += weight;
+
+        quarterlyData[quarter].manifests += 1;
+        quarterlyData[quarter].totalTires += manifestTotalTires;
+        quarterlyData[quarter].totalPTE += manifestPTE;
+        quarterlyData[quarter].totalWeight += weight;
+
+        tireTypeCounts['PTE Off Rim'] += pteOffRim;
+        tireTypeCounts['PTE On Rim'] += pteOnRim;
+        tireTypeCounts['Commercial 17.5-19.5 Off'] += comm175Off;
+        tireTypeCounts['Commercial 17.5-19.5 On'] += comm175On;
+        tireTypeCounts['Commercial 22.5+ Off'] += comm225Off;
+        tireTypeCounts['Commercial 22.5+ On'] += comm225On;
+        tireTypeCounts['OTR'] += otr;
+        tireTypeCounts['Tractor'] += tractor;
+
+        totalManifests += 1;
+        totalTires += manifestTotalTires;
+        totalPTE += manifestPTE;
+        totalWeight += weight;
+      });
+
+      // Process dropoffs
+      (dropoffs || []).forEach((dropoff) => {
+        const dropoffDate = new Date(dropoff.dropoff_date);
+        const month = dropoffDate.getMonth();
+        const quarter = Math.floor(month / 3);
+
+        const pte = dropoff.pte_count || 0;
+        const otr = dropoff.otr_count || 0;
+        const tractor = dropoff.tractor_count || 0;
+
+        const dropoffTotalTires = pte + otr + tractor;
+        const dropoffPTE = pte + (tractor * 5) + (otr * 15);
+
+        monthlyData[month].totalTires += dropoffTotalTires;
+        monthlyData[month].totalPTE += dropoffPTE;
+
+        quarterlyData[quarter].totalTires += dropoffTotalTires;
+        quarterlyData[quarter].totalPTE += dropoffPTE;
+
+        tireTypeCounts['PTE Off Rim'] += pte; // Dropoffs don't distinguish on/off rim
+        tireTypeCounts['OTR'] += otr;
+        tireTypeCounts['Tractor'] += tractor;
+
+        totalTires += dropoffTotalTires;
+        totalPTE += dropoffPTE;
       });
 
       // Convert tire type counts to array format
