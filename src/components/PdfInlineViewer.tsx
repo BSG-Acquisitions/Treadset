@@ -20,9 +20,20 @@ export const PdfInlineViewer: React.FC<PdfInlineViewerProps> = ({ filePath, clas
         setLoading(true);
         setError(null);
 
-        // Resolve public URL and fetch as ArrayBuffer to avoid viewer/plugin/popup issues
-        const { data: pub } = supabase.storage.from('manifests').getPublicUrl(filePath);
-        const resp = await fetch(pub.publicUrl);
+        // Prefer a signed URL (works with private buckets); fallback to public URL if available
+        let pdfUrl: string | null = null;
+        try {
+          const { data, error } = await supabase.storage
+            .from('manifests')
+            .createSignedUrl(filePath, 60 * 60); // 1 hour
+          if (error) throw error;
+          pdfUrl = data.signedUrl;
+        } catch {
+          const { data: pub } = supabase.storage.from('manifests').getPublicUrl(filePath);
+          pdfUrl = pub.publicUrl;
+        }
+
+        const resp = await fetch(pdfUrl!);
         if (!resp.ok) throw new Error('Failed to fetch PDF');
         const arrayBuffer = await resp.arrayBuffer();
 
