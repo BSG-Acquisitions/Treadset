@@ -20,20 +20,52 @@ export const PdfInlineViewer: React.FC<PdfInlineViewerProps> = ({ filePath, clas
         setLoading(true);
         setError(null);
 
-        // Prefer a signed URL (works with private buckets); fallback to public URL if available
-        let pdfUrl: string | null = null;
+        // Build candidate paths to handle legacy and org-scoped storage layouts
+        const raw = (filePath || '').replace(/^\/+/, '');
+        const strippedBucket = raw.replace(/^manifests\//, '');
+
+        const candidatePaths = new Set<string>([raw, strippedBucket]);
         try {
-          const { data, error } = await supabase.storage
-            .from('manifests')
-            .createSignedUrl(filePath, 60 * 60); // 1 hour
-          if (error) throw error;
-          pdfUrl = data.signedUrl;
+          // Try to prepend the current organization folder if policies require it
+          const { data: orgId } = await supabase.rpc('get_current_user_organization', { org_slug: 'bsg' });
+          if (orgId) {
+            candidatePaths.add(`${orgId}/${strippedBucket}`);
+            candidatePaths.add(`${orgId}/${raw}`);
+          }
         } catch {
-          const { data: pub } = supabase.storage.from('manifests').getPublicUrl(filePath);
-          pdfUrl = pub.publicUrl;
+          // ignore org resolution failures - we'll try without it
         }
 
-        const resp = await fetch(pdfUrl!);
+        let pdfUrl: string | null = null;
+        // Try signed URLs first (private bucket)
+        for (const p of candidatePaths) {
+          try {
+            const { data, error } = await supabase.storage
+              .from('manifests')
+              .createSignedUrl(p, 60 * 60);
+            if (!error && data?.signedUrl) {
+              pdfUrl = data.signedUrl;
+              break;
+            }
+          } catch { /* continue */ }
+        }
+
+        // Fallback to public URL (in case object is public)
+        if (!pdfUrl) {
+          for (const p of candidatePaths) {
+            try {
+              const { data: pub } = supabase.storage.from('manifests').getPublicUrl(p);
+              if (pub?.publicUrl) {
+                pdfUrl = pub.publicUrl;
+                break;
+              }
+            } catch { /* continue */ }
+          }
+        }
+
+        if (!pdfUrl) throw new Error('Failed to resolve PDF URL');
+
+        const resp = await fetch(pdfUrl);
         if (!resp.ok) throw new Error('Failed to fetch PDF');
         const arrayBuffer = await resp.arrayBuffer();
 
