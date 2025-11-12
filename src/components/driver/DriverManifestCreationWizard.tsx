@@ -365,8 +365,12 @@ export function DriverManifestCreationWizard({
   };
 
   const handleNext = async () => {
+    console.log('[MANIFEST_WIZARD] handleNext called at step:', currentStep.key, 'haulerData:', haulerData);
+    
     // CRITICAL: Validate hauler at EVERY step to prevent bypassing
     if (!haulerData) {
+      console.error('[MANIFEST_WIZARD] Hauler validation failed - no hauler data available');
+      console.log('[MANIFEST_WIZARD] Available haulers:', haulers);
       toast({
         title: "Missing Hauler Information",
         description: "No hauler is assigned. Please go back to the first step and select a hauler company.",
@@ -378,6 +382,7 @@ export function DriverManifestCreationWizard({
     // Validate hauler selection on info step
     if (currentStep.key === "info") {
       if (!haulerData) {
+        console.error('[MANIFEST_WIZARD] Info step validation failed - no hauler selected');
         toast({
           title: "Hauler Required",
           description: "Please select a hauler company before continuing",
@@ -388,6 +393,10 @@ export function DriverManifestCreationWizard({
       
       // Ensure hauler has required fields
       if (!haulerData.company_name || !haulerData.hauler_mi_reg) {
+        console.error('[MANIFEST_WIZARD] Hauler validation failed - missing required fields:', {
+          company_name: haulerData.company_name,
+          hauler_mi_reg: haulerData.hauler_mi_reg
+        });
         toast({
           title: "Incomplete Hauler Information",
           description: "The selected hauler is missing required information (company name or MI registration). Please contact your administrator.",
@@ -395,6 +404,8 @@ export function DriverManifestCreationWizard({
         });
         return;
       }
+      
+      console.log('[MANIFEST_WIZARD] Info step validation passed - hauler is valid:', haulerData.company_name);
     }
 
     // Validate current step before proceeding
@@ -1121,10 +1132,18 @@ export function DriverManifestCreationWizard({
                         </div>
                       ) : (
                         <Select onValueChange={(value) => {
+                          console.log('[MANIFEST_WIZARD] Hauler selection changed:', value);
                           const selected = haulers.find(h => h.id === value);
+                          console.log('[MANIFEST_WIZARD] Selected hauler object:', selected);
+                          
                           if (selected) {
                             // Validate the hauler has required fields
                             if (!selected.company_name || !selected.hauler_mi_reg) {
+                              console.error('[MANIFEST_WIZARD] Selected hauler is incomplete:', {
+                                id: selected.id,
+                                company_name: selected.company_name,
+                                hauler_mi_reg: selected.hauler_mi_reg
+                              });
                               toast({
                                 title: "Incomplete Hauler",
                                 description: "This hauler is missing required information. Please contact your administrator.",
@@ -1132,11 +1151,16 @@ export function DriverManifestCreationWizard({
                               });
                               return;
                             }
+                            
+                            console.log('[MANIFEST_WIZARD] Setting hauler data:', selected.company_name);
                             setHaulerData(selected);
+                            
                             toast({
                               title: "Hauler Selected",
                               description: `${selected.company_name} has been selected.`,
                             });
+                          } else {
+                            console.error('[MANIFEST_WIZARD] No hauler found with ID:', value);
                           }
                         }}>
                           <SelectTrigger id="hauler-select" className="w-full border-red-300 dark:border-red-700">

@@ -16,6 +16,7 @@ import { useHaulers } from "@/hooks/useHaulers";
 import { useAuth } from "@/contexts/AuthContext";
 import { Calculator, FileText, CreditCard, DollarSign, Factory, Truck, Building2, Plus } from "lucide-react";
 import { CreateHaulerDialog } from "./CreateHaulerDialog";
+import { CreateGeneratorDialog } from "./CreateGeneratorDialog";
 import { calculateTotalPTE } from "@/lib/michigan-conversions";
 import { format } from "date-fns";
 
@@ -30,6 +31,7 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
   const [customerId, setCustomerId] = useState(selectedCustomerId || "");
   const [haulerId, setHaulerId] = useState("");
   const [showCreateHauler, setShowCreateHauler] = useState(false);
+  const [showCreateGenerator, setShowCreateGenerator] = useState(false);
   const [customerType, setCustomerType] = useState<"existing" | "new">("existing");
   const [pteCount, setPteCount] = useState("");
   const [otrCount, setOtrCount] = useState("");
@@ -148,13 +150,25 @@ const subtotal = (Number(pteCount || 0) * ptePrice) +
               
               {/* Generator Selection */}
               <div className="space-y-3">
-                <Label className="flex items-center gap-2">
-                  <Factory className="h-4 w-4" />
-                  Generator (Tire Source)
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-2">
+                    <Factory className="h-4 w-4" />
+                    Generator (Tire Source)
+                  </Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowCreateGenerator(true)}
+                    className="h-8"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Generator
+                  </Button>
+                </div>
                 {customers.length === 0 ? (
                   <div className="text-sm text-muted-foreground p-4 border border-dashed rounded-lg text-center">
-                    No customers found. Please create a customer first using the "Add Customer" button on the dropoffs page.
+                    No customers found. Please create a customer first using the "Add Generator" button above.
                   </div>
                 ) : (
                   <Select value={customerId} onValueChange={setCustomerId}>
@@ -380,6 +394,11 @@ const subtotal = (Number(pteCount || 0) * ptePrice) +
       <CreateHaulerDialog 
         open={showCreateHauler}
         onOpenChange={setShowCreateHauler}
+      />
+
+      <CreateGeneratorDialog
+        open={showCreateGenerator}
+        onOpenChange={setShowCreateGenerator}
       />
     </Dialog>
   );
