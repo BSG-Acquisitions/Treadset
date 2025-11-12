@@ -64,25 +64,25 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.csv-import]
-verify_jwt = true
+verify_jwt = false
 
 [functions.csv-export]
-verify_jwt = true
+verify_jwt = false
 
 [functions.enhanced-route-optimizer]
-verify_jwt = true
+verify_jwt = false
 
 [functions.geocode-locations]
-verify_jwt = true
+verify_jwt = false
 
 [functions.vehicle-setup]
-verify_jwt = true
+verify_jwt = false
 
 [functions.multi-trip-optimizer]
-verify_jwt = true
+verify_jwt = false
 
 [functions.manifest-finalize]
-verify_jwt = true
+verify_jwt = false
 
 [functions.send-manifest-email]
 verify_jwt = false
@@ -91,7 +91,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.diag-storage]
-verify_jwt = true
+verify_jwt = false
 
 [functions.generate-acroform-manifest]
 verify_jwt = false
@@ -103,60 +103,60 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.delete-all-manifests]
-verify_jwt = true
+verify_jwt = false
 
 [functions.delete-hauler-and-manifests]
-verify_jwt = true
+verify_jwt = false
 
 [functions.ai-route-optimizer]
-verify_jwt = true
+verify_jwt = false
 
 [functions.ensure-manifest-pdf]
-verify_jwt = true
+verify_jwt = false
 
 [functions.ai-assistant]
-verify_jwt = true
+verify_jwt = false
 
 [functions.generate-ai-insights]
-verify_jwt = true
+verify_jwt = false
 
 [functions.calculate-driver-performance]
-verify_jwt = true
+verify_jwt = false
 
 [functions.calculate-capacity-forecast]
-verify_jwt = true
+verify_jwt = false
 
 [functions.calculate-revenue-forecast]
-verify_jwt = true
+verify_jwt = false
 
 [functions.calculate-client-risk]
-verify_jwt = true
+verify_jwt = false
 
 [functions.calculate-hauler-reliability]
-verify_jwt = true
+verify_jwt = false
 
 [functions.manifest-followup-automation]
-verify_jwt = true
+verify_jwt = false
 
 [functions.system-health-check]
-verify_jwt = true
+verify_jwt = false
 
 [functions.archive-old-logs]
-verify_jwt = true
+verify_jwt = false
 
 [functions.api-performance-monitor]
-verify_jwt = true
+verify_jwt = false
 
 [functions.warmup-critical-functions]
-verify_jwt = true
+verify_jwt = false
 
 [functions.cache-cleanup]
-verify_jwt = true
+verify_jwt = false
 
 [functions.compute-daily-metrics]
-verify_jwt = true
+verify_jwt = false
 
 [functions.suggest-nearby-clients]
-verify_jwt = true
+verify_jwt = false
 
 [auth]
