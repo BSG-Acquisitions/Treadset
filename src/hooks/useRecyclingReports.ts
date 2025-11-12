@@ -117,8 +117,11 @@ export const useRecyclingReports = (year: number = new Date().getFullYear()) => 
 
       // Process manifests
       (manifests || []).forEach((manifest) => {
-        const signedDate = new Date(manifest.signed_at);
-        const month = signedDate.getMonth(); // 0-based
+        const eventDateStr = (manifest as any).signed_at ?? (manifest as any).created_at;
+        if (!eventDateStr) return; // Skip if no date
+        const eventDate = new Date(eventDateStr as string);
+        if (isNaN(eventDate.getTime())) return; // Guard against invalid dates
+        const month = eventDate.getMonth(); // 0-based
         const quarter = Math.floor(month / 3); // 0-based
 
         // Calculate tire counts with Michigan PTE conversions
