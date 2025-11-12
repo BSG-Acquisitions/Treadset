@@ -123,11 +123,22 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
       const response = await fetch(signatureDataURL);
       const blob = await response.blob();
       
-      // Upload signature to storage
+      // Get organization_id from manifest for proper storage path
+      const { data: orgData } = await supabase
+        .from('manifests')
+        .select('organization_id')
+        .eq('id', manifestId)
+        .single();
+      
+      if (!orgData?.organization_id) {
+        throw new Error("Could not determine organization for manifest");
+      }
+      
+      // Upload signature to storage with organization prefix for RLS
       const fileName = `receiver_signature_${Date.now()}.png`;
       const { error: uploadError } = await supabase.storage
         .from('manifests')
-        .upload(`signatures/${fileName}`, blob);
+        .upload(`${orgData.organization_id}/signatures/${fileName}`, blob);
 
       if (uploadError) throw uploadError;
 
@@ -139,7 +150,7 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
       // Update manifest with receiver signature info
       // Guard: Only allow COMPLETED status when receiver signature is being added
       const updateData: any = {
-        receiver_sig_path: `signatures/${fileName}`,
+        receiver_sig_path: `${orgData.organization_id}/signatures/${fileName}`,
         receiver_signed_at: timestamp,
         receiver_signed_by: printName,
         status: 'COMPLETED', // Safe to set COMPLETED here because we have all signature data
@@ -156,7 +167,7 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
       // Regenerate AcroForm PDF with receiver signature and data
       const manifestData = manifest as any;
       const overrides: Record<string, any> = {
-        receiver_signature: `signatures/${fileName}`,
+        receiver_signature: `${orgData.organization_id}/signatures/${fileName}`,
         receiver_print_name: createPrintNameWithTimestamp(printName, timestamp, 'Processor Representative'),
         receiver_date: new Date(timestamp).toISOString().split('T')[0],
         receiver_time: new Date(timestamp).toLocaleTimeString('en-US', { hour12: false }),
