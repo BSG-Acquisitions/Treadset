@@ -114,7 +114,7 @@ export const useRecyclingReports = (year: number = new Date().getFullYear()) => 
       let totalPTE = 0;
       let totalWeight = 0;
 
-      // Process manifests (standalone)
+      // Process manifests
       (manifests || []).forEach((manifest) => {
         const signedDate = new Date(manifest.signed_at);
         const month = signedDate.getMonth(); // 0-based
@@ -160,53 +160,6 @@ export const useRecyclingReports = (year: number = new Date().getFullYear()) => 
         tireTypeCounts['Tractor'] += tractor;
 
         // Update totals
-        totalManifests += 1;
-        totalTires += manifestTotalTires;
-        totalPTE += manifestPTE;
-        totalWeight += weight;
-      });
-
-      // Process pickups with manifests
-      (pickups || []).forEach((pickup: any) => {
-        const manifest = pickup.manifests;
-        if (!manifest || !manifest.signed_at) return;
-
-        const signedDate = new Date(manifest.signed_at);
-        const month = signedDate.getMonth();
-        const quarter = Math.floor(month / 3);
-
-        const pteOffRim = manifest.pte_off_rim || 0;
-        const pteOnRim = manifest.pte_on_rim || 0;
-        const comm175Off = manifest.commercial_17_5_19_5_off || 0;
-        const comm175On = manifest.commercial_17_5_19_5_on || 0;
-        const comm225Off = manifest.commercial_22_5_off || 0;
-        const comm225On = manifest.commercial_22_5_on || 0;
-        const otr = manifest.otr_count || 0;
-        const tractor = manifest.tractor_count || 0;
-        const weight = manifest.weight_tons || 0;
-
-        const manifestTotalTires = pteOffRim + pteOnRim + comm175Off + comm175On + comm225Off + comm225On + otr + tractor;
-        const manifestPTE = (pteOffRim + pteOnRim + comm175Off + comm175On + comm225Off + comm225On) + (tractor * 5) + (otr * 15);
-
-        monthlyData[month].manifests += 1;
-        monthlyData[month].totalTires += manifestTotalTires;
-        monthlyData[month].totalPTE += manifestPTE;
-        monthlyData[month].totalWeight += weight;
-
-        quarterlyData[quarter].manifests += 1;
-        quarterlyData[quarter].totalTires += manifestTotalTires;
-        quarterlyData[quarter].totalPTE += manifestPTE;
-        quarterlyData[quarter].totalWeight += weight;
-
-        tireTypeCounts['PTE Off Rim'] += pteOffRim;
-        tireTypeCounts['PTE On Rim'] += pteOnRim;
-        tireTypeCounts['Commercial 17.5-19.5 Off'] += comm175Off;
-        tireTypeCounts['Commercial 17.5-19.5 On'] += comm175On;
-        tireTypeCounts['Commercial 22.5+ Off'] += comm225Off;
-        tireTypeCounts['Commercial 22.5+ On'] += comm225On;
-        tireTypeCounts['OTR'] += otr;
-        tireTypeCounts['Tractor'] += tractor;
-
         totalManifests += 1;
         totalTires += manifestTotalTires;
         totalPTE += manifestPTE;
