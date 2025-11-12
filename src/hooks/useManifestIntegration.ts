@@ -341,11 +341,13 @@ export const useManifestIntegration = () => {
         }
       });
 
-      // 3. Update manifest with AcroForm PDF path (keep status as AWAITING_RECEIVER_SIGNATURE)
+      // 3. Update manifest with PDF paths - update BOTH pdf_path and acroform_pdf_path
+      // This ensures the manifest always points to the latest generated PDF
       const { error: updateError } = await supabase
         .from('manifests')
         .update({ 
-          acroform_pdf_path: acroFormResult.pdfPath,
+          pdf_path: acroFormResult.pdfPath,           // Primary PDF path - MUST be updated
+          acroform_pdf_path: acroFormResult.pdfPath,  // Legacy field - keep for compatibility
           updated_at: new Date().toISOString()
         })
         .eq('id', manifestId);
