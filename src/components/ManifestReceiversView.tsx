@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useManifests } from "@/hooks/useManifests";
 import { useSendManifestEmail } from "@/hooks/useSendManifestEmail";
+import { useManifestIntegration } from "@/hooks/useManifestIntegration";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ReceiverSignatureDialog } from "./ReceiverSignatureDialog";
 import { format, subDays, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
-import { Clock, FileText, Signature, Search, Calendar, Filter, ChevronDown, ChevronRight, Mail, Loader2 } from "lucide-react";
+import { Clock, FileText, Signature, Search, Calendar, Filter, ChevronDown, ChevronRight, Mail, Loader2, RefreshCw } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -26,8 +27,10 @@ export const ManifestReceiversView = () => {
   const [clientNames, setClientNames] = useState<Record<string, string>>({});
   const [manifestClientNames, setManifestClientNames] = useState<Record<string, string>>({});
   const { mutate: sendEmail } = useSendManifestEmail();
+  const manifestIntegration = useManifestIntegration();
   const { toast } = useToast();
   const [sendingId, setSendingId] = useState<string | null>(null);
+  const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
   
   // Filters and search
   const [searchTerm, setSearchTerm] = useState("");
@@ -297,6 +300,87 @@ export const ManifestReceiversView = () => {
         description: e?.message || 'Unexpected error while preparing email.',
         variant: 'destructive',
       });
+    }
+  };
+
+  const handleRegenerateManifest = async (manifestId: string, manifestNumber: string) => {
+    try {
+      setRegeneratingId(manifestId);
+      
+      toast({
+        title: 'Regenerating PDF',
+        description: 'Creating new manifest PDF with all signatures...',
+      });
+
+      // Regenerate the PDF with all current signature data
+      const result = await manifestIntegration.mutateAsync({ 
+        manifestId,
+        overrides: {} // Use existing data from database
+      });
+
+      toast({
+        title: 'PDF Regenerated',
+        description: 'Manifest PDF has been updated with all signatures.',
+      });
+
+      // Get recipient email
+      const all = (manifests || []).concat(fallbackPending || []);
+      const manifest: any = all.find((m: any) => m.id === manifestId);
+      let to: string | undefined = undefined;
+
+      if (Array.isArray(manifest?.email_sent_to) && manifest.email_sent_to.length > 0) {
+        to = manifest.email_sent_to[0];
+      }
+
+      if (!to && manifest?.client_id) {
+        const { data: client, error: clientErr } = await supabase
+          .from('clients')
+          .select('email')
+          .eq('id', manifest.client_id)
+          .maybeSingle();
+        
+        if (!clientErr && client?.email) {
+          to = client.email;
+        }
+      }
+
+      // Automatically resend email with new PDF
+      if (to && result.pdfPath) {
+        sendEmail(
+          { manifestId, to },
+          {
+            onSuccess: () => {
+              toast({
+                title: 'Email sent',
+                description: `Updated manifest ${manifestNumber} has been emailed to ${to}.`,
+              });
+              queryClient.invalidateQueries({ queryKey: ['manifests'] });
+            },
+            onError: (error: any) => {
+              toast({
+                title: 'Email failed',
+                description: error?.message || 'PDF regenerated but email failed. Use Resend Email button.',
+                variant: 'destructive',
+              });
+            },
+          }
+        );
+      } else {
+        toast({
+          title: 'No email on file',
+          description: 'PDF regenerated successfully. Please add customer email and use Resend Email button.',
+        });
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['manifests'] });
+    } catch (e: any) {
+      toast({
+        title: 'Regeneration failed',
+        description: e?.message || 'Failed to regenerate manifest PDF.',
+        variant: 'destructive',
+      });
+    } finally {
+      setRegeneratingId(null);
     }
   };
   if (isLoading) {
@@ -666,6 +750,20 @@ export const ManifestReceiversView = () => {
                                  </TableCell>
                                  <TableCell className="text-right">
                                    <div className="flex items-center justify-end gap-2">
+                                     <Button
+                                       size="sm"
+                                       variant="ghost"
+                                       onClick={() => handleRegenerateManifest(manifest.id, manifest.manifest_number)}
+                                       disabled={regeneratingId === manifest.id}
+                                       title="Regenerate PDF with all signatures"
+                                     >
+                                       {regeneratingId === manifest.id ? (
+                                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                       ) : (
+                                         <RefreshCw className="h-4 w-4 mr-2" />
+                                       )}
+                                       Regenerate
+                                     </Button>
                                      {(!manifest.email_status || ['not_sent','failed','bounced'].includes(manifest.email_status)) && (
                                        <Button
                                          size="sm"
@@ -765,14 +863,32 @@ export const ManifestReceiversView = () => {
                                        </p>
                                      )}
                                      
-                                     {manifest.acroform_pdf_path && (
-                                       <ManifestPDFControls
-                                         manifestId={manifest.id}
-                                         acroformPdfPath={manifest.acroform_pdf_path}
-                                         clientEmails={[]}
-                                         className="w-full"
-                                       />
-                                     )}
+                                     <div className="flex items-center gap-2 mt-2">
+                                       <Button
+                                         size="sm"
+                                         variant="ghost"
+                                         onClick={() => handleRegenerateManifest(manifest.id, manifest.manifest_number)}
+                                         disabled={regeneratingId === manifest.id}
+                                         title="Regenerate PDF with all signatures"
+                                         className="flex-1"
+                                       >
+                                         {regeneratingId === manifest.id ? (
+                                           <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                         ) : (
+                                           <RefreshCw className="h-4 w-4 mr-1" />
+                                         )}
+                                         Regenerate
+                                       </Button>
+                                       
+                                       {manifest.acroform_pdf_path && (
+                                         <ManifestPDFControls
+                                           manifestId={manifest.id}
+                                           acroformPdfPath={manifest.acroform_pdf_path}
+                                           clientEmails={[]}
+                                           className="inline-flex"
+                                         />
+                                       )}
+                                     </div>
                                    </div>
                                 </CardContent>
                               </Card>
