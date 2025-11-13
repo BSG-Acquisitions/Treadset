@@ -1157,38 +1157,41 @@ export function DriverManifestCreationWizard({
                           </p>
                         </div>
                       ) : (
-                        <Select onValueChange={(value) => {
-                          console.log('[MANIFEST_WIZARD] Hauler selection changed:', value);
-                          const selected = haulers.find(h => h.id === value);
-                          console.log('[MANIFEST_WIZARD] Selected hauler object:', selected);
-                          
-                          if (selected) {
-                            // Validate the hauler has required fields
-                            if (!selected.company_name || !selected.hauler_mi_reg) {
-                              console.error('[MANIFEST_WIZARD] Selected hauler is incomplete:', {
-                                id: selected.id,
-                                company_name: selected.company_name,
-                                hauler_mi_reg: selected.hauler_mi_reg
-                              });
+                        <Select 
+                          value={haulerData?.id || ""}
+                          onValueChange={(value) => {
+                            console.log('[MANIFEST_WIZARD] Hauler selection changed:', value);
+                            const selected = haulers.find(h => h.id === value);
+                            console.log('[MANIFEST_WIZARD] Selected hauler object:', selected);
+                            
+                            if (selected) {
+                              // Validate the hauler has required fields
+                              if (!selected.company_name || !selected.hauler_mi_reg) {
+                                console.error('[MANIFEST_WIZARD] Selected hauler is incomplete:', {
+                                  id: selected.id,
+                                  company_name: selected.company_name,
+                                  hauler_mi_reg: selected.hauler_mi_reg
+                                });
+                                toast({
+                                  title: "Incomplete Hauler",
+                                  description: "This hauler is missing required information. Please contact your administrator.",
+                                  variant: "destructive",
+                                });
+                                return;
+                              }
+                              
+                              console.log('[MANIFEST_WIZARD] Setting hauler data:', selected.company_name);
+                              setHaulerData(selected);
+                              
                               toast({
-                                title: "Incomplete Hauler",
-                                description: "This hauler is missing required information. Please contact your administrator.",
-                                variant: "destructive",
+                                title: "Hauler Selected",
+                                description: `${selected.company_name} has been selected.`,
                               });
-                              return;
+                            } else {
+                              console.error('[MANIFEST_WIZARD] No hauler found with ID:', value);
                             }
-                            
-                            console.log('[MANIFEST_WIZARD] Setting hauler data:', selected.company_name);
-                            setHaulerData(selected);
-                            
-                            toast({
-                              title: "Hauler Selected",
-                              description: `${selected.company_name} has been selected.`,
-                            });
-                          } else {
-                            console.error('[MANIFEST_WIZARD] No hauler found with ID:', value);
-                          }
-                        }}>
+                          }}
+                        >
                           <SelectTrigger id="hauler-select" className="w-full border-red-300 dark:border-red-700">
                             <SelectValue placeholder="Choose a hauler..." />
                           </SelectTrigger>
