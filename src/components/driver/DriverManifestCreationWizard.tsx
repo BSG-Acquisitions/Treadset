@@ -533,34 +533,60 @@ export function DriverManifestCreationWizard({
         const now = new Date();
         const timestamp = now.toISOString().replace(/[:.]/g, '-');
 
+        // Helper to convert data URL to Blob (in-browser, no network fetch)
+        const dataURLtoBlob = (dataURL: string): Blob => {
+          const arr = dataURL.split(',');
+          const mimeMatch = arr[0].match(/:(.*?);/);
+          const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+          const bstr = atob(arr[1]);
+          let n = bstr.length;
+          const u8arr = new Uint8Array(n);
+          while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+          }
+          return new Blob([u8arr], { type: mime });
+        };
+
         if (generatorSigRef.current && !genSigPath) {
+          console.log('[DRIVER_WIZARD] Saving generator signature...');
           const dataUrl = generatorSigRef.current.toDataURL();
           setGenSigDataUrl(dataUrl); // Store data URL for restoration
-          const generatorBlob = await fetch(dataUrl).then(r => r.blob());
+          const generatorBlob = dataURLtoBlob(dataUrl);
           const generatorFileName = `signatures/${timestamp}-generator.png`;
           const { error: genUploadError } = await supabase.storage
             .from('manifests')
             .upload(generatorFileName, generatorBlob, { contentType: 'image/png', upsert: true });
-          if (genUploadError) throw genUploadError;
+          if (genUploadError) {
+            console.error('[DRIVER_WIZARD] Generator signature upload error:', genUploadError);
+            throw genUploadError;
+          }
           setGenSigPath(generatorFileName);
+          console.log('[DRIVER_WIZARD] Generator signature saved:', generatorFileName);
         }
 
         if (haulerSigRef.current && !haulSigPath) {
+          console.log('[DRIVER_WIZARD] Saving hauler signature...');
           const dataUrl = haulerSigRef.current.toDataURL();
           setHaulSigDataUrl(dataUrl); // Store data URL for restoration
-          const haulerBlob = await fetch(dataUrl).then(r => r.blob());
+          const haulerBlob = dataURLtoBlob(dataUrl);
           const haulerFileName = `signatures/${timestamp}-hauler.png`;
           const { error: haulUploadError } = await supabase.storage
             .from('manifests')
             .upload(haulerFileName, haulerBlob, { contentType: 'image/png', upsert: true });
-          if (haulUploadError) throw haulUploadError;
+          if (haulUploadError) {
+            console.error('[DRIVER_WIZARD] Hauler signature upload error:', haulUploadError);
+            throw haulUploadError;
+          }
           setHaulSigPath(haulerFileName);
+          console.log('[DRIVER_WIZARD] Hauler signature saved:', haulerFileName);
         }
+
+        console.log('[DRIVER_WIZARD] Both signatures saved successfully');
       } catch (e: any) {
-        console.error('Failed to upload signatures before review:', e);
+        console.error('[DRIVER_WIZARD] Failed to upload signatures:', e);
         toast({
           title: "Upload Failed",
-          description: "Could not save signatures. Please try again.",
+          description: e.message || "Could not save signatures. Please try again.",
           variant: "destructive",
         });
         return;
