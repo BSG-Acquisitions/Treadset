@@ -19,6 +19,8 @@ import { CreateHaulerDialog } from "./CreateHaulerDialog";
 import { CreateGeneratorDialog } from "./CreateGeneratorDialog";
 import { calculateTotalPTE } from "@/lib/michigan-conversions";
 import { format } from "date-fns";
+import { SearchableDropdown } from "@/components/SearchableDropdown";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ProcessDropoffDialogProps {
   open: boolean;
@@ -39,6 +41,10 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [notes, setNotes] = useState("");
   
+  // Selected items for searchable dropdowns
+  const [selectedGenerator, setSelectedGenerator] = useState<any>(null);
+  const [selectedHauler, setSelectedHauler] = useState<any>(null);
+  
   // New customer fields
   const [newCustomerName, setNewCustomerName] = useState("");
   const [newCustomerEmail, setNewCustomerEmail] = useState("");
@@ -51,7 +57,39 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
   const { data: pricingTiers = [] } = usePricingTiers();
   const createDropoff = useCreateDropoff();
 
-  const selectedCustomer = customers.find(c => c.id === customerId);
+  const selectedCustomer = selectedGenerator || customers.find(c => c.id === customerId);
+
+  // Search functions for dropdowns
+  const searchClients = async (search: string) => {
+    const { data, error } = await supabase
+      .from('clients')
+      .select('*')
+      .ilike('company_name', `%${search}%`)
+      .order('company_name')
+      .limit(50);
+    
+    if (error) {
+      console.error('Error searching clients:', error);
+      return [];
+    }
+    return data || [];
+  };
+
+  const searchHaulers = async (search: string) => {
+    const { data, error } = await supabase
+      .from('haulers')
+      .select('*')
+      .ilike('hauler_name', `%${search}%`)
+      .eq('is_active', true)
+      .order('hauler_name')
+      .limit(50);
+    
+    if (error) {
+      console.error('Error searching haulers:', error);
+      return [];
+    }
+    return data || [];
+  };
   const defaultPricingTier = pricingTiers.find(pt => pt.name === "Standard") || pricingTiers[0];
 
   // Calculate pricing
@@ -166,31 +204,16 @@ const subtotal = (Number(pteCount || 0) * ptePrice) +
                     Add Generator
                   </Button>
                 </div>
-                {customers.length === 0 ? (
-                  <div className="text-sm text-muted-foreground p-4 border border-dashed rounded-lg text-center">
-                    No customers found. Please create a customer first using the "Add Generator" button above.
-                  </div>
-                ) : (
-                  <Select value={customerId} onValueChange={setCustomerId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select generator..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {customers.map((customer) => (
-                        <SelectItem key={customer.id} value={customer.id}>
-                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                            <span>{customer.contact_name}</span>
-                            {customer.company_name && (
-                              <span className="text-muted-foreground text-xs sm:text-sm">
-                                ({customer.company_name})
-                              </span>
-                            )}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
+                <SearchableDropdown
+                  placeholder="Select generator..."
+                  searchFunction={searchClients}
+                  onSelect={(client) => {
+                    setSelectedGenerator(client);
+                    setCustomerId(client?.id || "");
+                  }}
+                  displayField="company_name"
+                  selected={selectedGenerator}
+                />
               </div>
 
               {/* Hauler Selection */}
@@ -211,18 +234,16 @@ const subtotal = (Number(pteCount || 0) * ptePrice) +
                     Add Hauler
                   </Button>
                 </div>
-                <Select value={haulerId} onValueChange={setHaulerId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select hauler (optional)..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {haulers.map((hauler) => (
-                      <SelectItem key={hauler.id} value={hauler.id}>
-                        {hauler.hauler_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableDropdown
+                  placeholder="Select hauler (optional)..."
+                  searchFunction={searchHaulers}
+                  onSelect={(hauler) => {
+                    setSelectedHauler(hauler);
+                    setHaulerId(hauler?.id || "");
+                  }}
+                  displayField="hauler_name"
+                  selected={selectedHauler}
+                />
               </div>
 
               {/* Receiver Display */}
