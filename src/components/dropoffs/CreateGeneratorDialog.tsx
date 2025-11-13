@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
 import { Factory } from "lucide-react";
 
 interface CreateGeneratorDialogProps {
@@ -15,6 +16,7 @@ interface CreateGeneratorDialogProps {
 
 export const CreateGeneratorDialog = ({ open, onOpenChange }: CreateGeneratorDialogProps) => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -40,19 +42,31 @@ export const CreateGeneratorDialog = ({ open, onOpenChange }: CreateGeneratorDia
       return;
     }
     
+    if (!user?.currentOrganization?.id) {
+      toast({
+        title: "Error",
+        description: "Organization not found. Please log in again.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
+      // Create client instead of generator - this prevents duplicates
       const { data, error } = await supabase
-        .from('generators')
+        .from('clients')
         .insert({
-          generator_name: formData.generator_name,
-          generator_mailing_address: formData.generator_mailing_address || null,
-          generator_city: formData.generator_city || null,
-          generator_state: formData.generator_state || 'MI',
-          generator_zip: formData.generator_zip || null,
-          generator_phone: formData.generator_phone || null,
-          generator_county: formData.generator_county || null,
+          organization_id: user.currentOrganization.id,
+          company_name: formData.generator_name,
+          contact_name: formData.generator_name, // Same as company name for generators
+          mailing_address: formData.generator_mailing_address || null,
+          city: formData.generator_city || null,
+          state: formData.generator_state || 'MI',
+          zip: formData.generator_zip || null,
+          phone: formData.generator_phone || null,
+          county: formData.generator_county || null,
           is_active: true,
         })
         .select()
@@ -62,12 +76,12 @@ export const CreateGeneratorDialog = ({ open, onOpenChange }: CreateGeneratorDia
 
       toast({
         title: "Success",
-        description: `Generator "${formData.generator_name}" created successfully`,
+        description: `Client "${formData.generator_name}" created successfully`,
       });
       
-      // Invalidate queries to refresh the generators list
-      queryClient.invalidateQueries({ queryKey: ['generators'] });
+      // Invalidate queries to refresh the clients list
       queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['clients-table'] });
       
       // Reset form and close dialog
       setFormData({
@@ -81,10 +95,10 @@ export const CreateGeneratorDialog = ({ open, onOpenChange }: CreateGeneratorDia
       });
       onOpenChange(false);
     } catch (error: any) {
-      console.error('Error creating generator:', error);
+      console.error('Error creating client:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to create generator",
+        description: error.message || "Failed to create client",
         variant: "destructive",
       });
     } finally {
@@ -101,7 +115,7 @@ export const CreateGeneratorDialog = ({ open, onOpenChange }: CreateGeneratorDia
             Add New Generator
           </DialogTitle>
           <DialogDescription>
-            Create a new generator (tire source) for manifests
+            Create a new client as a tire source for drop-offs
           </DialogDescription>
         </DialogHeader>
 
