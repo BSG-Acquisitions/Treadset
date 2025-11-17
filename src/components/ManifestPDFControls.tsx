@@ -33,9 +33,18 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
     if (!path) return;
     try {
       const { supabase } = await import('@/integrations/supabase/client');
-      // Use public URL (bucket is public) and fetch as Blob to avoid Chrome cross-origin issues
-      const { data: pub } = supabase.storage.from('manifests').getPublicUrl(path);
-      const url = pub.publicUrl;
+      // Normalize key (remove leading slashes and duplicate bucket prefix)
+      const key = path.replace(/^\/+/, '').replace(/^manifests\//, '');
+
+      // Prefer a signed URL (works for private buckets), fallback to public URL
+      const { data: signed } = await supabase.storage
+        .from('manifests')
+        .createSignedUrl(key, 60 * 60);
+
+      const url = signed?.signedUrl
+        ? signed.signedUrl
+        : supabase.storage.from('manifests').getPublicUrl(key).data.publicUrl;
+
       const resp = await fetch(url);
       if (!resp.ok) throw new Error('Failed to fetch file');
       const blob = await resp.blob();
@@ -56,7 +65,7 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
 
   const handleView = async (path: string, title: string) => {
     if (!path) return;
-    setCurrentPdfPath(path);
+    setCurrentPdfPath(normalizeManifestKey(path));
     setCurrentPdfTitle(title);
     setViewerOpen(true);
   };
@@ -85,13 +94,14 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
 
       // Resolve a URL first (signed if needed)
       let pdfUrl: string | null = null;
+      const key = path.replace(/^\/+/, '').replace(/^manifests\//, '');
       const { data: signedData } = await supabase.storage
         .from('manifests')
-        .createSignedUrl(path, 60 * 60);
+        .createSignedUrl(key, 60 * 60);
       if (signedData?.signedUrl) {
         pdfUrl = signedData.signedUrl;
       } else {
-        const { data: pub } = supabase.storage.from('manifests').getPublicUrl(path);
+        const { data: pub } = supabase.storage.from('manifests').getPublicUrl(key);
         pdfUrl = pub.publicUrl;
       }
       if (!pdfUrl) throw new Error('Could not resolve PDF URL');
@@ -144,15 +154,22 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
     }
   };
 
-  const resolvePublicUrl = async (path: string) => {
+  const normalizeManifestKey = (p: string) => p.replace(/^\/+/, '').replace(/^manifests\//, '');
+
+  const resolveFileUrl = async (path: string) => {
     const { supabase } = await import('@/integrations/supabase/client');
-    const { data: pub } = supabase.storage.from('manifests').getPublicUrl(path);
+    const key = normalizeManifestKey(path);
+    const { data: signed } = await supabase.storage
+      .from('manifests')
+      .createSignedUrl(key, 60 * 60);
+    if (signed?.signedUrl) return signed.signedUrl;
+    const { data: pub } = supabase.storage.from('manifests').getPublicUrl(key);
     return pub.publicUrl;
   };
 
   const handleOpenTab = async (path: string) => {
     try {
-      const url = await resolvePublicUrl(path);
+      const url = await resolveFileUrl(path);
       window.open(url, '_blank', 'noopener');
     } catch (e) {
       console.error('Open in new tab failed:', e);
@@ -162,7 +179,7 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
 
   const handleCopyLink = async (path: string) => {
     try {
-      const url = await resolvePublicUrl(path);
+      const url = await resolveFileUrl(path);
       await navigator.clipboard.writeText(url);
       toast({ title: 'Link copied', description: 'PDF link copied to clipboard.' });
     } catch (e) {
