@@ -59,6 +59,10 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
       setTimeout(() => URL.revokeObjectURL(blobUrl), 3000);
     } catch (err) {
       console.error('Download failed:', err);
+      try {
+        const fallbackUrl = await resolveFileUrl(path);
+        window.open(fallbackUrl, '_blank', 'noopener');
+      } catch {}
       toast({ title: 'Download failed', description: 'Please allow downloads and try again.', variant: 'destructive' });
     }
   };
@@ -147,6 +151,15 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
       printWindow.document.open();
       printWindow.document.write(html);
       printWindow.document.close();
+
+      // Fallback: if the print dialog didn’t appear, navigate to the PDF URL directly
+      setTimeout(() => {
+        try {
+          if (!printWindow.closed) {
+            printWindow.location.replace(pdfUrl!);
+          }
+        } catch {}
+      }, 2000);
     } catch (err) {
       console.error('Print failed:', err);
       try { printWindow.close(); } catch {}
