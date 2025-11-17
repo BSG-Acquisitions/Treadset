@@ -39,31 +39,36 @@ export default function Manifests() {
     );
   });
 
-  // Group manifests by time period
+  // Group manifests by time period using signed_at (completion date) with fallback to created_at
+  const getManifestDate = (manifest: any) => {
+    // Use signed_at (final completion) if available, otherwise fall back to created_at
+    return manifest.signed_at ? new Date(manifest.signed_at) : new Date(manifest.created_at);
+  };
+
   const groupedManifests = {
-    today: filteredManifests.filter(m => isToday(new Date(m.created_at))),
-    thisWeek: filteredManifests.filter(m => 
-      !isToday(new Date(m.created_at)) && 
-      isThisWeek(new Date(m.created_at), { weekStartsOn: 0 })
-    ),
+    today: filteredManifests.filter(m => isToday(getManifestDate(m))),
+    thisWeek: filteredManifests.filter(m => {
+      const date = getManifestDate(m);
+      return !isToday(date) && isThisWeek(date, { weekStartsOn: 0 });
+    }),
     lastWeek: filteredManifests.filter(m => {
-      const date = new Date(m.created_at);
+      const date = getManifestDate(m);
       const weekAgo = subWeeks(new Date(), 1);
       const twoWeeksAgo = subWeeks(new Date(), 2);
       return isAfter(date, twoWeeksAgo) && isBefore(date, weekAgo);
     }),
-    thisMonth: filteredManifests.filter(m => 
-      !isThisWeek(new Date(m.created_at), { weekStartsOn: 0 }) &&
-      isThisMonth(new Date(m.created_at))
-    ),
+    thisMonth: filteredManifests.filter(m => {
+      const date = getManifestDate(m);
+      return !isThisWeek(date, { weekStartsOn: 0 }) && isThisMonth(date);
+    }),
     lastMonth: filteredManifests.filter(m => {
-      const date = new Date(m.created_at);
+      const date = getManifestDate(m);
       const monthAgo = subMonths(new Date(), 1);
       const twoMonthsAgo = subMonths(new Date(), 2);
       return isAfter(date, twoMonthsAgo) && isBefore(date, monthAgo);
     }),
     older: filteredManifests.filter(m => {
-      const date = new Date(m.created_at);
+      const date = getManifestDate(m);
       const twoMonthsAgo = subMonths(new Date(), 2);
       return isBefore(date, twoMonthsAgo);
     }),
