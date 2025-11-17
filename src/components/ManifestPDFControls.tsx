@@ -65,50 +65,65 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
     if (!path) return;
     try {
       const { supabase } = await import('@/integrations/supabase/client');
-      
-      // Try signed URL first (for private buckets), then fallback to public
+
+      // Resolve a URL first (signed if needed)
       let pdfUrl: string | null = null;
-      const { data: signedData, error: signedError } = await supabase.storage
+      const { data: signedData } = await supabase.storage
         .from('manifests')
         .createSignedUrl(path, 60 * 60);
-      
-      if (!signedError && signedData?.signedUrl) {
+      if (signedData?.signedUrl) {
         pdfUrl = signedData.signedUrl;
       } else {
-        // Fallback to public URL
         const { data: pub } = supabase.storage.from('manifests').getPublicUrl(path);
         pdfUrl = pub.publicUrl;
       }
-      
       if (!pdfUrl) throw new Error('Could not resolve PDF URL');
-      
-      // Fetch PDF as blob
+
+      // Fetch as blob to avoid CORS and guarantee printability
       const resp = await fetch(pdfUrl);
       if (!resp.ok) throw new Error('Failed to fetch PDF for printing');
       const blob = await resp.blob();
       const blobUrl = URL.createObjectURL(blob);
-      
-      // Open in new window with blob URL
-      const printWindow = window.open(blobUrl, '_blank');
-      if (printWindow) {
-        // Wait for PDF to fully load before triggering print
-        printWindow.onload = () => {
-          setTimeout(() => {
-            printWindow.print();
-            // Clean up blob URL after print dialog closes
-            printWindow.onafterprint = () => {
-              URL.revokeObjectURL(blobUrl);
-              printWindow.close();
-            };
-          }, 250);
-        };
-      } else {
+
+      // Use a hidden iframe to trigger the print dialog without popups
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      iframe.src = blobUrl;
+      document.body.appendChild(iframe);
+
+      const cleanup = () => {
+        try {
+          document.body.removeChild(iframe);
+        } catch {}
         URL.revokeObjectURL(blobUrl);
-        toast({ title: 'Print blocked', description: 'Please allow popups to print.', variant: 'destructive' });
-      }
+      };
+
+      iframe.onload = () => {
+        try {
+          // Give the PDF a moment to render in the iframe before printing
+          setTimeout(() => {
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+            // Some browsers don't fire onafterprint reliably on iframes; add a fallback
+            const iw = iframe.contentWindow as Window | null;
+            if (iw) {
+              iw.onafterprint = () => cleanup();
+            }
+            setTimeout(cleanup, 3000);
+          }, 250);
+        } catch (e) {
+          cleanup();
+          throw e;
+        }
+      };
     } catch (err) {
       console.error('Print failed:', err);
-      toast({ title: 'Print failed', description: 'Could not load print dialog.', variant: 'destructive' });
+      toast({ title: 'Print failed', description: 'Could not open print dialog. Try again.', variant: 'destructive' });
     }
   };
 
