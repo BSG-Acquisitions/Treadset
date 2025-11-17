@@ -8,7 +8,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { useManifests } from '@/hooks/useManifests';
 import { useClient } from '@/hooks/useClients';
 import { ManifestAlertsList } from '@/components/ManifestAlertsList';
-import { format, isToday, isThisWeek, isThisMonth, subWeeks, subMonths, isAfter, isBefore } from 'date-fns';
+import { format, isToday, isThisMonth, subWeeks, subMonths, isAfter, isBefore } from 'date-fns';
 import { FileText, Clock, CheckCircle, CreditCard, ArrowLeft, MapPin, User, Calendar, Receipt, Search, X, ChevronDown } from 'lucide-react';
 import { ManifestPDFControls } from '@/components/ManifestPDFControls';
 
@@ -45,31 +45,38 @@ export default function Manifests() {
     return manifest.signed_at ? new Date(manifest.signed_at) : new Date(manifest.created_at);
   };
 
+  const now = new Date();
+  const startOfThisWeek = subWeeks(now, 0);
+  startOfThisWeek.setDate(startOfThisWeek.getDate() - startOfThisWeek.getDay()); // Set to Sunday
+  startOfThisWeek.setHours(0, 0, 0, 0);
+  
+  const startOfLastWeek = subWeeks(startOfThisWeek, 1);
+  const endOfLastWeek = new Date(startOfThisWeek);
+  endOfLastWeek.setMilliseconds(-1);
+
   const groupedManifests = {
     today: filteredManifests.filter(m => isToday(getManifestDate(m))),
     thisWeek: filteredManifests.filter(m => {
       const date = getManifestDate(m);
-      return !isToday(date) && isThisWeek(date, { weekStartsOn: 0 });
+      return !isToday(date) && date >= startOfThisWeek;
     }),
     lastWeek: filteredManifests.filter(m => {
       const date = getManifestDate(m);
-      const weekAgo = subWeeks(new Date(), 1);
-      const twoWeeksAgo = subWeeks(new Date(), 2);
-      return isAfter(date, twoWeeksAgo) && isBefore(date, weekAgo);
+      return date >= startOfLastWeek && date <= endOfLastWeek;
     }),
     thisMonth: filteredManifests.filter(m => {
       const date = getManifestDate(m);
-      return !isThisWeek(date, { weekStartsOn: 0 }) && isThisMonth(date);
+      return date < startOfLastWeek && isThisMonth(date);
     }),
     lastMonth: filteredManifests.filter(m => {
       const date = getManifestDate(m);
-      const monthAgo = subMonths(new Date(), 1);
-      const twoMonthsAgo = subMonths(new Date(), 2);
+      const monthAgo = subMonths(now, 1);
+      const twoMonthsAgo = subMonths(now, 2);
       return isAfter(date, twoMonthsAgo) && isBefore(date, monthAgo);
     }),
     older: filteredManifests.filter(m => {
       const date = getManifestDate(m);
-      const twoMonthsAgo = subMonths(new Date(), 2);
+      const twoMonthsAgo = subMonths(now, 2);
       return isBefore(date, twoMonthsAgo);
     }),
   };
@@ -204,10 +211,33 @@ export default function Manifests() {
     </div>
   );
 
+  // Group manifests by day of week
+  const groupByDayOfWeek = (manifests: any[]) => {
+    const days: Record<string, any[]> = {};
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    
+    manifests.forEach(m => {
+      const date = getManifestDate(m);
+      const dayName = format(date, 'EEEE');
+      if (!days[dayName]) {
+        days[dayName] = [];
+      }
+      days[dayName].push(m);
+    });
+
+    // Sort by day order within the week
+    return Object.entries(days).sort((a, b) => {
+      const aIndex = dayNames.indexOf(a[0]);
+      const bIndex = dayNames.indexOf(b[0]);
+      return bIndex - aIndex; // Reverse order (most recent first)
+    });
+  };
+
   const renderTimeSection = (
     title: string,
     manifests: any[],
-    sectionKey: keyof typeof openSections
+    sectionKey: keyof typeof openSections,
+    groupByDay: boolean = false
   ) => {
     if (manifests.length === 0) return null;
 
@@ -225,9 +255,22 @@ export default function Manifests() {
           </div>
         </CollapsibleTrigger>
         <CollapsibleContent className="px-4 pb-4">
-          <div className="space-y-3 pt-3">
-            {manifests.map(renderManifestCard)}
-          </div>
+          {groupByDay ? (
+            <div className="space-y-4 pt-3">
+              {groupByDayOfWeek(manifests).map(([dayName, dayManifests]) => (
+                <div key={dayName} className="space-y-2">
+                  <h4 className="text-sm font-semibold text-muted-foreground px-2">{dayName}</h4>
+                  <div className="space-y-3">
+                    {dayManifests.map(renderManifestCard)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-3 pt-3">
+              {manifests.map(renderManifestCard)}
+            </div>
+          )}
         </CollapsibleContent>
       </Collapsible>
     );
@@ -363,8 +406,8 @@ export default function Manifests() {
             ) : (
               <div className="space-y-4">
                 {renderTimeSection('Today', groupedManifests.today, 'today')}
-                {renderTimeSection('This Week', groupedManifests.thisWeek, 'thisWeek')}
-                {renderTimeSection('Last Week', groupedManifests.lastWeek, 'lastWeek')}
+                {renderTimeSection('This Week', groupedManifests.thisWeek, 'thisWeek', true)}
+                {renderTimeSection('Last Week', groupedManifests.lastWeek, 'lastWeek', true)}
                 {renderTimeSection('This Month', groupedManifests.thisMonth, 'thisMonth')}
                 {renderTimeSection('Last Month', groupedManifests.lastMonth, 'lastMonth')}
                 {renderTimeSection('Older', groupedManifests.older, 'older')}

@@ -7,11 +7,13 @@ import { usePaymentHistory } from "@/hooks/usePaymentHistory";
 import { useClientHealthScores } from "@/hooks/useClientHealthScores";
 import { useUpdatePaymentStatus } from "@/hooks/useUpdatePaymentStatus";
 import { useUpdatePickupPayment } from "@/hooks/useUpdatePickupPayment";
+import { useManifests } from "@/hooks/useManifests";
 import { CreateInvoiceDialog } from "@/components/finance/CreateInvoiceDialog";
 import { RecordPaymentDialog } from "@/components/finance/RecordPaymentDialog";
 import { PaymentDialog } from "@/components/PaymentDialog";
 import { SchedulePickupDialog } from "@/components/SchedulePickupDialog";
 import { ClientHealthBadge } from "@/components/ClientHealthBadge";
+import { ManifestPDFControls } from "@/components/ManifestPDFControls";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -19,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DollarSign, FileText, CreditCard, MapPin, Plus, Receipt, Clock, CheckCircle2, XCircle, Edit2, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { startOfWeek, startOfMonth, startOfQuarter, startOfYear, isWithinInterval } from "date-fns";
+import { startOfWeek, startOfMonth, startOfQuarter, startOfYear, isWithinInterval, format } from "date-fns";
 import { formatDateLocal, parseLocalDate } from "@/lib/formatters";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
@@ -31,6 +33,7 @@ export default function ClientDetail() {
   const { data: invoices = [] } = useInvoices(id);
   const { data: completedPickups = [] } = useCompletedPickups(id);
   const { data: paymentHistory = [] } = usePaymentHistory(id!);
+  const { data: manifests = [] } = useManifests(id);
   const { healthScores } = useClientHealthScores(id);
   const clientHealth = healthScores.find(h => h.client_id === id);
   const updatePaymentStatus = useUpdatePaymentStatus();
@@ -606,6 +609,105 @@ export default function ClientDetail() {
                   </AccordionItem>
                 )}
               </Accordion>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Manifests Section */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <FileText className="h-6 w-6 text-primary" />
+              Manifests
+            </CardTitle>
+            <p className="text-sm text-muted-foreground mt-2">
+              View, download, and print all completed manifests
+            </p>
+          </CardHeader>
+          <CardContent>
+            {manifests.length === 0 ? (
+              <div className="text-center py-12 bg-muted/20 rounded-lg border-2 border-dashed">
+                <FileText className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
+                <p className="text-lg font-medium text-muted-foreground mb-2">No manifests yet</p>
+                <p className="text-sm text-muted-foreground">
+                  Completed manifests will appear here
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {manifests.map((manifest) => (
+                  <div
+                    key={manifest.id}
+                    className="flex flex-col md:flex-row md:items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors gap-4"
+                  >
+                    <div className="flex items-start gap-4 flex-1">
+                      <FileText className="h-5 w-5 text-primary mt-1" />
+                      <div className="flex flex-col space-y-2 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-foreground">
+                            {manifest.manifest_number}
+                          </span>
+                          <Badge variant={manifest.status === 'COMPLETED' ? 'default' : 'secondary'}>
+                            {manifest.status.replace(/_/g, ' ')}
+                          </Badge>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                          {manifest.location && (
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <MapPin className="h-3.5 w-3.5" />
+                              <span className="truncate">{manifest.location.address}</span>
+                            </div>
+                          )}
+                          
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Clock className="h-3.5 w-3.5" />
+                            <span>
+                              {format(new Date(manifest.created_at), 'MMM d, yyyy h:mm a')}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2 flex-wrap">
+                          {(manifest.pte_off_rim + manifest.pte_on_rim) > 0 && (
+                            <span className="inline-flex items-center gap-1 bg-blue-100 dark:bg-blue-900/30 text-blue-900 dark:text-blue-100 px-2 py-0.5 rounded text-xs font-medium">
+                              {manifest.pte_off_rim + manifest.pte_on_rim} PTE
+                            </span>
+                          )}
+                          {manifest.otr_count > 0 && (
+                            <span className="inline-flex items-center gap-1 bg-green-100 dark:bg-green-900/30 text-green-900 dark:text-green-100 px-2 py-0.5 rounded text-xs font-medium">
+                              {manifest.otr_count} OTR
+                            </span>
+                          )}
+                          {(manifest.commercial_17_5_19_5_off + manifest.commercial_17_5_19_5_on + manifest.commercial_22_5_off + manifest.commercial_22_5_on + manifest.tractor_count) > 0 && (
+                            <span className="inline-flex items-center gap-1 bg-purple-100 dark:bg-purple-900/30 text-purple-900 dark:text-purple-100 px-2 py-0.5 rounded text-xs font-medium">
+                              {manifest.commercial_17_5_19_5_off + manifest.commercial_17_5_19_5_on + manifest.commercial_22_5_off + manifest.commercial_22_5_on + manifest.tractor_count} COM
+                            </span>
+                          )}
+                        </div>
+
+                        {manifest.status === 'COMPLETED' && (manifest.pdf_path || manifest.acroform_pdf_path) && (
+                          <div className="mt-2">
+                            <ManifestPDFControls
+                              manifestId={manifest.id}
+                              acroformPdfPath={manifest.acroform_pdf_path}
+                              initialPdfPath={manifest.initial_pdf_path}
+                              clientEmails={client?.email ? [client.email] : []}
+                              className="text-xs"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="text-right">
+                      <div className="text-lg font-semibold text-foreground">
+                        ${manifest.total.toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </CardContent>
         </Card>
