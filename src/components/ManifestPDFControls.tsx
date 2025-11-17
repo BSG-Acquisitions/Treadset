@@ -66,10 +66,24 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
     try {
       const { supabase } = await import('@/integrations/supabase/client');
       
-      // Fetch PDF as blob first to ensure it's loaded
-      const { data: pub } = supabase.storage.from('manifests').getPublicUrl(path);
-      const url = pub.publicUrl;
-      const resp = await fetch(url);
+      // Try signed URL first (for private buckets), then fallback to public
+      let pdfUrl: string | null = null;
+      const { data: signedData, error: signedError } = await supabase.storage
+        .from('manifests')
+        .createSignedUrl(path, 60 * 60);
+      
+      if (!signedError && signedData?.signedUrl) {
+        pdfUrl = signedData.signedUrl;
+      } else {
+        // Fallback to public URL
+        const { data: pub } = supabase.storage.from('manifests').getPublicUrl(path);
+        pdfUrl = pub.publicUrl;
+      }
+      
+      if (!pdfUrl) throw new Error('Could not resolve PDF URL');
+      
+      // Fetch PDF as blob
+      const resp = await fetch(pdfUrl);
       if (!resp.ok) throw new Error('Failed to fetch PDF for printing');
       const blob = await resp.blob();
       const blobUrl = URL.createObjectURL(blob);
@@ -94,7 +108,7 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
       }
     } catch (err) {
       console.error('Print failed:', err);
-      toast({ title: 'Print failed', description: 'Could not open print dialog.', variant: 'destructive' });
+      toast({ title: 'Print failed', description: 'Could not load print dialog.', variant: 'destructive' });
     }
   };
 
