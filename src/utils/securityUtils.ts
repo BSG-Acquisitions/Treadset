@@ -126,6 +126,8 @@ export const applyCSP = (): void => {
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: https: blob:",
       "font-src 'self' data: https://fonts.gstatic.com",
+      // Allow embedding/printing PDFs and plugin-like content
+      "object-src 'self' blob: data:",
       "connect-src 'self' https://wvjehbozyxhmgdljwsiz.supabase.co wss://wvjehbozyxhmgdljwsiz.supabase.co https://api.stripe.com https://api.mapbox.com https://events.mapbox.com",
       "frame-src 'self' https://js.stripe.com blob: data:",
       "frame-ancestors 'none'",
