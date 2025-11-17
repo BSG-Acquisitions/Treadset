@@ -65,16 +65,31 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
     if (!path) return;
     try {
       const { supabase } = await import('@/integrations/supabase/client');
+      
+      // Fetch PDF as blob first to ensure it's loaded
       const { data: pub } = supabase.storage.from('manifests').getPublicUrl(path);
       const url = pub.publicUrl;
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error('Failed to fetch PDF for printing');
+      const blob = await resp.blob();
+      const blobUrl = URL.createObjectURL(blob);
       
-      // Open in new window with print dialog
-      const printWindow = window.open(url, '_blank');
+      // Open in new window with blob URL
+      const printWindow = window.open(blobUrl, '_blank');
       if (printWindow) {
-        printWindow.addEventListener('load', () => {
-          printWindow.print();
-        });
+        // Wait for PDF to fully load before triggering print
+        printWindow.onload = () => {
+          setTimeout(() => {
+            printWindow.print();
+            // Clean up blob URL after print dialog closes
+            printWindow.onafterprint = () => {
+              URL.revokeObjectURL(blobUrl);
+              printWindow.close();
+            };
+          }, 250);
+        };
       } else {
+        URL.revokeObjectURL(blobUrl);
         toast({ title: 'Print blocked', description: 'Please allow popups to print.', variant: 'destructive' });
       }
     } catch (err) {
