@@ -120,14 +120,14 @@ export const applyCSP = (): void => {
     
     meta.content = [
       "default-src 'self'",
-      // No unsafe-inline or unsafe-eval for scripts - use nonces if needed
-      "script-src 'self' https://js.stripe.com https://maps.googleapis.com",
+      // Allow unsafe-inline for scripts to enable printing functionality
+      "script-src 'self' 'unsafe-inline' https://js.stripe.com https://maps.googleapis.com",
       // Allow inline styles from same origin (Tailwind requires this)
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: https: blob:",
       "font-src 'self' data: https://fonts.gstatic.com",
       "connect-src 'self' https://wvjehbozyxhmgdljwsiz.supabase.co wss://wvjehbozyxhmgdljwsiz.supabase.co https://api.stripe.com https://api.mapbox.com https://events.mapbox.com",
-      "frame-src 'self' https://js.stripe.com",
+      "frame-src 'self' https://js.stripe.com blob: data:",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
