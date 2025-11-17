@@ -63,7 +63,24 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
 
   const handlePrint = async (path: string) => {
     if (!path) return;
+
+    // Open a print window synchronously (prevents popup blockers)
+    const printWindow = window.open('', '_blank', 'noopener,noreferrer');
+    if (!printWindow) {
+      toast({ title: 'Pop-up blocked', description: 'Please allow pop-ups to print.', variant: 'destructive' });
+      return;
+    }
+
+    // Basic shell so the window is visible quickly
     try {
+      printWindow.document.write(
+        '<!doctype html><title>Printing…</title>' +
+          '<meta name="viewport" content="width=device-width, initial-scale=1" />' +
+          '<style>html,body{height:100%;margin:0}body{display:flex;align-items:center;justify-content:center;font:14px system-ui;color:#666}</style>' +
+          '<div>Loading PDF…</div>'
+      );
+      printWindow.document.close();
+
       const { supabase } = await import('@/integrations/supabase/client');
 
       // Resolve a URL first (signed if needed)
@@ -85,44 +102,44 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
       const blob = await resp.blob();
       const blobUrl = URL.createObjectURL(blob);
 
-      // Use a hidden iframe to trigger the print dialog without popups
-      const iframe = document.createElement('iframe');
-      iframe.style.position = 'fixed';
-      iframe.style.right = '0';
-      iframe.style.bottom = '0';
-      iframe.style.width = '0';
-      iframe.style.height = '0';
-      iframe.style.border = '0';
-      iframe.src = blobUrl;
-      document.body.appendChild(iframe);
+      // Write a same-origin HTML that embeds the PDF and self-triggers print.
+      // This avoids cross-origin access to iframe.contentWindow (Chrome blocks it for the PDF viewer).
+      const html = `
+        <!doctype html>
+        <html>
+          <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <title>Manifest</title>
+            <style>
+              html, body { height: 100%; margin: 0; }
+              iframe { width: 100%; height: 100%; border: 0; }
+            </style>
+          </head>
+          <body>
+            <iframe src="${blobUrl}" id="printFrame"></iframe>
+            <script>
+              // Print after a short delay to allow PDF to render
+              window.addEventListener('load', function(){
+                setTimeout(function(){
+                  try { window.focus(); window.print(); } catch (e) {}
+                }, 300);
+              });
+              window.onafterprint = function(){
+                setTimeout(function(){ URL.revokeObjectURL('${blobUrl}'); window.close(); }, 300);
+              };
+              // Safety cleanup in case onafterprint doesn't fire
+              setTimeout(function(){ URL.revokeObjectURL('${blobUrl}'); }, 15000);
+            <\/script>
+          </body>
+        </html>`;
 
-      const cleanup = () => {
-        try {
-          document.body.removeChild(iframe);
-        } catch {}
-        URL.revokeObjectURL(blobUrl);
-      };
-
-      iframe.onload = () => {
-        try {
-          // Give the PDF a moment to render in the iframe before printing
-          setTimeout(() => {
-            iframe.contentWindow?.focus();
-            iframe.contentWindow?.print();
-            // Some browsers don't fire onafterprint reliably on iframes; add a fallback
-            const iw = iframe.contentWindow as Window | null;
-            if (iw) {
-              iw.onafterprint = () => cleanup();
-            }
-            setTimeout(cleanup, 3000);
-          }, 250);
-        } catch (e) {
-          cleanup();
-          throw e;
-        }
-      };
+      printWindow.document.open();
+      printWindow.document.write(html);
+      printWindow.document.close();
     } catch (err) {
       console.error('Print failed:', err);
+      try { printWindow.close(); } catch {}
       toast({ title: 'Print failed', description: 'Could not open print dialog. Try again.', variant: 'destructive' });
     }
   };
