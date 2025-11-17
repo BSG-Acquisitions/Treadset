@@ -90,10 +90,15 @@ serve(async (req) => {
 
     if (vehiclesError) throw vehiclesError;
 
-    // Group by vehicle
+    // Group by vehicle - LIMIT to prevent resource exhaustion
     const routesByVehicle: Record<string, RouteData> = {};
+    const MAX_STOPS_PER_VEHICLE = 20;
+    const MAX_TOTAL_STOPS = 50;
+    let totalStops = 0;
     
     for (const assignment of (assignments as Assignment[])) {
+      if (totalStops >= MAX_TOTAL_STOPS) break;
+      
       const vehicleId = assignment.vehicle_id;
       
       if (!routesByVehicle[vehicleId]) {
@@ -104,6 +109,9 @@ serve(async (req) => {
           stops: []
         };
       }
+
+      // Skip if vehicle already at capacity
+      if (routesByVehicle[vehicleId].stops.length >= MAX_STOPS_PER_VEHICLE) continue;
 
       // Skip assignments with missing data
       if (!assignment.pickup?.client || !assignment.pickup?.location) {
@@ -126,58 +134,30 @@ serve(async (req) => {
         },
         time_window: assignment.pickup.preferred_window || ''
       });
+      totalStops++;
     }
 
-    // Build AI prompt with geographic context
-    const prompt = `You are an expert logistics optimizer. Analyze these delivery routes for ${date} and provide actionable optimization suggestions.
+    // Build compact AI prompt
+    const routeSummary = Object.values(routesByVehicle).map(route => ({
+      vehicle: route.vehicle_name,
+      stopCount: route.stops.length,
+      stops: route.stops.map(s => ({
+        name: s.client,
+        coords: `${s.coordinates.lat.toFixed(4)},${s.coordinates.lng.toFixed(4)}`,
+        window: s.time_window
+      }))
+    }));
 
-ROUTE DATA:
-${Object.values(routesByVehicle).map(route => `
-Vehicle: ${route.vehicle_name}
-Stops (${route.stops.length}):
-${route.stops.map((stop, idx) => `
-  ${idx + 1}. ${stop.client} - ${stop.location}
-     Address: ${stop.address}
-     Coordinates: ${stop.coordinates.lat}, ${stop.coordinates.lng}
-     Items: ${stop.items.pte} PTEs, ${stop.items.otr} OTRs, ${stop.items.tractor} Tractors
-     Time Window: ${stop.time_window}
-`).join('')}
-`).join('\n---\n')}
+    const prompt = `Analyze these ${date} delivery routes and suggest optimizations.
 
-OPTIMIZATION FACTORS TO CONSIDER:
-- Geographic clustering (stops close together should be grouped)
-- Time windows (AM pickups vs PM pickups)
-- Load balancing across vehicles
-- Minimize total travel distance
-- Reduce backtracking and inefficient routing
-- Consider Detroit metro area traffic patterns
+Routes: ${JSON.stringify(routeSummary, null, 2)}
 
-PROVIDE:
-1. Overall route efficiency score (0-100)
-2. Top 3 specific improvements with impact estimates
-3. Suggested stop reordering for each vehicle
-4. Load balancing recommendations
-5. Any geographic patterns or clusters identified
-
-Format your response as JSON with this structure:
+Provide JSON with:
 {
-  "efficiency_score": number,
-  "improvements": [
-    {
-      "title": string,
-      "description": string,
-      "impact": "high" | "medium" | "low",
-      "estimated_savings": string (e.g., "15 minutes", "8 miles")
-    }
-  ],
-  "route_suggestions": [
-    {
-      "vehicle": string,
-      "suggested_sequence": [stop names in optimal order],
-      "reasoning": string
-    }
-  ],
-  "insights": string (overall analysis)
+  "efficiency_score": number (0-100),
+  "improvements": [{"title": string, "description": string, "impact": "high"|"medium"|"low", "estimated_savings": string}],
+  "route_suggestions": [{"vehicle": string, "suggested_sequence": [client names], "reasoning": string}],
+  "insights": string
 }`;
 
     // Call Lovable AI
