@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useClients } from "@/hooks/useClients";
-import { useCreateDropoff } from "@/hooks/useDropoffs";
+import { useCreateDropoffWithManifest } from "@/hooks/useCreateDropoffWithManifest";
 import { usePricingTiers } from "@/hooks/usePricingTiers";
 import { useHaulers } from "@/hooks/useHaulers";
 import { useAuth } from "@/contexts/AuthContext";
@@ -55,7 +55,7 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
   const customers = Array.isArray(clientsData) ? clientsData : (clientsData?.data || []);
   const { data: haulers = [] } = useHaulers();
   const { data: pricingTiers = [] } = usePricingTiers();
-  const createDropoff = useCreateDropoff();
+  const createDropoffWithManifest = useCreateDropoffWithManifest();
 
   const selectedCustomer = selectedGenerator || customers.find(c => c.id === customerId);
 
@@ -128,25 +128,28 @@ const subtotal = (Number(pteCount || 0) * ptePrice) +
       const localDate = format(now, 'yyyy-MM-dd');
       const localTime = format(now, 'HH:mm:ss');
 
-      await createDropoff.mutateAsync({
-        organization_id: user?.currentOrganization?.id || "", 
-        client_id: dropoffCustomerId,
-        hauler_id: haulerId || null,
-        dropoff_date: localDate, // Explicitly set local date
-        dropoff_time: localTime, // Set current time
-        pte_count: Number(pteCount || 0),
-        otr_count: Number(otrCount || 0),
-        tractor_count: Number(tractorCount || 0),
-        unit_price_pte: ptePrice,
-        unit_price_otr: otrPrice,
-        unit_price_tractor: tractorPrice,
-        computed_revenue: subtotal,
-        payment_method: paymentMethod,
-        payment_status: paymentMethod === 'invoice' ? 'pending' : 'paid',
-        requires_manifest: true, // All dropoffs require manifests
-        notes: notes || null,
-        status: 'completed',
-        processed_by: user?.id || null
+      await createDropoffWithManifest.mutateAsync({
+        dropoff: {
+          organization_id: user?.currentOrganization?.id || "", 
+          client_id: dropoffCustomerId,
+          hauler_id: haulerId || null,
+          dropoff_date: localDate, // Explicitly set local date
+          dropoff_time: localTime, // Set current time
+          pte_count: Number(pteCount || 0),
+          otr_count: Number(otrCount || 0),
+          tractor_count: Number(tractorCount || 0),
+          unit_price_pte: ptePrice,
+          unit_price_otr: otrPrice,
+          unit_price_tractor: tractorPrice,
+          computed_revenue: subtotal,
+          payment_method: paymentMethod,
+          payment_status: paymentMethod === 'invoice' ? 'pending' : 'paid',
+          requires_manifest: true, // All dropoffs require manifests
+          notes: notes || null,
+          status: 'completed',
+          processed_by: user?.id || null
+        },
+        vehicleId: undefined, // Dropoffs don't require vehicle assignment
       });
 
       // Reset form
@@ -405,9 +408,9 @@ const subtotal = (Number(pteCount || 0) * ptePrice) +
           </Button>
           <Button 
             onClick={handleSubmit} 
-            disabled={!customerId || (!pteCount && !otrCount && !tractorCount) || createDropoff.isPending || customers.length === 0}
+            disabled={!customerId || (!pteCount && !otrCount && !tractorCount) || createDropoffWithManifest.isPending || customers.length === 0}
           >
-            {createDropoff.isPending ? "Processing..." : "Process Drop-off"}
+            {createDropoffWithManifest.isPending ? "Processing..." : "Process Drop-off"}
           </Button>
         </DialogFooter>
       </DialogContent>
