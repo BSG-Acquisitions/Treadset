@@ -44,8 +44,7 @@ export const useGenerateDropoffManifest = () => {
           commercial_22_5_off: 0,
           commercial_22_5_on: 0,
           total: dropoffData.computed_revenue || 0,
-          status: 'COMPLETED',
-          signed_at: new Date().toISOString(),
+          status: 'AWAITING_RECEIVER_SIGNATURE',
         })
         .select()
         .single();
@@ -68,18 +67,7 @@ export const useGenerateDropoffManifest = () => {
 
       if (updateError) throw updateError;
 
-      // 6. Send email with manifest
-      if (dropoffData.clients?.email) {
-        await supabase.functions.invoke('send-manifest-email', {
-          body: {
-            to: dropoffData.clients.email,
-            manifestId: manifestData.id,
-            clientName: dropoffData.clients.company_name,
-            manifestNumber: manifestNumber,
-            pdfUrl: `https://wvjehbozyxhmgdljwsiz.supabase.co/storage/v1/object/public/${pdfResult.pdfPath}`,
-          },
-        });
-      }
+      // Note: Email will be sent after receiver signature is added
 
       return { manifest: manifestData, pdfPath: pdfResult.pdfPath };
     },
