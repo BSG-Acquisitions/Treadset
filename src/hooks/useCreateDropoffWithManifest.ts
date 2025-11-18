@@ -29,7 +29,7 @@ export const useCreateDropoffWithManifest = () => {
 
       // 2. Generate a manifest number
       const { data: manifestNumber, error: manifestNumberError } = await supabase
-        .rpc('generate_manifest_number');
+        .rpc('generate_manifest_number', { org_id: dropoff.organization_id });
 
       if (manifestNumberError) throw manifestNumberError;
 
