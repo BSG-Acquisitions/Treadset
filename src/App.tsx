@@ -185,6 +185,13 @@ const App = () => (
                 </AppLayout>
               </ProtectedRoute>
             } />
+            <Route path="/manifests/:id" element={
+              <ProtectedRoute roles={['admin', 'ops_manager', 'sales', 'driver']}>
+                <AppLayout>
+                  <ManifestViewer />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
             <Route path="/manifests/backfill" element={
               <ProtectedRoute roles={['admin']}>
                 <AppLayout>
