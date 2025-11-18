@@ -304,11 +304,11 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
                 </Button>
               )}
               
-              {dropoff.manifest_id && dropoff.manifest_pdf_path && (
+              {dropoff.manifest_id && (
                 <Button 
                   size="sm" 
                   variant="outline"
-                  onClick={() => window.open(`https://wvjehbozyxhmgdljwsiz.supabase.co/storage/v1/object/public/${dropoff.manifest_pdf_path}`, '_blank')}
+                  onClick={() => window.location.href = `/manifests/${dropoff.manifest_id}`}
                 >
                   <FileText className="h-4 w-4 mr-2" />
                   View Manifest
@@ -336,8 +336,8 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
                         Generate Manifest
                       </DropdownMenuItem>
                     )}
-                    {dropoff.manifest_id && dropoff.manifest_pdf_path && (
-                      <DropdownMenuItem onClick={() => window.open(`https://wvjehbozyxhmgdljwsiz.supabase.co/storage/v1/object/public/${dropoff.manifest_pdf_path}`, '_blank')}>
+                    {dropoff.manifest_id && (
+                      <DropdownMenuItem onClick={() => window.location.href = `/manifests/${dropoff.manifest_id}`}>
                         <FileText className="h-4 w-4 mr-2" />
                         View Manifest
                       </DropdownMenuItem>
