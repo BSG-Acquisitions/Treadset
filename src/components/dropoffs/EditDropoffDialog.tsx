@@ -36,6 +36,7 @@ export const EditDropoffDialog = ({ open, onOpenChange, dropoff }: EditDropoffDi
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [paymentStatus, setPaymentStatus] = useState("paid");
   const [notes, setNotes] = useState("");
+  const [manualRevenue, setManualRevenue] = useState("");
 
   useEffect(() => {
     if (dropoff) {
@@ -45,6 +46,7 @@ export const EditDropoffDialog = ({ open, onOpenChange, dropoff }: EditDropoffDi
       setPaymentMethod(dropoff.payment_method || "cash");
       setPaymentStatus(dropoff.payment_status || "paid");
       setNotes(dropoff.notes || "");
+      setManualRevenue(String(dropoff.computed_revenue || 0));
     }
   }, [dropoff]);
 
@@ -102,7 +104,7 @@ const subtotal = (Number(pteCount || 0) * ptePrice) +
       pte_count: Number(pteCount || 0),
       otr_count: Number(otrCount || 0),
       tractor_count: Number(tractorCount || 0),
-      computed_revenue: subtotal,
+      computed_revenue: Number(manualRevenue || 0),
       payment_method: paymentMethod,
       payment_status: paymentStatus,
       notes: notes || null,
@@ -220,6 +222,30 @@ const subtotal = (Number(pteCount || 0) * ptePrice) +
               </CardContent>
             </Card>
           )}
+
+          {/* Revenue Override */}
+          <div className="space-y-3">
+            <Label htmlFor="revenue" className="flex items-center gap-2">
+              <CreditCard className="h-4 w-4" />
+              Revenue Amount Collected
+            </Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+              <Input
+                id="revenue"
+                type="number"
+                step="0.01"
+                min="0"
+                value={manualRevenue}
+                onChange={(e) => setManualRevenue(e.target.value)}
+                className="pl-7"
+                placeholder="0.00"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Enter the actual amount collected for this drop-off
+            </p>
+          </div>
 
           {/* Payment Info */}
           <div className="grid grid-cols-2 gap-4">
