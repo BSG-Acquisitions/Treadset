@@ -36,6 +36,7 @@ import { HaulerReliabilityBadge } from "@/components/HaulerReliabilityBadge";
 import { useState } from "react";
 import { calculateTotalPTE } from "@/lib/michigan-conversions";
 import { cn } from "@/lib/utils";
+import { useGenerateDropoffManifest } from "@/hooks/useGenerateDropoffManifest";
 
 type Dropoff = Database["public"]["Tables"]["dropoffs"]["Row"] & {
   clients?: {
@@ -65,6 +66,7 @@ interface DropopffsListProps {
 
 export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListProps) => {
   const [editDropoff, setEditDropoff] = useState<Dropoff | null>(null);
+  const generateManifest = useGenerateDropoffManifest();
   
   const filteredDropoffs = dropoffs.filter(dropoff => 
     dropoff.clients?.contact_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -281,6 +283,27 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
 
             {/* Actions */}
             <div className="flex gap-2 pt-2">
+              {!dropoff.manifest_id && (
+                <Button 
+                  size="sm" 
+                  variant="default"
+                  onClick={() => generateManifest.mutate(dropoff.id)}
+                  disabled={generateManifest.isPending}
+                >
+                  {generateManifest.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Generate Manifest
+                    </>
+                  )}
+                </Button>
+              )}
+              
               {dropoff.manifest_id && dropoff.manifest_pdf_path && (
                 <Button 
                   size="sm" 
@@ -304,6 +327,15 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
                       <Edit className="h-4 w-4 mr-2" />
                       Edit Drop-off
                     </DropdownMenuItem>
+                    {!dropoff.manifest_id && (
+                      <DropdownMenuItem 
+                        onClick={() => generateManifest.mutate(dropoff.id)}
+                        disabled={generateManifest.isPending}
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        Generate Manifest
+                      </DropdownMenuItem>
+                    )}
                     {dropoff.manifest_id && dropoff.manifest_pdf_path && (
                       <DropdownMenuItem onClick={() => window.open(`https://wvjehbozyxhmgdljwsiz.supabase.co/storage/v1/object/public/${dropoff.manifest_pdf_path}`, '_blank')}>
                         <FileText className="h-4 w-4 mr-2" />
