@@ -37,6 +37,8 @@ export const PdfInlineViewer: React.FC<PdfInlineViewerProps> = ({ filePath, clas
         }
 
         let pdfUrl: string | null = null;
+        let lastError: any = null;
+
         // Try signed URLs first (private bucket)
         for (const p of candidatePaths) {
           try {
@@ -44,26 +46,24 @@ export const PdfInlineViewer: React.FC<PdfInlineViewerProps> = ({ filePath, clas
               .from('manifests')
               .createSignedUrl(p, 60 * 60);
             if (!error && data?.signedUrl) {
-              pdfUrl = data.signedUrl;
-              break;
-            }
-          } catch { /* continue */ }
-        }
-
-        // Fallback to public URL (in case object is public)
-        if (!pdfUrl) {
-          for (const p of candidatePaths) {
-            try {
-              const { data: pub } = supabase.storage.from('manifests').getPublicUrl(p);
-              if (pub?.publicUrl) {
-                pdfUrl = pub.publicUrl;
+              // Verify the URL is accessible before using it
+              const testResp = await fetch(data.signedUrl, { method: 'HEAD' });
+              if (testResp.ok) {
+                pdfUrl = data.signedUrl;
                 break;
               }
-            } catch { /* continue */ }
+            }
+            if (error) lastError = error;
+          } catch (e) { 
+            lastError = e;
           }
         }
 
-        if (!pdfUrl) throw new Error('Failed to resolve PDF URL');
+        if (!pdfUrl) {
+          const errorMsg = lastError?.message || 'Failed to resolve PDF URL';
+          console.error('PDF URL resolution failed:', errorMsg, 'Tried paths:', Array.from(candidatePaths));
+          throw new Error(errorMsg);
+        }
 
         const resp = await fetch(pdfUrl);
         if (!resp.ok) throw new Error('Failed to fetch PDF');
