@@ -20,36 +20,21 @@ export const PdfInlineViewer: React.FC<PdfInlineViewerProps> = ({ filePath, clas
         setLoading(true);
         setError(null);
 
-        // Normalize the path - files are stored as "manifests/filename.pdf" in the bucket
-        const raw = (filePath || '').replace(/^\/+/, '');
-        const normalized = raw.replace(/^manifests\//, ''); // Remove leading "manifests/" since we're already in the manifests bucket
+        // Files are stored WITH "manifests/" prefix in the bucket
+        const cleanPath = (filePath || '').replace(/^\/+/, '');
+        
+        console.log('Attempting to load PDF from path:', cleanPath);
 
-        let pdfUrl: string | null = null;
-        let lastError: any = null;
-
-        // Try to get a signed URL directly with the normalized path
-        try {
-          const { data, error } = await supabase.storage
-            .from('manifests')
-            .createSignedUrl(normalized, 60 * 60);
-          
-          if (!error && data?.signedUrl) {
-            // Verify the URL is accessible
-            const testResp = await fetch(data.signedUrl, { method: 'HEAD' });
-            if (testResp.ok) {
-              pdfUrl = data.signedUrl;
-            }
-          }
-          if (error) lastError = error;
-        } catch (e) { 
-          lastError = e;
+        const { data, error } = await supabase.storage
+          .from('manifests')
+          .createSignedUrl(cleanPath, 60 * 60);
+        
+        if (error || !data?.signedUrl) {
+          console.error('Failed to create signed URL:', error);
+          throw new Error(error?.message || 'Failed to create signed URL');
         }
 
-        if (!pdfUrl) {
-          const errorMsg = lastError?.message || 'Object not found';
-          console.error('PDF access failed:', errorMsg, 'Path tried:', normalized);
-          throw new Error(errorMsg);
-        }
+        const pdfUrl = data.signedUrl;
 
         const resp = await fetch(pdfUrl);
         if (!resp.ok) throw new Error('Failed to fetch PDF');
