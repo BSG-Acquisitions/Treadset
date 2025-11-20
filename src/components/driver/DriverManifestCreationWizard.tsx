@@ -1014,7 +1014,7 @@ export function DriverManifestCreationWizard({
           computed_revenue: calculatedTotal,
           final_revenue: calculatedTotal,
           payment_method: paymentMethod,
-          payment_status: paymentMethod === 'CASH' ? 'SUCCEEDED' : 'PENDING'
+          payment_status: paymentMethod === 'CASH' || paymentMethod === 'CHECK' ? 'SUCCEEDED' : 'PENDING'
         })
         .eq('id', pickupId);
 
@@ -1068,16 +1068,126 @@ export function DriverManifestCreationWizard({
       setCreatedManifestId(manifest.id);
       setManifestCreated(true);
       
-      // Skip payment step if invoice customer, otherwise proceed to payment
-      if (requiresInvoice) {
-        // Complete the wizard for invoice customers
+      // Handle Stripe card payment
+      if (paymentMethod === 'CARD') {
+        console.log('[STRIPE] Creating itemized checkout for card payment');
+        try {
+          // Build itemized line items from tire counts and pricing
+          const lineItems: Array<{ description: string; quantity: number; unit_amount: number }> = [];
+          
+          if ((data.pte_off_rim || 0) > 0 && parseFloat(pteOffRimRate) > 0) {
+            lineItems.push({
+              description: 'Passenger Tires (Off-Rim)',
+              quantity: data.pte_off_rim || 0,
+              unit_amount: Math.round(parseFloat(pteOffRimRate) * 100), // Convert to cents
+            });
+          }
+          
+          if ((data.pte_on_rim || 0) > 0 && parseFloat(pteOnRimRate) > 0) {
+            lineItems.push({
+              description: 'Passenger Tires (On-Rim)',
+              quantity: data.pte_on_rim || 0,
+              unit_amount: Math.round(parseFloat(pteOnRimRate) * 100),
+            });
+          }
+          
+          if ((data.commercial_17_5_19_5_off || 0) > 0 && parseFloat(commercial_17_5_19_5_off_rate) > 0) {
+            lineItems.push({
+              description: 'Commercial 17.5"/19.5" Tires (Off-Rim)',
+              quantity: data.commercial_17_5_19_5_off || 0,
+              unit_amount: Math.round(parseFloat(commercial_17_5_19_5_off_rate) * 100),
+            });
+          }
+          
+          if ((data.commercial_17_5_19_5_on || 0) > 0 && parseFloat(commercial_17_5_19_5_on_rate) > 0) {
+            lineItems.push({
+              description: 'Commercial 17.5"/19.5" Tires (On-Rim)',
+              quantity: data.commercial_17_5_19_5_on || 0,
+              unit_amount: Math.round(parseFloat(commercial_17_5_19_5_on_rate) * 100),
+            });
+          }
+          
+          if ((data.commercial_22_5_off || 0) > 0 && parseFloat(commercial_22_5_off_rate) > 0) {
+            lineItems.push({
+              description: 'Commercial 22.5" Tires (Off-Rim)',
+              quantity: data.commercial_22_5_off || 0,
+              unit_amount: Math.round(parseFloat(commercial_22_5_off_rate) * 100),
+            });
+          }
+          
+          if ((data.commercial_22_5_on || 0) > 0 && parseFloat(commercial_22_5_on_rate) > 0) {
+            lineItems.push({
+              description: 'Commercial 22.5" Tires (On-Rim)',
+              quantity: data.commercial_22_5_on || 0,
+              unit_amount: Math.round(parseFloat(commercial_22_5_on_rate) * 100),
+            });
+          }
+          
+          const otrTotal = (data.otr_count || 0) + (data.tractor_count || 0);
+          if (otrTotal > 0 && parseFloat(otrRate) > 0) {
+            lineItems.push({
+              description: 'OTR/Tractor Tires',
+              quantity: otrTotal,
+              unit_amount: Math.round(parseFloat(otrRate) * 100),
+            });
+          }
+          
+          const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke(
+            'create-tire-checkout',
+            {
+              body: {
+                line_items: lineItems,
+                customer_email: pickupData.client.email,
+                customer_name: pickupData.client.company_name,
+                pickup_id: pickupId,
+                manifest_id: manifest.id,
+                client_id: resolvedClientId,
+              }
+            }
+          );
+          
+          if (checkoutError) throw checkoutError;
+          
+          if (checkoutData?.url) {
+            // Open Stripe checkout in new tab
+            window.open(checkoutData.url, '_blank');
+            
+            toast({
+              title: "Stripe Checkout Opened",
+              description: "Customer payment window opened in new tab with itemized receipt",
+            });
+            
+            // Complete the wizard - driver can continue while customer pays
+            if (onComplete) {
+              onComplete();
+            } else {
+              navigate("/driver/routes");
+            }
+          }
+        } catch (stripeError: any) {
+          console.error('[STRIPE] Checkout error:', stripeError);
+          toast({
+            title: "Payment Setup Error",
+            description: `Couldn't open Stripe checkout: ${stripeError.message}. Manifest created successfully.`,
+            variant: "destructive",
+          });
+          
+          // Still complete the workflow even if Stripe fails
+          if (onComplete) {
+            onComplete();
+          } else {
+            navigate("/driver/routes");
+          }
+        }
+      } else if (requiresInvoice || paymentMethod === 'INVOICE' || paymentMethod === 'CARD_ON_FILE') {
+        // Complete the wizard for invoice/card-on-file customers
         if (onComplete) {
           onComplete();
         } else {
           navigate("/driver/manifests");
         }
       } else {
-        // Move to payment step for non-invoice customers
+        // Move to payment step for cash/check customers (legacy flow)
         setStep(step + 1);
       }
     } catch (error: any) {
@@ -2010,6 +2120,26 @@ export function DriverManifestCreationWizard({
                   </div>
                 </CardContent>
               </Card>
+
+              <Card 
+                className={`cursor-pointer transition-colors hover:bg-muted/50 ${paymentMethod === 'CARD' ? 'border-primary border-2' : ''}`}
+                onClick={() => setPaymentMethod('CARD')}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className={`w-5 h-5 rounded-full border-2 mt-0.5 flex items-center justify-center ${paymentMethod === 'CARD' ? 'border-primary bg-primary' : 'border-muted-foreground'}`}>
+                      {paymentMethod === 'CARD' && <div className="w-2 h-2 rounded-full bg-white" />}
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold mb-1">Card (Stripe)</h4>
+                      <p className="text-sm text-muted-foreground">Customer will pay now with credit/debit card</p>
+                      <div className="mt-2 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-900 dark:text-blue-100 rounded text-xs inline-block">
+                        Immediate Card Payment via Stripe
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
 
             <Card className="bg-muted/30">
@@ -2023,6 +2153,7 @@ export function DriverManifestCreationWizard({
                       {paymentMethod === 'CARD_ON_FILE' && 'Payment will be marked as PENDING until office staff processes the card charge.'}
                       {paymentMethod === 'INVOICE' && 'Payment will be marked as PENDING until the invoice is paid.'}
                       {paymentMethod === 'CHECK' && 'Payment will be marked as COMPLETED immediately.'}
+                      {paymentMethod === 'CARD' && 'Customer will be redirected to secure Stripe checkout to pay immediately with itemized receipt.'}
                     </p>
                   </div>
                 </div>
@@ -2034,7 +2165,7 @@ export function DriverManifestCreationWizard({
                 Total Amount: ${calculatedTotal.toFixed(2)}
               </p>
               <p className="text-xs text-amber-900/70 dark:text-amber-100/70">
-                This is the amount that {paymentMethod === 'CASH' || paymentMethod === 'CHECK' ? 'was collected' : 'will be charged'}.
+                This is the amount that {paymentMethod === 'CASH' || paymentMethod === 'CHECK' ? 'was collected' : paymentMethod === 'CARD' ? 'customer will pay via Stripe' : 'will be charged'}.
               </p>
             </div>
           </div>
