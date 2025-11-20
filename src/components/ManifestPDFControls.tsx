@@ -59,7 +59,8 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
 
   const handleView = async (path: string, title: string) => {
     if (!path) return;
-    setCurrentPdfPath(normalizeManifestKey(path));
+    // Pass the path as-is from the database - don't normalize it
+    setCurrentPdfPath(path);
     setCurrentPdfTitle(title);
     setViewerOpen(true);
   };
@@ -146,41 +147,27 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
     }
   };
 
-  const normalizeManifestKey = (p: string) => p.replace(/^\/+/, '').replace(/^manifests\//, '');
+  
 
   const resolveFileUrl = async (path: string) => {
     const { supabase } = await import('@/integrations/supabase/client');
-    const raw = (path || '').replace(/^\/+/, '');
-    const stripped = raw.replace(/^manifests\//, '');
+    
+    // Files are stored WITH "manifests/" prefix as part of the object key
+    let pathToTry = (path || '').replace(/^\/+/, '');
+    
+    // Ensure path starts with "manifests/"
+    if (!pathToTry.startsWith('manifests/')) {
+      pathToTry = 'manifests/' + pathToTry;
+    }
 
-    const candidates = new Set<string>([raw, stripped]);
+    // Try signed URL
     try {
-      // Try to prepend current organization folder if required by storage layout
-      const { data: orgId } = await supabase.rpc('get_current_user_organization', { org_slug: 'bsg' });
-      if (orgId) {
-        candidates.add(`${orgId}/${raw}`);
-        candidates.add(`${orgId}/${stripped}`);
-      }
-    } catch {
-      // ignore org resolution errors
-    }
-
-    // Prefer signed URLs (private buckets)
-    for (const key of candidates) {
-      try {
-        const { data } = await supabase.storage
-          .from('manifests')
-          .createSignedUrl(key, 60 * 60);
-        if (data?.signedUrl) return data.signedUrl;
-      } catch { /* continue */ }
-    }
-
-    // Fallback to public URL
-    for (const key of candidates) {
-      try {
-        const { data: pub } = supabase.storage.from('manifests').getPublicUrl(key);
-        if (pub?.publicUrl) return pub.publicUrl;
-      } catch { /* continue */ }
+      const { data } = await supabase.storage
+        .from('manifests')
+        .createSignedUrl(pathToTry, 60 * 60);
+      if (data?.signedUrl) return data.signedUrl;
+    } catch (e) {
+      console.error('Signed URL failed:', e);
     }
 
     throw new Error('Could not resolve a valid URL for the PDF');
