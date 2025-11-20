@@ -20,14 +20,20 @@ export const PdfInlineViewer: React.FC<PdfInlineViewerProps> = ({ filePath, clas
         setLoading(true);
         setError(null);
 
-        // Files are stored WITH "manifests/" prefix in the bucket
-        const cleanPath = (filePath || '').replace(/^\/+/, '');
+        // Files in the manifests bucket are stored WITH "manifests/" as part of the object key
+        // e.g., object name is "manifests/acroform-xxx.pdf" inside the manifests bucket
+        let pathToTry = (filePath || '').replace(/^\/+/, '');
         
-        console.log('Attempting to load PDF from path:', cleanPath);
+        // If path doesn't start with "manifests/", add it
+        if (!pathToTry.startsWith('manifests/')) {
+          pathToTry = 'manifests/' + pathToTry;
+        }
+        
+        console.log('Attempting to load PDF from path:', pathToTry);
 
         const { data, error } = await supabase.storage
           .from('manifests')
-          .createSignedUrl(cleanPath, 60 * 60);
+          .createSignedUrl(pathToTry, 60 * 60);
         
         if (error || !data?.signedUrl) {
           console.error('Failed to create signed URL:', error);
