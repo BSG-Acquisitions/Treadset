@@ -20,48 +20,34 @@ export const PdfInlineViewer: React.FC<PdfInlineViewerProps> = ({ filePath, clas
         setLoading(true);
         setError(null);
 
-        // Build candidate paths to handle legacy and org-scoped storage layouts
+        // Normalize the path - files are stored as "manifests/filename.pdf" in the bucket
         const raw = (filePath || '').replace(/^\/+/, '');
-        const strippedBucket = raw.replace(/^manifests\//, '');
-
-        const candidatePaths = new Set<string>([raw, strippedBucket]);
-        try {
-          // Try to prepend the current organization folder if policies require it
-          const { data: orgId } = await supabase.rpc('get_current_user_organization', { org_slug: 'bsg' });
-          if (orgId) {
-            candidatePaths.add(`${orgId}/${strippedBucket}`);
-            candidatePaths.add(`${orgId}/${raw}`);
-          }
-        } catch {
-          // ignore org resolution failures - we'll try without it
-        }
+        const normalized = raw.replace(/^manifests\//, ''); // Remove leading "manifests/" since we're already in the manifests bucket
 
         let pdfUrl: string | null = null;
         let lastError: any = null;
 
-        // Try signed URLs first (private bucket)
-        for (const p of candidatePaths) {
-          try {
-            const { data, error } = await supabase.storage
-              .from('manifests')
-              .createSignedUrl(p, 60 * 60);
-            if (!error && data?.signedUrl) {
-              // Verify the URL is accessible before using it
-              const testResp = await fetch(data.signedUrl, { method: 'HEAD' });
-              if (testResp.ok) {
-                pdfUrl = data.signedUrl;
-                break;
-              }
+        // Try to get a signed URL directly with the normalized path
+        try {
+          const { data, error } = await supabase.storage
+            .from('manifests')
+            .createSignedUrl(normalized, 60 * 60);
+          
+          if (!error && data?.signedUrl) {
+            // Verify the URL is accessible
+            const testResp = await fetch(data.signedUrl, { method: 'HEAD' });
+            if (testResp.ok) {
+              pdfUrl = data.signedUrl;
             }
-            if (error) lastError = error;
-          } catch (e) { 
-            lastError = e;
           }
+          if (error) lastError = error;
+        } catch (e) { 
+          lastError = e;
         }
 
         if (!pdfUrl) {
-          const errorMsg = lastError?.message || 'Failed to resolve PDF URL';
-          console.error('PDF URL resolution failed:', errorMsg, 'Tried paths:', Array.from(candidatePaths));
+          const errorMsg = lastError?.message || 'Object not found';
+          console.error('PDF access failed:', errorMsg, 'Path tried:', normalized);
           throw new Error(errorMsg);
         }
 
