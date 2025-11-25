@@ -120,43 +120,67 @@ export default function Index() {
     refetchInterval: 30000,
   });
 
-  // Fetch monthly stats for environmental impact chart
-  const { data: monthlyData = [] } = useQuery({
-    queryKey: ['monthly-stats', user?.currentOrganization?.id],
+  // Fetch daily stats for current month for Environmental Impact chart
+  const { data: currentMonthDailyData = [] } = useQuery({
+    queryKey: ['current-month-daily-stats', user?.currentOrganization?.id, format(new Date(), 'yyyy-MM')],
     queryFn: async () => {
-      const sixMonthsAgo = new Date();
-      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      const today = new Date();
+      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
       
-        const { data, error } = await supabase
+      const startDate = format(monthStart, 'yyyy-MM-dd');
+      const endDate = format(monthEnd, 'yyyy-MM-dd');
+      
+      const [manifestsResult, dropoffsResult] = await Promise.all([
+        supabase
           .from('manifests')
-          .select('pte_on_rim, pte_off_rim, commercial_17_5_19_5_off, commercial_17_5_19_5_on, commercial_22_5_off, commercial_22_5_on, otr_count, tractor_count, created_at')
+          .select('pte_on_rim, pte_off_rim, commercial_17_5_19_5_off, commercial_17_5_19_5_on, commercial_22_5_off, commercial_22_5_on, otr_count, tractor_count, signed_at, created_at')
           .eq('organization_id', user?.currentOrganization?.id)
-          .eq('status', 'COMPLETED')
-          .gte('created_at', sixMonthsAgo.toISOString());
+          .gte('created_at', `${startDate}T00:00:00`)
+          .lte('created_at', `${endDate}T23:59:59`),
+        supabase
+          .from('dropoffs')
+          .select('pte_count, otr_count, tractor_count, dropoff_date')
+          .eq('organization_id', user?.currentOrganization?.id)
+          .gte('dropoff_date', startDate)
+          .lte('dropoff_date', endDate)
+      ]);
       
-        if (error) throw error;
-        
-        // Group by month with date tracking for sorting
-        const byMonth: Record<string, { ptes: number; date: Date }> = {};
-        (data || []).forEach((manifest) => {
-          const manifestDate = new Date(manifest.created_at);
-          const monthKey = format(manifestDate, 'MMM yy');
-          const ptes = calculateManifestPTE(manifest as any);
-          
-          if (!byMonth[monthKey]) {
-            byMonth[monthKey] = { ptes: 0, date: manifestDate };
-          }
-          byMonth[monthKey].ptes += ptes;
+      if (manifestsResult.error) throw manifestsResult.error;
+      if (dropoffsResult.error) throw dropoffsResult.error;
+      
+      const ptesByDate: Record<string, number> = {};
+      
+      // Sum manifest tire counts by completion date
+      (manifestsResult.data || []).forEach(m => {
+        const completionDate = m.signed_at || m.created_at;
+        const dateKey = format(new Date(completionDate), 'yyyy-MM-dd');
+        const ptes = calculateManifestPTE(m as any);
+        ptesByDate[dateKey] = (ptesByDate[dateKey] || 0) + ptes;
+      });
+      
+      // Add dropoff counts
+      (dropoffsResult.data || []).forEach(d => {
+        const converted = (d.pte_count || 0) + ((d.otr_count || 0) * 15) + ((d.tractor_count || 0) * 5);
+        ptesByDate[d.dropoff_date] = (ptesByDate[d.dropoff_date] || 0) + converted;
+      });
+      
+      // Generate all days in current month
+      const days = [];
+      const currentDay = today.getDate();
+      for (let i = 1; i <= currentDay; i++) {
+        const date = new Date(today.getFullYear(), today.getMonth(), i);
+        const dateKey = format(date, 'yyyy-MM-dd');
+        days.push({
+          day: format(date, 'MMM d'),
+          ptes: ptesByDate[dateKey] || 0
         });
+      }
       
-      // Convert to array and sort chronologically (oldest to newest)
-      return Object.entries(byMonth)
-        .map(([month, data]) => ({ month, ptes: data.ptes, date: data.date }))
-        .sort((a, b) => a.date.getTime() - b.date.getTime())
-        .slice(-6) // Take last 6 months
-        .map(({ month, ptes }) => ({ month, ptes }));
+      return days;
     },
     enabled: !!user?.currentOrganization?.id,
+    refetchInterval: 30000,
   });
 
   // Fetch this week's tire totals (Monday through today) - TIMEZONE ALIGNED
@@ -789,8 +813,8 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
                       </TooltipTrigger>
                       <TooltipContent>
                         <p className="text-xs max-w-xs">
-                          <strong>Data source:</strong> manifests table<br/>
-                          <strong>Period:</strong> Last 6 months<br/>
+                          <strong>Data source:</strong> manifests + dropoffs tables<br/>
+                          <strong>Period:</strong> This month (daily breakdown)<br/>
                           <strong>Filter:</strong> status = COMPLETED<br/>
                           <strong>Updates:</strong> Real-time
                         </p>
@@ -807,17 +831,17 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
                   <div className="text-sm text-muted-foreground">Tires Recycled This Month</div>
                 </div>
 
-                {/* Monthly Trend Chart */}
+                {/* Monthly Daily Breakdown Chart */}
                 <div className="space-y-2">
-                  <div className="text-xs font-medium text-muted-foreground">6-Month Recycling Trend (PTEs)</div>
+                  <div className="text-xs font-medium text-muted-foreground">This Month's Daily Breakdown (PTEs)</div>
                   <ResponsiveContainer width="100%" height={140}>
                     <LineChart
-                      data={monthlyData || []}
+                      data={currentMonthDailyData || []}
                       margin={{ top: 10, right: 15, left: 0, bottom: 30 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
                       <XAxis 
-                        dataKey="month" 
+                        dataKey="day" 
                         tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                         angle={-45}
                         textAnchor="end"
@@ -842,7 +866,7 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
                           if (active && payload && payload.length) {
                             return (
                               <div className="bg-popover border border-border rounded-lg px-3 py-2 shadow-lg">
-                                <p className="font-semibold text-sm">{payload[0].payload.month}</p>
+                                <p className="font-semibold text-sm">{payload[0].payload.day}</p>
                                 <p className="text-brand-recycling font-bold text-base">{payload[0].value?.toLocaleString()} PTEs</p>
                               </div>
                             );
