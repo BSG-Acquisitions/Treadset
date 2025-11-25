@@ -90,6 +90,36 @@ export default function Index() {
     enabled: !!user?.currentOrganization?.id,
   });
 
+  // Fetch this month's manifests and dropoffs for revenue calculation
+  const { data: thisMonthRevenue = 0 } = useQuery({
+    queryKey: ['monthly-revenue', user?.currentOrganization?.id, format(new Date(), 'yyyy-MM')],
+    queryFn: async () => {
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+      
+      const [manifestsData, dropoffsData] = await Promise.all([
+        supabase
+          .from('manifests')
+          .select('total')
+          .eq('organization_id', user?.currentOrganization?.id)
+          .gte('created_at', format(monthStart, 'yyyy-MM-dd')),
+        supabase
+          .from('dropoffs')
+          .select('computed_revenue')
+          .eq('organization_id', user?.currentOrganization?.id)
+          .gte('dropoff_date', format(monthStart, 'yyyy-MM-dd'))
+      ]);
+      
+      const manifestRevenue = (manifestsData.data || []).reduce((sum: number, m: any) => sum + (m.total || 0), 0);
+      const dropoffRevenue = (dropoffsData.data || []).reduce((sum: number, d: any) => sum + (d.computed_revenue || 0), 0);
+      
+      return manifestRevenue + dropoffRevenue;
+    },
+    enabled: !!user?.currentOrganization?.id,
+    refetchInterval: 30000,
+  });
+
   // Fetch monthly stats for environmental impact chart
   const { data: monthlyData = [] } = useQuery({
     queryKey: ['monthly-stats', user?.currentOrganization?.id],
@@ -772,9 +802,9 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
               <CardContent className="p-6 space-y-4">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-brand-recycling mb-1">
-                    {totalPoundsRecycled > 0 ? totalPoundsRecycled.toLocaleString() : '0'} lbs
+                    {monthlyTireStats ? (monthlyTireStats * 22).toLocaleString() : '0'} lbs
                   </div>
-                  <div className="text-sm text-muted-foreground">Tires Recycled Today</div>
+                  <div className="text-sm text-muted-foreground">Tires Recycled This Month</div>
                 </div>
 
                 {/* Monthly Trend Chart */}
@@ -826,12 +856,12 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
 
                 <div className="space-y-2 pt-2 border-t">
                   <div className="flex justify-between text-sm">
-                    <span>CO₂ Saved</span>
-                    <span className="font-medium">{totalTiresRecycled > 0 ? (totalTiresRecycled * 0.00427).toFixed(3) : '0'} tons</span>
+                    <span>CO₂ Saved This Month</span>
+                    <span className="font-medium">{monthlyTireStats ? ((monthlyTireStats * 0.00427).toFixed(2)) : '0'} tons</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span>Revenue Today</span>
-                    <span className="font-medium">${totalDailyRevenue.toLocaleString()}</span>
+                    <span>Revenue This Month</span>
+                    <span className="font-medium">${thisMonthRevenue.toLocaleString()}</span>
                   </div>
                 </div>
               </CardContent>
