@@ -343,17 +343,65 @@ export default function Index() {
       const ptes = pickup + dropoff;
       const pounds = ptes * 22;
       
-      console.log('📊 TODAY PTE TOTALS:');
-      console.log(`  Pickups: ${pickup} PTEs`);
-      console.log(`  Drop-offs: ${dropoff} PTEs`);
-      console.log(`  Combined: ${ptes} PTEs`);
-      console.log('Dashboard tiles recalibrated — using direct live PTE sums only.');
-      
       return { ptes, pounds };
     },
     enabled: !!user?.currentOrganization?.id,
     refetchInterval: 30000,
   });
+  
+  // Yesterday's PTEs
+  const { data: yesterdayPTEStats = { ptes: 0 } } = useQuery({
+    queryKey: ['yesterday-pte-stats', user?.currentOrganization?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_yesterday_pte_totals', {
+        org_id: user?.currentOrganization?.id
+      });
+      if (error) throw error;
+      const ptes = Number(data[0]?.total_ptes || 0);
+      return { ptes };
+    },
+    enabled: !!user?.currentOrganization?.id,
+    refetchInterval: 30000,
+  });
+  
+  // This Week's PTEs
+  const { data: weeklyPTEStats = { ptes: 0 } } = useQuery({
+    queryKey: ['weekly-pte-stats', user?.currentOrganization?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_weekly_pte_totals', {
+        org_id: user?.currentOrganization?.id
+      });
+      if (error) throw error;
+      const ptes = Number(data[0]?.total_ptes || 0);
+      return { ptes };
+    },
+    enabled: !!user?.currentOrganization?.id,
+    refetchInterval: 30000,
+  });
+  
+  // This Month's PTEs
+  const { data: monthlyPTEStats = { ptes: 0 } } = useQuery({
+    queryKey: ['monthly-pte-stats', user?.currentOrganization?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_monthly_pte_totals', {
+        org_id: user?.currentOrganization?.id
+      });
+      if (error) throw error;
+      const ptes = Number(data[0]?.total_ptes || 0);
+      return { ptes };
+    },
+    enabled: !!user?.currentOrganization?.id,
+    refetchInterval: 30000,
+  });
+  
+  // Calculate percent changes
+  const todayChange = yesterdayTireStats && yesterdayTireStats > 0 
+    ? ((todayPTEStats.ptes - yesterdayTireStats) / yesterdayTireStats) * 100 
+    : 0;
+  
+  const yesterdayChange = 0; // Would need day-before-yesterday data
+  const weeklyChange = 0; // Would need last week data
+  const monthlyChange = 0; // Would need last month data
   
   const totalTiresRecycled = todayPTEStats.ptes;
   const totalPoundsRecycled = todayPTEStats.pounds;
@@ -505,8 +553,8 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
               value={totalTiresRecycled > 0 ? `${totalTiresRecycled} PTEs` : '0 PTEs'}
               icon={<Recycle className="w-5 h-5" />}
               variant="success"
-              change={totalTiresRecycled > 0 ? 8.3 : 0}
-              changeLabel="from all sources"
+              change={todayChange}
+              changeLabel="vs yesterday"
               onClick={() => setBreakdownDialog({ open: true, title: 'Tires Recycled Today', period: 'today' })}
             />
           </SlideUp>
@@ -517,8 +565,8 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
               value={yesterdayTireStats ? `${yesterdayTireStats} PTEs` : '0 PTEs'}
               icon={<Recycle className="w-5 h-5" />}
               variant="primary"
-              change={yesterdayTireStats && yesterdayTireStats > 0 ? 5.2 : 0}
-              changeLabel="previous day"
+              change={yesterdayChange}
+              changeLabel="vs previous day"
               onClick={() => setBreakdownDialog({ open: true, title: 'Tires Recycled Yesterday', period: 'yesterday' })}
             />
           </SlideUp>
@@ -529,8 +577,8 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
               value={weeklyTireStats ? `${weeklyTireStats} PTEs` : '0 PTEs'}
               icon={<Recycle className="w-5 h-5" />}
               variant="primary"
-              change={weeklyTireStats && weeklyTireStats > 0 ? 15.2 : 0}
-              changeLabel="Monday - today"
+              change={weeklyChange}
+              changeLabel="vs last week"
               onClick={() => setBreakdownDialog({ open: true, title: 'Tires Recycled This Week', period: 'week' })}
             />
           </SlideUp>
@@ -541,8 +589,8 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
               value={monthlyTireStats ? `${monthlyTireStats} PTEs` : '0 PTEs'}
               icon={<Recycle className="w-5 h-5" />}
               variant="success"
-              change={monthlyTireStats && monthlyTireStats > 0 ? 22.4 : 0}
-              changeLabel="month to date"
+              change={monthlyChange}
+              changeLabel="vs last month"
               onClick={() => setBreakdownDialog({ open: true, title: 'Tires Recycled This Month', period: 'month' })}
             />
           </SlideUp>
