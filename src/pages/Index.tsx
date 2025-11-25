@@ -507,19 +507,19 @@ export default function Index() {
   
   // Calculate percent changes
   const todayChange = yesterdayTireStats && yesterdayTireStats > 0 
-    ? ((todayPTEStats.ptes - yesterdayTireStats) / yesterdayTireStats) * 100 
+    ? Math.round(((todayPTEStats.ptes - yesterdayTireStats) / yesterdayTireStats) * 100)
     : 0;
   
   const yesterdayChange = dayBeforeYesterdayPTEs > 0
-    ? ((yesterdayTireStats - dayBeforeYesterdayPTEs) / dayBeforeYesterdayPTEs) * 100
+    ? Math.round(((yesterdayTireStats - dayBeforeYesterdayPTEs) / dayBeforeYesterdayPTEs) * 100)
     : 0;
     
   const weeklyChange = lastWeekPTEs > 0
-    ? ((weeklyPTEStats.ptes - lastWeekPTEs) / lastWeekPTEs) * 100
+    ? Math.round(((weeklyPTEStats.ptes - lastWeekPTEs) / lastWeekPTEs) * 100)
     : 0;
     
   const monthlyChange = lastMonthPTEs > 0
-    ? ((monthlyPTEStats.ptes - lastMonthPTEs) / lastMonthPTEs) * 100
+    ? Math.round(((monthlyPTEStats.ptes - lastMonthPTEs) / lastMonthPTEs) * 100)
     : 0;
   
   const totalTiresRecycled = todayPTEStats.ptes;
