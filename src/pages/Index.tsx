@@ -394,14 +394,133 @@ export default function Index() {
     refetchInterval: 30000,
   });
   
+  // Day Before Yesterday
+  const { data: dayBeforeYesterdayPTEs = 0 } = useQuery({
+    queryKey: ['day-before-yesterday-ptes', user?.currentOrganization?.id],
+    queryFn: async () => {
+      const twoDaysAgo = format(addDays(new Date(), -2), 'yyyy-MM-dd');
+      const [manifests, dropoffs] = await Promise.all([
+        supabase.from('manifests')
+          .select('pte_on_rim, pte_off_rim, commercial_17_5_19_5_off, commercial_17_5_19_5_on, commercial_22_5_off, commercial_22_5_on, otr_count, tractor_count')
+          .eq('organization_id', user?.currentOrganization?.id)
+          .gte('created_at', `${twoDaysAgo}T00:00:00`)
+          .lt('created_at', `${format(addDays(new Date(), -1), 'yyyy-MM-dd')}T00:00:00`),
+        supabase.from('dropoffs')
+          .select('pte_count, otr_count, tractor_count')
+          .eq('organization_id', user?.currentOrganization?.id)
+          .eq('dropoff_date', twoDaysAgo)
+      ]);
+      
+      const manifestPTEs = (manifests.data || []).reduce((sum, m) => 
+        sum + (m.pte_on_rim || 0) + (m.pte_off_rim || 0) + 
+        (m.commercial_17_5_19_5_off || 0) + (m.commercial_17_5_19_5_on || 0) +
+        (m.commercial_22_5_off || 0) + (m.commercial_22_5_on || 0) +
+        ((m.otr_count || 0) * 15) + ((m.tractor_count || 0) * 5), 0);
+      
+      const dropoffPTEs = (dropoffs.data || []).reduce((sum, d) =>
+        sum + (d.pte_count || 0) + ((d.otr_count || 0) * 15) + ((d.tractor_count || 0) * 5), 0);
+      
+      return manifestPTEs + dropoffPTEs;
+    },
+    enabled: !!user?.currentOrganization?.id,
+    refetchInterval: 30000,
+  });
+  
+  // Last Week Same Period
+  const { data: lastWeekPTEs = 0 } = useQuery({
+    queryKey: ['last-week-ptes', user?.currentOrganization?.id],
+    queryFn: async () => {
+      const today = new Date();
+      const todayDay = today.getDay();
+      const daysFromMonday = todayDay === 0 ? 6 : todayDay - 1;
+      
+      const lastWeekStart = format(addDays(today, -daysFromMonday - 7), 'yyyy-MM-dd');
+      const lastWeekEnd = format(addDays(today, -7), 'yyyy-MM-dd');
+      
+      const [manifests, dropoffs] = await Promise.all([
+        supabase.from('manifests')
+          .select('pte_on_rim, pte_off_rim, commercial_17_5_19_5_off, commercial_17_5_19_5_on, commercial_22_5_off, commercial_22_5_on, otr_count, tractor_count')
+          .eq('organization_id', user?.currentOrganization?.id)
+          .gte('created_at', `${lastWeekStart}T00:00:00`)
+          .lte('created_at', `${lastWeekEnd}T23:59:59`),
+        supabase.from('dropoffs')
+          .select('pte_count, otr_count, tractor_count')
+          .eq('organization_id', user?.currentOrganization?.id)
+          .gte('dropoff_date', lastWeekStart)
+          .lte('dropoff_date', lastWeekEnd)
+      ]);
+      
+      const manifestPTEs = (manifests.data || []).reduce((sum, m) => 
+        sum + (m.pte_on_rim || 0) + (m.pte_off_rim || 0) + 
+        (m.commercial_17_5_19_5_off || 0) + (m.commercial_17_5_19_5_on || 0) +
+        (m.commercial_22_5_off || 0) + (m.commercial_22_5_on || 0) +
+        ((m.otr_count || 0) * 15) + ((m.tractor_count || 0) * 5), 0);
+      
+      const dropoffPTEs = (dropoffs.data || []).reduce((sum, d) =>
+        sum + (d.pte_count || 0) + ((d.otr_count || 0) * 15) + ((d.tractor_count || 0) * 5), 0);
+      
+      return manifestPTEs + dropoffPTEs;
+    },
+    enabled: !!user?.currentOrganization?.id,
+    refetchInterval: 30000,
+  });
+  
+  // Last Month Same Period
+  const { data: lastMonthPTEs = 0 } = useQuery({
+    queryKey: ['last-month-ptes', user?.currentOrganization?.id],
+    queryFn: async () => {
+      const today = new Date();
+      const currentDay = today.getDate();
+      const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      const lastMonthEnd = new Date(today.getFullYear(), today.getMonth() - 1, currentDay);
+      
+      const startDate = format(lastMonthStart, 'yyyy-MM-dd');
+      const endDate = format(lastMonthEnd, 'yyyy-MM-dd');
+      
+      const [manifests, dropoffs] = await Promise.all([
+        supabase.from('manifests')
+          .select('pte_on_rim, pte_off_rim, commercial_17_5_19_5_off, commercial_17_5_19_5_on, commercial_22_5_off, commercial_22_5_on, otr_count, tractor_count')
+          .eq('organization_id', user?.currentOrganization?.id)
+          .gte('created_at', `${startDate}T00:00:00`)
+          .lte('created_at', `${endDate}T23:59:59`),
+        supabase.from('dropoffs')
+          .select('pte_count, otr_count, tractor_count')
+          .eq('organization_id', user?.currentOrganization?.id)
+          .gte('dropoff_date', startDate)
+          .lte('dropoff_date', endDate)
+      ]);
+      
+      const manifestPTEs = (manifests.data || []).reduce((sum, m) => 
+        sum + (m.pte_on_rim || 0) + (m.pte_off_rim || 0) + 
+        (m.commercial_17_5_19_5_off || 0) + (m.commercial_17_5_19_5_on || 0) +
+        (m.commercial_22_5_off || 0) + (m.commercial_22_5_on || 0) +
+        ((m.otr_count || 0) * 15) + ((m.tractor_count || 0) * 5), 0);
+      
+      const dropoffPTEs = (dropoffs.data || []).reduce((sum, d) =>
+        sum + (d.pte_count || 0) + ((d.otr_count || 0) * 15) + ((d.tractor_count || 0) * 5), 0);
+      
+      return manifestPTEs + dropoffPTEs;
+    },
+    enabled: !!user?.currentOrganization?.id,
+    refetchInterval: 30000,
+  });
+  
   // Calculate percent changes
   const todayChange = yesterdayTireStats && yesterdayTireStats > 0 
     ? ((todayPTEStats.ptes - yesterdayTireStats) / yesterdayTireStats) * 100 
     : 0;
   
-  const yesterdayChange = 0; // Would need day-before-yesterday data
-  const weeklyChange = 0; // Would need last week data
-  const monthlyChange = 0; // Would need last month data
+  const yesterdayChange = dayBeforeYesterdayPTEs > 0
+    ? ((yesterdayTireStats - dayBeforeYesterdayPTEs) / dayBeforeYesterdayPTEs) * 100
+    : 0;
+    
+  const weeklyChange = lastWeekPTEs > 0
+    ? ((weeklyPTEStats.ptes - lastWeekPTEs) / lastWeekPTEs) * 100
+    : 0;
+    
+  const monthlyChange = lastMonthPTEs > 0
+    ? ((monthlyPTEStats.ptes - lastMonthPTEs) / lastMonthPTEs) * 100
+    : 0;
   
   const totalTiresRecycled = todayPTEStats.ptes;
   const totalPoundsRecycled = todayPTEStats.pounds;
