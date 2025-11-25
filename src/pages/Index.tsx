@@ -399,19 +399,26 @@ export default function Index() {
     queryKey: ['day-before-yesterday-ptes', user?.currentOrganization?.id],
     queryFn: async () => {
       const twoDaysAgo = format(addDays(new Date(), -2), 'yyyy-MM-dd');
+      const oneDayAgo = format(addDays(new Date(), -1), 'yyyy-MM-dd');
+      
       const [manifests, dropoffs] = await Promise.all([
         supabase.from('manifests')
-          .select('pte_on_rim, pte_off_rim, commercial_17_5_19_5_off, commercial_17_5_19_5_on, commercial_22_5_off, commercial_22_5_on, otr_count, tractor_count')
-          .eq('organization_id', user?.currentOrganization?.id)
-          .gte('created_at', `${twoDaysAgo}T00:00:00`)
-          .lt('created_at', `${format(addDays(new Date(), -1), 'yyyy-MM-dd')}T00:00:00`),
+          .select('pte_on_rim, pte_off_rim, commercial_17_5_19_5_off, commercial_17_5_19_5_on, commercial_22_5_off, commercial_22_5_on, otr_count, tractor_count, signed_at, created_at')
+          .eq('organization_id', user?.currentOrganization?.id),
         supabase.from('dropoffs')
           .select('pte_count, otr_count, tractor_count')
           .eq('organization_id', user?.currentOrganization?.id)
           .eq('dropoff_date', twoDaysAgo)
       ]);
       
-      const manifestPTEs = (manifests.data || []).reduce((sum, m) => 
+      // Filter manifests by signed_at (completion date) with fallback to created_at
+      const twoDaysAgoManifests = (manifests.data || []).filter(m => {
+        const completionDate = m.signed_at || m.created_at;
+        const dateOnly = format(new Date(completionDate), 'yyyy-MM-dd');
+        return dateOnly === twoDaysAgo;
+      });
+      
+      const manifestPTEs = twoDaysAgoManifests.reduce((sum, m) => 
         sum + (m.pte_on_rim || 0) + (m.pte_off_rim || 0) + 
         (m.commercial_17_5_19_5_off || 0) + (m.commercial_17_5_19_5_on || 0) +
         (m.commercial_22_5_off || 0) + (m.commercial_22_5_on || 0) +
@@ -419,6 +426,8 @@ export default function Index() {
       
       const dropoffPTEs = (dropoffs.data || []).reduce((sum, d) =>
         sum + (d.pte_count || 0) + ((d.otr_count || 0) * 15) + ((d.tractor_count || 0) * 5), 0);
+      
+      console.log(`📊 DAY BEFORE YESTERDAY (${twoDaysAgo}):`, manifestPTEs + dropoffPTEs);
       
       return manifestPTEs + dropoffPTEs;
     },
