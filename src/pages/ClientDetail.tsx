@@ -19,7 +19,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, FileText, CreditCard, MapPin, Plus, Receipt, Clock, CheckCircle2, XCircle, Edit2, ChevronDown } from "lucide-react";
+import { DollarSign, FileText, CreditCard, MapPin, Plus, Receipt, Clock, CheckCircle2, XCircle, Edit2, ChevronDown, Building2 } from "lucide-react";
+import { AddLocationDialog } from "@/components/AddLocationDialog";
 import { Input } from "@/components/ui/input";
 import { startOfWeek, startOfMonth, startOfQuarter, startOfYear, isWithinInterval, format } from "date-fns";
 import { formatDateLocal, parseLocalDate } from "@/lib/formatters";
@@ -714,21 +715,55 @@ export default function ClientDetail() {
 
         {/* Address Section */}
         <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2">
                 <MapPin className="h-5 w-5" />
-                {locations.length === 1 ? 'Address' : 'Addresses'}
+                Addresses
               </CardTitle>
+              <AddLocationDialog 
+                clientId={client.id}
+                trigger={
+                  <Button variant="outline" size="sm">
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Address
+                  </Button>
+                }
+              />
             </CardHeader>
-            <CardContent>
-              {locations.length === 0 ? (
+            <CardContent className="space-y-4">
+              {/* Primary Address from Client Record */}
+              {(client.physical_address || client.mailing_address) && (
+                <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Building2 className="h-4 w-4 text-primary" />
+                    <span className="font-medium text-sm text-primary">Primary Address</span>
+                  </div>
+                  <p className="text-sm text-foreground">
+                    {client.physical_address || client.mailing_address}
+                  </p>
+                  {(client.physical_city || client.city) && (
+                    <p className="text-sm text-muted-foreground">
+                      {client.physical_city || client.city}, {client.physical_state || client.state} {client.physical_zip || client.zip}
+                    </p>
+                  )}
+                  {client.county && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {client.county} County
+                    </p>
+                  )}
+                </div>
+              )}
+              
+              {/* Additional Locations */}
+              {locations.length === 0 && !client.physical_address && !client.mailing_address ? (
                 <div className="text-center py-6">
                   <MapPin className="h-12 w-12 mx-auto text-muted-foreground/50 mb-2" />
-                  <p className="text-muted-foreground">No locations found</p>
+                  <p className="text-muted-foreground">No addresses found</p>
+                  <p className="text-sm text-muted-foreground">Add an address to get started</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {locations.slice(0, 4).map((location) => (
+                  {locations.map((location) => (
                     <div key={location.id} className="p-3 bg-muted/30 rounded-lg">
                       {location.name && (
                         <p className="font-medium mb-1">{location.name}</p>
@@ -749,11 +784,6 @@ export default function ClientDetail() {
                       </div>
                     </div>
                   ))}
-                  {locations.length > 4 && (
-                    <p className="text-sm text-muted-foreground text-center">
-                      +{locations.length - 4} more locations
-                    </p>
-                  )}
                 </div>
               )}
             </CardContent>
