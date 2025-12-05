@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { useHasSemiHaulerCapability } from "@/hooks/useDriverCapabilities";
 import { NavLink, useLocation } from "react-router-dom";
+import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { useAuth } from "@/contexts/AuthContext";
 
 import {
@@ -165,11 +166,17 @@ export function AppSidebar() {
   const isSuperAdmin = user?.email === 'zachdevon@bsgtires.com';
 
   const filteredNavItems = isSuperAdmin 
-    ? navigationItems.filter(item => !item.requiresSemiHauler || hasSemiHauler)
-    : navigationItems.filter(item => 
-        (([...item.roles].length === 0) || hasAnyRole([...item.roles])) &&
-        (!item.requiresSemiHauler || hasSemiHauler)
-      );
+    ? navigationItems.filter(item => {
+        // Filter out trailer-assignments if feature is disabled
+        if (item.id === 'trailer-assignments' && !FEATURE_FLAGS.TRAILERS) return false;
+        return !item.requiresSemiHauler || hasSemiHauler;
+      })
+    : navigationItems.filter(item => {
+        // Filter out trailer-assignments if feature is disabled
+        if (item.id === 'trailer-assignments' && !FEATURE_FLAGS.TRAILERS) return false;
+        return (([...item.roles].length === 0) || hasAnyRole([...item.roles])) &&
+               (!item.requiresSemiHauler || hasSemiHauler);
+      });
 
   const filteredAdminItems = isSuperAdmin
     ? adminItems
@@ -177,11 +184,13 @@ export function AppSidebar() {
         ([...item.roles].length === 0) || hasAnyRole([...item.roles])
       );
 
-  const filteredTrailerItems = isSuperAdmin
-    ? trailerItems
-    : trailerItems.filter(item => 
-        ([...item.roles].length === 0) || hasAnyRole([...item.roles])
-      );
+  const filteredTrailerItems = FEATURE_FLAGS.TRAILERS
+    ? (isSuperAdmin
+        ? trailerItems
+        : trailerItems.filter(item => 
+            ([...item.roles].length === 0) || hasAnyRole([...item.roles])
+          ))
+    : [];
 
   return (
     <Sidebar 
@@ -257,7 +266,11 @@ export function AppSidebar() {
               <SidebarGroupContent>
                 <SidebarMenu className="space-y-1">
                   {superAdminNavigation.driverPortal
-                    .filter((item) => !item.requiresSemiHauler || hasSemiHauler)
+                    .filter((item) => {
+                      // Filter out trailer-assignments if feature is disabled
+                      if (item.id === 'trailer-assignments' && !FEATURE_FLAGS.TRAILERS) return false;
+                      return !item.requiresSemiHauler || hasSemiHauler;
+                    })
                     .map((item) => (
                     <SidebarMenuItem key={item.id}>
                       <SidebarMenuButton asChild className="h-12">
@@ -320,27 +333,29 @@ export function AppSidebar() {
               </SidebarGroupContent>
             </SidebarGroup>
 
-            <SidebarGroup>
-              <SidebarGroupLabel className={isCollapsed ? "sr-only" : ""}>Trailers</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu className="space-y-1">
-                  {superAdminNavigation.trailers.map((item) => (
-                    <SidebarMenuItem key={item.id}>
-                      <SidebarMenuButton asChild className="h-12">
-                        <NavLink 
-                          to={item.path} 
-                          onClick={handleNavClick}
-                          className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${getNavClass(item.path)}`}
-                        >
-                          <item.icon className={`h-5 w-5 flex-shrink-0 ${isCollapsed ? 'mx-auto' : ''}`} />
-                          {!isCollapsed && <span className="text-sm font-medium truncate">{item.label}</span>}
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+            {FEATURE_FLAGS.TRAILERS && (
+              <SidebarGroup>
+                <SidebarGroupLabel className={isCollapsed ? "sr-only" : ""}>Trailers</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu className="space-y-1">
+                    {superAdminNavigation.trailers.map((item) => (
+                      <SidebarMenuItem key={item.id}>
+                        <SidebarMenuButton asChild className="h-12">
+                          <NavLink 
+                            to={item.path} 
+                            onClick={handleNavClick}
+                            className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${getNavClass(item.path)}`}
+                          >
+                            <item.icon className={`h-5 w-5 flex-shrink-0 ${isCollapsed ? 'mx-auto' : ''}`} />
+                            {!isCollapsed && <span className="text-sm font-medium truncate">{item.label}</span>}
+                          </NavLink>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            )}
 
             <SidebarGroup>
               <SidebarGroupLabel className={isCollapsed ? "sr-only" : ""}>Reports & Analytics</SidebarGroupLabel>

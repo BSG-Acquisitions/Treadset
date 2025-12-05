@@ -65,6 +65,7 @@ import TrailerExternalMoves from "./pages/TrailerExternalMoves";
 import TrailerVehicles from "./pages/TrailerVehicles";
 import DriverTrailerAssignments from "./pages/DriverTrailerAssignments";
 import TrailerDriverManagement from "./pages/TrailerDriverManagement";
+import { FEATURE_FLAGS } from "./lib/featureFlags";
 
 const queryClient = new QueryClient();
 
@@ -347,51 +348,55 @@ const App = () => (
               </ProtectedRoute>
             } />
             
-            {/* Trailer Management Routes - Admin/Ops/Dispatcher only */}
-            <Route path="/trailers" element={
-              <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
-                <AppLayout>
-                  <TrailerInventory />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/trailers/routes" element={
-              <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
-                <AppLayout>
-                  <TrailerRoutes />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/trailers/vehicles" element={
-              <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
-                <AppLayout>
-                  <TrailerVehicles />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/trailers/external-moves" element={
-              <ProtectedRoute roles={['admin']}>
-                <AppLayout>
-                  <TrailerExternalMoves />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/trailers/drivers" element={
-              <ProtectedRoute roles={['admin', 'ops_manager']}>
-                <AppLayout>
-                  <TrailerDriverManagement />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            
-            {/* Driver Trailer Assignments - Drivers with semi_hauler capability */}
-            <Route path="/driver/trailer-assignments" element={
-              <ProtectedRoute roles={['driver', 'admin']}>
-                <AppLayout>
-                  <DriverTrailerAssignments />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
+            {/* Trailer Management Routes - Admin/Ops/Dispatcher only (Feature Flag Protected) */}
+            {FEATURE_FLAGS.TRAILERS && (
+              <>
+                <Route path="/trailers" element={
+                  <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
+                    <AppLayout>
+                      <TrailerInventory />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/trailers/routes" element={
+                  <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
+                    <AppLayout>
+                      <TrailerRoutes />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/trailers/vehicles" element={
+                  <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
+                    <AppLayout>
+                      <TrailerVehicles />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/trailers/external-moves" element={
+                  <ProtectedRoute roles={['admin']}>
+                    <AppLayout>
+                      <TrailerExternalMoves />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/trailers/drivers" element={
+                  <ProtectedRoute roles={['admin', 'ops_manager']}>
+                    <AppLayout>
+                      <TrailerDriverManagement />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+                
+                {/* Driver Trailer Assignments - Drivers with semi_hauler capability */}
+                <Route path="/driver/trailer-assignments" element={
+                  <ProtectedRoute roles={['driver', 'admin']}>
+                    <AppLayout>
+                      <DriverTrailerAssignments />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+              </>
+            )}
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
