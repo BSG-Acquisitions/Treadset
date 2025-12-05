@@ -66,6 +66,7 @@ import TrailerExternalMoves from "./pages/TrailerExternalMoves";
 import TrailerVehicles from "./pages/TrailerVehicles";
 import DriverTrailerAssignments from "./pages/DriverTrailerAssignments";
 import TrailerDriverManagement from "./pages/TrailerDriverManagement";
+import ProcessorQueue from "./pages/ProcessorQueue";
 import { FEATURE_FLAGS } from "./lib/featureFlags";
 
 const queryClient = new QueryClient();
@@ -391,6 +392,13 @@ const App = () => (
                   <ProtectedRoute roles={['admin', 'ops_manager']}>
                     <AppLayout>
                       <TrailerDriverManagement />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/trailers/processor-queue" element={
+                  <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
+                    <AppLayout>
+                      <ProcessorQueue />
                     </AppLayout>
                   </ProtectedRoute>
                 } />
