@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Search, Bell, Menu, User, Settings, Package, BarChart3, UserCheck, Home, Users, MapPin, DollarSign, CreditCard, PenTool, Truck, Building, FileText, PackageOpen, TrendingUp } from 'lucide-react';
+import { Search, Bell, Menu, User, Settings, Package, BarChart3, UserCheck, Home, Users, MapPin, DollarSign, CreditCard, PenTool, Truck, Building, FileText, PackageOpen, TrendingUp, Container } from 'lucide-react';
+import { FEATURE_FLAGS } from '@/lib/featureFlags';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -47,6 +48,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
     if (location.pathname.startsWith('/clients')) return 'clients';
     if (location.pathname.startsWith('/routes')) return 'routes';
     if (location.pathname.startsWith('/driver')) return 'driver';
+    if (location.pathname.startsWith('/trailers')) return 'trailers';
     if (location.pathname === '/haulers') return 'haulers';
     if (location.pathname === '/analytics') return 'analytics';
     if (location.pathname === '/reports') return 'reports';
@@ -55,14 +57,15 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
   };
 
   const navigationTabs = [
-    { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/', roles: [] as const },
-    { id: 'clients', label: 'Clients', icon: Users, path: '/clients', roles: ['admin', 'ops_manager', 'sales'] as const },
-    { id: 'routes', label: 'Routes', icon: MapPin, path: '/routes/today', roles: ['admin', 'ops_manager', 'dispatcher'] as const },
-    { id: 'driver', label: 'My Routes', icon: UserCheck, path: '/routes/driver', roles: ['driver'] as const },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics', roles: ['admin', 'ops_manager'] as const },
-    { id: 'reports', label: 'Reports', icon: FileText, path: '/reports', roles: ['admin', 'ops_manager'] as const },
-    { id: 'dropoffs', label: 'Drop-offs', icon: PackageOpen, path: '/dropoffs', roles: ['admin', 'ops_manager', 'sales'] as const },
-    { id: 'haulers', label: 'Independent Haulers', icon: Truck, path: '/haulers', roles: ['admin', 'ops_manager'] as const },
+    { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/', roles: [] as const, featureFlag: null },
+    { id: 'clients', label: 'Clients', icon: Users, path: '/clients', roles: ['admin', 'ops_manager', 'sales'] as const, featureFlag: null },
+    { id: 'routes', label: 'Routes', icon: MapPin, path: '/routes/today', roles: ['admin', 'ops_manager', 'dispatcher'] as const, featureFlag: null },
+    { id: 'driver', label: 'My Routes', icon: UserCheck, path: '/routes/driver', roles: ['driver'] as const, featureFlag: null },
+    { id: 'trailers', label: 'Trailers', icon: Container, path: '/trailers/inventory', roles: ['admin', 'ops_manager', 'dispatcher'] as const, featureFlag: 'TRAILERS' as const },
+    { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics', roles: ['admin', 'ops_manager'] as const, featureFlag: null },
+    { id: 'reports', label: 'Reports', icon: FileText, path: '/reports', roles: ['admin', 'ops_manager'] as const, featureFlag: null },
+    { id: 'dropoffs', label: 'Drop-offs', icon: PackageOpen, path: '/dropoffs', roles: ['admin', 'ops_manager', 'sales'] as const, featureFlag: null },
+    { id: 'haulers', label: 'Independent Haulers', icon: Truck, path: '/haulers', roles: ['admin', 'ops_manager'] as const, featureFlag: null },
   ];
 
 
@@ -222,9 +225,9 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
       <div className="hidden xl:block border-t border-border/20 bg-card/50 overflow-x-auto">
         <div className="px-3 sm:px-6">
           <Tabs value={getCurrentTab()} className="w-full">
-            <TabsList className="grid w-full bg-transparent h-auto p-0 overflow-x-auto" style={{ gridTemplateColumns: `repeat(${navigationTabs.filter(tab => tab.roles.length === 0 || hasAnyRole([...tab.roles])).length}, minmax(0, 1fr))` }}>
+            <TabsList className="grid w-full bg-transparent h-auto p-0 overflow-x-auto" style={{ gridTemplateColumns: `repeat(${navigationTabs.filter(tab => (tab.roles.length === 0 || hasAnyRole([...tab.roles])) && (!tab.featureFlag || FEATURE_FLAGS[tab.featureFlag])).length}, minmax(0, 1fr))` }}>
               {navigationTabs
-                .filter(tab => tab.roles.length === 0 || hasAnyRole([...tab.roles]))
+                .filter(tab => (tab.roles.length === 0 || hasAnyRole([...tab.roles])) && (!tab.featureFlag || FEATURE_FLAGS[tab.featureFlag]))
                 .map((tab) => {
                   const Icon = tab.icon;
                   return (
