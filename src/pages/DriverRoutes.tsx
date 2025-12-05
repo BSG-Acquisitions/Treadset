@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-import { Building, MapPin, Calendar, CheckCircle2, Clock, AlertCircle, Package, Truck, MoreVertical, Move } from "lucide-react";
+import { Building, MapPin, Calendar, CheckCircle2, Clock, AlertCircle, Package, Truck, MoreVertical, Move, Phone } from "lucide-react";
 import { format } from "date-fns";
 
 export default function DriverRoutes() {
@@ -183,6 +183,24 @@ export default function DriverRoutes() {
                             </div>
                           </div>
                         </div>
+
+                        {/* Phone Number */}
+                        {assignment.pickup?.client?.phone && (
+                          <div className="mb-4 p-3 md:p-4 bg-green-50 rounded-lg border border-green-200">
+                            <div className="flex items-center gap-3">
+                              <Phone className="h-5 w-5 md:h-6 md:w-6 text-green-600 flex-shrink-0" />
+                              <div>
+                                <div className="text-sm md:text-base font-medium text-green-800 mb-1">Phone:</div>
+                                <a 
+                                  href={`tel:${assignment.pickup.client.phone}`}
+                                  className="text-base md:text-lg font-semibold text-green-900 hover:underline"
+                                >
+                                  {assignment.pickup.client.phone}
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+                        )}
 
                         {/* Vehicle Info */}
                         <div className="mb-4 flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
