@@ -61,6 +61,7 @@ import DataQuality from "./pages/DataQuality";
 import IntelligenceDashboard from "./pages/IntelligenceDashboard";
 import TrailerInventory from "./pages/TrailerInventory";
 import TrailerRoutes from "./pages/TrailerRoutes";
+import TrailerRouteDetail from "./pages/TrailerRouteDetail";
 import TrailerExternalMoves from "./pages/TrailerExternalMoves";
 import TrailerVehicles from "./pages/TrailerVehicles";
 import DriverTrailerAssignments from "./pages/DriverTrailerAssignments";
@@ -362,6 +363,13 @@ const App = () => (
                   <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
                     <AppLayout>
                       <TrailerRoutes />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/trailers/routes/:routeId" element={
+                  <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
+                    <AppLayout>
+                      <TrailerRouteDetail />
                     </AppLayout>
                   </ProtectedRoute>
                 } />
