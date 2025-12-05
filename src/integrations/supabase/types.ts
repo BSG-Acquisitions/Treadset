@@ -1006,6 +1006,45 @@ export type Database = {
           },
         ]
       }
+      driver_capabilities: {
+        Row: {
+          capability: string
+          granted_at: string
+          granted_by: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          capability: string
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          capability?: string
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_capabilities_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_capabilities_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       driver_performance: {
         Row: {
           avg_mileage_per_stop: number | null
@@ -4008,6 +4047,326 @@ export type Database = {
           },
         ]
       }
+      trailer_events: {
+        Row: {
+          created_at: string
+          driver_id: string | null
+          event_type: Database["public"]["Enums"]["trailer_event_type"]
+          id: string
+          location_id: string | null
+          location_name: string | null
+          notes: string | null
+          organization_id: string
+          route_id: string | null
+          stop_id: string | null
+          timestamp: string
+          trailer_id: string
+        }
+        Insert: {
+          created_at?: string
+          driver_id?: string | null
+          event_type: Database["public"]["Enums"]["trailer_event_type"]
+          id?: string
+          location_id?: string | null
+          location_name?: string | null
+          notes?: string | null
+          organization_id: string
+          route_id?: string | null
+          stop_id?: string | null
+          timestamp?: string
+          trailer_id: string
+        }
+        Update: {
+          created_at?: string
+          driver_id?: string | null
+          event_type?: Database["public"]["Enums"]["trailer_event_type"]
+          id?: string
+          location_id?: string | null
+          location_name?: string | null
+          notes?: string | null
+          organization_id?: string
+          route_id?: string | null
+          stop_id?: string | null
+          timestamp?: string
+          trailer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trailer_events_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trailer_events_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trailer_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trailer_events_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "trailer_routes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trailer_events_stop_id_fkey"
+            columns: ["stop_id"]
+            isOneToOne: false
+            referencedRelation: "trailer_route_stops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trailer_events_trailer_id_fkey"
+            columns: ["trailer_id"]
+            isOneToOne: false
+            referencedRelation: "trailers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trailer_route_stops: {
+        Row: {
+          completed_at: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string
+          id: string
+          instructions: string | null
+          location_address: string | null
+          location_id: string | null
+          location_name: string | null
+          route_id: string
+          sequence_number: number
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          instructions?: string | null
+          location_address?: string | null
+          location_id?: string | null
+          location_name?: string | null
+          route_id: string
+          sequence_number?: number
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          instructions?: string | null
+          location_address?: string | null
+          location_id?: string | null
+          location_name?: string | null
+          route_id?: string
+          sequence_number?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trailer_route_stops_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trailer_route_stops_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "trailer_routes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trailer_routes: {
+        Row: {
+          created_at: string
+          driver_id: string | null
+          id: string
+          notes: string | null
+          organization_id: string
+          route_name: string
+          scheduled_date: string
+          status: Database["public"]["Enums"]["trailer_route_status"]
+          updated_at: string
+          vehicle_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          driver_id?: string | null
+          id?: string
+          notes?: string | null
+          organization_id: string
+          route_name: string
+          scheduled_date: string
+          status?: Database["public"]["Enums"]["trailer_route_status"]
+          updated_at?: string
+          vehicle_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          driver_id?: string | null
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          route_name?: string
+          scheduled_date?: string
+          status?: Database["public"]["Enums"]["trailer_route_status"]
+          updated_at?: string
+          vehicle_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trailer_routes_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trailer_routes_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trailer_routes_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "trailer_vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trailer_vehicles: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean | null
+          license_plate: string | null
+          notes: string | null
+          organization_id: string
+          updated_at: string
+          vehicle_number: string
+          vehicle_type: string | null
+          vin: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          license_plate?: string | null
+          notes?: string | null
+          organization_id: string
+          updated_at?: string
+          vehicle_number: string
+          vehicle_type?: string | null
+          vin?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          license_plate?: string | null
+          notes?: string | null
+          organization_id?: string
+          updated_at?: string
+          vehicle_number?: string
+          vehicle_type?: string | null
+          vin?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trailer_vehicles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trailers: {
+        Row: {
+          created_at: string
+          current_location: string | null
+          current_location_id: string | null
+          current_status: Database["public"]["Enums"]["trailer_status"]
+          id: string
+          is_active: boolean | null
+          last_event_id: string | null
+          notes: string | null
+          organization_id: string
+          trailer_number: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_location?: string | null
+          current_location_id?: string | null
+          current_status?: Database["public"]["Enums"]["trailer_status"]
+          id?: string
+          is_active?: boolean | null
+          last_event_id?: string | null
+          notes?: string | null
+          organization_id: string
+          trailer_number: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_location?: string | null
+          current_location_id?: string | null
+          current_status?: Database["public"]["Enums"]["trailer_status"]
+          id?: string
+          is_active?: boolean | null
+          last_event_id?: string | null
+          notes?: string | null
+          organization_id?: string
+          trailer_number?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trailers_current_location_id_fkey"
+            columns: ["current_location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trailers_last_event_fkey"
+            columns: ["last_event_id"]
+            isOneToOne: false
+            referencedRelation: "trailer_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trailers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_organization_roles: {
         Row: {
           created_at: string
@@ -4553,6 +4912,28 @@ export type Database = {
         | "commercial_22_5"
         | "otr"
         | "other"
+      trailer_event_type:
+        | "pickup_empty"
+        | "drop_empty"
+        | "pickup_full"
+        | "drop_full"
+        | "swap"
+        | "stage_empty"
+        | "external_pickup"
+        | "external_drop"
+        | "waiting_unload"
+      trailer_route_status:
+        | "draft"
+        | "scheduled"
+        | "in_progress"
+        | "completed"
+        | "cancelled"
+      trailer_status:
+        | "empty"
+        | "full"
+        | "staged"
+        | "in_transit"
+        | "waiting_unload"
       unit_basis:
         | "pte"
         | "tons"
@@ -4757,6 +5138,31 @@ export const Constants = {
         "commercial_22_5",
         "otr",
         "other",
+      ],
+      trailer_event_type: [
+        "pickup_empty",
+        "drop_empty",
+        "pickup_full",
+        "drop_full",
+        "swap",
+        "stage_empty",
+        "external_pickup",
+        "external_drop",
+        "waiting_unload",
+      ],
+      trailer_route_status: [
+        "draft",
+        "scheduled",
+        "in_progress",
+        "completed",
+        "cancelled",
+      ],
+      trailer_status: [
+        "empty",
+        "full",
+        "staged",
+        "in_transit",
+        "waiting_unload",
       ],
       unit_basis: [
         "pte",
