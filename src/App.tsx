@@ -76,372 +76,366 @@ const App = () => (
     <ThemeProvider>
       <TooltipProvider>
         <AuthProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-          <Routes>
-            {/* Public Routes - No Authentication Required */}
-            <Route path="/public-book" element={<PublicBook />} />
-            <Route path="/public-booking-confirmation" element={<PublicBookingConfirmation />} />
-          <Route path="/test/manifest" element={
-            <div>
-              <ManifestExample />
-            </div>
-          } />
-          <Route path="/test/acroform" element={
-            <div>
-              <AcroFormDemo />
-            </div>
-          } />
-            
-            {/* Protected Routes with Layout */}
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/auth/sign-in" element={<Auth />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/onboarding" element={
-              <ProtectedRoute>
-                <Onboarding />
-              </ProtectedRoute>
-            } />
-            <Route path="/" element={
-              <ProtectedRoute>
-                <AppLayout>
-                  <Index />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/clients" element={
-              <ProtectedRoute roles={['admin', 'ops_manager', 'sales']}>
-                <AppLayout>
-                  <Clients />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/clients/:id" element={
-              <ProtectedRoute roles={['admin', 'ops_manager', 'sales']}>
-                <AppLayout>
-                  <ClientDetail />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/routes/today" element={
-              <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
-                <AppLayout>
-                  <EnhancedRoutesToday />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/routes/legacy" element={
-              <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
-                <AppLayout>
-                  <RoutesToday />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/routes/print/today" element={
-              <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
-                <AppLayout>
-                  <RoutesPrintToday />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/book" element={
-              <ProtectedRoute roles={['driver', 'admin']}>
-                <AppLayout>
-                  <DriverSchedulePickup />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/employees" element={
-              <ProtectedRoute roles={['admin']}>
-                <AppLayout>
-                  <Employees />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/analytics" element={
-              <ProtectedRoute roles={['admin', 'ops_manager']}>
-                <AppLayout>
-                  <ClientAnalytics />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/settings" element={
-              <ProtectedRoute roles={['admin', 'ops_manager']}>
-                <AppLayout>
-                  <Settings />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/booking-confirmation" element={
-              <ProtectedRoute>
-                <AppLayout>
-                  <BookingConfirmation />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/integrations" element={
-              <ProtectedRoute roles={['admin']}>
-                <AppLayout>
-                  <Integrations />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/manifests" element={
-              <ProtectedRoute roles={['admin', 'ops_manager', 'sales']}>
-                <AppLayout>
-                  <Manifests />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/manifests/:id" element={
-              <ProtectedRoute roles={['admin', 'ops_manager', 'sales', 'driver']}>
-                <AppLayout>
-                  <ManifestViewer />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/manifests/backfill" element={
-              <ProtectedRoute roles={['admin']}>
-                <AppLayout>
-                  <BackfillManifestPdfs />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/driver/manifests" element={
-              <ProtectedRoute roles={['driver', 'admin']}>
-                <AppLayout>
-                  <DriverManifests />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/driver/manifest/new" element={
-              <ProtectedRoute roles={['driver', 'admin']}>
-                <AppLayout>
-                  <DriverManifestCreate />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/driver/manifest/:id" element={
-              <ProtectedRoute roles={['driver', 'admin']}>
-                <AppLayout>
-                  <ManifestViewer />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/routes/driver" element={
-              <ProtectedRoute roles={['driver', 'admin']}>
-                <AppLayout>
-                  <DriverRoutes />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/driver-assignment-helper" element={
-              <ProtectedRoute roles={['admin']}>
-                <AppLayout>
-                  <DriverAssignmentHelper />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/driver/dashboard" element={
-              <ProtectedRoute roles={['driver', 'admin']}>
-                <AppLayout>
-                  <DriverDashboard />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/driver/assignment/:assignmentId" element={
-              <ProtectedRoute roles={['driver', 'admin']}>
-                <AppLayout>
-                  <DriverAssignmentView />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/driver/payment-success" element={
-              <ProtectedRoute roles={['driver', 'admin']}>
-                <DriverPaymentSuccess />
-              </ProtectedRoute>
-            } />
-            <Route path="/driver/payment-cancelled" element={
-              <ProtectedRoute roles={['driver', 'admin']}>
-                <DriverPaymentCancelled />
-              </ProtectedRoute>
-            } />
-            <Route path="/receiver-signatures" element={
-              <ProtectedRoute roles={['admin', 'ops_manager']}>
-                <AppLayout>
-                  <ReceiverSignatures />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/haulers" element={
-              <ProtectedRoute roles={['admin', 'ops_manager']}>
-                <IndependentHaulers />
-              </ProtectedRoute>
-            } />
-            <Route path="/receivers" element={
-              <ProtectedRoute roles={['admin', 'ops_manager']}>
-                <AppLayout>
-                  <ReceiverManagement />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/reports" element={
-              <ProtectedRoute roles={['admin', 'ops_manager']}>
-                <AppLayout>
-                  <Reports />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/michigan-reports" element={
-              <ProtectedRoute roles={['admin', 'ops_manager']}>
-                <AppLayout>
-                  <MichiganReports />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/dropoffs" element={
-              <ProtectedRoute roles={['admin', 'ops_manager', 'sales']}>
-                <AppLayout>
-                  <Dropoffs />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/hauler-dashboard" element={<ProtectedRoute><HaulerDashboard /></ProtectedRoute>} />
-            <Route path="/hauler-customers" element={<ProtectedRoute><HaulerCustomers /></ProtectedRoute>} />
-            <Route path="/hauler-manifests" element={<ProtectedRoute><HaulerManifests /></ProtectedRoute>} />
-            <Route path="/hauler-manifest-create" element={<ProtectedRoute><HaulerManifestCreate /></ProtectedRoute>} />
-            <Route path="/hauler-rates" element={<ProtectedRoute roles={['admin', 'ops_manager']}><HaulerRates /></ProtectedRoute>} />
-            <Route path="/payment-success" element={<PaymentSuccess />} />
-            <Route path="/payment-cancelled" element={<PaymentCancelled />} />
-            <Route path="/intelligence" element={
-              <ProtectedRoute roles={['admin', 'ops_manager']}>
-                <AppLayout>
-                  <IntelligenceDashboard />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/deployment" element={
-              <ProtectedRoute roles={['admin']}>
-                <AppLayout>
-                  <DeploymentDashboard />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/test/notifications" element={
-              <ProtectedRoute roles={['admin']}>
-                <AppLayout>
-                  <NotificationTest />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/test/manifest-reminders" element={
-              <ProtectedRoute roles={['admin', 'receptionist']}>
-                <AppLayout>
-                  <ManifestRemindersTest />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/data-quality" element={
-              <ProtectedRoute roles={['admin']}>
-                <AppLayout>
-                  <DataQuality />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            
-            {/* Trailer Management Routes - Admin/Ops/Dispatcher only (Feature Flag Protected) */}
-            <Route path="/trailers" element={
-              FEATURE_FLAGS.TRAILERS ? (
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              {/* Public Routes - No Authentication Required */}
+              <Route path="/public-book" element={<PublicBook />} />
+              <Route path="/public-booking-confirmation" element={<PublicBookingConfirmation />} />
+              <Route path="/test/manifest" element={<ManifestExample />} />
+              <Route path="/test/acroform" element={<AcroFormDemo />} />
+              
+              {/* Auth Routes */}
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/auth/sign-in" element={<Auth />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              
+              {/* Protected Routes with Layout */}
+              <Route path="/onboarding" element={
+                <ProtectedRoute>
+                  <Onboarding />
+                </ProtectedRoute>
+              } />
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <Index />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/clients" element={
+                <ProtectedRoute roles={['admin', 'ops_manager', 'sales']}>
+                  <AppLayout>
+                    <Clients />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/clients/:id" element={
+                <ProtectedRoute roles={['admin', 'ops_manager', 'sales']}>
+                  <AppLayout>
+                    <ClientDetail />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/routes/today" element={
                 <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
                   <AppLayout>
-                    <TrailerInventory />
+                    <EnhancedRoutesToday />
                   </AppLayout>
                 </ProtectedRoute>
-              ) : <NotFound />
-            } />
-            <Route path="/trailers/inventory" element={
-              FEATURE_FLAGS.TRAILERS ? (
+              } />
+              <Route path="/routes/legacy" element={
                 <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
                   <AppLayout>
-                    <TrailerInventory />
+                    <RoutesToday />
                   </AppLayout>
                 </ProtectedRoute>
-              ) : <NotFound />
-            } />
-            <Route path="/trailers/routes" element={
-              FEATURE_FLAGS.TRAILERS ? (
+              } />
+              <Route path="/routes/print/today" element={
                 <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
                   <AppLayout>
-                    <TrailerRoutes />
+                    <RoutesPrintToday />
                   </AppLayout>
                 </ProtectedRoute>
-              ) : <NotFound />
-            } />
-            <Route path="/trailers/routes/:routeId" element={
-              FEATURE_FLAGS.TRAILERS ? (
-                <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
-                  <AppLayout>
-                    <TrailerRouteDetail />
-                  </AppLayout>
-                </ProtectedRoute>
-              ) : <NotFound />
-            } />
-            <Route path="/trailers/vehicles" element={
-              FEATURE_FLAGS.TRAILERS ? (
-                <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
-                  <AppLayout>
-                    <TrailerVehicles />
-                  </AppLayout>
-                </ProtectedRoute>
-              ) : <NotFound />
-            } />
-            <Route path="/trailers/external-moves" element={
-              FEATURE_FLAGS.TRAILERS ? (
-                <ProtectedRoute roles={['admin']}>
-                  <AppLayout>
-                    <TrailerExternalMoves />
-                  </AppLayout>
-                </ProtectedRoute>
-              ) : <NotFound />
-            } />
-            <Route path="/trailers/drivers" element={
-              FEATURE_FLAGS.TRAILERS ? (
-                <ProtectedRoute roles={['admin', 'ops_manager']}>
-                  <AppLayout>
-                    <TrailerDriverManagement />
-                  </AppLayout>
-                </ProtectedRoute>
-              ) : <NotFound />
-            } />
-            <Route path="/trailers/processor-queue" element={
-              FEATURE_FLAGS.TRAILERS ? (
-                <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
-                  <AppLayout>
-                    <ProcessorQueue />
-                  </AppLayout>
-                </ProtectedRoute>
-              ) : <NotFound />
-            } />
-            
-            {/* Driver Trailer Assignments - Drivers with semi_hauler capability */}
-            <Route path="/driver/trailer-assignments" element={
-              FEATURE_FLAGS.TRAILERS ? (
+              } />
+              <Route path="/book" element={
                 <ProtectedRoute roles={['driver', 'admin']}>
                   <AppLayout>
-                    <DriverTrailerAssignments />
+                    <DriverSchedulePickup />
                   </AppLayout>
                 </ProtectedRoute>
-              ) : <NotFound />
-            } />
-            
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          <AIAssistant />
-        </BrowserRouter>
-      </AuthProvider>
-    </TooltipProvider>
+              } />
+              <Route path="/employees" element={
+                <ProtectedRoute roles={['admin']}>
+                  <AppLayout>
+                    <Employees />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/analytics" element={
+                <ProtectedRoute roles={['admin', 'ops_manager']}>
+                  <AppLayout>
+                    <ClientAnalytics />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/settings" element={
+                <ProtectedRoute roles={['admin', 'ops_manager']}>
+                  <AppLayout>
+                    <Settings />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/booking-confirmation" element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <BookingConfirmation />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/integrations" element={
+                <ProtectedRoute roles={['admin']}>
+                  <AppLayout>
+                    <Integrations />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/manifests" element={
+                <ProtectedRoute roles={['admin', 'ops_manager', 'sales']}>
+                  <AppLayout>
+                    <Manifests />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/manifests/:id" element={
+                <ProtectedRoute roles={['admin', 'ops_manager', 'sales', 'driver']}>
+                  <AppLayout>
+                    <ManifestViewer />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/manifests/backfill" element={
+                <ProtectedRoute roles={['admin']}>
+                  <AppLayout>
+                    <BackfillManifestPdfs />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/driver/manifests" element={
+                <ProtectedRoute roles={['driver', 'admin']}>
+                  <AppLayout>
+                    <DriverManifests />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/driver/manifest/new" element={
+                <ProtectedRoute roles={['driver', 'admin']}>
+                  <AppLayout>
+                    <DriverManifestCreate />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/driver/manifest/:id" element={
+                <ProtectedRoute roles={['driver', 'admin']}>
+                  <AppLayout>
+                    <ManifestViewer />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/routes/driver" element={
+                <ProtectedRoute roles={['driver', 'admin']}>
+                  <AppLayout>
+                    <DriverRoutes />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/driver-assignment-helper" element={
+                <ProtectedRoute roles={['admin']}>
+                  <AppLayout>
+                    <DriverAssignmentHelper />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/driver/dashboard" element={
+                <ProtectedRoute roles={['driver', 'admin']}>
+                  <AppLayout>
+                    <DriverDashboard />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/driver/assignment/:assignmentId" element={
+                <ProtectedRoute roles={['driver', 'admin']}>
+                  <AppLayout>
+                    <DriverAssignmentView />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/driver/payment-success" element={
+                <ProtectedRoute roles={['driver', 'admin']}>
+                  <DriverPaymentSuccess />
+                </ProtectedRoute>
+              } />
+              <Route path="/driver/payment-cancelled" element={
+                <ProtectedRoute roles={['driver', 'admin']}>
+                  <DriverPaymentCancelled />
+                </ProtectedRoute>
+              } />
+              <Route path="/receiver-signatures" element={
+                <ProtectedRoute roles={['admin', 'ops_manager']}>
+                  <AppLayout>
+                    <ReceiverSignatures />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/haulers" element={
+                <ProtectedRoute roles={['admin', 'ops_manager']}>
+                  <IndependentHaulers />
+                </ProtectedRoute>
+              } />
+              <Route path="/receivers" element={
+                <ProtectedRoute roles={['admin', 'ops_manager']}>
+                  <AppLayout>
+                    <ReceiverManagement />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/reports" element={
+                <ProtectedRoute roles={['admin', 'ops_manager']}>
+                  <AppLayout>
+                    <Reports />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/michigan-reports" element={
+                <ProtectedRoute roles={['admin', 'ops_manager']}>
+                  <AppLayout>
+                    <MichiganReports />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/dropoffs" element={
+                <ProtectedRoute roles={['admin', 'ops_manager', 'sales']}>
+                  <AppLayout>
+                    <Dropoffs />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/hauler-dashboard" element={<ProtectedRoute><HaulerDashboard /></ProtectedRoute>} />
+              <Route path="/hauler-customers" element={<ProtectedRoute><HaulerCustomers /></ProtectedRoute>} />
+              <Route path="/hauler-manifests" element={<ProtectedRoute><HaulerManifests /></ProtectedRoute>} />
+              <Route path="/hauler-manifest-create" element={<ProtectedRoute><HaulerManifestCreate /></ProtectedRoute>} />
+              <Route path="/hauler-rates" element={<ProtectedRoute roles={['admin', 'ops_manager']}><HaulerRates /></ProtectedRoute>} />
+              <Route path="/payment-success" element={<PaymentSuccess />} />
+              <Route path="/payment-cancelled" element={<PaymentCancelled />} />
+              <Route path="/intelligence" element={
+                <ProtectedRoute roles={['admin', 'ops_manager']}>
+                  <AppLayout>
+                    <IntelligenceDashboard />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/deployment" element={
+                <ProtectedRoute roles={['admin']}>
+                  <AppLayout>
+                    <DeploymentDashboard />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/test/notifications" element={
+                <ProtectedRoute roles={['admin']}>
+                  <AppLayout>
+                    <NotificationTest />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/test/manifest-reminders" element={
+                <ProtectedRoute roles={['admin', 'receptionist']}>
+                  <AppLayout>
+                    <ManifestRemindersTest />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/data-quality" element={
+                <ProtectedRoute roles={['admin']}>
+                  <AppLayout>
+                    <DataQuality />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              
+              {/* Trailer Management Routes - Feature Flag Protected */}
+              <Route path="/trailers" element={
+                FEATURE_FLAGS.TRAILERS ? (
+                  <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
+                    <AppLayout>
+                      <TrailerInventory />
+                    </AppLayout>
+                  </ProtectedRoute>
+                ) : <NotFound />
+              } />
+              <Route path="/trailers/inventory" element={
+                FEATURE_FLAGS.TRAILERS ? (
+                  <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
+                    <AppLayout>
+                      <TrailerInventory />
+                    </AppLayout>
+                  </ProtectedRoute>
+                ) : <NotFound />
+              } />
+              <Route path="/trailers/routes" element={
+                FEATURE_FLAGS.TRAILERS ? (
+                  <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
+                    <AppLayout>
+                      <TrailerRoutes />
+                    </AppLayout>
+                  </ProtectedRoute>
+                ) : <NotFound />
+              } />
+              <Route path="/trailers/routes/:routeId" element={
+                FEATURE_FLAGS.TRAILERS ? (
+                  <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
+                    <AppLayout>
+                      <TrailerRouteDetail />
+                    </AppLayout>
+                  </ProtectedRoute>
+                ) : <NotFound />
+              } />
+              <Route path="/trailers/vehicles" element={
+                FEATURE_FLAGS.TRAILERS ? (
+                  <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
+                    <AppLayout>
+                      <TrailerVehicles />
+                    </AppLayout>
+                  </ProtectedRoute>
+                ) : <NotFound />
+              } />
+              <Route path="/trailers/external-moves" element={
+                FEATURE_FLAGS.TRAILERS ? (
+                  <ProtectedRoute roles={['admin']}>
+                    <AppLayout>
+                      <TrailerExternalMoves />
+                    </AppLayout>
+                  </ProtectedRoute>
+                ) : <NotFound />
+              } />
+              <Route path="/trailers/drivers" element={
+                FEATURE_FLAGS.TRAILERS ? (
+                  <ProtectedRoute roles={['admin', 'ops_manager']}>
+                    <AppLayout>
+                      <TrailerDriverManagement />
+                    </AppLayout>
+                  </ProtectedRoute>
+                ) : <NotFound />
+              } />
+              <Route path="/trailers/processor-queue" element={
+                FEATURE_FLAGS.TRAILERS ? (
+                  <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
+                    <AppLayout>
+                      <ProcessorQueue />
+                    </AppLayout>
+                  </ProtectedRoute>
+                ) : <NotFound />
+              } />
+              
+              {/* Driver Trailer Assignments */}
+              <Route path="/driver/trailer-assignments" element={
+                FEATURE_FLAGS.TRAILERS ? (
+                  <ProtectedRoute roles={['driver', 'admin']}>
+                    <AppLayout>
+                      <DriverTrailerAssignments />
+                    </AppLayout>
+                  </ProtectedRoute>
+                ) : <NotFound />
+              } />
+              
+              {/* Catch-all 404 - Must be last */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+            <AIAssistant />
+          </BrowserRouter>
+        </AuthProvider>
+      </TooltipProvider>
     </ThemeProvider>
   </QueryClientProvider>
 );
