@@ -10,9 +10,9 @@ export function FollowupWorkflows() {
   const { data: followups, isLoading } = useActiveFollowups();
   const updateWorkflow = useUpdateWorkflow();
 
-  const handleCompleteFollowup = async (workflowId: string) => {
+  const handleCompleteFollowup = async (workflowId: string, intervalDays: number = 30) => {
     const nextDate = new Date();
-    nextDate.setDate(nextDate.getDate() + 30);
+    nextDate.setDate(nextDate.getDate() + intervalDays);
     
     await updateWorkflow.mutateAsync({
       id: workflowId,
@@ -23,6 +23,20 @@ export function FollowupWorkflows() {
         updated_at: new Date().toISOString()
       }
     });
+  };
+
+  const getFrequencyLabel = (days: number | null) => {
+    if (!days) return 'monthly';
+    if (days <= 7) return 'weekly';
+    if (days <= 14) return 'biweekly';
+    return 'monthly';
+  };
+
+  const getFrequencyColor = (days: number | null) => {
+    if (!days) return 'bg-muted text-muted-foreground';
+    if (days <= 7) return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+    if (days <= 14) return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
+    return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
   };
 
   const handleSnoozeFollowup = async (workflowId: string, days: number) => {
@@ -71,13 +85,14 @@ export function FollowupWorkflows() {
           {followups.map((workflow) => {
             const lastPickup = workflow.clients?.last_pickup_at;
             const lastPickupDate = lastPickup ? new Date(lastPickup) : null;
+            const intervalDays = workflow.contact_interval_days || 30;
             
             return (
               <div key={workflow.id} className="flex items-center gap-4 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
                 {/* One-click checkbox */}
                 <Checkbox
                   checked={false}
-                  onCheckedChange={() => handleCompleteFollowup(workflow.id)}
+                  onCheckedChange={() => handleCompleteFollowup(workflow.id, intervalDays)}
                   disabled={updateWorkflow.isPending}
                   className="h-5 w-5"
                 />
@@ -86,6 +101,9 @@ export function FollowupWorkflows() {
                   <div className="flex items-center gap-2 mb-1">
                     <Building className="h-4 w-4 text-muted-foreground shrink-0" />
                     <span className="font-medium truncate">{workflow.clients?.company_name || 'Unknown Client'}</span>
+                    <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${getFrequencyColor(intervalDays)}`}>
+                      {getFrequencyLabel(intervalDays)}
+                    </Badge>
                   </div>
                   
                   <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
