@@ -149,7 +149,11 @@ export function DriverStopEventActions({
     setShowDialog(true);
   };
 
-  const handleCompleteEvent = async (signaturePath?: string, signatureNotes?: string) => {
+  const handleCompleteEvent = async (
+    signaturePath?: string, 
+    signatureNotes?: string,
+    contactInfo?: { email?: string; name?: string }
+  ) => {
     if (!selectedEventType) return;
 
     const finalNotes = signatureNotes || notes;
@@ -169,7 +173,7 @@ export function DriverStopEventActions({
         notes: `Swap - Drop Empty: ${finalNotes}`,
       });
 
-      // Second: pickup full
+      // Second: pickup full (this one may require signature)
       await completeEvent.mutateAsync({
         trailer_id: swapPickupTrailerId,
         event_type: 'pickup_full',
@@ -178,6 +182,9 @@ export function DriverStopEventActions({
         location_name: locationName,
         location_id: locationId,
         notes: `Swap - Pickup Full: ${finalNotes}`,
+        signature_path: signaturePath,
+        contact_email: contactInfo?.email,
+        contact_name: contactInfo?.name,
       });
     } else {
       await completeEvent.mutateAsync({
@@ -188,6 +195,9 @@ export function DriverStopEventActions({
         location_name: locationName,
         location_id: locationId,
         notes: finalNotes,
+        signature_path: signaturePath,
+        contact_email: contactInfo?.email,
+        contact_name: contactInfo?.name,
       });
     }
 
@@ -370,8 +380,8 @@ export function DriverStopEventActions({
           eventType={selectedEventType}
           trailerNumber={getSelectedTrailer()?.trailer_number || ''}
           locationName={locationName}
-          onComplete={async (signaturePath, signatureNotes) => {
-            await handleCompleteEvent(signaturePath || undefined, signatureNotes);
+          onComplete={async (signaturePath, signatureNotes, contactInfo) => {
+            await handleCompleteEvent(signaturePath || undefined, signatureNotes, contactInfo);
           }}
         />
       )}

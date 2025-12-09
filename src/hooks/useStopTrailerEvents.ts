@@ -18,11 +18,29 @@ export interface StopTrailerEvent {
   timestamp: string;
   notes: string | null;
   created_at: string;
+  manifest_number?: string;
+  manifest_pdf_path?: string;
+  signature_path?: string;
+  signer_name?: string;
   trailer?: {
     id: string;
     trailer_number: string;
     current_status: string;
   };
+}
+
+export interface CompleteTrailerEventData {
+  trailer_id: string;
+  event_type: TrailerEventType;
+  stop_id: string;
+  route_id: string;
+  location_name?: string;
+  location_id?: string;
+  notes?: string;
+  signature_path?: string;
+  signer_name?: string;
+  contact_email?: string;
+  contact_name?: string;
 }
 
 // Fetch all trailer events for a specific route (grouped by stop)
@@ -52,22 +70,14 @@ export const useRouteStopEvents = (routeId: string) => {
   });
 };
 
-// Complete a trailer event with optional signature
+// Complete a trailer event with optional signature and auto-manifest generation
 export const useCompleteTrailerEvent = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const orgId = user?.currentOrganization?.id;
 
   return useMutation({
-    mutationFn: async (data: {
-      trailer_id: string;
-      event_type: TrailerEventType;
-      stop_id: string;
-      route_id: string;
-      location_name?: string;
-      location_id?: string;
-      notes?: string;
-    }) => {
+    mutationFn: async (data: CompleteTrailerEventData) => {
       if (!orgId) throw new Error('No organization selected');
       
       // Get the driver's internal user ID
@@ -76,6 +86,16 @@ export const useCompleteTrailerEvent = () => {
         .select('id')
         .eq('auth_user_id', user?.id)
         .single();
+      
+      // Extract signer name from notes if present (format: "Name: notes")
+      let signerName = data.signer_name;
+      let eventNotes = data.notes;
+      
+      if (!signerName && eventNotes?.includes(':')) {
+        const colonIndex = eventNotes.indexOf(':');
+        signerName = eventNotes.substring(0, colonIndex).trim();
+        eventNotes = eventNotes.substring(colonIndex + 1).trim();
+      }
       
       // Create the event record
       const { data: event, error } = await supabase
@@ -89,7 +109,11 @@ export const useCompleteTrailerEvent = () => {
           location_name: data.location_name,
           location_id: data.location_id,
           driver_id: userData?.id,
-          notes: data.notes,
+          notes: eventNotes,
+          signature_path: data.signature_path,
+          signer_name: signerName,
+          location_contact_email: data.contact_email,
+          location_contact_name: data.contact_name,
         })
         .select()
         .single();
@@ -127,12 +151,43 @@ export const useCompleteTrailerEvent = () => {
           .eq('id', data.trailer_id);
       }
 
+      // Auto-generate manifest for signed events (pickup_full, drop_full)
+      const requiresManifest = ['pickup_full', 'drop_full'].includes(data.event_type);
+      if (requiresManifest && data.signature_path) {
+        console.log('[CompleteTrailerEvent] Generating manifest for signed event:', event.id);
+        
+        try {
+          const { data: manifestData, error: manifestError } = await supabase.functions.invoke(
+            'generate-trailer-manifest',
+            {
+              body: {
+                event_id: event.id,
+                organization_id: orgId,
+                send_email: !!data.contact_email,
+                recipient_email: data.contact_email,
+                recipient_name: data.contact_name || signerName,
+              },
+            }
+          );
+
+          if (manifestError) {
+            console.error('[CompleteTrailerEvent] Manifest generation failed:', manifestError);
+          } else {
+            console.log('[CompleteTrailerEvent] Manifest generated:', manifestData);
+          }
+        } catch (manifestErr) {
+          console.error('[CompleteTrailerEvent] Manifest generation error:', manifestErr);
+          // Don't fail the event completion if manifest generation fails
+        }
+      }
+
       return event;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['route-stop-events'] });
       queryClient.invalidateQueries({ queryKey: ['driver-trailer-routes'] });
       queryClient.invalidateQueries({ queryKey: ['trailers'] });
+      queryClient.invalidateQueries({ queryKey: ['trailer-events'] });
       toast.success('Event completed');
     },
     onError: (error: Error) => {

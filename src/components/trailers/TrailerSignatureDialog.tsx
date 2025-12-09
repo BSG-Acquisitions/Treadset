@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Eraser } from "lucide-react";
+import { Loader2, Eraser, Mail } from "lucide-react";
 
 interface TrailerSignatureDialogProps {
   open: boolean;
@@ -15,7 +16,7 @@ interface TrailerSignatureDialogProps {
   eventType: string;
   trailerNumber: string;
   locationName: string;
-  onComplete: (signaturePath: string | null, notes: string) => Promise<void>;
+  onComplete: (signaturePath: string | null, notes: string, contactInfo?: { email?: string; name?: string }) => Promise<void>;
 }
 
 export function TrailerSignatureDialog({
@@ -29,9 +30,19 @@ export function TrailerSignatureDialog({
   const sigRef = useRef<SignatureCanvas>(null);
   const [signerName, setSignerName] = useState("");
   const [notes, setNotes] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [sendEmail, setSendEmail] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const clearSignature = () => {
+    sigRef.current?.clear();
+  };
+
+  const resetForm = () => {
+    setSignerName("");
+    setNotes("");
+    setContactEmail("");
+    setSendEmail(false);
     sigRef.current?.clear();
   };
 
@@ -43,6 +54,11 @@ export function TrailerSignatureDialog({
 
     if (!signerName.trim()) {
       toast.error("Please enter signer name");
+      return;
+    }
+
+    if (sendEmail && !contactEmail.trim()) {
+      toast.error("Please enter contact email to send manifest");
       return;
     }
 
@@ -69,18 +85,21 @@ export function TrailerSignatureDialog({
           upsert: false,
         });
 
+      const contactInfo = sendEmail ? {
+        email: contactEmail.trim(),
+        name: signerName.trim(),
+      } : undefined;
+
       if (uploadError) {
         console.error('Upload error:', uploadError);
         // Continue without signature if upload fails
-        await onComplete(null, `${signerName}: ${notes}`);
+        await onComplete(null, `${signerName}: ${notes}`, contactInfo);
       } else {
-        await onComplete(filePath, `${signerName}: ${notes}`);
+        await onComplete(filePath, `${signerName}: ${notes}`, contactInfo);
       }
 
       // Reset form
-      setSignerName("");
-      setNotes("");
-      sigRef.current?.clear();
+      resetForm();
       onOpenChange(false);
     } catch (error) {
       console.error('Signature error:', error);
@@ -96,13 +115,21 @@ export function TrailerSignatureDialog({
         return 'Confirm Full Trailer Pickup';
       case 'drop_full':
         return 'Confirm Full Trailer Drop-off';
+      case 'pickup_empty':
+        return 'Confirm Empty Trailer Pickup';
+      case 'drop_empty':
+        return 'Confirm Empty Trailer Drop-off';
+      case 'swap':
+        return 'Confirm Trailer Swap';
       default:
         return 'Confirm Trailer Event';
     }
   };
 
+  const requiresManifest = ['pickup_full', 'drop_full'].includes(eventType);
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(val) => { if (!val) resetForm(); onOpenChange(val); }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>{getEventTitle()}</DialogTitle>
@@ -115,7 +142,7 @@ export function TrailerSignatureDialog({
           </div>
 
           <div>
-            <Label>Signer Name</Label>
+            <Label>Signer Name *</Label>
             <Input
               value={signerName}
               onChange={(e) => setSignerName(e.target.value)}
@@ -125,7 +152,7 @@ export function TrailerSignatureDialog({
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <Label>Signature</Label>
+              <Label>Signature *</Label>
               <Button
                 type="button"
                 variant="ghost"
@@ -157,10 +184,41 @@ export function TrailerSignatureDialog({
               rows={2}
             />
           </div>
+
+          {requiresManifest && (
+            <div className="border-t pt-4 space-y-3">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="sendEmail"
+                  checked={sendEmail}
+                  onCheckedChange={(checked) => setSendEmail(checked === true)}
+                />
+                <label
+                  htmlFor="sendEmail"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1"
+                >
+                  <Mail className="h-4 w-4" />
+                  Email manifest to location contact
+                </label>
+              </div>
+
+              {sendEmail && (
+                <div>
+                  <Label>Contact Email</Label>
+                  <Input
+                    type="email"
+                    value={contactEmail}
+                    onChange={(e) => setContactEmail(e.target.value)}
+                    placeholder="contact@location.com"
+                  />
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+          <Button variant="outline" onClick={() => { resetForm(); onOpenChange(false); }} disabled={isSubmitting}>
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={isSubmitting}>
