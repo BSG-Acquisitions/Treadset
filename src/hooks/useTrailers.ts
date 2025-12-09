@@ -53,8 +53,8 @@ export const useCreateTrailer = () => {
     mutationFn: async (data: { 
       trailer_number: string; 
       notes?: string;
-      ownership_type?: 'owned' | 'rented';
-      owner_name?: string | null;
+      ownership_type?: string;
+      owner_name?: string;
     }) => {
       if (!orgId) throw new Error('No organization selected');
       
@@ -63,9 +63,9 @@ export const useCreateTrailer = () => {
         .insert({
           organization_id: orgId,
           trailer_number: data.trailer_number,
-          notes: data.notes,
-          ownership_type: data.ownership_type || 'owned',
-          owner_name: data.owner_name,
+          notes: data.notes || null,
+          ownership_type: data.ownership_type || null,
+          owner_name: data.owner_name || null,
         })
         .select()
         .single();
