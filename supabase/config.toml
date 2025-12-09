@@ -159,4 +159,8 @@ verify_jwt = false
 [functions.suggest-nearby-clients]
 verify_jwt = false
 
-[auth]
+[functions.generate-trailer-manifest]
+verify_jwt = false
+
+[functions.check-trailer-alerts]
+verify_jwt = false

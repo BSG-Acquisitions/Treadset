@@ -4047,6 +4047,70 @@ export type Database = {
           },
         ]
       }
+      trailer_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string
+          id: string
+          is_resolved: boolean
+          message: string
+          organization_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          trailer_id: string
+          updated_at: string
+        }
+        Insert: {
+          alert_type: string
+          created_at?: string
+          id?: string
+          is_resolved?: boolean
+          message: string
+          organization_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          trailer_id: string
+          updated_at?: string
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string
+          id?: string
+          is_resolved?: boolean
+          message?: string
+          organization_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          trailer_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trailer_alerts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trailer_alerts_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trailer_alerts_trailer_id_fkey"
+            columns: ["trailer_id"]
+            isOneToOne: false
+            referencedRelation: "trailers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trailer_events: {
         Row: {
           created_at: string
@@ -4055,9 +4119,13 @@ export type Database = {
           id: string
           location_id: string | null
           location_name: string | null
+          manifest_number: string | null
+          manifest_pdf_path: string | null
           notes: string | null
           organization_id: string
           route_id: string | null
+          signature_path: string | null
+          signer_name: string | null
           stop_id: string | null
           timestamp: string
           trailer_id: string
@@ -4069,9 +4137,13 @@ export type Database = {
           id?: string
           location_id?: string | null
           location_name?: string | null
+          manifest_number?: string | null
+          manifest_pdf_path?: string | null
           notes?: string | null
           organization_id: string
           route_id?: string | null
+          signature_path?: string | null
+          signer_name?: string | null
           stop_id?: string | null
           timestamp?: string
           trailer_id: string
@@ -4083,9 +4155,13 @@ export type Database = {
           id?: string
           location_id?: string | null
           location_name?: string | null
+          manifest_number?: string | null
+          manifest_pdf_path?: string | null
           notes?: string | null
           organization_id?: string
           route_id?: string | null
+          signature_path?: string | null
+          signer_name?: string | null
           stop_id?: string | null
           timestamp?: string
           trailer_id?: string
@@ -4754,6 +4830,10 @@ export type Database = {
       }
       generate_invoice_number: { Args: never; Returns: string }
       generate_manifest_number: { Args: { org_id: string }; Returns: string }
+      generate_trailer_manifest_number: {
+        Args: { org_id: string }
+        Returns: string
+      }
       get_current_user_organization: {
         Args: { org_slug?: string }
         Returns: string
