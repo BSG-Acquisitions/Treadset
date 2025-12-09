@@ -4411,6 +4411,8 @@ export type Database = {
           last_event_id: string | null
           notes: string | null
           organization_id: string
+          owner_name: string | null
+          ownership_type: string | null
           trailer_number: string
           updated_at: string
         }
@@ -4424,6 +4426,8 @@ export type Database = {
           last_event_id?: string | null
           notes?: string | null
           organization_id: string
+          owner_name?: string | null
+          ownership_type?: string | null
           trailer_number: string
           updated_at?: string
         }
@@ -4437,6 +4441,8 @@ export type Database = {
           last_event_id?: string | null
           notes?: string | null
           organization_id?: string
+          owner_name?: string | null
+          ownership_type?: string | null
           trailer_number?: string
           updated_at?: string
         }

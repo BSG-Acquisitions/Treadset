@@ -57,7 +57,12 @@ export default function TrailerInventory() {
   // Modal state
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [selectedTrailer, setSelectedTrailer] = useState<TrailerWithLastEvent | null>(null);
-  const [newTrailer, setNewTrailer] = useState({ trailer_number: '', notes: '' });
+  const [newTrailer, setNewTrailer] = useState({ 
+    trailer_number: '', 
+    notes: '', 
+    ownership_type: 'owned' as 'owned' | 'rented',
+    owner_name: '' 
+  });
 
   // Filter trailers
   const filteredTrailers = useMemo(() => {
@@ -115,8 +120,13 @@ export default function TrailerInventory() {
   const handleAddTrailer = async () => {
     if (!newTrailer.trailer_number.trim()) return;
     
-    await createTrailer.mutateAsync(newTrailer);
-    setNewTrailer({ trailer_number: '', notes: '' });
+    await createTrailer.mutateAsync({
+      trailer_number: newTrailer.trailer_number,
+      notes: newTrailer.notes,
+      ownership_type: newTrailer.ownership_type,
+      owner_name: newTrailer.owner_name || null,
+    });
+    setNewTrailer({ trailer_number: '', notes: '', ownership_type: 'owned', owner_name: '' });
     setShowAddDialog(false);
   };
 
@@ -191,6 +201,35 @@ export default function TrailerInventory() {
                     placeholder="e.g., T-001"
                   />
                 </div>
+                
+                <div>
+                  <Label htmlFor="ownership_type">Ownership</Label>
+                  <Select 
+                    value={newTrailer.ownership_type} 
+                    onValueChange={(v) => setNewTrailer(prev => ({ ...prev, ownership_type: v as 'owned' | 'rented' }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="owned">Owned</SelectItem>
+                      <SelectItem value="rented">Rented</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {newTrailer.ownership_type === 'rented' && (
+                  <div>
+                    <Label htmlFor="owner_name">Owner / Rental Company</Label>
+                    <Input
+                      id="owner_name"
+                      value={newTrailer.owner_name}
+                      onChange={(e) => setNewTrailer(prev => ({ ...prev, owner_name: e.target.value }))}
+                      placeholder="e.g., ABC Trailer Rentals"
+                    />
+                  </div>
+                )}
+                
                 <div>
                   <Label htmlFor="notes">Notes (Optional)</Label>
                   <Textarea
