@@ -440,6 +440,8 @@ const ProcessorQueue = () => {
           current_location_id: null,
           notes: selectedTrailer.notes,
           is_active: true,
+          ownership_type: null,
+          owner_name: null,
           created_at: '',
           updated_at: '',
           last_event: selectedTrailer.last_event ? {

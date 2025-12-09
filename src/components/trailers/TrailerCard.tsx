@@ -3,7 +3,7 @@ import { TrailerStatus } from "@/hooks/useTrailers";
 import { EVENT_TYPE_LABELS } from "@/hooks/useTrailerEvents";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Truck, MapPin, Clock, User, ArrowRight } from "lucide-react";
+import { Truck, MapPin, Clock, User, ArrowRight, Building2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -80,6 +80,12 @@ export function TrailerCard({ trailer, onClick, compact = false }: TrailerCardPr
                 <div className="flex items-center gap-1 text-sm text-muted-foreground">
                   <MapPin className="h-3 w-3" />
                   {trailer.current_location}
+                </div>
+              )}
+              {(trailer.ownership_type || trailer.owner_name) && (
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <Building2 className="h-3 w-3" />
+                  {trailer.owner_name || trailer.ownership_type}
                 </div>
               )}
             </div>
