@@ -15,6 +15,8 @@ export interface Trailer {
   last_event_id: string | null;
   notes: string | null;
   is_active: boolean;
+  ownership_type: 'owned' | 'rented' | null;
+  owner_name: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -48,7 +50,12 @@ export const useCreateTrailer = () => {
   const orgId = user?.currentOrganization?.id;
 
   return useMutation({
-    mutationFn: async (data: { trailer_number: string; notes?: string }) => {
+    mutationFn: async (data: { 
+      trailer_number: string; 
+      notes?: string;
+      ownership_type?: 'owned' | 'rented';
+      owner_name?: string | null;
+    }) => {
       if (!orgId) throw new Error('No organization selected');
       
       const { data: trailer, error } = await supabase
@@ -57,6 +64,8 @@ export const useCreateTrailer = () => {
           organization_id: orgId,
           trailer_number: data.trailer_number,
           notes: data.notes,
+          ownership_type: data.ownership_type || 'owned',
+          owner_name: data.owner_name,
         })
         .select()
         .single();
