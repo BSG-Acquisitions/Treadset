@@ -75,6 +75,7 @@ export const useCreateTrailer = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trailers'] });
+      queryClient.invalidateQueries({ queryKey: ['trailer-inventory'] });
       toast.success('Trailer added successfully');
     },
     onError: (error: Error) => {
@@ -97,6 +98,7 @@ export const useUpdateTrailer = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trailers'] });
+      queryClient.invalidateQueries({ queryKey: ['trailer-inventory'] });
       toast.success('Trailer updated');
     },
     onError: (error: Error) => {
@@ -119,6 +121,7 @@ export const useDeleteTrailer = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trailers'] });
+      queryClient.invalidateQueries({ queryKey: ['trailer-inventory'] });
       toast.success('Trailer removed');
     },
     onError: (error: Error) => {
