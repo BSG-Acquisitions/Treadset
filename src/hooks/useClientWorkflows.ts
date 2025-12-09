@@ -54,16 +54,39 @@ export const useActiveFollowups = () => {
       const clientIds = Array.from(new Set(workflows.map(w => w.client_id).filter(Boolean)));
       const { data: clients, error: clientsError } = await supabase
         .from('clients')
-        .select('id, company_name, email')
+        .select('id, company_name, email, last_pickup_at')
         .in('id', clientIds);
 
       if (clientsError) throw clientsError;
 
       const clientMap = new Map(clients?.map(c => [c.id, c]) ?? []);
-      const enriched = workflows.map(w => ({
-        ...w,
-        clients: clientMap.get(w.client_id) || null,
-      }));
+      
+      // 3) Smart filter: exclude clients who have been picked up AFTER their next_contact_date
+      // or within the last 7 days (recently serviced)
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
+      
+      const enriched = workflows
+        .map(w => ({
+          ...w,
+          clients: clientMap.get(w.client_id) || null,
+        }))
+        .filter(w => {
+          const client = clientMap.get(w.client_id);
+          if (!client?.last_pickup_at) return true; // No pickup history, show followup
+          
+          const lastPickup = client.last_pickup_at.split('T')[0];
+          const nextContact = w.next_contact_date;
+          
+          // Hide if picked up after the next_contact_date (already serviced)
+          if (lastPickup >= nextContact) return false;
+          
+          // Hide if picked up within last 7 days (recently serviced)
+          if (lastPickup >= sevenDaysAgoStr) return false;
+          
+          return true;
+        });
 
       return enriched;
     }
