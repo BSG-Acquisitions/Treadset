@@ -30,10 +30,17 @@ export default function SignIn() {
     setLoading(true);
     setError('');
 
-    const { error } = await signIn(email, password);
-    
-    if (error) {
-      setError(error.message);
+    try {
+      const { error } = await signIn(email, password);
+      
+      if (error) {
+        setError(error.message || 'Invalid email or password');
+        setLoading(false);
+      }
+      // If no error, auth state change will redirect the user
+    } catch (err: any) {
+      console.error('Sign in error:', err);
+      setError(err?.message || 'An unexpected error occurred. Please try again.');
       setLoading(false);
     }
   };
