@@ -1,10 +1,13 @@
+import { useState } from "react";
 import { useTrailerEvents, EVENT_TYPE_LABELS } from "@/hooks/useTrailerEvents";
 import { TrailerWithLastEvent } from "@/hooks/useTrailerInventory";
 import { TrailerStatus } from "@/hooks/useTrailers";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { EditTrailerDialog } from "./EditTrailerDialog";
 import { 
   Truck, 
   MapPin, 
@@ -16,7 +19,8 @@ import {
   PackageOpen,
   ArrowDownToLine,
   ArrowUpFromLine,
-  RefreshCw
+  RefreshCw,
+  Pencil
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -49,26 +53,39 @@ const EVENT_ICONS: Record<string, typeof Package> = {
 
 export function TrailerDetailModal({ trailer, open, onOpenChange }: TrailerDetailModalProps) {
   const { data: events, isLoading } = useTrailerEvents(trailer?.id);
+  const [editOpen, setEditOpen] = useState(false);
 
   if (!trailer) return null;
 
   const statusConfig = STATUS_CONFIG[trailer.current_status];
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Truck className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <div className="text-xl">Trailer {trailer.trailer_number}</div>
-              <div className="text-sm font-normal text-muted-foreground">
-                Full lifecycle history
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Truck className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <div className="text-xl">Trailer {trailer.trailer_number}</div>
+                  <div className="text-sm font-normal text-muted-foreground">
+                    Full lifecycle history
+                  </div>
+                </div>
               </div>
-            </div>
-          </DialogTitle>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setEditOpen(true)}
+                className="ml-auto"
+              >
+                <Pencil className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+            </DialogTitle>
         </DialogHeader>
 
         {/* Current Status Section */}
@@ -215,5 +232,12 @@ export function TrailerDetailModal({ trailer, open, onOpenChange }: TrailerDetai
         </ScrollArea>
       </DialogContent>
     </Dialog>
+    
+    <EditTrailerDialog 
+      trailer={trailer} 
+      open={editOpen} 
+      onOpenChange={setEditOpen} 
+    />
+    </>
   );
 }
