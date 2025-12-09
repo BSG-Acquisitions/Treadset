@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useTrailerEvents, EVENT_TYPE_LABELS } from "@/hooks/useTrailerEvents";
 import { TrailerWithLastEvent } from "@/hooks/useTrailerInventory";
-import { TrailerStatus } from "@/hooks/useTrailers";
+import { TrailerStatus, useDeleteTrailer } from "@/hooks/useTrailers";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -20,7 +21,8 @@ import {
   ArrowDownToLine,
   ArrowUpFromLine,
   RefreshCw,
-  Pencil
+  Pencil,
+  Trash2
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -54,10 +56,16 @@ const EVENT_ICONS: Record<string, typeof Package> = {
 export function TrailerDetailModal({ trailer, open, onOpenChange }: TrailerDetailModalProps) {
   const { data: events, isLoading } = useTrailerEvents(trailer?.id);
   const [editOpen, setEditOpen] = useState(false);
+  const deleteTrailer = useDeleteTrailer();
 
   if (!trailer) return null;
 
   const statusConfig = STATUS_CONFIG[trailer.current_status];
+
+  const handleDelete = async () => {
+    await deleteTrailer.mutateAsync(trailer.id);
+    onOpenChange(false);
+  };
 
   return (
     <>
@@ -76,15 +84,38 @@ export function TrailerDetailModal({ trailer, open, onOpenChange }: TrailerDetai
                   </div>
                 </div>
               </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setEditOpen(true)}
-                className="ml-auto"
-              >
-                <Pencil className="h-4 w-4 mr-2" />
-                Edit
-              </Button>
+              <div className="flex gap-2 ml-auto">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setEditOpen(true)}
+                >
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm">
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Trailer {trailer.trailer_number}?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will remove the trailer from your inventory. This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
             </DialogTitle>
         </DialogHeader>
 
