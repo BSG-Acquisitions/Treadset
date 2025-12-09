@@ -67,7 +67,7 @@ const useExternalMoves = () => {
           timestamp,
           notes,
           created_at,
-          trailer:trailers(trailer_number)
+          trailer:trailers!trailer_events_trailer_id_fkey(trailer_number)
         `)
         .eq('organization_id', orgId)
         .in('event_type', ['external_pickup', 'external_drop'])

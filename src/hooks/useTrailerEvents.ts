@@ -45,7 +45,7 @@ export const useTrailerEvents = (trailerId?: string) => {
         .from('trailer_events')
         .select(`
           *,
-          trailer:trailers(trailer_number)
+          trailer:trailers!trailer_events_trailer_id_fkey(trailer_number)
         `)
         .eq('organization_id', orgId)
         .order('timestamp', { ascending: false })
