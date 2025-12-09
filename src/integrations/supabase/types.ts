@@ -4115,8 +4115,15 @@ export type Database = {
         Row: {
           created_at: string
           driver_id: string | null
+          email_error: string | null
+          email_resend_id: string | null
+          email_sent_at: string | null
+          email_sent_to: string[] | null
+          email_status: string | null
           event_type: Database["public"]["Enums"]["trailer_event_type"]
           id: string
+          location_contact_email: string | null
+          location_contact_name: string | null
           location_id: string | null
           location_name: string | null
           manifest_number: string | null
@@ -4133,8 +4140,15 @@ export type Database = {
         Insert: {
           created_at?: string
           driver_id?: string | null
+          email_error?: string | null
+          email_resend_id?: string | null
+          email_sent_at?: string | null
+          email_sent_to?: string[] | null
+          email_status?: string | null
           event_type: Database["public"]["Enums"]["trailer_event_type"]
           id?: string
+          location_contact_email?: string | null
+          location_contact_name?: string | null
           location_id?: string | null
           location_name?: string | null
           manifest_number?: string | null
@@ -4151,8 +4165,15 @@ export type Database = {
         Update: {
           created_at?: string
           driver_id?: string | null
+          email_error?: string | null
+          email_resend_id?: string | null
+          email_sent_at?: string | null
+          email_sent_to?: string[] | null
+          email_status?: string | null
           event_type?: Database["public"]["Enums"]["trailer_event_type"]
           id?: string
+          location_contact_email?: string | null
+          location_contact_name?: string | null
           location_id?: string | null
           location_name?: string | null
           manifest_number?: string | null
