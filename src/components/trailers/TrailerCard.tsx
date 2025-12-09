@@ -3,14 +3,17 @@ import { TrailerStatus } from "@/hooks/useTrailers";
 import { EVENT_TYPE_LABELS } from "@/hooks/useTrailerEvents";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Truck, MapPin, Clock, User, ArrowRight, Building2 } from "lucide-react";
+import { Truck, MapPin, Clock, User, ArrowRight, Building2, GripVertical } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
+import { DragEvent } from "react";
 
 interface TrailerCardProps {
   trailer: TrailerWithLastEvent;
   onClick: () => void;
   compact?: boolean;
+  draggable?: boolean;
+  onDragStart?: (e: DragEvent<HTMLDivElement>, trailer: TrailerWithLastEvent) => void;
 }
 
 const STATUS_COLORS: Record<TrailerStatus, string> = {
@@ -21,22 +24,33 @@ const STATUS_COLORS: Record<TrailerStatus, string> = {
   waiting_unload: 'border-l-orange-500',
 };
 
-export function TrailerCard({ trailer, onClick, compact = false }: TrailerCardProps) {
+export function TrailerCard({ trailer, onClick, compact = false, draggable = false, onDragStart }: TrailerCardProps) {
   const driverName = trailer.last_event?.driver
     ? `${trailer.last_event.driver.first_name || ''} ${trailer.last_event.driver.last_name || ''}`.trim()
     : null;
+
+  const handleDragStart = (e: DragEvent<HTMLDivElement>) => {
+    if (onDragStart) {
+      onDragStart(e, trailer);
+    }
+    e.dataTransfer.effectAllowed = 'move';
+  };
 
   if (compact) {
     return (
       <div
         className={cn(
           "p-3 bg-card rounded-lg border border-l-4 cursor-pointer hover:bg-muted/50 transition-all hover:shadow-sm",
-          STATUS_COLORS[trailer.current_status]
+          STATUS_COLORS[trailer.current_status],
+          draggable && "cursor-grab active:cursor-grabbing"
         )}
         onClick={onClick}
+        draggable={draggable}
+        onDragStart={handleDragStart}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
+            {draggable && <GripVertical className="h-4 w-4 text-muted-foreground/50" />}
             <Truck className="h-4 w-4 text-muted-foreground" />
             <span className="font-semibold">{trailer.trailer_number}</span>
           </div>
