@@ -273,7 +273,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
-                            <Link to="/trailers/driver-management" className="flex items-center gap-2">
+                            <Link to="/trailers/drivers" className="flex items-center gap-2">
                               <UserCheck className="h-4 w-4" />
                               Driver Management
                             </Link>
