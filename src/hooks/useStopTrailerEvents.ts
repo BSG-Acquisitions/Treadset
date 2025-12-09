@@ -57,7 +57,7 @@ export const useRouteStopEvents = (routeId: string) => {
         .from('trailer_events')
         .select(`
           *,
-          trailer:trailers(id, trailer_number, current_status)
+          trailer:trailers!trailer_events_trailer_id_fkey(id, trailer_number, current_status)
         `)
         .eq('organization_id', orgId)
         .eq('route_id', routeId)
@@ -210,7 +210,7 @@ export const useStopEvents = (stopId: string) => {
         .from('trailer_events')
         .select(`
           *,
-          trailer:trailers(id, trailer_number, current_status)
+          trailer:trailers!trailer_events_trailer_id_fkey(id, trailer_number, current_status)
         `)
         .eq('organization_id', orgId)
         .eq('stop_id', stopId)

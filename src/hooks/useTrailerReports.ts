@@ -211,7 +211,7 @@ export const useActiveTrailerAlerts = () => {
         .from('trailer_alerts')
         .select(`
           *,
-          trailer:trailers(trailer_number, current_status, current_location)
+          trailer:trailers!trailer_alerts_trailer_id_fkey(trailer_number, current_status, current_location)
         `)
         .eq('organization_id', orgId)
         .eq('is_resolved', false)
