@@ -735,6 +735,7 @@ export type Database = {
         Row: {
           client_id: string
           contact_frequency_days: number | null
+          contact_interval_days: number | null
           created_at: string
           id: string
           last_contact_date: string | null
@@ -748,6 +749,7 @@ export type Database = {
         Insert: {
           client_id: string
           contact_frequency_days?: number | null
+          contact_interval_days?: number | null
           created_at?: string
           id?: string
           last_contact_date?: string | null
@@ -761,6 +763,7 @@ export type Database = {
         Update: {
           client_id?: string
           contact_frequency_days?: number | null
+          contact_interval_days?: number | null
           created_at?: string
           id?: string
           last_contact_date?: string | null
