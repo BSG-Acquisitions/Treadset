@@ -68,6 +68,7 @@ import TrailerVehicles from "./pages/TrailerVehicles";
 import DriverTrailerAssignments from "./pages/DriverTrailerAssignments";
 import TrailerDriverManagement from "./pages/TrailerDriverManagement";
 import ProcessorQueue from "./pages/ProcessorQueue";
+import TrailerReports from "./pages/TrailerReports";
 import { FEATURE_FLAGS } from "./lib/featureFlags";
 
 const queryClient = new QueryClient();
@@ -414,6 +415,15 @@ const App = () => (
                   <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
                     <AppLayout>
                       <ProcessorQueue />
+                    </AppLayout>
+                  </ProtectedRoute>
+                ) : <NotFound />
+              } />
+              <Route path="/trailers/reports" element={
+                FEATURE_FLAGS.TRAILERS ? (
+                  <ProtectedRoute roles={['admin', 'ops_manager']}>
+                    <AppLayout>
+                      <TrailerReports />
                     </AppLayout>
                   </ProtectedRoute>
                 ) : <NotFound />
