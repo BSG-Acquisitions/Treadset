@@ -230,6 +230,65 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                 .filter(tab => (tab.roles.length === 0 || hasAnyRole([...tab.roles])) && (!tab.featureFlag || FEATURE_FLAGS[tab.featureFlag]))
                 .map((tab) => {
                   const Icon = tab.icon;
+                  
+                  // Special handling for Trailers tab - show dropdown
+                  if (tab.id === 'trailers') {
+                    return (
+                      <DropdownMenu key={tab.id}>
+                        <DropdownMenuTrigger asChild>
+                          <div 
+                            className={`flex items-center justify-center gap-1 sm:gap-2 h-10 sm:h-12 px-1 sm:px-2 lg:px-4 cursor-pointer border-b-2 transition-colors ${
+                              getCurrentTab() === 'trailers' 
+                                ? 'bg-brand-primary/10 text-brand-primary border-brand-primary' 
+                                : 'border-transparent hover:bg-muted/50'
+                            }`}
+                          >
+                            <Icon className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                            <span className="text-xs sm:text-sm truncate">{tab.label}</span>
+                          </div>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="center" className="w-48">
+                          <DropdownMenuItem asChild>
+                            <Link to="/trailers/inventory" className="flex items-center gap-2">
+                              <Container className="h-4 w-4" />
+                              Inventory
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link to="/trailers/routes" className="flex items-center gap-2">
+                              <MapPin className="h-4 w-4" />
+                              Routes
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link to="/trailers/processor-queue" className="flex items-center gap-2">
+                              <Package className="h-4 w-4" />
+                              Processor Queue
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link to="/trailers/vehicles" className="flex items-center gap-2">
+                              <Truck className="h-4 w-4" />
+                              Vehicles
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link to="/trailers/driver-management" className="flex items-center gap-2">
+                              <UserCheck className="h-4 w-4" />
+                              Driver Management
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link to="/trailers/reports" className="flex items-center gap-2">
+                              <BarChart3 className="h-4 w-4" />
+                              Reports
+                            </Link>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    );
+                  }
+                  
                   return (
                     <TabsTrigger 
                       key={tab.id} 
