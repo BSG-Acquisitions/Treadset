@@ -13,6 +13,8 @@ export interface TrailerWithLastEvent {
   current_location_id: string | null;
   notes: string | null;
   is_active: boolean;
+  ownership_type: string | null;
+  owner_name: string | null;
   created_at: string;
   updated_at: string;
   last_event?: {
