@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, DragEvent } from "react";
 import { useTrailerInventory, useTrailerLocations, useTrailerDrivers, TrailerWithLastEvent } from "@/hooks/useTrailerInventory";
-import { useCreateTrailer, useDeleteTrailer, TrailerStatus } from "@/hooks/useTrailers";
+import { useCreateTrailer, useDeleteTrailer, useUpdateTrailer, TrailerStatus } from "@/hooks/useTrailers";
 import { TrailerDetailModal } from "@/components/trailers/TrailerDetailModal";
 import { TrailerCard } from "@/components/trailers/TrailerCard";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { toast } from "sonner";
 import { 
   Plus, 
   Truck, 
@@ -47,6 +48,7 @@ export default function TrailerInventory() {
   const { data: drivers } = useTrailerDrivers();
   const createTrailer = useCreateTrailer();
   const deleteTrailer = useDeleteTrailer();
+  const updateTrailer = useUpdateTrailer();
   
   // Filter state
   const [searchQuery, setSearchQuery] = useState("");
@@ -63,6 +65,48 @@ export default function TrailerInventory() {
     ownership_type: '',
     owner_name: '' 
   });
+
+  // Drag and drop state
+  const [draggedTrailer, setDraggedTrailer] = useState<TrailerWithLastEvent | null>(null);
+  const [dragOverStatus, setDragOverStatus] = useState<TrailerStatus | null>(null);
+
+  const handleDragStart = (e: DragEvent<HTMLDivElement>, trailer: TrailerWithLastEvent) => {
+    setDraggedTrailer(trailer);
+    e.dataTransfer.setData('text/plain', trailer.id);
+  };
+
+  const handleDragOver = (e: DragEvent<HTMLDivElement>, status: TrailerStatus) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverStatus(status);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverStatus(null);
+  };
+
+  const handleDrop = async (e: DragEvent<HTMLDivElement>, newStatus: TrailerStatus) => {
+    e.preventDefault();
+    setDragOverStatus(null);
+    
+    if (!draggedTrailer) return;
+    if (draggedTrailer.current_status === newStatus) {
+      setDraggedTrailer(null);
+      return;
+    }
+
+    try {
+      await updateTrailer.mutateAsync({
+        id: draggedTrailer.id,
+        current_status: newStatus
+      });
+      toast.success(`Trailer ${draggedTrailer.trailer_number} moved to ${STATUS_COLUMNS.find(c => c.status === newStatus)?.label}`);
+    } catch (error) {
+      toast.error('Failed to update trailer status');
+    }
+    
+    setDraggedTrailer(null);
+  };
 
   // Filter trailers
   const filteredTrailers = useMemo(() => {
@@ -320,9 +364,19 @@ export default function TrailerInventory() {
         {STATUS_COLUMNS.map(column => {
           const columnTrailers = trailersByStatus[column.status];
           const Icon = column.icon;
+          const isDropTarget = dragOverStatus === column.status;
           
           return (
-            <Card key={column.status} className="flex flex-col">
+            <Card 
+              key={column.status} 
+              className={cn(
+                "flex flex-col transition-all duration-200",
+                isDropTarget && "ring-2 ring-primary ring-offset-2 bg-primary/5"
+              )}
+              onDragOver={(e) => handleDragOver(e, column.status)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, column.status)}
+            >
               <CardHeader className="pb-2 flex-shrink-0">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
                   <div className={cn("p-1.5 rounded", column.color)}>
@@ -345,12 +399,17 @@ export default function TrailerInventory() {
                           trailer={trailer}
                           onClick={() => setSelectedTrailer(trailer)}
                           compact
+                          draggable
+                          onDragStart={handleDragStart}
                         />
                       ))
                     ) : (
-                      <div className="text-center py-8 text-muted-foreground">
+                      <div className={cn(
+                        "text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg",
+                        isDropTarget && "border-primary bg-primary/10"
+                      )}>
                         <Truck className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                        <p className="text-sm">No trailers</p>
+                        <p className="text-sm">{isDropTarget ? "Drop here" : "No trailers"}</p>
                       </div>
                     )}
                   </div>
