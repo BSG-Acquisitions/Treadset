@@ -49,6 +49,13 @@ export function TrailerCard({ trailer, onClick, compact = false }: TrailerCardPr
             <span className="truncate">{trailer.current_location}</span>
           </div>
         )}
+
+        {(trailer.ownership_type || trailer.owner_name) && (
+          <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+            <Building2 className="h-3 w-3" />
+            <span className="truncate">{trailer.owner_name || trailer.ownership_type}</span>
+          </div>
+        )}
         
         {trailer.last_event && (
           <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
