@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useDataTable } from "@/hooks/useDataTable";
 import { useClientsWithTable } from "@/hooks/useClientsWithTable";
 import { useDeleteClient } from "@/hooks/useClients";
-import { usePricingTiers } from "@/hooks/usePricingTiers";
 import { DataTable, Column } from "@/components/DataTable";
 import { CSVImportDialog } from "@/components/csv/CSVImportDialog";
 import { CSVExportDialog } from "@/components/csv/CSVExportDialog";
@@ -12,13 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Upload, Download, Edit, AlertTriangle, MailWarning, Trash2, RefreshCw } from "lucide-react";
-import { SchedulePickupDialog } from "@/components/SchedulePickupDialog";
+import { Plus, Upload, Download, Edit, AlertTriangle, MailWarning, Trash2 } from "lucide-react";
 import { CreateClientDialog } from "@/components/CreateClientDialog";
-import { ClientRiskBadge } from "@/components/ClientRiskBadge";
-import { useCalculateClientRisk } from "@/hooks/useClientRisk";
-
+import { format } from "date-fns";
 
 import type { Database } from "@/integrations/supabase/types";
 
@@ -35,13 +30,6 @@ type Client = {
   pricing_tier: { name: string } | null;
   locations: { id?: string; address?: string; access_notes?: string }[];
   pickups: { count: number }[];
-  risk_score: {
-    risk_score: number;
-    risk_level: 'low' | 'medium' | 'high';
-    pickup_frequency_decline: number | null;
-    avg_payment_delay_days: number | null;
-    contact_gap_ratio: number | null;
-  }[] | null;
 } & Database["public"]["Tables"]["clients"]["Row"];
 
 export default function Clients() {
@@ -56,9 +44,7 @@ export default function Clients() {
   });
 
   const { data: clientsData, isLoading } = useClientsWithTable({ tableState: tableState.state });
-  const { data: pricingTiers = [] } = usePricingTiers();
   const deleteClient = useDeleteClient();
-  const calculateRisk = useCalculateClientRisk();
 
   // Count clients without emails
   const clientsWithoutEmail = clientsData?.data?.filter(client => !client.email) || [];
@@ -70,24 +56,12 @@ export default function Clients() {
       title: 'Company',
       sortable: true,
       render: (value, row) => (
-        <div className="flex items-center gap-2">
-          <Link 
-            to={`/clients/${row.id}`}
-            className="font-medium text-primary hover:underline"
-          >
-            {value}
-          </Link>
-          {row.risk_score?.[0] && (
-            <ClientRiskBadge 
-              score={row.risk_score[0].risk_score}
-              riskLevel={row.risk_score[0].risk_level}
-              pickupDecline={row.risk_score[0].pickup_frequency_decline}
-              paymentDelay={row.risk_score[0].avg_payment_delay_days}
-              contactGap={row.risk_score[0].contact_gap_ratio}
-              size="sm"
-            />
-          )}
-        </div>
+        <Link 
+          to={`/clients/${row.id}`}
+          className="font-medium text-primary hover:underline"
+        >
+          {value}
+        </Link>
       )
     },
     {
@@ -143,44 +117,26 @@ export default function Clients() {
       }
     },
     {
-      key: 'risk_score',
-      title: 'Churn Risk',
-      sortable: false,
-      render: (value, row) => {
-        const riskData = row.risk_score?.[0];
-        if (!riskData) {
-          return (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => calculateRisk.mutate(row.id)}
-              disabled={calculateRisk.isPending}
-            >
-              <RefreshCw className={`h-3 w-3 ${calculateRisk.isPending ? 'animate-spin' : ''}`} />
-            </Button>
-          );
+      key: 'last_pickup_at',
+      title: 'Last Pickup',
+      sortable: true,
+      render: (value) => {
+        if (!value) {
+          return <span className="text-muted-foreground text-sm">No pickups yet</span>;
         }
         return (
-          <div className="flex items-center gap-2">
-            <span className="font-medium">{riskData.risk_score}</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => calculateRisk.mutate(row.id)}
-              disabled={calculateRisk.isPending}
-              className="h-6 w-6 p-0"
-            >
-              <RefreshCw className={`h-3 w-3 ${calculateRisk.isPending ? 'animate-spin' : ''}`} />
-            </Button>
-          </div>
+          <span className="text-sm">
+            {format(new Date(value), 'MMM d, yyyy')}
+          </span>
         );
       }
     },
     {
-      key: 'last_pickup_at',
+      key: 'status',
       title: 'Status',
-      sortable: true,
-      render: (value) => {
+      sortable: false,
+      render: (_, row) => {
+        const value = row.last_pickup_at;
         if (!value) {
           return (
             <Badge variant="destructive" className="text-xs">
@@ -282,15 +238,6 @@ export default function Clients() {
         }
       />
 
-      <SchedulePickupDialog
-        trigger={
-          <Button variant="outline">
-            <Plus className="h-4 w-4 mr-2" />
-            Schedule Pickup
-          </Button>
-        }
-      />
-
       <CreateClientDialog
         trigger={
           <Button>
@@ -304,8 +251,6 @@ export default function Clients() {
 
   return (
     <div className="min-h-screen bg-background">
-      
-      
       <main className="container py-6">
         <header className="mb-6">
           <h1 className="text-2xl font-semibold text-foreground">Clients</h1>
