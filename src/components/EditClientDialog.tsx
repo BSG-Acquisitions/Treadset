@@ -30,7 +30,7 @@ export function EditClientDialog({ client, trigger }: EditClientDialogProps) {
   const updateLocation = useUpdateLocation();
 
   const handleSubmit = async (data: ClientFormData & { address?: string; access_notes?: string }) => {
-    // Update client with ALL form data including address fields
+    // Update client with form data (excluding removed fields)
     await updateClient.mutateAsync({
       id: client.id,
       updates: {
@@ -39,9 +39,6 @@ export function EditClientDialog({ client, trigger }: EditClientDialogProps) {
         email: data.email || null,
         phone: data.phone || null,
         notes: data.notes || null,
-        tags: data.tags || null,
-        sla_weeks: data.sla_weeks || null,
-        pricing_tier_id: data.pricing_tier_id || null,
         // Address fields - keep as-is including empty strings
         mailing_address: data.mailing_address === "" ? null : data.mailing_address,
         city: data.city === "" ? null : data.city,

@@ -99,6 +99,8 @@ export function DriverManifestCreationWizard({
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [requiresInvoice, setRequiresInvoice] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<string>("CASH");
+  const [driverNotes, setDriverNotes] = useState<string>("");
+  const [saveNotesToClient, setSaveNotesToClient] = useState<boolean>(false);
   
   // Use ref for more reliable duplicate prevention
   const isSubmittingRef = useRef(false);
@@ -1038,10 +1040,47 @@ export function DriverManifestCreationWizard({
         }
       }
 
+      // Save driver notes to client profile if checkbox is checked
+      if (saveNotesToClient && driverNotes.trim() && resolvedClientId) {
+        const timestamp = new Date().toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric', 
+          year: 'numeric' 
+        });
+        const driverName = user?.firstName && user?.lastName 
+          ? `${user.firstName} ${user.lastName}` 
+          : 'Driver';
+        
+        // Get current client notes
+        const { data: currentClient } = await supabase
+          .from('clients')
+          .select('notes')
+          .eq('id', resolvedClientId)
+          .single();
+        
+        const existingNotes = currentClient?.notes || '';
+        const newNote = `[${timestamp} - ${driverName}]: ${driverNotes.trim()}`;
+        const updatedNotes = existingNotes 
+          ? `${existingNotes}\n\n${newNote}` 
+          : newNote;
+        
+        const { error: clientUpdateError } = await supabase
+          .from('clients')
+          .update({ notes: updatedNotes })
+          .eq('id', resolvedClientId);
+        
+        if (clientUpdateError) {
+          console.error('Error saving notes to client:', clientUpdateError);
+        } else {
+          console.log('✅ Driver notes saved to client profile');
+        }
+      }
+
       // Invalidate queries to refresh the UI
       queryClient.invalidateQueries({ queryKey: ['pickups'] });
       queryClient.invalidateQueries({ queryKey: ['assignments'] });
       queryClient.invalidateQueries({ queryKey: ['manifests'] });
+      queryClient.invalidateQueries({ queryKey: ['client', resolvedClientId] });
       console.log('✅ Queries invalidated - UI should refresh');
 
       // Ensure manifest PDF is generated and linked
@@ -2381,6 +2420,35 @@ export function DriverManifestCreationWizard({
               <CardContent className="space-y-2 text-xs sm:text-sm px-3 sm:px-6">
                 <div><strong>Generator:</strong> {values.generator_print_name}</div>
                 <div><strong>Hauler:</strong> {values.hauler_print_name}</div>
+              </CardContent>
+            </Card>
+
+            {/* Driver Notes Section */}
+            <Card>
+              <CardHeader className="px-3 sm:px-6 py-3">
+                <CardTitle className="text-sm sm:text-base">Driver Notes</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
+                  Add any notes about this pickup (access issues, special instructions, etc.)
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 px-3 sm:px-6">
+                <textarea
+                  value={driverNotes}
+                  onChange={(e) => setDriverNotes(e.target.value)}
+                  placeholder="Enter any notes about this pickup..."
+                  className="w-full min-h-[80px] p-3 text-sm border rounded-md resize-none bg-background"
+                  rows={3}
+                />
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="save-to-client"
+                    checked={saveNotesToClient}
+                    onCheckedChange={setSaveNotesToClient}
+                  />
+                  <Label htmlFor="save-to-client" className="text-xs sm:text-sm cursor-pointer">
+                    Save to client profile (visible on client detail page)
+                  </Label>
+                </div>
               </CardContent>
             </Card>
 

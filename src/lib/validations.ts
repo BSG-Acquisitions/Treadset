@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-// Phone validation for E.164 format
-const phoneRegex = /^\+[1-9]\d{1,14}$/;
+// Relaxed phone validation - accepts common US formats
+const phoneRegex = /^(\+?1?[-.\s]?)?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}$/;
 
 export const pricingTierSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
@@ -13,11 +13,8 @@ export const clientSchema = z.object({
   company_name: z.string().min(1, "Company name is required").max(200, "Company name must be less than 200 characters"),
   contact_name: z.string().max(200, "Contact name must be less than 200 characters").optional(),
   email: z.string().email("Invalid email format").optional().or(z.literal("")),
-  phone: z.string().regex(phoneRegex, "Phone must be in E.164 format (+1234567890)").optional().or(z.literal("")),
+  phone: z.string().regex(phoneRegex, "Invalid phone format").optional().or(z.literal("")),
   notes: z.string().max(2000, "Notes must be less than 2000 characters").optional(),
-  tags: z.array(z.string()).optional(),
-  sla_weeks: z.number().int().min(1, "SLA weeks must be at least 1").optional(),
-  pricing_tier_id: z.string().uuid().optional(),
   // Address fields - REQUIRED for manifest generation
   mailing_address: z.string().min(1, "Street address is required for manifests").max(500, "Address must be less than 500 characters"),
   city: z.string().min(1, "City is required for manifests").max(100, "City must be less than 100 characters"),

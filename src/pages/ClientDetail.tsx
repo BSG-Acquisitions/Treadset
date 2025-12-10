@@ -9,6 +9,7 @@ import { useManifests } from "@/hooks/useManifests";
 import { SchedulePickupDialog } from "@/components/SchedulePickupDialog";
 import { EditClientDialog } from "@/components/EditClientDialog";
 import { ManifestPDFControls } from "@/components/ManifestPDFControls";
+import { ClientNotesWidget } from "@/components/client/ClientNotesWidget";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -415,6 +416,11 @@ export default function ClientDetail() {
               />
             </div>
           </div>
+        </div>
+
+        {/* Notes Widget */}
+        <div className="mb-8">
+          <ClientNotesWidget client={client} />
         </div>
 
         {/* Key Metrics Cards */}
