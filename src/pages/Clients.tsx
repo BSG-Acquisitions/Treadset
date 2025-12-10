@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useDataTable } from "@/hooks/useDataTable";
 import { useClientsWithTable } from "@/hooks/useClientsWithTable";
@@ -10,7 +10,9 @@ import { EditClientDialog } from "@/components/EditClientDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { Plus, Upload, Download, Edit, AlertTriangle, MailWarning, Trash2 } from "lucide-react";
 import { CreateClientDialog } from "@/components/CreateClientDialog";
 import { format } from "date-fns";
@@ -31,6 +33,82 @@ type Client = {
   locations: { id?: string; address?: string; access_notes?: string }[];
   pickups: { count: number }[];
 } & Database["public"]["Tables"]["clients"]["Row"];
+
+// Separate component for delete dialog with state
+function ClientActionsCell({ row, deleteClient }: { row: any; deleteClient: any }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [forceDelete, setForceDelete] = useState(false);
+
+  const handleDelete = () => {
+    deleteClient.mutate({ id: row.id, forceDelete });
+    setIsOpen(false);
+    setForceDelete(false);
+  };
+
+  return (
+    <div className="flex items-center gap-1">
+      <EditClientDialog
+        client={row}
+        trigger={
+          <Button variant="ghost" size="sm">
+            <Edit className="h-4 w-4" />
+          </Button>
+        }
+      />
+      <AlertDialog open={isOpen} onOpenChange={(open) => {
+        setIsOpen(open);
+        if (!open) setForceDelete(false);
+      }}>
+        <Button variant="ghost" size="sm" onClick={() => setIsOpen(true)}>
+          <Trash2 className="h-4 w-4 text-destructive" />
+        </Button>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Client</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div>
+                <p>Are you sure you want to delete <strong>{row.company_name}</strong>?</p>
+                {row.open_balance && row.open_balance > 0 && (
+                  <p className="mt-2 text-amber-600">
+                    This client has an open balance of ${row.open_balance.toFixed(2)}. 
+                    They will be deactivated instead of permanently deleted unless you force delete.
+                  </p>
+                )}
+                <div className="mt-4 flex items-start space-x-2 p-3 bg-destructive/10 rounded-md border border-destructive/20">
+                  <Checkbox 
+                    id={`force-delete-${row.id}`}
+                    checked={forceDelete}
+                    onCheckedChange={(checked) => setForceDelete(checked === true)}
+                  />
+                  <div className="grid gap-1.5 leading-none">
+                    <Label 
+                      htmlFor={`force-delete-${row.id}`}
+                      className="text-sm font-medium text-destructive cursor-pointer"
+                    >
+                      Force Delete (Permanent)
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Permanently delete this client AND all related records (pickups, drop-offs, manifests, locations, workflows). This cannot be undone.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {forceDelete ? "Force Delete" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
 
 export default function Clients() {
   useEffect(() => {
@@ -169,50 +247,7 @@ export default function Clients() {
       title: 'Actions',
       sortable: false,
       render: (_, row) => (
-        <div className="flex items-center gap-1">
-          <EditClientDialog
-            client={row}
-            trigger={
-              <Button variant="ghost" size="sm">
-                <Edit className="h-4 w-4" />
-              </Button>
-            }
-          />
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="ghost" size="sm">
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete Client</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Are you sure you want to delete <strong>{row.company_name}</strong>?
-                  {row.open_balance && row.open_balance > 0 ? (
-                    <span className="block mt-2 text-amber-600">
-                      This client has an open balance of ${row.open_balance.toFixed(2)}. 
-                      They will be deactivated instead of permanently deleted.
-                    </span>
-                  ) : (
-                    <span className="block mt-2">
-                      This action cannot be undone.
-                    </span>
-                  )}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => deleteClient.mutate(row.id)}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                >
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
+        <ClientActionsCell row={row} deleteClient={deleteClient} />
       )
     }
   ];
