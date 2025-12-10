@@ -4,16 +4,14 @@ import { useParams, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useManifests } from '@/hooks/useManifests';
+import { useManifest } from '@/hooks/useManifests';
 import { ManifestPDFControls } from '@/components/ManifestPDFControls';
 import { format } from 'date-fns';
 import { ArrowLeft, FileText, User, MapPin, Package, Clock, CreditCard, CheckCircle } from 'lucide-react';
 
 export default function ManifestViewer() {
   const { id } = useParams<{ id: string }>();
-  const { data: manifests = [], isLoading } = useManifests();
-  
-  const manifest = manifests.find(m => m.id === id);
+  const { data: manifest, isLoading } = useManifest(id || '');
 
   const getStatusIcon = (status: string) => {
     switch (status) {
