@@ -94,7 +94,7 @@ function DriverRow({
   driver: any; 
   onToggle: (userId: string, hasCapability: boolean) => void;
 }) {
-  const { data: capabilities, isLoading } = useDriverCapabilities(driver.user_id);
+  const { data: capabilities, isLoading } = useDriverCapabilities(driver.id);
   const hasSemiHauler = capabilities?.some(c => c.capability === 'semi_hauler') ?? false;
 
   return (
@@ -105,13 +105,13 @@ function DriverRow({
             <User className="h-4 w-4 text-muted-foreground" />
           </div>
           <span className="font-medium">
-            {driver.first_name} {driver.last_name}
+            {driver.firstName} {driver.lastName}
           </span>
         </div>
       </TableCell>
       <TableCell className="text-muted-foreground">{driver.email}</TableCell>
       <TableCell>
-        <Badge variant="outline">{driver.role}</Badge>
+        <Badge variant="outline">{driver.roles?.join(', ')}</Badge>
       </TableCell>
       <TableCell className="text-right">
         <div className="flex items-center justify-end gap-2">
@@ -120,7 +120,7 @@ function DriverRow({
           )}
           <Switch
             checked={hasSemiHauler}
-            onCheckedChange={() => onToggle(driver.user_id, hasSemiHauler)}
+            onCheckedChange={() => onToggle(driver.id, hasSemiHauler)}
             disabled={isLoading}
           />
         </div>
