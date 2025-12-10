@@ -1,46 +1,101 @@
-import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useEffect, useState, useMemo } from "react";
+import { useParams } from "react-router-dom";
 import { useClient } from "@/hooks/useClients";
 import { useLocations } from "@/hooks/useLocations";
-import { useInvoices, useCompletedPickups } from "@/hooks/useFinance";
 import { usePaymentHistory } from "@/hooks/usePaymentHistory";
-import { useClientHealthScores } from "@/hooks/useClientHealthScores";
 import { useUpdatePaymentStatus } from "@/hooks/useUpdatePaymentStatus";
 import { useUpdatePickupPayment } from "@/hooks/useUpdatePickupPayment";
 import { useManifests } from "@/hooks/useManifests";
-import { CreateInvoiceDialog } from "@/components/finance/CreateInvoiceDialog";
-import { RecordPaymentDialog } from "@/components/finance/RecordPaymentDialog";
-import { PaymentDialog } from "@/components/PaymentDialog";
 import { SchedulePickupDialog } from "@/components/SchedulePickupDialog";
-import { ClientHealthBadge } from "@/components/ClientHealthBadge";
+import { EditClientDialog } from "@/components/EditClientDialog";
 import { ManifestPDFControls } from "@/components/ManifestPDFControls";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, FileText, CreditCard, MapPin, Plus, Receipt, Clock, CheckCircle2, XCircle, Edit2, ChevronDown, Building2 } from "lucide-react";
+import { DollarSign, FileText, CreditCard, MapPin, Plus, Receipt, Clock, CheckCircle2, XCircle, Edit2, Building2, Search, Pencil } from "lucide-react";
 import { AddLocationDialog } from "@/components/AddLocationDialog";
 import { Input } from "@/components/ui/input";
-import { startOfWeek, startOfMonth, startOfQuarter, startOfYear, isWithinInterval, format } from "date-fns";
+import { startOfWeek, startOfMonth, startOfQuarter, startOfYear, isWithinInterval, format, parseISO } from "date-fns";
 import { formatDateLocal, parseLocalDate } from "@/lib/formatters";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 
 
 export default function ClientDetail() {
   const { id } = useParams();
   const { data: client, isLoading } = useClient(id!);
   const { data: locations = [] } = useLocations(id);
-  const { data: invoices = [] } = useInvoices(id);
-  const { data: completedPickups = [] } = useCompletedPickups(id);
   const { data: paymentHistory = [] } = usePaymentHistory(id!);
   const { data: manifests = [] } = useManifests(id);
-  const { healthScores } = useClientHealthScores(id);
-  const clientHealth = healthScores.find(h => h.client_id === id);
   const updatePaymentStatus = useUpdatePaymentStatus();
   const updatePickupPayment = useUpdatePickupPayment();
   const [editingAmount, setEditingAmount] = useState<string | null>(null);
   const [editAmount, setEditAmount] = useState<string>("");
+  
+  // Manifest search/filter state
+  const [manifestSearch, setManifestSearch] = useState("");
+  const [manifestDateFrom, setManifestDateFrom] = useState<Date | undefined>();
+  const [manifestDateTo, setManifestDateTo] = useState<Date | undefined>();
+
+  // Filter manifests based on search and date range
+  const filteredManifests = useMemo(() => {
+    return manifests.filter(manifest => {
+      // Text search on manifest number
+      if (manifestSearch && !manifest.manifest_number?.toLowerCase().includes(manifestSearch.toLowerCase())) {
+        return false;
+      }
+      
+      // Date range filter
+      const manifestDate = manifest.signed_at || manifest.created_at;
+      if (manifestDate) {
+        const date = parseISO(manifestDate);
+        if (manifestDateFrom && date < manifestDateFrom) return false;
+        if (manifestDateTo) {
+          const endOfDay = new Date(manifestDateTo);
+          endOfDay.setHours(23, 59, 59, 999);
+          if (date > endOfDay) return false;
+        }
+      }
+      
+      return true;
+    });
+  }, [manifests, manifestSearch, manifestDateFrom, manifestDateTo]);
+
+  // Calculate last rate charged from most recent pickup
+  const lastRateCharged = useMemo(() => {
+    if (paymentHistory.length === 0) return null;
+    
+    // Sort by date descending to get most recent
+    const sorted = [...paymentHistory].sort((a, b) => 
+      new Date(b.pickup_date).getTime() - new Date(a.pickup_date).getTime()
+    );
+    
+    const lastPickup = sorted[0];
+    const revenue = lastPickup.computed_revenue || 0;
+    
+    // Calculate total tires from manifest or pickup data
+    let totalTires = 0;
+    const manifest = lastPickup.manifest;
+    if (manifest) {
+      totalTires = (manifest.pte_on_rim || 0) + (manifest.pte_off_rim || 0) +
+                   (manifest.commercial_17_5_19_5_on || 0) + (manifest.commercial_17_5_19_5_off || 0) +
+                   (manifest.commercial_22_5_on || 0) + (manifest.commercial_22_5_off || 0) +
+                   (manifest.otr_count || 0) + (manifest.tractor_count || 0);
+    } else {
+      totalTires = (lastPickup.pte_count || 0) + (lastPickup.otr_count || 0) + (lastPickup.tractor_count || 0);
+    }
+    
+    if (totalTires === 0) return { rate: 0, date: lastPickup.pickup_date };
+    
+    return {
+      rate: revenue / totalTires,
+      date: lastPickup.pickup_date
+    };
+  }, [paymentHistory]);
 
   // Group payments by time period
   const groupPaymentsByPeriod = (payments: typeof paymentHistory) => {
@@ -332,20 +387,23 @@ export default function ClientDetail() {
         <div className="mb-8">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
+              <h1 className="text-3xl font-bold text-foreground">
                 {client.company_name}
-                {clientHealth && (
-                  <ClientHealthBadge 
-                    score={clientHealth.score} 
-                    riskLevel={clientHealth.risk_level}
-                  />
-                )}
               </h1>
               <p className="text-muted-foreground">
-                Last pickup: {client.last_pickup_at ? new Date(client.last_pickup_at).toLocaleDateString() : 'Never'}
+                <span className="font-semibold">Last pickup:</span> {client.last_pickup_at ? new Date(client.last_pickup_at).toLocaleDateString() : 'Never'}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
+              <EditClientDialog
+                client={client}
+                trigger={
+                  <Button variant="outline">
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Edit Client
+                  </Button>
+                }
+              />
               <SchedulePickupDialog
                 defaultClientId={client.id}
                 trigger={
@@ -355,12 +413,6 @@ export default function ClientDetail() {
                   </Button>
                 }
               />
-              <Link to={`/manifests?client=${client.id}`}>
-                <Button variant="outline">
-                  <FileText className="h-4 w-4 mr-2" />
-                  View Manifests
-                </Button>
-              </Link>
             </div>
           </div>
         </div>
@@ -420,19 +472,22 @@ export default function ClientDetail() {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
-                <Clock className="h-5 w-5 text-muted-foreground" />
-                Last Pickup
+                <DollarSign className="h-5 w-5 text-primary" />
+                Last Rate Charged
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-foreground">
-                {client.last_pickup_at 
-                  ? new Date(client.last_pickup_at).toLocaleDateString()
-                  : 'Never'
+                {lastRateCharged && lastRateCharged.rate > 0
+                  ? `$${lastRateCharged.rate.toFixed(2)}/tire`
+                  : 'N/A'
                 }
               </div>
               <p className="text-sm text-muted-foreground mt-1">
-                Most recent service
+                {lastRateCharged?.date
+                  ? `Rate from ${formatDateLocal(lastRateCharged.date)}`
+                  : 'No pickup history'
+                }
               </p>
             </CardContent>
           </Card>
@@ -624,6 +679,80 @@ export default function ClientDetail() {
             <p className="text-sm text-muted-foreground mt-2">
               View, download, and print all completed manifests
             </p>
+            
+            {/* Search and Filter Controls */}
+            {manifests.length > 0 && (
+              <div className="flex flex-col sm:flex-row gap-3 mt-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by manifest number..."
+                    value={manifestSearch}
+                    onChange={(e) => setManifestSearch(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "justify-start text-left font-normal",
+                          !manifestDateFrom && "text-muted-foreground"
+                        )}
+                      >
+                        {manifestDateFrom ? format(manifestDateFrom, "MMM d, yyyy") : "From date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={manifestDateFrom}
+                        onSelect={setManifestDateFrom}
+                        initialFocus
+                        className="p-3 pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "justify-start text-left font-normal",
+                          !manifestDateTo && "text-muted-foreground"
+                        )}
+                      >
+                        {manifestDateTo ? format(manifestDateTo, "MMM d, yyyy") : "To date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={manifestDateTo}
+                        onSelect={setManifestDateTo}
+                        initialFocus
+                        className="p-3 pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  {(manifestSearch || manifestDateFrom || manifestDateTo) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setManifestSearch("");
+                        setManifestDateFrom(undefined);
+                        setManifestDateTo(undefined);
+                      }}
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
           </CardHeader>
           <CardContent>
             {manifests.length === 0 ? (
@@ -634,9 +763,17 @@ export default function ClientDetail() {
                   Completed manifests will appear here
                 </p>
               </div>
+            ) : filteredManifests.length === 0 ? (
+              <div className="text-center py-12 bg-muted/20 rounded-lg border-2 border-dashed">
+                <Search className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
+                <p className="text-lg font-medium text-muted-foreground mb-2">No manifests found</p>
+                <p className="text-sm text-muted-foreground">
+                  Try adjusting your search or date filters
+                </p>
+              </div>
             ) : (
               <div className="space-y-3">
-                {manifests.map((manifest) => (
+                {filteredManifests.map((manifest) => (
                   <div
                     key={manifest.id}
                     className="flex flex-col md:flex-row md:items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors gap-4"
@@ -664,7 +801,7 @@ export default function ClientDetail() {
                           <div className="flex items-center gap-2 text-muted-foreground">
                             <Clock className="h-3.5 w-3.5" />
                             <span>
-                              {format(new Date(manifest.created_at), 'MMM d, yyyy h:mm a')}
+                              {format(new Date(manifest.signed_at || manifest.created_at), 'MMM d, yyyy h:mm a')}
                             </span>
                           </div>
                         </div>
@@ -718,7 +855,7 @@ export default function ClientDetail() {
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2">
                 <MapPin className="h-5 w-5" />
-                Addresses
+                {locations.length === 1 ? 'Address' : 'Addresses'}
               </CardTitle>
               <AddLocationDialog 
                 clientId={client.id}
@@ -770,18 +907,10 @@ export default function ClientDetail() {
                       )}
                       <p className="text-sm text-muted-foreground mb-2">{location.address}</p>
                       {location.access_notes && (
-                        <p className="text-xs text-muted-foreground italic mb-2">
+                        <p className="text-xs text-muted-foreground italic">
                           {location.access_notes}
                         </p>
                       )}
-                      <div className="flex justify-between items-center">
-                        <Badge variant={location.is_active ? "default" : "secondary"}>
-                          {location.is_active ? "Active" : "Inactive"}
-                        </Badge>
-                        {location.pricing_tier && (
-                          <Badge variant="outline">{location.pricing_tier.name}</Badge>
-                        )}
-                      </div>
                     </div>
                   ))}
                 </div>

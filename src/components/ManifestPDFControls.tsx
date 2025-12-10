@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Download, Mail, FileText, Calendar, Eye, Printer } from 'lucide-react';
+import { Download, Mail, FileText, Calendar, Eye, Printer, MoreHorizontal, ExternalLink, Copy } from 'lucide-react';
 import { useSendManifestEmail } from '@/hooks/useSendManifestEmail';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { PdfInlineViewer } from '@/components/PdfInlineViewer';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 
 interface ManifestPDFControlsProps {
   manifestId: string;
@@ -85,8 +86,6 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
       );
       printWindow.document.close();
 
-      const { supabase } = await import('@/integrations/supabase/client');
-
       const pdfUrl = await resolveFileUrl(path);
       if (!pdfUrl) throw new Error('Could not resolve PDF URL');
 
@@ -132,7 +131,7 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
       printWindow.document.write(html);
       printWindow.document.close();
 
-      // Fallback: if the print dialog didn’t appear, navigate to the PDF URL directly
+      // Fallback: if the print dialog didn't appear, navigate to the PDF URL directly
       setTimeout(() => {
         try {
           if (!printWindow.closed) {
@@ -227,150 +226,94 @@ export const ManifestPDFControls: React.FC<ManifestPDFControlsProps> = ({
     );
   }
 
+  const PDFDropdown = ({ 
+    path, 
+    label, 
+    filename,
+    variant = 'default'
+  }: { 
+    path: string; 
+    label: string; 
+    filename: string;
+    variant?: 'initial' | 'default';
+  }) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          size="sm"
+          variant={variant === 'initial' ? 'outline' : 'default'}
+          className="text-xs gap-1"
+        >
+          <FileText className="w-3 h-3" />
+          {label}
+          <MoreHorizontal className="w-3 h-3 ml-1" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-40">
+        <DropdownMenuItem onClick={() => handleView(path, label)} className="cursor-pointer">
+          <Eye className="w-4 h-4 mr-2" />
+          View
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handlePrint(path)} className="cursor-pointer">
+          <Printer className="w-4 h-4 mr-2" />
+          Print
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleDownload(path, filename)} className="cursor-pointer">
+          <Download className="w-4 h-4 mr-2" />
+          Download
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => handleOpenTab(path)} className="cursor-pointer">
+          <ExternalLink className="w-4 h-4 mr-2" />
+          Open in Tab
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleCopyLink(path)} className="cursor-pointer">
+          <Copy className="w-4 h-4 mr-2" />
+          Copy Link
+        </DropdownMenuItem>
+        {clientEmails.length > 0 && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem 
+              onClick={() => handleEmail(path, label)} 
+              disabled={sendEmail.isPending}
+              className="cursor-pointer"
+            >
+              <Mail className="w-4 h-4 mr-2" />
+              Email
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
   return (
-    <div className={`space-y-3 ${className}`}>
-      {/* Initial Manifest (Generator + Hauler signatures only) */}
+    <div className={`flex flex-wrap gap-2 ${className}`}>
+      {/* Initial Manifest Dropdown */}
       {initialPdfPath && (
-        <>
-          <div className="text-sm font-medium text-muted-foreground">
-            Initial Manifest (Generator + Hauler):
-          </div>
-          
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800 gap-3">
-            <div className="flex items-center gap-2 min-w-0">
-              <FileText className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
-              <div className="min-w-0">
-                <div className="font-medium text-sm truncate">Initial Manifest PDF</div>
-                <div className="text-xs text-muted-foreground">Generator & Hauler signatures</div>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-1 justify-end w-full sm:w-auto">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleView(initialPdfPath, 'Initial Manifest')}
-                className="text-xs px-2 py-1.5 touch-target"
-              >
-                <Eye className="w-3 h-3 mr-1" />
-                <span className="hidden sm:inline">View</span>
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handlePrint(initialPdfPath)}
-                className="text-xs px-2 py-1.5 touch-target"
-              >
-                <Printer className="w-3 h-3 mr-1" />
-                <span className="hidden sm:inline">Print</span>
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleDownload(initialPdfPath, `manifest-${manifestId}-initial.pdf`)}
-                className="text-xs px-2 py-1.5 touch-target"
-              >
-                <Download className="w-3 h-3 mr-1" />
-                <span className="hidden sm:inline">Download</span>
-              </Button>
-              {clientEmails.length > 0 && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleEmail(initialPdfPath, 'Initial Manifest')}
-                  disabled={sendEmail.isPending}
-                  className="text-xs px-2 py-1.5 touch-target"
-                >
-                  <Mail className="w-3 h-3 mr-1" />
-                  <span className="hidden sm:inline">Email</span>
-                </Button>
-              )}
-            </div>
-          </div>
-        </>
+        <PDFDropdown
+          path={initialPdfPath}
+          label="Initial PDF"
+          filename={`manifest-${manifestId}-initial.pdf`}
+          variant="initial"
+        />
       )}
 
-      {/* Final Manifest (All signatures) */}
+      {/* Final/Michigan Manifest Dropdown */}
       {acroformPdfPath && (
-        <>
-          <div className="text-sm font-medium text-muted-foreground">
-            {initialPdfPath ? 'Final Manifest (All Signatures):' : 'State Compliant Manifest:'}
-          </div>
-          
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 bg-primary/5 rounded-lg border border-primary/20 gap-3">
-            <div className="flex items-center gap-2 min-w-0">
-              <FileText className="w-4 h-4 text-primary flex-shrink-0" />
-              <div className="min-w-0">
-                <div className="font-medium text-sm truncate">Michigan Manifest PDF</div>
-                <div className="text-xs text-muted-foreground">
-                  {initialPdfPath ? 'Complete with all signatures' : 'View or download manifest'}
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-1 justify-end w-full sm:w-auto">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleView(acroformPdfPath, 'Final Manifest')}
-                className="text-xs px-2 py-1.5 touch-target"
-              >
-                <Eye className="w-3 h-3 mr-1" />
-                <span className="hidden sm:inline">View</span>
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handlePrint(acroformPdfPath)}
-                className="text-xs px-2 py-1.5 touch-target"
-              >
-                <Printer className="w-3 h-3 mr-1" />
-                <span className="hidden sm:inline">Print</span>
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleDownload(acroformPdfPath, `manifest-${manifestId}-final.pdf`)}
-                className="text-xs px-2 py-1.5 touch-target"
-              >
-                <Download className="w-3 h-3 mr-1" />
-                <span className="hidden sm:inline">Download</span>
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleOpenTab(acroformPdfPath)}
-                className="text-xs px-2 py-1.5 touch-target hidden sm:inline-flex"
-              >
-                Open Tab
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleCopyLink(acroformPdfPath)}
-                className="text-xs px-2 py-1.5 touch-target hidden sm:inline-flex"
-              >
-                Copy Link
-              </Button>
-              {clientEmails.length > 0 && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleEmail(acroformPdfPath, 'Final Manifest')}
-                  disabled={sendEmail.isPending}
-                  className="text-xs px-2 py-1.5 touch-target"
-                >
-                  <Mail className="w-3 h-3 mr-1" />
-                  <span className="hidden sm:inline">Email</span>
-                </Button>
-              )}
-            </div>
-          </div>
-        </>
+        <PDFDropdown
+          path={acroformPdfPath}
+          label="Michigan PDF"
+          filename={`manifest-${manifestId}-final.pdf`}
+          variant="default"
+        />
       )}
 
       {sendEmail.isPending && (
-        <div className="text-center text-sm text-muted-foreground">
-          Sending email...
-        </div>
+        <span className="text-xs text-muted-foreground self-center">
+          Sending...
+        </span>
       )}
 
       <Dialog open={viewerOpen} onOpenChange={setViewerOpen}>
