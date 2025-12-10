@@ -20,10 +20,14 @@ export const CreateHaulerDialog = ({ open, onOpenChange }: CreateHaulerDialogPro
   const [phone, setPhone] = useState("");
   const [miReg, setMiReg] = useState("");
   const [email, setEmail] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false); // Prevents duplicate submissions
 
   const createHauler = useCreateHauler();
 
   const handleSubmit = async () => {
+    // Immediately block duplicate submissions
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       await createHauler.mutateAsync({
         hauler_name: haulerName,
@@ -45,10 +49,13 @@ export const CreateHaulerDialog = ({ open, onOpenChange }: CreateHaulerDialogPro
       setPhone("");
       setMiReg("");
       setEmail("");
+      setIsSubmitting(false);
       
       onOpenChange(false);
     } catch (error) {
       console.error('Error creating hauler:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -165,9 +172,9 @@ export const CreateHaulerDialog = ({ open, onOpenChange }: CreateHaulerDialogPro
           </Button>
           <Button 
             onClick={handleSubmit} 
-            disabled={!haulerName || createHauler.isPending}
+            disabled={!haulerName || isSubmitting || createHauler.isPending}
           >
-            {createHauler.isPending ? "Creating..." : "Create Hauler"}
+            {isSubmitting || createHauler.isPending ? "Creating..." : "Create Hauler"}
           </Button>
         </DialogFooter>
       </DialogContent>

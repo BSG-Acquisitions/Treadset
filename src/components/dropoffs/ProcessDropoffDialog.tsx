@@ -40,6 +40,7 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
   const [tractorCount, setTractorCount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [notes, setNotes] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false); // Prevents duplicate submissions
   
   // Selected items for searchable dropdowns
   const [selectedGenerator, setSelectedGenerator] = useState<any>(null);
@@ -114,6 +115,10 @@ const subtotal = (Number(pteCount || 0) * ptePrice) +
   }, [selectedCustomerId]);
 
   const handleSubmit = async () => {
+    // Immediately block duplicate submissions
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    
     try {
       let dropoffCustomerId = customerId;
       
@@ -160,10 +165,14 @@ const subtotal = (Number(pteCount || 0) * ptePrice) +
       setTractorCount("");
       setPaymentMethod("cash");
       setNotes("");
+      setSelectedGenerator(null);
+      setSelectedHauler(null);
       
       onOpenChange(false);
     } catch (error) {
       console.error('Error processing dropoff:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -408,9 +417,9 @@ const subtotal = (Number(pteCount || 0) * ptePrice) +
           </Button>
           <Button 
             onClick={handleSubmit} 
-            disabled={!customerId || (!pteCount && !otrCount && !tractorCount) || createDropoffWithManifest.isPending || customers.length === 0}
+            disabled={!customerId || (!pteCount && !otrCount && !tractorCount) || isSubmitting || createDropoffWithManifest.isPending || customers.length === 0}
           >
-            {createDropoffWithManifest.isPending ? "Processing..." : "Process Drop-off"}
+            {isSubmitting || createDropoffWithManifest.isPending ? "Processing..." : "Process Drop-off"}
           </Button>
         </DialogFooter>
       </DialogContent>
