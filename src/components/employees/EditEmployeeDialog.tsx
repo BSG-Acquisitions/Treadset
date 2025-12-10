@@ -13,8 +13,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
-import { Settings } from 'lucide-react';
+import { Settings, Loader2, KeyRound, CheckCircle } from 'lucide-react';
 import { useUpdateEmployee, Employee, UpdateEmployeeData } from '@/hooks/useEmployees';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 const ROLE_OPTIONS = [
   { value: 'admin', label: 'Administrator', description: 'Full system access' },
@@ -39,8 +41,11 @@ export function EditEmployeeDialog({ employee, trigger }: EditEmployeeDialogProp
     roles: employee.roles,
     isActive: employee.isActive
   });
+  const [resetting, setResetting] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
 
   const updateEmployee = useUpdateEmployee();
+  const { resetPassword } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,8 +74,33 @@ export function EditEmployeeDialog({ employee, trigger }: EditEmployeeDialogProp
     }));
   };
 
+  const handleResetPassword = async () => {
+    if (!employee.email) {
+      toast.error('No email address found for this employee');
+      return;
+    }
+
+    setResetting(true);
+    try {
+      await resetPassword(employee.email);
+      setResetSent(true);
+      toast.success(`Password reset email sent to ${employee.email}`);
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to send password reset email');
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  const handleOpenChange = (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (!isOpen) {
+      setResetSent(false);
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {trigger || (
           <Button variant="ghost" size="sm">
@@ -131,6 +161,42 @@ export function EditEmployeeDialog({ employee, trigger }: EditEmployeeDialogProp
               onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
               placeholder="(555) 123-4567"
             />
+          </div>
+
+          {/* Password Reset Section */}
+          <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <KeyRound className="h-4 w-4 text-muted-foreground" />
+              <Label className="text-sm font-medium">Password Reset</Label>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Send a password reset email to this employee. They'll receive a link to set a new password.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleResetPassword}
+              disabled={resetting || resetSent}
+              className="w-full sm:w-auto"
+            >
+              {resetting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Sending...
+                </>
+              ) : resetSent ? (
+                <>
+                  <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+                  Reset Email Sent
+                </>
+              ) : (
+                <>
+                  <KeyRound className="h-4 w-4 mr-2" />
+                  Reset Password
+                </>
+              )}
+            </Button>
           </div>
 
           <div className="flex items-center space-x-2">
