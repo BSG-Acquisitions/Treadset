@@ -64,9 +64,10 @@ serve(async (req) => {
     }
 
     const { email, password, firstName, lastName, phone, roles, organizationId } = requestBody;
+    const normalizedEmail = email?.toLowerCase().trim();
 
     console.log('Creating employee with data:', {
-      email,
+      email: normalizedEmail,
       firstName,
       lastName,
       phone,
@@ -74,8 +75,8 @@ serve(async (req) => {
       organizationId
     });
 
-    if (!email || !password || !roles || !organizationId) {
-      console.error('Missing required fields:', { email: !!email, password: !!password, roles: !!roles, organizationId: !!organizationId });
+    if (!normalizedEmail || !password || !roles || !organizationId) {
+      console.error('Missing required fields:', { email: !!normalizedEmail, password: !!password, roles: !!roles, organizationId: !!organizationId });
       throw new Error('Missing required fields: email, password, roles, and organizationId are required');
     }
 
@@ -135,9 +136,57 @@ serve(async (req) => {
       throw new Error('Insufficient permissions - admin role required in target organization');
     }
 
+    // Check if a user with this email already exists in public.users
+    const { data: existingUser, error: existingUserError } = await supabaseAdmin
+      .from('users')
+      .select('id, auth_user_id, email')
+      .eq('email', normalizedEmail)
+      .maybeSingle();
+
+    if (existingUserError) {
+      console.error('Error checking existing user:', existingUserError);
+      throw new Error('Failed to check for existing user');
+    }
+
+    if (existingUser) {
+      console.log('Found existing user record with email:', normalizedEmail);
+      
+      // Check if the auth user still exists
+      const { data: authUserCheck, error: authCheckError } = await supabaseAdmin.auth.admin.getUserById(
+        existingUser.auth_user_id
+      );
+
+      if (authCheckError || !authUserCheck?.user) {
+        // Auth user doesn't exist - this is an orphaned record, clean it up
+        console.log('Orphaned user record found, cleaning up...');
+        
+        // Delete any roles first (foreign key constraint)
+        await supabaseAdmin
+          .from('user_organization_roles')
+          .delete()
+          .eq('user_id', existingUser.id);
+        
+        // Delete the orphaned user record
+        const { error: deleteError } = await supabaseAdmin
+          .from('users')
+          .delete()
+          .eq('id', existingUser.id);
+
+        if (deleteError) {
+          console.error('Failed to clean up orphaned user:', deleteError);
+          throw new Error('Failed to clean up orphaned user record');
+        }
+        
+        console.log('Orphaned user record cleaned up successfully');
+      } else {
+        // Auth user exists - this email is already in use
+        throw new Error('An employee with this email already exists');
+      }
+    }
+
     // Create the auth user using admin client
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email,
+      email: normalizedEmail,
       password,
       email_confirm: true,
       user_metadata: {
@@ -162,7 +211,7 @@ serve(async (req) => {
       .from('users')
       .insert({
         auth_user_id: authData.user.id,
-        email,
+        email: normalizedEmail,
         first_name: firstName,
         last_name: lastName,
         phone: phone || null
