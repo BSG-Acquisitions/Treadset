@@ -34,6 +34,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { EditDropoffDialog } from "./EditDropoffDialog";
 import { HaulerReliabilityBadge } from "@/components/HaulerReliabilityBadge";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { calculateTotalPTE } from "@/lib/michigan-conversions";
 import { cn } from "@/lib/utils";
 import { useGenerateDropoffManifest } from "@/hooks/useGenerateDropoffManifest";
@@ -66,6 +67,7 @@ interface DropopffsListProps {
 
 export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListProps) => {
   const [editDropoff, setEditDropoff] = useState<Dropoff | null>(null);
+  const navigate = useNavigate();
   const generateManifest = useGenerateDropoffManifest();
   
   const filteredDropoffs = dropoffs.filter(dropoff => 
@@ -308,7 +310,7 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
                 <Button 
                   size="sm" 
                   variant="outline"
-                  onClick={() => window.location.href = `/manifests/${dropoff.manifest_id}`}
+                  onClick={() => navigate(`/manifests/${dropoff.manifest_id}`)}
                 >
                   <FileText className="h-4 w-4 mr-2" />
                   View Manifest
@@ -337,7 +339,7 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
                       </DropdownMenuItem>
                     )}
                     {dropoff.manifest_id && (
-                      <DropdownMenuItem onClick={() => window.location.href = `/manifests/${dropoff.manifest_id}`}>
+                      <DropdownMenuItem onClick={() => navigate(`/manifests/${dropoff.manifest_id}`)}>
                         <FileText className="h-4 w-4 mr-2" />
                         View Manifest
                       </DropdownMenuItem>

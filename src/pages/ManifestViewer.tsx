@@ -11,7 +11,7 @@ import { ArrowLeft, FileText, User, MapPin, Package, Clock, CreditCard, CheckCir
 
 export default function ManifestViewer() {
   const { id } = useParams<{ id: string }>();
-  const { data: manifest, isLoading } = useManifest(id || '');
+  const { data: manifest, isLoading, error } = useManifest(id ?? '');
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -55,7 +55,7 @@ export default function ManifestViewer() {
     );
   }
 
-  if (!manifest) {
+  if (error || !manifest) {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto p-6">
@@ -64,12 +64,12 @@ export default function ManifestViewer() {
               <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
               <h2 className="text-xl font-semibold mb-2">Manifest not found</h2>
               <p className="text-muted-foreground mb-4">
-                The manifest you're looking for doesn't exist or you don't have access to it.
+                {error ? `Error: ${error.message}` : "The manifest you're looking for doesn't exist or you don't have access to it."}
               </p>
               <Button asChild variant="outline">
-                <Link to="/driver/manifests">
+                <Link to="/dropoffs">
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Manifests
+                  Back
                 </Link>
               </Button>
             </CardContent>
