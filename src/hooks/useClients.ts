@@ -168,8 +168,65 @@ export const useDeleteClient = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (id: string) => {
-      // Check if client has open balance
+    mutationFn: async ({ id, forceDelete = false }: { id: string; forceDelete?: boolean }) => {
+      if (forceDelete) {
+        // Force delete: cascade delete all related records
+        
+        // 1. Delete client_workflows
+        await supabase.from('client_workflows').delete().eq('client_id', id);
+        
+        // 2. Delete client_summaries
+        await supabase.from('client_summaries').delete().eq('client_id', id);
+        
+        // 3. Delete client_health_scores
+        await supabase.from('client_health_scores').delete().eq('client_id', id);
+        
+        // 4. Delete client_pickup_patterns
+        await supabase.from('client_pickup_patterns').delete().eq('client_id', id);
+        
+        // 5. Delete client_risk_scores
+        await supabase.from('client_risk_scores').delete().eq('client_id', id);
+        
+        // 6. Delete client_engagement
+        await supabase.from('client_engagement').delete().eq('client_id', id);
+        
+        // 7. Unlink pickups from manifests first, then delete pickups
+        const { data: pickups } = await supabase
+          .from('pickups')
+          .select('id')
+          .eq('client_id', id);
+        
+        if (pickups && pickups.length > 0) {
+          // Unlink manifests from these pickups
+          await supabase
+            .from('manifests')
+            .update({ pickup_id: null })
+            .in('pickup_id', pickups.map(p => p.id));
+          
+          // Delete the pickups
+          await supabase.from('pickups').delete().eq('client_id', id);
+        }
+        
+        // 8. Delete dropoffs
+        await supabase.from('dropoffs').delete().eq('client_id', id);
+        
+        // 9. Delete locations
+        await supabase.from('locations').delete().eq('client_id', id);
+        
+        // 10. Delete manifests linked to this client
+        await supabase.from('manifests').delete().eq('client_id', id);
+        
+        // 11. Finally delete the client
+        const { error } = await supabase
+          .from('clients')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+        return { softDeleted: false, forceDeleted: true };
+      }
+      
+      // Standard delete logic
       const { data: client, error: fetchError } = await supabase
         .from('clients')
         .select('open_balance')
@@ -186,7 +243,7 @@ export const useDeleteClient = () => {
           .eq('id', id);
 
         if (error) throw error;
-        return { softDeleted: true };
+        return { softDeleted: true, forceDeleted: false };
       } else {
         // Hard delete if no open balance
         const { error } = await supabase
@@ -195,16 +252,19 @@ export const useDeleteClient = () => {
           .eq('id', id);
 
         if (error) throw error;
-        return { softDeleted: false };
+        return { softDeleted: false, forceDeleted: false };
       }
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['clients-table'] });
       toast({
         title: "Success",
-        description: result.softDeleted 
-          ? "Client deactivated due to open balance" 
-          : "Client deleted successfully",
+        description: result.forceDeleted 
+          ? "Client and all related records permanently deleted"
+          : result.softDeleted 
+            ? "Client deactivated due to open balance" 
+            : "Client deleted successfully",
       });
     },
     onError: (error) => {

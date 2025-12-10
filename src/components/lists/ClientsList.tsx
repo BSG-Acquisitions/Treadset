@@ -195,7 +195,7 @@ export function ClientsList({ onCreateClick, onEditClick }: ClientsListProps) {
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
                           <AlertDialogAction
-                            onClick={() => deleteClient.mutate(client.id)}
+                            onClick={() => deleteClient.mutate({ id: client.id, forceDelete: false })}
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                           >
                             {client.open_balance && client.open_balance > 0 ? "Deactivate" : "Delete"}
