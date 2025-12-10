@@ -170,53 +170,41 @@ export const useDeleteClient = () => {
   return useMutation({
     mutationFn: async ({ id, forceDelete = false }: { id: string; forceDelete?: boolean }) => {
       if (forceDelete) {
-        // Force delete: cascade delete all related records
+        // Force delete: cascade delete all related records in correct order
         
-        // 1. Delete client_workflows
+        // 1. Delete analytics/metadata tables first (no FK dependencies)
         await supabase.from('client_workflows').delete().eq('client_id', id);
-        
-        // 2. Delete client_summaries
         await supabase.from('client_summaries').delete().eq('client_id', id);
-        
-        // 3. Delete client_health_scores
         await supabase.from('client_health_scores').delete().eq('client_id', id);
-        
-        // 4. Delete client_pickup_patterns
         await supabase.from('client_pickup_patterns').delete().eq('client_id', id);
-        
-        // 5. Delete client_risk_scores
         await supabase.from('client_risk_scores').delete().eq('client_id', id);
-        
-        // 6. Delete client_engagement
         await supabase.from('client_engagement').delete().eq('client_id', id);
         
-        // 7. Unlink pickups from manifests first, then delete pickups
-        const { data: pickups } = await supabase
-          .from('pickups')
-          .select('id')
+        // 2. Nullify ALL foreign key references in manifests (pickup_id AND location_id)
+        await supabase
+          .from('manifests')
+          .update({ pickup_id: null, location_id: null })
           .eq('client_id', id);
         
-        if (pickups && pickups.length > 0) {
-          // Unlink manifests from these pickups
-          await supabase
-            .from('manifests')
-            .update({ pickup_id: null })
-            .in('pickup_id', pickups.map(p => p.id));
-          
-          // Delete the pickups
-          await supabase.from('pickups').delete().eq('client_id', id);
-        }
+        // 3. Nullify pickup.manifest_id references before deleting pickups
+        await supabase
+          .from('pickups')
+          .update({ manifest_id: null })
+          .eq('client_id', id);
         
-        // 8. Delete dropoffs
-        await supabase.from('dropoffs').delete().eq('client_id', id);
-        
-        // 9. Delete locations
-        await supabase.from('locations').delete().eq('client_id', id);
-        
-        // 10. Delete manifests linked to this client
+        // 4. Delete manifests FIRST (now safe - all FKs nullified)
         await supabase.from('manifests').delete().eq('client_id', id);
         
-        // 11. Finally delete the client
+        // 5. Delete pickups (now safe - no manifest references)
+        await supabase.from('pickups').delete().eq('client_id', id);
+        
+        // 6. Delete dropoffs
+        await supabase.from('dropoffs').delete().eq('client_id', id);
+        
+        // 7. Delete locations (now safe - no manifest references)
+        await supabase.from('locations').delete().eq('client_id', id);
+        
+        // 8. Finally delete the client
         const { error } = await supabase
           .from('clients')
           .delete()
