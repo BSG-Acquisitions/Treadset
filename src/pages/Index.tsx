@@ -630,6 +630,29 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
           startDate.setHours(0, 0, 0, 0);
       }
 
+      // First fetch all dropoffs to get their linked manifest IDs
+      const { data: dropoffsData, error: dropoffsError } = await supabase
+        .from('dropoffs')
+        .select(`
+          id,
+          dropoff_date,
+          pte_count,
+          otr_count,
+          tractor_count,
+          manifest_id,
+          client:clients(company_name, contact_name)
+        `)
+        .eq('organization_id', user?.currentOrganization?.id)
+        .gte('dropoff_date', format(startDate, 'yyyy-MM-dd'))
+        .lte('dropoff_date', format(endDate, 'yyyy-MM-dd'));
+
+      if (dropoffsError) throw dropoffsError;
+
+      // Get manifest IDs linked to dropoffs to exclude from pickups
+      const dropoffManifestIds = new Set(
+        dropoffsData?.filter(d => d.manifest_id).map(d => d.manifest_id) || []
+      );
+
       // Fetch manifests for client pickups only
       const { data: manifestsData, error: manifestsError } = await supabase
         .from('manifests')
@@ -656,12 +679,13 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
 
       if (manifestsError) throw manifestsError;
 
-      // Filter and transform manifests with tire counts
+      // Filter and transform manifests with tire counts, excluding dropoff-linked manifests
       const pickupsData = manifestsData
         ?.filter(m => {
           const totalPTE = calculateManifestPTE(m as any);
           const isDropoffPseudoClient = m.client?.company_name && /drop[- ]?off customers/i.test(m.client.company_name.trim());
-          return totalPTE > 0 && m.client && !isDropoffPseudoClient;
+          const isLinkedToDropoff = dropoffManifestIds.has(m.id);
+          return totalPTE > 0 && m.client && !isDropoffPseudoClient && !isLinkedToDropoff;
         })
         .map(m => ({
           id: m.id,
@@ -672,22 +696,6 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
           client: m.client,
           location: m.location
         })) || [];
-
-      // Fetch standalone dropoffs (without linked manifests to avoid double-counting)
-      const { data: dropoffsData, error: dropoffsError } = await supabase
-        .from('dropoffs')
-        .select(`
-          id,
-          dropoff_date,
-          pte_count,
-          otr_count,
-          tractor_count,
-          client:clients(company_name, contact_name)
-        `)
-        .eq('organization_id', user?.currentOrganization?.id)
-        .gte('dropoff_date', format(startDate, 'yyyy-MM-dd'))
-        .lte('dropoff_date', format(endDate, 'yyyy-MM-dd'))
-        .is('manifest_id', null);
 
       if (dropoffsError) throw dropoffsError;
 
