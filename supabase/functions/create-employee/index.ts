@@ -185,13 +185,16 @@ serve(async (req) => {
     }
 
     // Create the auth user using admin client
+    // IMPORTANT: Set created_as_employee flag to prevent auto-org creation trigger
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: normalizedEmail,
       password,
       email_confirm: true,
       user_metadata: {
         first_name: firstName,
-        last_name: lastName
+        last_name: lastName,
+        created_as_employee: true,
+        target_organization_id: organizationId
       }
     });
 
