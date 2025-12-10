@@ -24,9 +24,6 @@ export function CreateClientDialog({ trigger }: CreateClientDialogProps) {
         email: data.email || null,
         phone: data.phone || null,
         notes: data.notes || null,
-        tags: data.tags || [],
-        sla_weeks: data.sla_weeks || null,
-        pricing_tier_id: data.pricing_tier_id || null,
         mailing_address: data.mailing_address || null,
         city: data.city || null,
         state: data.state || null,
@@ -44,7 +41,7 @@ export function CreateClientDialog({ trigger }: CreateClientDialogProps) {
           name: `${data.company_name} - Primary Location`,
           address: data.mailing_address,
           access_notes: null,
-          pricing_tier_id: data.pricing_tier_id || null,
+          pricing_tier_id: null,
           is_active: true,
           organization_id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73', // Default org ID
         });
