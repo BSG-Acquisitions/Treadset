@@ -217,12 +217,20 @@ export default function Manifests() {
     toast.success(`Exported ${filteredManifests.length} manifests to CSV`);
   };
 
-  // Export all PDFs as ZIP
+  // Export all PDFs as ZIP via edge function
   const handleExportZIP = async () => {
-    const completedManifests = filteredManifests.filter(m => m.status === 'COMPLETED' && (m.pdf_path || m.acroform_pdf_path));
+    const completedManifests = filteredManifests.filter(m => 
+      (m.status === 'COMPLETED' || m.status === 'AWAITING_RECEIVER_SIGNATURE') && 
+      (m.pdf_path || m.acroform_pdf_path)
+    );
     
     if (completedManifests.length === 0) {
       toast.error('No completed manifests with PDFs to export');
+      return;
+    }
+
+    if (completedManifests.length > 200) {
+      toast.error('Maximum 200 manifests per export. Please narrow your date range.');
       return;
     }
 
@@ -230,41 +238,38 @@ export default function Manifests() {
     toast.info(`Preparing ${completedManifests.length} PDFs for download...`);
 
     try {
-      // For now, download each PDF individually since we don't have server-side ZIP
-      // In production, this could be an edge function that creates a ZIP
-      for (const manifest of completedManifests.slice(0, 10)) { // Limit to 10 for safety
-        const pdfPath = manifest.acroform_pdf_path || manifest.pdf_path;
-        if (!pdfPath) continue;
+      const manifestIds = completedManifests.map(m => m.id);
+      const clientName = selectedClientId !== 'all' 
+        ? clients.find(c => c.id === selectedClientId)?.company_name 
+        : undefined;
+      const dateRange = fromDate && toDate 
+        ? `${format(fromDate, 'yyyyMMdd')}-${format(toDate, 'yyyyMMdd')}` 
+        : format(new Date(), 'yyyyMMdd');
 
-        const { data, error } = await supabase.storage
-          .from('manifests')
-          .createSignedUrl(pdfPath, 60);
+      const { data, error } = await supabase.functions.invoke('batch-manifest-export', {
+        body: {
+          manifest_ids: manifestIds,
+          client_name: clientName,
+          date_range: dateRange,
+        },
+      });
 
-        if (data?.signedUrl) {
-          const response = await fetch(data.signedUrl);
-          const blob = await response.blob();
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          const clientName = manifest.client?.company_name?.replace(/[^a-z0-9]/gi, '_') || 'Unknown';
-          const date = format(getManifestDate(manifest), 'yyyy-MM-dd');
-          a.download = `${manifest.manifest_number}_${clientName}_${date}.pdf`;
-          a.click();
-          URL.revokeObjectURL(url);
-          
-          // Small delay between downloads
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
-      }
+      if (error) throw error;
 
-      if (completedManifests.length > 10) {
-        toast.warning(`Downloaded first 10 PDFs. For bulk exports over 10 files, please contact support.`);
-      } else {
-        toast.success(`Downloaded ${Math.min(completedManifests.length, 10)} PDFs`);
-      }
-    } catch (error) {
+      // The response is a blob (ZIP file)
+      const blob = new Blob([data], { type: 'application/zip' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const safeClientName = clientName?.replace(/[^a-z0-9]/gi, '_') || 'AllClients';
+      a.download = `Manifests_${safeClientName}_${dateRange}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast.success(`Downloaded ${completedManifests.length} manifests as ZIP`);
+    } catch (error: any) {
       console.error('Export error:', error);
-      toast.error('Failed to export some PDFs');
+      toast.error(error.message || 'Failed to export PDFs');
     } finally {
       setIsExporting(false);
     }
