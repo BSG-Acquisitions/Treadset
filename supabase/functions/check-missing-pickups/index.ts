@@ -29,6 +29,28 @@ Deno.serve(async (req) => {
 
     console.log(`[MISSING_PICKUPS] Checking for missing pickups in org: ${organization_id}`);
 
+    // Get admin users to create notifications for
+    const { data: adminUsers, error: usersError } = await supabase
+      .from('user_organization_roles')
+      .select('user_id')
+      .eq('organization_id', organization_id)
+      .in('role', ['admin', 'ops_manager', 'dispatcher', 'receptionist']);
+
+    if (usersError) {
+      console.error('[MISSING_PICKUPS] Error getting admin users:', usersError);
+      throw usersError;
+    }
+
+    if (!adminUsers || adminUsers.length === 0) {
+      console.log('[MISSING_PICKUPS] No admin users found to notify');
+      return new Response(
+        JSON.stringify({ success: true, notifications_created: 0, message: 'No admin users to notify' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`[MISSING_PICKUPS] Found ${adminUsers.length} admin users to notify`);
+
     const today = new Date();
     const currentDayOfWeek = today.getDay();
     const currentWeekOfMonth = Math.ceil(today.getDate() / 7);
@@ -58,7 +80,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const notificationsToCreate = [];
+    const notificationsToCreate: any[] = [];
 
     for (const pattern of patterns) {
       const client = pattern.client;
@@ -161,23 +183,27 @@ Deno.serve(async (req) => {
         ? '✓' 
         : '~';
 
-      notificationsToCreate.push({
-        organization_id,
-        type: 'missing_pickup',
-        title: `${client.company_name} may need scheduling`,
-        message: `${client.company_name} is ${scheduleReason}. They're not currently scheduled.\n\nPattern Details:\n• Frequency: ${frequencyText}${pattern.typical_day_of_week !== null ? ` on ${dayName}s` : ''}\n• Last pickup: ${daysSinceLastPickup} days ago\n• Confidence: ${pattern.confidence_score}% ${confidenceEmoji}`,
-        priority: 'medium',
-        metadata: {
-          client_id: client.id,
-          client_name: client.company_name,
-          frequency: pattern.frequency,
-          typical_day: dayName,
-          days_since_last_pickup: daysSinceLastPickup,
-          confidence_score: pattern.confidence_score,
-        },
-      });
+      // Create notification for EACH admin user
+      for (const user of adminUsers) {
+        notificationsToCreate.push({
+          user_id: user.user_id,
+          organization_id,
+          type: 'missing_pickup',
+          title: `${client.company_name} may need scheduling`,
+          message: `${client.company_name} is ${scheduleReason}. They're not currently scheduled.\n\nPattern Details:\n• Frequency: ${frequencyText}${pattern.typical_day_of_week !== null ? ` on ${dayName}s` : ''}\n• Last pickup: ${daysSinceLastPickup} days ago\n• Confidence: ${pattern.confidence_score}% ${confidenceEmoji}`,
+          priority: 'medium',
+          metadata: {
+            client_id: client.id,
+            client_name: client.company_name,
+            frequency: pattern.frequency,
+            typical_day: dayName,
+            days_since_last_pickup: daysSinceLastPickup,
+            confidence_score: pattern.confidence_score,
+          },
+        });
+      }
 
-      console.log(`[MISSING_PICKUPS] Created notification for ${client.company_name}`);
+      console.log(`[MISSING_PICKUPS] Created notifications for ${client.company_name} (${adminUsers.length} users)`);
     }
 
     // Insert notifications
@@ -189,13 +215,14 @@ Deno.serve(async (req) => {
       if (insertError) throw insertError;
     }
 
-    console.log(`[MISSING_PICKUPS] Created ${notificationsToCreate.length} notifications`);
+    console.log(`[MISSING_PICKUPS] Created ${notificationsToCreate.length} total notifications`);
 
     return new Response(
       JSON.stringify({
         success: true,
         notifications_created: notificationsToCreate.length,
         clients_checked: patterns.length,
+        users_notified: adminUsers.length,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
