@@ -88,6 +88,7 @@ export const useCreateDropoffWithManifest = () => {
       queryClient.invalidateQueries({ queryKey: ['yesterday-tire-totals'] });
       queryClient.invalidateQueries({ queryKey: ['monthly-tire-totals'] });
       queryClient.invalidateQueries({ queryKey: ['weekly-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['client-analytics-deep'] });
       toast({ 
         title: "Success", 
         description: "Drop-off processed and manifest generated successfully" 

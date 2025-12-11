@@ -79,6 +79,7 @@ export const useCreateDropoff = () => {
       queryClient.invalidateQueries({ queryKey: ['yesterday-tire-totals'] });
       queryClient.invalidateQueries({ queryKey: ['monthly-tire-totals'] });
       queryClient.invalidateQueries({ queryKey: ['weekly-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['client-analytics-deep'] });
       toast({ title: "Success", description: "Drop-off processed successfully" });
     },
     onError: (error) => {
@@ -105,6 +106,7 @@ export const useUpdateDropoff = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dropoffs'] });
+      queryClient.invalidateQueries({ queryKey: ['client-analytics-deep'] });
       toast({ title: "Success", description: "Drop-off updated successfully" });
     },
     onError: (error) => {
@@ -131,6 +133,7 @@ export const useDeleteDropoff = () => {
       queryClient.invalidateQueries({ queryKey: ['todays-dropoffs'] });
       queryClient.invalidateQueries({ queryKey: ['weekly-tire-totals'] });
       queryClient.invalidateQueries({ queryKey: ['monthly-tire-totals'] });
+      queryClient.invalidateQueries({ queryKey: ['client-analytics-deep'] });
       toast({ title: "Success", description: "Drop-off deleted successfully" });
     },
     onError: (error) => {
