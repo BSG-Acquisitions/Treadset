@@ -5,13 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { useManifests } from '@/hooks/useManifests';
 import { useClient, useClients } from '@/hooks/useClients';
 import { format, isToday, isThisMonth, subWeeks, subMonths, subDays, subYears, isAfter, isBefore, startOfMonth, endOfMonth, startOfYear, isWithinInterval, parseISO } from 'date-fns';
-import { FileText, Clock, CheckCircle, CreditCard, ArrowLeft, MapPin, User, Calendar as CalendarIcon, Receipt, Search, X, ChevronDown, Download, FileSpreadsheet, Package } from 'lucide-react';
+import { FileText, Clock, CheckCircle, CreditCard, ArrowLeft, MapPin, User, Calendar as CalendarIcon, Receipt, Search, X, ChevronDown, Download, FileSpreadsheet, Package, Check, ChevronsUpDown } from 'lucide-react';
 import { ManifestPDFControls } from '@/components/ManifestPDFControls';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -29,10 +29,18 @@ export default function Manifests() {
   const [toDate, setToDate] = useState<Date | undefined>();
   const [isExporting, setIsExporting] = useState(false);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+  const [clientComboboxOpen, setClientComboboxOpen] = useState(false);
   
   const { data: client } = useClient(clientId || '');
   const { data: clientsData } = useClients({ limit: 1000 });
   const clients = clientsData?.data || [];
+  
+  // Sort clients alphabetically
+  const sortedClients = useMemo(() => {
+    return [...clients].sort((a, b) => 
+      (a.company_name || '').localeCompare(b.company_name || '')
+    );
+  }, [clients]);
   
   // Fetch manifests - if a client is selected, filter by that client
   const effectiveClientId = selectedClientId !== 'all' ? selectedClientId : undefined;
@@ -524,17 +532,62 @@ export default function Manifests() {
               {/* Client Selector */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Client</label>
-                <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select client..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Clients</SelectItem>
-                    {clients.map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover open={clientComboboxOpen} onOpenChange={setClientComboboxOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={clientComboboxOpen}
+                      className="w-full justify-between font-normal"
+                    >
+                      {selectedClientName || "All Clients"}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search clients..." />
+                      <CommandList>
+                        <CommandEmpty>No clients found.</CommandEmpty>
+                        <CommandGroup>
+                          <CommandItem
+                            value="all-clients"
+                            onSelect={() => {
+                              setSelectedClientId('all');
+                              setClientComboboxOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedClientId === 'all' ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            All Clients
+                          </CommandItem>
+                          {sortedClients.map(c => (
+                            <CommandItem
+                              key={c.id}
+                              value={c.company_name || c.id}
+                              onSelect={() => {
+                                setSelectedClientId(c.id);
+                                setClientComboboxOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedClientId === c.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {c.company_name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               {/* Search */}
