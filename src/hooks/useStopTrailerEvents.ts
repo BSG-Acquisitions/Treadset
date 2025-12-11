@@ -134,9 +134,6 @@ export const useCompleteTrailerEvent = () => {
         case 'stage_empty':
           newStatus = 'staged';
           break;
-        case 'waiting_unload':
-          newStatus = 'waiting_unload';
-          break;
       }
 
       if (newStatus) {

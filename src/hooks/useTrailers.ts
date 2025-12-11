@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
-export type TrailerStatus = 'empty' | 'full' | 'staged' | 'in_transit' | 'waiting_unload';
+export type TrailerStatus = 'empty' | 'full' | 'staged';
 
 export interface Trailer {
   id: string;

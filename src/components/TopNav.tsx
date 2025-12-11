@@ -253,12 +253,6 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
-                            <Link to="/trailers/processor-queue" className="flex items-center gap-2">
-                              <Package className="h-4 w-4" />
-                              Processor Queue
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
                             <Link to="/trailers/vehicles" className="flex items-center gap-2">
                               <Truck className="h-4 w-4" />
                               Vehicles

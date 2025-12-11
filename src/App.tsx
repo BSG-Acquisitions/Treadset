@@ -64,7 +64,6 @@ import TrailerExternalMoves from "./pages/TrailerExternalMoves";
 import TrailerVehicles from "./pages/TrailerVehicles";
 import DriverTrailerAssignments from "./pages/DriverTrailerAssignments";
 import TrailerDriverManagement from "./pages/TrailerDriverManagement";
-import ProcessorQueue from "./pages/ProcessorQueue";
 import TrailerReports from "./pages/TrailerReports";
 import { FEATURE_FLAGS } from "./lib/featureFlags";
 
@@ -394,15 +393,6 @@ const App = () => (
                   <ProtectedRoute roles={['admin', 'ops_manager']}>
                     <AppLayout>
                       <TrailerDriverManagement />
-                    </AppLayout>
-                  </ProtectedRoute>
-                ) : <NotFound />
-              } />
-              <Route path="/trailers/processor-queue" element={
-                FEATURE_FLAGS.TRAILERS ? (
-                  <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
-                    <AppLayout>
-                      <ProcessorQueue />
                     </AppLayout>
                   </ProtectedRoute>
                 ) : <NotFound />

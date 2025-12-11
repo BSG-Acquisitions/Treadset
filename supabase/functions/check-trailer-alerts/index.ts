@@ -7,7 +7,6 @@ const corsHeaders = {
 };
 
 // Alert thresholds
-const WAITING_UNLOAD_HOURS = 4; // Alert if waiting to unload for more than 4 hours
 const FULL_IDLE_HOURS = 24; // Alert if full trailer sits idle for more than 24 hours
 const ROUTE_START_GRACE_MINUTES = 30; // Alert if route hasn't started within 30 min of scheduled time
 
@@ -37,51 +36,7 @@ serve(async (req: Request) => {
     for (const orgId of uniqueOrgIds) {
       console.log(`[TrailerAlerts] Checking organization: ${orgId}`);
 
-      // 1. Check for trailers waiting to unload too long
-      const waitingThreshold = new Date(now.getTime() - WAITING_UNLOAD_HOURS * 60 * 60 * 1000);
-      
-      const { data: waitingTrailers } = await supabase
-        .from('trailers')
-        .select(`
-          id, trailer_number, current_location, updated_at,
-          last_event:trailer_events!trailers_last_event_id_fkey(timestamp)
-        `)
-        .eq('organization_id', orgId)
-        .eq('current_status', 'waiting_unload')
-        .eq('is_active', true);
-
-      for (const trailer of waitingTrailers || []) {
-        const eventTime = trailer.last_event?.timestamp 
-          ? new Date(trailer.last_event.timestamp) 
-          : new Date(trailer.updated_at);
-        
-        if (eventTime < waitingThreshold) {
-          // Check if alert already exists
-          const { data: existingAlert } = await supabase
-            .from('trailer_alerts')
-            .select('id')
-            .eq('trailer_id', trailer.id)
-            .eq('alert_type', 'waiting_too_long')
-            .eq('is_resolved', false)
-            .single();
-
-          if (!existingAlert) {
-            const hoursWaiting = Math.round((now.getTime() - eventTime.getTime()) / (60 * 60 * 1000));
-            
-            await supabase.from('trailer_alerts').insert({
-              organization_id: orgId,
-              trailer_id: trailer.id,
-              alert_type: 'waiting_too_long',
-              severity: hoursWaiting > 8 ? 'critical' : 'warning',
-              message: `Trailer ${trailer.trailer_number} has been waiting to unload for ${hoursWaiting} hours at ${trailer.current_location || 'unknown location'}`,
-            });
-            
-            alertsCreated.push(`waiting_too_long: ${trailer.trailer_number}`);
-          }
-        }
-      }
-
-      // 2. Check for full trailers sitting idle
+      // 1. Check for full trailers sitting idle
       const fullIdleThreshold = new Date(now.getTime() - FULL_IDLE_HOURS * 60 * 60 * 1000);
       
       const { data: fullTrailers } = await supabase
@@ -124,7 +79,7 @@ serve(async (req: Request) => {
         }
       }
 
-      // 3. Check for routes not started on time
+      // 2. Check for routes not started on time
       const routeGraceThreshold = new Date(now.getTime() - ROUTE_START_GRACE_MINUTES * 60 * 1000);
       const today = now.toISOString().split('T')[0];
       

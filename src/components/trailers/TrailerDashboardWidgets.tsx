@@ -42,8 +42,8 @@ export function TrailerStatusWidget() {
             <p className="text-xs text-white/70">Empty</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold">{utilization?.statusBreakdown.waiting_unload || 0}</p>
-            <p className="text-xs text-white/70">Waiting</p>
+            <p className="text-2xl font-bold">{utilization?.statusBreakdown.staged || 0}</p>
+            <p className="text-xs text-white/70">Staged</p>
           </div>
         </div>
         <Button 
