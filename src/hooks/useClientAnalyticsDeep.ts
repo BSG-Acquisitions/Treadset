@@ -431,10 +431,29 @@ export const useClientAnalyticsDeep = (period: AnalyticsPeriod = 'month') => {
         }
       });
 
+      // Build set of clients who have ever had a pickup (not drop-off only clients)
+      const clientsWithPickupHistory = new Set<string>();
+      currentPickups?.forEach((p: any) => {
+        if (p.client_id) clientsWithPickupHistory.add(p.client_id);
+      });
+      previousPickups?.forEach((p: any) => {
+        if (p.client_id) clientsWithPickupHistory.add(p.client_id);
+      });
+      // Also check last_pickup_at on client record - indicates they've had pickups historically
+      clientMap.forEach((client, clientId) => {
+        if (client.last_pickup_at) clientsWithPickupHistory.add(clientId);
+      });
+
       // Find at-risk clients (no activity in current period but had activity before)
-      // Also check if they have recent dropoffs - if so, they're NOT at-risk
+      // EXCLUDE drop-off only clients who have never had a pickup
       clientMap.forEach((client, clientId) => {
         if (!clientCurrentStats.has(clientId)) {
+          // Skip clients who have ONLY dropoff activity (never had a pickup)
+          // These are drop-off clients who bring tires TO us, not pickup clients we service
+          if (!clientsWithPickupHistory.has(clientId)) {
+            return; // Skip - they're drop-off only
+          }
+
           const pattern = patternMap.get(clientId);
           const previous = clientPreviousStats.get(clientId);
           const lastPickup = pattern?.last_pickup_date || client?.last_pickup_at;
