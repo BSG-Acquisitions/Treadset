@@ -2139,6 +2139,7 @@ export type Database = {
           id: string
           is_read: boolean
           message: string
+          metadata: Json | null
           organization_id: string
           priority: string | null
           related_id: string | null
@@ -2155,6 +2156,7 @@ export type Database = {
           id?: string
           is_read?: boolean
           message: string
+          metadata?: Json | null
           organization_id: string
           priority?: string | null
           related_id?: string | null
@@ -2171,6 +2173,7 @@ export type Database = {
           id?: string
           is_read?: boolean
           message?: string
+          metadata?: Json | null
           organization_id?: string
           priority?: string | null
           related_id?: string | null

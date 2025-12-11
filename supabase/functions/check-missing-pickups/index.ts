@@ -47,10 +47,10 @@ Deno.serve(async (req) => {
       const orgId = org.id;
       console.log(`[MISSING_PICKUPS] Processing org: ${orgId}`);
 
-      // Get admin users to create notifications for
+      // Get admin users to create notifications for - need auth_user_id for FK constraint
       const { data: adminUsers, error: usersError } = await supabase
         .from('user_organization_roles')
-        .select('user_id')
+        .select('user_id, users!inner(auth_user_id)')
         .eq('organization_id', orgId)
         .in('role', ['admin', 'ops_manager', 'dispatcher', 'receptionist']);
 
@@ -63,6 +63,11 @@ Deno.serve(async (req) => {
         console.log(`[MISSING_PICKUPS] No admin users found for org ${orgId}`);
         continue;
       }
+      
+      // Extract auth_user_ids
+      const authUserIds = adminUsers
+        .map(u => (u as any).users?.auth_user_id)
+        .filter(Boolean);
 
       // Get all patterns that should have pickups this week
       const { data: patterns, error: patternsError } = await supabase
@@ -175,10 +180,10 @@ Deno.serve(async (req) => {
           ? '✓' 
           : '~';
 
-        // Create notification for EACH admin user
-        for (const user of adminUsers) {
+        // Create notification for EACH admin user using auth_user_id
+        for (const authUserId of authUserIds) {
           notificationsToCreate.push({
-            user_id: user.user_id,
+            user_id: authUserId,
             organization_id: orgId,
             type: 'missing_pickup',
             title: `${client.company_name} may need scheduling`,
