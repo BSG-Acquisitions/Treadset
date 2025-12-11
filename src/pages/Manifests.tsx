@@ -10,7 +10,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { useManifests } from '@/hooks/useManifests';
 import { useClient, useClients } from '@/hooks/useClients';
-import { ManifestAlertsList } from '@/components/ManifestAlertsList';
 import { format, isToday, isThisMonth, subWeeks, subMonths, subDays, subYears, isAfter, isBefore, startOfMonth, endOfMonth, startOfYear, isWithinInterval, parseISO } from 'date-fns';
 import { FileText, Clock, CheckCircle, CreditCard, ArrowLeft, MapPin, User, Calendar as CalendarIcon, Receipt, Search, X, ChevronDown, Download, FileSpreadsheet, Package } from 'lucide-react';
 import { ManifestPDFControls } from '@/components/ManifestPDFControls';
@@ -690,8 +689,6 @@ export default function Manifests() {
             </Button>
           </div>
         </div>
-
-        <ManifestAlertsList />
 
         {/* Manifests List */}
         <Card>
