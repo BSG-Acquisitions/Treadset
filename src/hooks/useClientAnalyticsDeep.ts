@@ -175,8 +175,10 @@ export const useClientAnalyticsDeep = (period: AnalyticsPeriod = 'month') => {
       if (currentError) throw currentError;
       
       // Filter manifests using signed_at with created_at fallback (matching dashboard logic)
+      // Extract YYYY-MM-DD portion from ISO timestamps for proper date comparison
       const filteredCurrentManifests = currentManifests?.filter((m: any) => {
-        const effectiveDate = m.signed_at || m.created_at;
+        const effectiveDateStr = m.signed_at || m.created_at;
+        const effectiveDate = effectiveDateStr?.split('T')[0] || '';
         return effectiveDate >= effectiveCurrentStart && effectiveDate <= dates.currentEnd;
       }) || [];
 
@@ -249,8 +251,10 @@ export const useClientAnalyticsDeep = (period: AnalyticsPeriod = 'month') => {
       if (previousError) throw previousError;
       
       // Filter previous manifests using signed_at with created_at fallback
+      // Extract YYYY-MM-DD portion from ISO timestamps for proper date comparison
       const filteredPreviousManifests = previousManifests?.filter((m: any) => {
-        const effectiveDate = m.signed_at || m.created_at;
+        const effectiveDateStr = m.signed_at || m.created_at;
+        const effectiveDate = effectiveDateStr?.split('T')[0] || '';
         return effectiveDate >= effectivePreviousStart && effectiveDate < dates.previousEnd;
       }) || [];
 
