@@ -113,6 +113,32 @@ export const useUpdateDropoff = () => {
   });
 };
 
+export const useDeleteDropoff = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('dropoffs')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dropoffs'] });
+      queryClient.invalidateQueries({ queryKey: ['todays-dropoffs'] });
+      queryClient.invalidateQueries({ queryKey: ['weekly-tire-totals'] });
+      queryClient.invalidateQueries({ queryKey: ['monthly-tire-totals'] });
+      toast({ title: "Success", description: "Drop-off deleted successfully" });
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+};
+
 export const useTodaysDropoffs = () => {
   return useQuery({
     queryKey: ['todays-dropoffs'],
