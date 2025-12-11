@@ -1,16 +1,84 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useLiveClientAnalytics } from "@/hooks/useLiveClientAnalytics";
-import { MonthlyPerformanceTable } from "./MonthlyPerformanceTable";
+import { Badge } from "@/components/ui/badge";
+import { useClientAnalyticsDeep, AnalyticsPeriod } from "@/hooks/useClientAnalyticsDeep";
+import { RevenueCharts, RevenueTrendChart, DayOfWeekChart, ConcentrationChart } from "./RevenueCharts";
+import { ClientHealthPanel } from "./ClientHealthPanel";
+import { ClientInsightCards } from "./ClientInsightCards";
+import { TrendingUp, TrendingDown, DollarSign, Users, Truck, Package } from "lucide-react";
+
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+};
+
+const formatNumber = (value: number) => {
+  return new Intl.NumberFormat('en-US').format(value);
+};
+
+function ComparisonBadge({ value, suffix = '' }: { value: number; suffix?: string }) {
+  if (value === 0) return null;
+  
+  const isPositive = value > 0;
+  return (
+    <Badge 
+      variant={isPositive ? "default" : "destructive"} 
+      className="ml-2 text-xs"
+    >
+      {isPositive ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
+      {isPositive ? '+' : ''}{Math.round(value)}{suffix}
+    </Badge>
+  );
+}
+
+function StatCard({ 
+  title, 
+  value, 
+  change, 
+  icon: Icon, 
+  subtitle 
+}: { 
+  title: string; 
+  value: string; 
+  change?: number; 
+  icon: any; 
+  subtitle?: string;
+}) {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+        <Icon className="h-4 w-4 text-muted-foreground" />
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center">
+          <div className="text-2xl font-bold">{value}</div>
+          {change !== undefined && <ComparisonBadge value={change} suffix="%" />}
+        </div>
+        {subtitle && <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>}
+      </CardContent>
+    </Card>
+  );
+}
 
 export function ClientAnalyticsDashboard() {
-  const currentYear = new Date().getFullYear();
-  const { data: analytics, isLoading } = useLiveClientAnalytics(currentYear);
+  const [period, setPeriod] = useState<AnalyticsPeriod>('month');
+  const { data: analytics, isLoading } = useClientAnalyticsDeep(period);
 
   if (isLoading) {
     return (
-      <div className="grid gap-6">
+      <div className="space-y-6">
+        <div className="flex gap-2">
+          {['Week', 'Month', 'Quarter', 'Year'].map(p => (
+            <Skeleton key={p} className="h-10 w-20" />
+          ))}
+        </div>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <Card key={i}>
@@ -32,171 +100,182 @@ export function ClientAnalyticsDashboard() {
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground">
-            No completed manifests found for {currentYear}. Complete some pickups to see analytics.
+            No completed manifests found. Complete some pickups to see analytics.
           </p>
         </CardContent>
       </Card>
     );
   }
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
+  const periodLabels: Record<AnalyticsPeriod, string> = {
+    week: 'This Week',
+    month: 'This Month',
+    quarter: 'This Quarter',
+    year: 'This Year',
   };
-
-  const formatNumber = (value: number) => {
-    return new Intl.NumberFormat('en-US').format(value);
-  };
-
-  // Calculate total tires from all tire types
-  const totalTires = analytics.total_ptes + analytics.total_otr + analytics.total_tractor;
 
   return (
     <div className="space-y-6">
-      {/* Key Metrics */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Revenue
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(analytics.total_revenue)}</div>
-            <p className="text-xs text-muted-foreground mt-1">Year to date</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Tires Recycled
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatNumber(totalTires)}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {formatNumber(analytics.total_ptes)} PTEs, {formatNumber(analytics.total_otr)} OTR, {formatNumber(analytics.total_tractor)} Tractor
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Pickups
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatNumber(analytics.total_pickups)}</div>
-            <p className="text-xs text-muted-foreground mt-1">Completed this year</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Active Clients
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatNumber(analytics.total_clients)}</div>
-            <p className="text-xs text-muted-foreground mt-1">Currently active</p>
-          </CardContent>
-        </Card>
+      {/* Period Selector */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <Tabs value={period} onValueChange={(v) => setPeriod(v as AnalyticsPeriod)}>
+          <TabsList>
+            <TabsTrigger value="week">Week</TabsTrigger>
+            <TabsTrigger value="month">Month</TabsTrigger>
+            <TabsTrigger value="quarter">Quarter</TabsTrigger>
+            <TabsTrigger value="year">Year</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <p className="text-sm text-muted-foreground">
+          Showing data for <span className="font-medium text-foreground">{periodLabels[period]}</span>
+        </p>
       </div>
 
-      {/* Detailed Analytics */}
-      <Tabs defaultValue="monthly" className="space-y-4">
+      {/* Key Metrics */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Total Revenue"
+          value={formatCurrency(analytics.totalRevenue)}
+          change={analytics.revenueChange}
+          icon={DollarSign}
+          subtitle={`vs last ${period}`}
+        />
+        <StatCard
+          title="Total Pickups"
+          value={formatNumber(analytics.totalPickups)}
+          change={analytics.pickupsChange}
+          icon={Truck}
+          subtitle={`vs last ${period}`}
+        />
+        <StatCard
+          title="Tires Recycled"
+          value={formatNumber(analytics.totalTires)}
+          icon={Package}
+          subtitle="Total PTEs (converted)"
+        />
+        <StatCard
+          title="Active Clients"
+          value={formatNumber(analytics.activeClients)}
+          icon={Users}
+          subtitle={`${analytics.newClients.length} new this ${period}`}
+        />
+      </div>
+
+      {/* Actionable Insights */}
+      <div className="space-y-2">
+        <h3 className="text-lg font-semibold">Insights & Recommendations</h3>
+        <ClientInsightCards insights={analytics.insights} />
+      </div>
+
+      {/* Detailed Analytics Tabs */}
+      <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="monthly">Monthly Trends</TabsTrigger>
-          <TabsTrigger value="clients">Top Clients</TabsTrigger>
-          <TabsTrigger value="performance">Performance</TabsTrigger>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="health">Client Health</TabsTrigger>
+          <TabsTrigger value="revenue">Revenue Analysis</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="monthly" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Monthly Performance</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <MonthlyPerformanceTable monthlyData={analytics.monthly_data} />
-            </CardContent>
-          </Card>
+        <TabsContent value="overview" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <RevenueTrendChart data={analytics.revenueTrend} period={period} />
+            <DayOfWeekChart data={analytics.revenueByDay} />
+            <ConcentrationChart data={analytics.concentration} />
+          </div>
+          
+          {/* Quick Client Summary */}
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card className="border-l-4 border-l-green-500">
+              <CardContent className="pt-4">
+                <div className="text-2xl font-bold text-green-600">{analytics.growingClients.length}</div>
+                <p className="text-sm text-muted-foreground">Growing Clients</p>
+              </CardContent>
+            </Card>
+            <Card className="border-l-4 border-l-blue-500">
+              <CardContent className="pt-4">
+                <div className="text-2xl font-bold text-blue-600">{analytics.stableClients.length}</div>
+                <p className="text-sm text-muted-foreground">Stable Clients</p>
+              </CardContent>
+            </Card>
+            <Card className="border-l-4 border-l-red-500">
+              <CardContent className="pt-4">
+                <div className="text-2xl font-bold text-red-600">{analytics.decliningClients.length}</div>
+                <p className="text-sm text-muted-foreground">Declining Clients</p>
+              </CardContent>
+            </Card>
+            <Card className="border-l-4 border-l-orange-500">
+              <CardContent className="pt-4">
+                <div className="text-2xl font-bold text-orange-600">{analytics.atRiskClients.length}</div>
+                <p className="text-sm text-muted-foreground">At-Risk Clients</p>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
-        <TabsContent value="clients" className="space-y-4">
+        <TabsContent value="health">
+          <ClientHealthPanel
+            growingClients={analytics.growingClients}
+            stableClients={analytics.stableClients}
+            decliningClients={analytics.decliningClients}
+            newClients={analytics.newClients}
+            atRiskClients={analytics.atRiskClients}
+          />
+        </TabsContent>
+
+        <TabsContent value="revenue" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <RevenueTrendChart data={analytics.revenueTrend} period={period} />
+            <ConcentrationChart data={analytics.concentration} />
+          </div>
+          
+          {/* Top Revenue Clients Table */}
           <Card>
             <CardHeader>
-              <CardTitle>Top Clients by Revenue</CardTitle>
+              <CardTitle>Top Revenue Clients</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {analytics.top_clients.map((client, index) => (
-                  <div key={client.client_id} className="flex items-center justify-between p-4 rounded-lg border">
+              <div className="space-y-3">
+                {analytics.concentration.topClients.map((client, index) => (
+                  <div key={client.name} className="flex items-center justify-between p-3 rounded-lg border">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-sm">
                         {index + 1}
                       </div>
-                      <div>
-                        <p className="font-medium">{client.company_name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {formatNumber(client.pickups)} pickups • {formatNumber(client.ptes)} PTEs
-                        </p>
-                      </div>
+                      <span className="font-medium">{client.name}</span>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold">{formatCurrency(client.revenue)}</p>
+                    <div className="flex items-center gap-4">
+                      <span className="text-muted-foreground text-sm">{Math.round(client.percent)}%</span>
+                      <span className="font-bold">{formatCurrency(client.revenue)}</span>
                     </div>
                   </div>
                 ))}
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
 
-        <TabsContent value="performance" className="space-y-4">
-          <div className="grid gap-6 md:grid-cols-2">
+          {/* Day of Week Insights */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <DayOfWeekChart data={analytics.revenueByDay} />
             <Card>
               <CardHeader>
-                <CardTitle>Environmental Impact</CardTitle>
+                <CardTitle>Day Performance Summary</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <div className="text-sm text-muted-foreground">Total Weight</div>
-                  <div className="text-2xl font-bold">{analytics.total_weight_tons.toFixed(1)} tons</div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <div className="text-sm text-muted-foreground">Avg per Pickup</div>
-                  <div className="text-2xl font-bold">
-                    {analytics.total_pickups > 0 
-                      ? (analytics.total_weight_tons / analytics.total_pickups).toFixed(2) 
-                      : '0.00'} tons
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Efficiency Metrics</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <div className="text-sm text-muted-foreground">Revenue per Pickup</div>
-                  <div className="text-2xl font-bold">
-                    {formatCurrency(analytics.avg_revenue_per_pickup || 0)}
-                  </div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <div className="text-sm text-muted-foreground">PTEs per Pickup</div>
-                  <div className="text-2xl font-bold">
-                    {formatNumber(Math.round(analytics.avg_ptes_per_pickup || 0))}
-                  </div>
+              <CardContent>
+                <div className="space-y-3">
+                  {analytics.revenueByDay
+                    .filter((_, i) => i > 0 && i < 6)
+                    .sort((a, b) => b.revenue - a.revenue)
+                    .map((day, index) => (
+                      <div key={day.day} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {index === 0 && <Badge variant="default">Best</Badge>}
+                          <span className="font-medium">{day.dayName}</span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <span className="text-sm text-muted-foreground">{day.pickups} pickups</span>
+                          <span className="font-bold">{formatCurrency(day.revenue)}</span>
+                        </div>
+                      </div>
+                    ))}
                 </div>
               </CardContent>
             </Card>
