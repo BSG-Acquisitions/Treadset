@@ -9,7 +9,14 @@ interface RevenueChartsProps {
   period: string;
 }
 
-const COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
+const COLORS = [
+  '#1A4314',  // TreadSet Deep Green - Top client
+  '#2563EB',  // Blue
+  '#DC2626',  // Red
+  '#F59E0B',  // Amber/Orange
+  '#8B5CF6',  // Purple
+  '#6B7280',  // Gray - Others
+];
 
 const formatCurrency = (value: number) => {
   if (value >= 1000) return `$${(value / 1000).toFixed(1)}k`;
