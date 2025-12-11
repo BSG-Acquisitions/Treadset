@@ -161,3 +161,6 @@ verify_jwt = false
 
 [functions.check-trailer-alerts]
 verify_jwt = false
+
+[functions.batch-manifest-export]
+verify_jwt = false
