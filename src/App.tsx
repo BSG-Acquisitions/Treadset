@@ -13,7 +13,6 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import ClientDetail from "./pages/ClientDetail";
 import Clients from "./pages/Clients";
-import RoutesToday from "./pages/RoutesToday";
 import RoutesPrintToday from "./pages/RoutesPrintToday";
 import Book from "./pages/Book";
 import BookingConfirmation from "./pages/BookingConfirmation";
@@ -34,8 +33,6 @@ import DriverAssignmentHelper from "./pages/DriverAssignmentHelper";
 import DriverAssignmentView from "./pages/DriverAssignmentView";
 import PublicBook from "./pages/PublicBook";
 import PublicBookingConfirmation from "./pages/PublicBookingConfirmation";
-import ManifestExample from '@/pages/ManifestExample';
-import AcroFormDemo from '@/pages/AcroFormDemo';
 import ManifestViewer from './pages/ManifestViewer';
 import ReceiverSignatures from './pages/ReceiverSignatures';
 import ReceiverManagement from './pages/ReceiverManagement';
@@ -85,8 +82,6 @@ const App = () => (
               {/* Public Routes - No Authentication Required */}
               <Route path="/public-book" element={<PublicBook />} />
               <Route path="/public-booking-confirmation" element={<PublicBookingConfirmation />} />
-              <Route path="/test/manifest" element={<ManifestExample />} />
-              <Route path="/test/acroform" element={<AcroFormDemo />} />
               
               {/* Auth Routes */}
               <Route path="/auth" element={<Auth />} />
@@ -124,13 +119,6 @@ const App = () => (
                 <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
                   <AppLayout>
                     <EnhancedRoutesToday />
-                  </AppLayout>
-                </ProtectedRoute>
-              } />
-              <Route path="/routes/legacy" element={
-                <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
-                  <AppLayout>
-                    <RoutesToday />
                   </AppLayout>
                 </ProtectedRoute>
               } />
