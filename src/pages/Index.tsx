@@ -678,7 +678,7 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
         .eq('organization_id', user?.currentOrganization?.id)
         .gte('created_at', format(lookbackDate, 'yyyy-MM-dd') + 'T00:00:00')
         .lte('created_at', format(endDate, 'yyyy-MM-dd') + 'T23:59:59')
-        .in('status', ['COMPLETED', 'AWAITING_RECEIVER_SIGNATURE'])
+        .eq('status', 'COMPLETED')
         .not('client_id', 'is', null);
 
       if (manifestsError) throw manifestsError;
