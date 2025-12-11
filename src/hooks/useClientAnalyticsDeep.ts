@@ -180,12 +180,13 @@ export const useClientAnalyticsDeep = (period: AnalyticsPeriod = 'month') => {
         return effectiveDate >= effectiveCurrentStart && effectiveDate <= dates.currentEnd;
       }) || [];
 
-      // Fetch current period dropoffs
+      // Fetch current period dropoffs (include manifest_id to exclude linked manifests from pickup count)
       const { data: currentDropoffs, error: dropoffsError } = await supabase
         .from('dropoffs')
         .select(`
           id,
           client_id,
+          manifest_id,
           computed_revenue,
           dropoff_date,
           pte_count,
@@ -198,6 +199,13 @@ export const useClientAnalyticsDeep = (period: AnalyticsPeriod = 'month') => {
         .lte('dropoff_date', dates.currentEnd);
 
       if (dropoffsError) throw dropoffsError;
+      
+      // Build set of manifest IDs linked to dropoffs (to exclude from pickup tire count - matches dashboard logic)
+      const dropoffLinkedManifestIds = new Set(
+        (currentDropoffs || [])
+          .filter((d: any) => d.manifest_id)
+          .map((d: any) => d.manifest_id)
+      );
 
       // Fetch previous period pickups
       const { data: previousPickups, error: prevPickupsError } = await supabase
@@ -300,8 +308,12 @@ export const useClientAnalyticsDeep = (period: AnalyticsPeriod = 'month') => {
       const totalRevenue = pickupRevenue + dropoffRevenue;
       
       // Calculate total tires (PTEs) from manifests (tire counts) and dropoffs
-      // Use filtered manifests and apply 5x multiplier for commercial tires (like dashboard)
-      const pickupTires = filteredCurrentManifests.reduce((sum, m: any) => {
+      // Exclude manifests linked to dropoffs to avoid double-counting (matches dashboard RPC logic)
+      const pickupManifests = filteredCurrentManifests.filter(
+        (m: any) => !dropoffLinkedManifestIds.has(m.id)
+      );
+      
+      const pickupTires = pickupManifests.reduce((sum, m: any) => {
         const pte = (Number(m.pte_on_rim) || 0) + (Number(m.pte_off_rim) || 0);
         // Commercial tires get 5x multiplier (same as semi/tractor - per Michigan conversion rates)
         const commercial = 5 * ((Number(m.commercial_17_5_19_5_off) || 0) + (Number(m.commercial_17_5_19_5_on) || 0) +
