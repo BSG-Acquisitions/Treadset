@@ -572,8 +572,10 @@ export const useClientAnalyticsDeep = (period: AnalyticsPeriod = 'month') => {
         });
       }
 
-      const bestDay = revenueByDay.reduce((best, day) => day.revenue > best.revenue ? day : best, revenueByDay[0]);
-      if (bestDay.revenue > 0) {
+      // Only consider weekdays (Mon-Fri) for best day - business is closed on weekends
+      const weekdaysOnly = revenueByDay.filter((_, i) => i >= 1 && i <= 5);
+      const bestDay = weekdaysOnly.reduce((best, day) => day.revenue > best.revenue ? day : best, weekdaysOnly[0]);
+      if (bestDay && bestDay.revenue > 0) {
         insights.push({
           type: 'info',
           title: `${bestDay.dayName}s Are Your Best Day`,
