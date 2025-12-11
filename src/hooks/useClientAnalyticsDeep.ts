@@ -152,13 +152,14 @@ export const useClientAnalyticsDeep = (period: AnalyticsPeriod = 'month') => {
 
       if (pickupsError) throw pickupsError;
 
-      // Fetch current period manifests (for tire counts - use created_at as fallback)
+      // Fetch current period manifests (for tire counts - include AWAITING_RECEIVER_SIGNATURE like dashboard)
       const { data: currentManifests, error: currentError } = await supabase
         .from('manifests')
         .select(`
           id,
           client_id,
           created_at,
+          signed_at,
           pte_on_rim,
           pte_off_rim,
           commercial_17_5_19_5_off,
@@ -169,11 +170,15 @@ export const useClientAnalyticsDeep = (period: AnalyticsPeriod = 'month') => {
           tractor_count
         `)
         .eq('organization_id', organizationId)
-        .eq('status', 'COMPLETED')
-        .gte('created_at', effectiveCurrentStart)
-        .lte('created_at', dates.currentEnd);
+        .in('status', ['COMPLETED', 'AWAITING_RECEIVER_SIGNATURE']);
 
       if (currentError) throw currentError;
+      
+      // Filter manifests using signed_at with created_at fallback (matching dashboard logic)
+      const filteredCurrentManifests = currentManifests?.filter((m: any) => {
+        const effectiveDate = m.signed_at || m.created_at;
+        return effectiveDate >= effectiveCurrentStart && effectiveDate <= dates.currentEnd;
+      }) || [];
 
       // Fetch current period dropoffs
       const { data: currentDropoffs, error: dropoffsError } = await supabase
@@ -213,24 +218,33 @@ export const useClientAnalyticsDeep = (period: AnalyticsPeriod = 'month') => {
 
       if (prevPickupsError) throw prevPickupsError;
 
-      // Fetch previous period manifests (for tire counts)
+      // Fetch previous period manifests (for tire counts - include AWAITING_RECEIVER_SIGNATURE)
       const { data: previousManifests, error: previousError } = await supabase
         .from('manifests')
         .select(`
           id,
           client_id,
           created_at,
+          signed_at,
           pte_on_rim,
           pte_off_rim,
+          commercial_17_5_19_5_off,
+          commercial_17_5_19_5_on,
+          commercial_22_5_off,
+          commercial_22_5_on,
           otr_count,
           tractor_count
         `)
         .eq('organization_id', organizationId)
-        .eq('status', 'COMPLETED')
-        .gte('created_at', effectivePreviousStart)
-        .lt('created_at', dates.previousEnd);
+        .in('status', ['COMPLETED', 'AWAITING_RECEIVER_SIGNATURE']);
 
       if (previousError) throw previousError;
+      
+      // Filter previous manifests using signed_at with created_at fallback
+      const filteredPreviousManifests = previousManifests?.filter((m: any) => {
+        const effectiveDate = m.signed_at || m.created_at;
+        return effectiveDate >= effectivePreviousStart && effectiveDate < dates.previousEnd;
+      }) || [];
 
       // Fetch previous period dropoffs
       const { data: previousDropoffs, error: prevDropoffsError } = await supabase
@@ -286,14 +300,16 @@ export const useClientAnalyticsDeep = (period: AnalyticsPeriod = 'month') => {
       const totalRevenue = pickupRevenue + dropoffRevenue;
       
       // Calculate total tires (PTEs) from manifests (tire counts) and dropoffs
-      const pickupTires = currentManifests?.reduce((sum, m: any) => {
+      // Use filtered manifests and apply 5x multiplier for commercial tires (like dashboard)
+      const pickupTires = filteredCurrentManifests.reduce((sum, m: any) => {
         const pte = (Number(m.pte_on_rim) || 0) + (Number(m.pte_off_rim) || 0);
-        const commercial = (Number(m.commercial_17_5_19_5_off) || 0) + (Number(m.commercial_17_5_19_5_on) || 0) +
-                          (Number(m.commercial_22_5_off) || 0) + (Number(m.commercial_22_5_on) || 0);
+        // Commercial tires get 5x multiplier (same as semi/tractor - per Michigan conversion rates)
+        const commercial = 5 * ((Number(m.commercial_17_5_19_5_off) || 0) + (Number(m.commercial_17_5_19_5_on) || 0) +
+                          (Number(m.commercial_22_5_off) || 0) + (Number(m.commercial_22_5_on) || 0));
         const otr = (Number(m.otr_count) || 0) * 15;
         const tractor = (Number(m.tractor_count) || 0) * 5;
         return sum + pte + commercial + otr + tractor;
-      }, 0) || 0;
+      }, 0);
       
       const dropoffTires = currentDropoffs?.reduce((sum, d: any) => {
         const pte = Number(d.pte_count) || 0;
