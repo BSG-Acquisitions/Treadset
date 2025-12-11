@@ -130,15 +130,34 @@ export const useClientAnalyticsDeep = (period: AnalyticsPeriod = 'month') => {
 
       // Minimum date filter for real data (Nov 2025+)
       const MIN_DATA_DATE = '2025-11-01';
+      const effectiveCurrentStart = dates.currentStart >= MIN_DATA_DATE ? dates.currentStart : MIN_DATA_DATE;
+      const effectivePreviousStart = dates.previousStart >= MIN_DATA_DATE ? dates.previousStart : MIN_DATA_DATE;
 
-      // Fetch current period manifests (pickups)
+      // Fetch current period PICKUPS directly (for revenue - more reliable than manifests.total)
+      const { data: currentPickups, error: pickupsError } = await supabase
+        .from('pickups')
+        .select(`
+          id,
+          client_id,
+          pickup_date,
+          computed_revenue,
+          final_revenue,
+          status,
+          clients!inner(id, company_name)
+        `)
+        .eq('organization_id', organizationId)
+        .eq('status', 'completed')
+        .gte('pickup_date', effectiveCurrentStart)
+        .lte('pickup_date', dates.currentEnd);
+
+      if (pickupsError) throw pickupsError;
+
+      // Fetch current period manifests (for tire counts - use created_at as fallback)
       const { data: currentManifests, error: currentError } = await supabase
         .from('manifests')
         .select(`
           id,
           client_id,
-          total,
-          signed_at,
           created_at,
           pte_on_rim,
           pte_off_rim,
@@ -147,13 +166,12 @@ export const useClientAnalyticsDeep = (period: AnalyticsPeriod = 'month') => {
           commercial_22_5_off,
           commercial_22_5_on,
           otr_count,
-          tractor_count,
-          clients!inner(id, company_name)
+          tractor_count
         `)
         .eq('organization_id', organizationId)
         .eq('status', 'COMPLETED')
-        .gte('signed_at', dates.currentStart >= MIN_DATA_DATE ? dates.currentStart : MIN_DATA_DATE)
-        .lte('signed_at', dates.currentEnd);
+        .gte('created_at', effectiveCurrentStart)
+        .lte('created_at', dates.currentEnd);
 
       if (currentError) throw currentError;
 
@@ -171,29 +189,46 @@ export const useClientAnalyticsDeep = (period: AnalyticsPeriod = 'month') => {
           clients!inner(id, company_name)
         `)
         .eq('organization_id', organizationId)
-        .gte('dropoff_date', dates.currentStart >= MIN_DATA_DATE ? dates.currentStart : MIN_DATA_DATE)
+        .gte('dropoff_date', effectiveCurrentStart)
         .lte('dropoff_date', dates.currentEnd);
 
       if (dropoffsError) throw dropoffsError;
 
-      // Fetch previous period manifests
+      // Fetch previous period pickups
+      const { data: previousPickups, error: prevPickupsError } = await supabase
+        .from('pickups')
+        .select(`
+          id,
+          client_id,
+          pickup_date,
+          computed_revenue,
+          final_revenue,
+          status,
+          clients!inner(id, company_name)
+        `)
+        .eq('organization_id', organizationId)
+        .eq('status', 'completed')
+        .gte('pickup_date', effectivePreviousStart)
+        .lt('pickup_date', dates.previousEnd);
+
+      if (prevPickupsError) throw prevPickupsError;
+
+      // Fetch previous period manifests (for tire counts)
       const { data: previousManifests, error: previousError } = await supabase
         .from('manifests')
         .select(`
           id,
           client_id,
-          total,
-          signed_at,
+          created_at,
           pte_on_rim,
           pte_off_rim,
           otr_count,
-          tractor_count,
-          clients!inner(id, company_name)
+          tractor_count
         `)
         .eq('organization_id', organizationId)
         .eq('status', 'COMPLETED')
-        .gte('signed_at', dates.previousStart >= MIN_DATA_DATE ? dates.previousStart : MIN_DATA_DATE)
-        .lt('signed_at', dates.previousEnd);
+        .gte('created_at', effectivePreviousStart)
+        .lt('created_at', dates.previousEnd);
 
       if (previousError) throw previousError;
 
@@ -210,7 +245,7 @@ export const useClientAnalyticsDeep = (period: AnalyticsPeriod = 'month') => {
           tractor_count
         `)
         .eq('organization_id', organizationId)
-        .gte('dropoff_date', dates.previousStart >= MIN_DATA_DATE ? dates.previousStart : MIN_DATA_DATE)
+        .gte('dropoff_date', effectivePreviousStart)
         .lt('dropoff_date', dates.previousEnd);
 
       if (prevDropoffsError) throw prevDropoffsError;
@@ -228,9 +263,21 @@ export const useClientAnalyticsDeep = (period: AnalyticsPeriod = 'month') => {
         .eq('organization_id', organizationId)
         .eq('is_active', true);
 
-      // Calculate pickup revenue from manifests
-      const pickupRevenue = currentManifests?.reduce((sum, m: any) => sum + (Number(m.total) || 0), 0) || 0;
-      const totalPickups = currentManifests?.length || 0;
+      // Build map of last dropoff per client (for at-risk logic)
+      const clientLastDropoff = new Map<string, string>();
+      currentDropoffs?.forEach((d: any) => {
+        const existing = clientLastDropoff.get(d.client_id);
+        if (!existing || d.dropoff_date > existing) {
+          clientLastDropoff.set(d.client_id, d.dropoff_date);
+        }
+      });
+
+      // Calculate pickup revenue from pickups table (use final_revenue or computed_revenue)
+      const pickupRevenue = currentPickups?.reduce((sum, p: any) => {
+        const revenue = Number(p.final_revenue) || Number(p.computed_revenue) || 0;
+        return sum + revenue;
+      }, 0) || 0;
+      const totalPickupsCount = currentPickups?.length || 0;
       
       // Calculate dropoff revenue
       const dropoffRevenue = currentDropoffs?.reduce((sum, d: any) => sum + (Number(d.computed_revenue) || 0), 0) || 0;
@@ -238,7 +285,7 @@ export const useClientAnalyticsDeep = (period: AnalyticsPeriod = 'month') => {
       // Combined total revenue
       const totalRevenue = pickupRevenue + dropoffRevenue;
       
-      // Calculate total tires (PTEs) from both pickups and dropoffs
+      // Calculate total tires (PTEs) from manifests (tire counts) and dropoffs
       const pickupTires = currentManifests?.reduce((sum, m: any) => {
         const pte = (Number(m.pte_on_rim) || 0) + (Number(m.pte_off_rim) || 0);
         const commercial = (Number(m.commercial_17_5_19_5_off) || 0) + (Number(m.commercial_17_5_19_5_on) || 0) +
@@ -258,25 +305,28 @@ export const useClientAnalyticsDeep = (period: AnalyticsPeriod = 'month') => {
       const totalTires = pickupTires + dropoffTires;
 
       // Previous period calculations
-      const previousPickupRevenue = previousManifests?.reduce((sum, m: any) => sum + (Number(m.total) || 0), 0) || 0;
+      const previousPickupRevenue = previousPickups?.reduce((sum, p: any) => {
+        const revenue = Number(p.final_revenue) || Number(p.computed_revenue) || 0;
+        return sum + revenue;
+      }, 0) || 0;
       const previousDropoffRevenue = previousDropoffs?.reduce((sum, d: any) => sum + (Number(d.computed_revenue) || 0), 0) || 0;
       const previousRevenue = previousPickupRevenue + previousDropoffRevenue;
-      const previousPickups = previousManifests?.length || 0;
+      const previousPickupsCount = previousPickups?.length || 0;
 
       // Calculate changes
       const revenueChange = previousRevenue > 0 ? ((totalRevenue - previousRevenue) / previousRevenue) * 100 : 0;
-      const pickupsChange = previousPickups > 0 ? ((totalPickups - previousPickups) / previousPickups) * 100 : 0;
+      const pickupsChange = previousPickupsCount > 0 ? ((totalPickupsCount - previousPickupsCount) / previousPickupsCount) * 100 : 0;
 
-      // Group by client for segmentation
+      // Group by client for segmentation (use pickups table for revenue data)
       const clientCurrentStats = new Map<string, { revenue: number; pickups: number; name: string }>();
       const clientPreviousStats = new Map<string, { revenue: number; pickups: number }>();
 
-      // Include pickup manifests in client stats
-      currentManifests?.forEach((m: any) => {
-        const clientId = m.client_id;
-        const clientData = m.clients as any;
+      // Include pickups in client stats
+      currentPickups?.forEach((p: any) => {
+        const clientId = p.client_id;
+        const clientData = p.clients as any;
         const existing = clientCurrentStats.get(clientId) || { revenue: 0, pickups: 0, name: clientData?.company_name || 'Unknown' };
-        existing.revenue += Number(m.total) || 0;
+        existing.revenue += Number(p.final_revenue) || Number(p.computed_revenue) || 0;
         existing.pickups += 1;
         clientCurrentStats.set(clientId, existing);
       });
@@ -291,10 +341,10 @@ export const useClientAnalyticsDeep = (period: AnalyticsPeriod = 'month') => {
         clientCurrentStats.set(clientId, existing);
       });
 
-      previousManifests?.forEach((m: any) => {
-        const clientId = m.client_id;
+      previousPickups?.forEach((p: any) => {
+        const clientId = p.client_id;
         const existing = clientPreviousStats.get(clientId) || { revenue: 0, pickups: 0 };
-        existing.revenue += Number(m.total) || 0;
+        existing.revenue += Number(p.final_revenue) || Number(p.computed_revenue) || 0;
         existing.pickups += 1;
         clientPreviousStats.set(clientId, existing);
       });
@@ -350,15 +400,24 @@ export const useClientAnalyticsDeep = (period: AnalyticsPeriod = 'month') => {
       });
 
       // Find at-risk clients (no activity in current period but had activity before)
+      // Also check if they have recent dropoffs - if so, they're NOT at-risk
       clientMap.forEach((client, clientId) => {
         if (!clientCurrentStats.has(clientId)) {
           const pattern = patternMap.get(clientId);
           const previous = clientPreviousStats.get(clientId);
           const lastPickup = pattern?.last_pickup_date || client?.last_pickup_at;
-          const daysSince = lastPickup ? differenceInDays(now, new Date(lastPickup)) : 999;
+          const daysSincePickup = lastPickup ? differenceInDays(now, new Date(lastPickup)) : 999;
           const expectedFreq = pattern?.average_days_between_pickups ? Number(pattern.average_days_between_pickups) : 30;
+          
+          // Check for recent dropoff activity - if client has recent dropoff, not at-risk
+          const lastDropoff = clientLastDropoff.get(clientId);
+          const daysSinceDropoff = lastDropoff ? differenceInDays(now, new Date(lastDropoff)) : 999;
+          
+          // Only at-risk if BOTH no recent pickup AND no recent dropoff
+          const isOverdue = daysSincePickup > expectedFreq * 1.5 && daysSinceDropoff > expectedFreq * 1.5;
+          const hadPreviousActivity = previous && previous.pickups > 0;
 
-          if (daysSince > expectedFreq * 1.5 || (previous && previous.pickups > 0)) {
+          if (isOverdue || (hadPreviousActivity && daysSinceDropoff > expectedFreq)) {
             atRiskClients.push({
               client_id: clientId,
               company_name: client.company_name,
@@ -368,7 +427,7 @@ export const useClientAnalyticsDeep = (period: AnalyticsPeriod = 'month') => {
               previous_pickups: previous?.pickups || 0,
               change_percent: -100,
               last_pickup_date: lastPickup || null,
-              days_since_pickup: daysSince,
+              days_since_pickup: Math.min(daysSincePickup, daysSinceDropoff), // Use most recent activity
               expected_frequency_days: expectedFreq,
             });
           }
@@ -380,12 +439,12 @@ export const useClientAnalyticsDeep = (period: AnalyticsPeriod = 'month') => {
       decliningClients.sort((a, b) => a.change_percent - b.change_percent);
       atRiskClients.sort((a, b) => b.days_since_pickup - a.days_since_pickup);
 
-      // Revenue by day of week (include both pickups and dropoffs)
+      // Revenue by day of week (use pickups for revenue, dropoffs)
       const dayStats = new Map<number, { revenue: number; pickups: number }>();
-      currentManifests?.forEach((m: any) => {
-        const day = new Date(m.signed_at || m.created_at).getDay();
+      currentPickups?.forEach((p: any) => {
+        const day = new Date(p.pickup_date).getDay();
         const existing = dayStats.get(day) || { revenue: 0, pickups: 0 };
-        existing.revenue += Number(m.total) || 0;
+        existing.revenue += Number(p.final_revenue) || Number(p.computed_revenue) || 0;
         existing.pickups += 1;
         dayStats.set(day, existing);
       });
@@ -405,14 +464,14 @@ export const useClientAnalyticsDeep = (period: AnalyticsPeriod = 'month') => {
         pickups: dayStats.get(i)?.pickups || 0,
       }));
 
-      // Revenue trend (last 30 days for granularity)
+      // Revenue trend (use pickups for revenue, dropoffs)
       const trendDays = period === 'week' ? 7 : period === 'month' ? 30 : period === 'quarter' ? 90 : 365;
       const trendMap = new Map<string, { revenue: number; pickups: number }>();
       
-      currentManifests?.forEach((m: any) => {
-        const date = format(new Date(m.signed_at || m.created_at), 'yyyy-MM-dd');
+      currentPickups?.forEach((p: any) => {
+        const date = format(new Date(p.pickup_date), 'yyyy-MM-dd');
         const existing = trendMap.get(date) || { revenue: 0, pickups: 0 };
-        existing.revenue += Number(m.total) || 0;
+        existing.revenue += Number(p.final_revenue) || Number(p.computed_revenue) || 0;
         existing.pickups += 1;
         trendMap.set(date, existing);
       });
@@ -506,13 +565,13 @@ export const useClientAnalyticsDeep = (period: AnalyticsPeriod = 'month') => {
 
       return {
         totalRevenue,
-        totalPickups,
+        totalPickups: totalPickupsCount,
         totalTires,
         activeClients: clientCurrentStats.size,
         pickupRevenue,
         dropoffRevenue,
         previousRevenue,
-        previousPickups,
+        previousPickups: previousPickupsCount,
         revenueChange,
         pickupsChange,
         growingClients: growingClients.slice(0, 10),
