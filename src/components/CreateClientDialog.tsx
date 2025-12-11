@@ -7,14 +7,21 @@ import { ClientFormData } from "@/lib/validations";
 import { useToast } from "@/hooks/use-toast";
 
 interface CreateClientDialogProps {
-  trigger: React.ReactNode;
+  trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function CreateClientDialog({ trigger }: CreateClientDialogProps) {
-  const [open, setOpen] = useState(false);
+export function CreateClientDialog({ trigger, open: controlledOpen, onOpenChange }: CreateClientDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
   const createClient = useCreateClient();
   const createLocation = useCreateLocation();
   const { toast } = useToast();
+
+  // Support both controlled and uncontrolled modes
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = isControlled ? (onOpenChange || (() => {})) : setInternalOpen;
 
   const handleSubmit = async (data: ClientFormData) => {
     try {
@@ -64,9 +71,11 @@ export function CreateClientDialog({ trigger }: CreateClientDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger}
-      </DialogTrigger>
+      {trigger && (
+        <DialogTrigger asChild>
+          {trigger}
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add New Client</DialogTitle>
