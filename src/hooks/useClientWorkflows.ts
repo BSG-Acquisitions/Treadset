@@ -59,14 +59,16 @@ export const useActiveFollowups = () => {
 
       if (clientsError) throw clientsError;
 
+      // 3) Fetch client pickup patterns for smart interval-based filtering
+      const { data: patterns } = await supabase
+        .from('client_pickup_patterns')
+        .select('client_id, average_days_between_pickups, frequency')
+        .in('client_id', clientIds);
+
       const clientMap = new Map(clients?.map(c => [c.id, c]) ?? []);
+      const patternMap = new Map(patterns?.map(p => [p.client_id, p]) ?? []);
       
-      // 3) Smart filter: exclude clients who have been picked up AFTER their next_contact_date
-      // or within the last 7 days (recently serviced)
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
-      
+      // 4) Smart filter: use client's actual pickup interval to determine if followup is appropriate
       const enriched = workflows
         .map(w => ({
           ...w,
@@ -76,14 +78,18 @@ export const useActiveFollowups = () => {
           const client = clientMap.get(w.client_id);
           if (!client?.last_pickup_at) return true; // No pickup history, show followup
           
-          const lastPickup = client.last_pickup_at.split('T')[0];
-          const nextContact = w.next_contact_date;
+          const lastPickupDate = new Date(client.last_pickup_at);
+          const daysSincePickup = Math.floor((Date.now() - lastPickupDate.getTime()) / (1000 * 60 * 60 * 24));
           
-          // Hide if picked up after the next_contact_date (already serviced)
-          if (lastPickup >= nextContact) return false;
+          // Get client's actual pattern interval (default to 30 days if unknown)
+          const pattern = patternMap.get(w.client_id);
+          const intervalDays = pattern?.average_days_between_pickups || 30;
           
-          // Hide if picked up within last 7 days (recently serviced)
-          if (lastPickup >= sevenDaysAgoStr) return false;
+          // Only show followup if they're at least 75% through their interval
+          // e.g., for 11-day interval, show after ~8 days
+          const thresholdDays = Math.floor(intervalDays * 0.75);
+          
+          if (daysSincePickup < thresholdDays) return false; // Too early for followup
           
           return true;
         });
