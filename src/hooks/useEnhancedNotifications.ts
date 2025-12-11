@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSystemUpdates } from './useSystemUpdates';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export interface EnhancedNotification {
   id: string;
@@ -43,6 +43,25 @@ export const useEnhancedNotifications = () => {
   const { user } = useAuth();
   const { createUpdate } = useSystemUpdates();
   const triggeredRef = useRef(false);
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
+
+  // Get the actual auth.users.id from the session (not public.users.id)
+  useEffect(() => {
+    const getAuthUserId = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.id) {
+        setAuthUserId(session.user.id);
+      }
+    };
+    getAuthUserId();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setAuthUserId(session?.user?.id ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   // Auto-trigger notification checks once per session
   useEffect(() => {
@@ -90,22 +109,22 @@ export const useEnhancedNotifications = () => {
   }, [user?.id]);
 
   const { data: notifications, isLoading } = useQuery({
-    queryKey: ['enhanced-notifications', user?.id],
+    queryKey: ['enhanced-notifications', authUserId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!authUserId) return [];
 
-      // Query directly with user.id (which IS auth.users.id)
+      // Query with auth.users.id (from session, not AuthContext)
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', authUserId)
         .order('created_at', { ascending: false })
         .limit(50);
 
       if (error) throw error;
       return data as EnhancedNotification[];
     },
-    enabled: !!user?.id,
+    enabled: !!authUserId,
     refetchInterval: 60000, // Refetch every minute
   });
 
@@ -162,13 +181,13 @@ export const useEnhancedNotifications = () => {
 
   const markAllAsRead = useMutation({
     mutationFn: async () => {
-      if (!user?.id) return;
+      if (!authUserId) return;
 
-      // Use user.id directly (which IS auth.users.id)
+      // Use auth.users.id (from session, not AuthContext)
       const { error } = await supabase
         .from('notifications')
         .update({ is_read: true })
-        .eq('user_id', user.id)
+        .eq('user_id', authUserId)
         .eq('is_read', false);
 
       if (error) throw error;
