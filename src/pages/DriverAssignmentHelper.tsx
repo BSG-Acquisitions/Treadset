@@ -4,12 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Truck, User, Calendar, CheckCircle } from "lucide-react";
+import { Truck, User, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 import { SchedulePickupWithDriverDialog } from "@/components/SchedulePickupWithDriverDialog";
-import { WorkflowTestDialog } from "@/components/WorkflowTestDialog";
-import { ManifestWorkflowTest } from "@/components/ManifestWorkflowTest";
-
 export default function DriverAssignmentHelper() {
   const [loading, setLoading] = useState(false);
   const [assignments, setAssignments] = useState<any[]>([]);
@@ -108,8 +105,6 @@ export default function DriverAssignmentHelper() {
                       </Button>
                     }
                   />
-                  <WorkflowTestDialog />
-                  <ManifestWorkflowTest />
                 </div>
               </div>
             </div>
