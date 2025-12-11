@@ -9,7 +9,9 @@ import {
   AlertCircle, 
   Info, 
   CheckCircle, 
-  XCircle 
+  XCircle,
+  X,
+  Trash2
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
@@ -62,9 +64,10 @@ interface NotificationItemProps {
   notification: EnhancedNotification;
   onMarkAsRead: (id: string) => void;
   onActionClick: (link: string) => void;
+  onDelete: (id: string) => void;
 }
 
-const NotificationItem = ({ notification, onMarkAsRead, onActionClick }: NotificationItemProps) => {
+const NotificationItem = ({ notification, onMarkAsRead, onActionClick, onDelete }: NotificationItemProps) => {
   return (
     <Card 
       className={`mb-2 cursor-pointer transition-all hover:shadow-md ${
@@ -85,7 +88,20 @@ const NotificationItem = ({ notification, onMarkAsRead, onActionClick }: Notific
               }`}>
                 {notification.title}
               </h4>
-              {notification.priority && getPriorityBadge(notification.priority)}
+              <div className="flex items-center gap-2">
+                {notification.priority && getPriorityBadge(notification.priority)}
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(notification.id);
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
             
             <p className={`text-sm mb-2 ${
@@ -138,7 +154,17 @@ const NotificationItem = ({ notification, onMarkAsRead, onActionClick }: Notific
 };
 
 export const EnhancedNotificationCenter = () => {
-  const { notifications, unreadCount, markAsRead, markAllAsRead, isMarkingAllAsRead } = useEnhancedNotifications();
+  const { 
+    notifications, 
+    unreadCount, 
+    readCount,
+    markAsRead, 
+    markAllAsRead, 
+    isMarkingAllAsRead,
+    deleteNotification,
+    deleteAllRead,
+    isDeletingAllRead
+  } = useEnhancedNotifications();
   const navigate = useNavigate();
 
   const handleActionClick = (link: string) => {
@@ -158,18 +184,32 @@ export const EnhancedNotificationCenter = () => {
           )}
         </div>
         
-        {unreadCount > 0 && (
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => markAllAsRead()}
-            disabled={isMarkingAllAsRead}
-            className="gap-1"
-          >
-            <CheckCheck className="h-4 w-4" />
-            Mark all read
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {readCount > 0 && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => deleteAllRead()}
+              disabled={isDeletingAllRead}
+              className="gap-1 text-muted-foreground hover:text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+              Clear read
+            </Button>
+          )}
+          {unreadCount > 0 && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => markAllAsRead()}
+              disabled={isMarkingAllAsRead}
+              className="gap-1"
+            >
+              <CheckCheck className="h-4 w-4" />
+              Mark all read
+            </Button>
+          )}
+        </div>
       </div>
 
       <ScrollArea className="h-[500px]">
@@ -186,6 +226,7 @@ export const EnhancedNotificationCenter = () => {
                 notification={notification}
                 onMarkAsRead={markAsRead}
                 onActionClick={handleActionClick}
+                onDelete={deleteNotification}
               />
             ))
           )}

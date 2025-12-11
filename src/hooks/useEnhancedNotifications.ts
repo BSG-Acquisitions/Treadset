@@ -183,7 +183,6 @@ export const useEnhancedNotifications = () => {
     mutationFn: async () => {
       if (!authUserId) return;
 
-      // Use auth.users.id (from session, not AuthContext)
       const { error } = await supabase
         .from('notifications')
         .update({ is_read: true })
@@ -198,15 +197,52 @@ export const useEnhancedNotifications = () => {
     },
   });
 
+  const deleteNotification = useMutation({
+    mutationFn: async (notificationId: string) => {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', notificationId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['enhanced-notifications'] });
+    },
+  });
+
+  const deleteAllRead = useMutation({
+    mutationFn: async () => {
+      if (!authUserId) return;
+
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', authUserId)
+        .eq('is_read', true);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['enhanced-notifications'] });
+      toast.success('Cleared all read notifications');
+    },
+  });
+
   const unreadCount = notifications?.filter(n => !n.is_read).length || 0;
+  const readCount = notifications?.filter(n => n.is_read).length || 0;
 
   return {
     notifications: notifications || [],
     isLoading,
     unreadCount,
+    readCount,
     createNotification: createNotification.mutate,
     markAsRead: markAsRead.mutate,
     markAllAsRead: markAllAsRead.mutate,
     isMarkingAllAsRead: markAllAsRead.isPending,
+    deleteNotification: deleteNotification.mutate,
+    deleteAllRead: deleteAllRead.mutate,
+    isDeletingAllRead: deleteAllRead.isPending,
   };
 };
