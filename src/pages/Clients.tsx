@@ -124,9 +124,15 @@ export default function Clients() {
   const { data: clientsData, isLoading } = useClientsWithTable({ tableState: tableState.state });
   const deleteClient = useDeleteClient();
 
-  // Count clients without emails
+  // Count clients with data quality issues
   const clientsWithoutEmail = clientsData?.data?.filter(client => !client.email) || [];
   const missingEmailCount = clientsWithoutEmail.length;
+  
+  // Count clients missing required manifest fields (city, state, county)
+  const clientsMissingManifestFields = clientsData?.data?.filter(client => 
+    !client.city || !client.state || !client.county
+  ) || [];
+  const missingManifestFieldsCount = clientsMissingManifestFields.length;
 
   const columns: Column<any>[] = [
     {
@@ -294,12 +300,29 @@ export default function Clients() {
           </p>
         </header>
 
-        {missingEmailCount > 0 && (
-          <Alert variant="destructive" className="mb-6">
+        {missingManifestFieldsCount > 0 && (
+          <Alert variant="destructive" className="mb-4">
             <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
+            <AlertDescription className="flex flex-col gap-1">
+              <span>
+                <strong>{missingManifestFieldsCount} client{missingManifestFieldsCount !== 1 ? 's' : ''}</strong> {missingManifestFieldsCount !== 1 ? 'are' : 'is'} missing required address information (city, state, or county).
+              </span>
+              <span className="text-sm opacity-90">
+                Michigan manifests cannot be generated correctly without complete address data. 
+                {missingManifestFieldsCount <= 5 && clientsMissingManifestFields.length > 0 && (
+                  <span className="font-medium"> Affected: {clientsMissingManifestFields.map(c => c.company_name).join(', ')}</span>
+                )}
+              </span>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {missingEmailCount > 0 && (
+          <Alert variant="default" className="mb-6 border-amber-500 bg-amber-500/10">
+            <MailWarning className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="text-amber-800 dark:text-amber-200">
               <strong>{missingEmailCount} client{missingEmailCount !== 1 ? 's' : ''}</strong> {missingEmailCount !== 1 ? 'are' : 'is'} missing email addresses. 
-              Manifests cannot be automatically emailed to these clients. Please update their contact information.
+              Manifests cannot be automatically emailed to these clients.
             </AlertDescription>
           </Alert>
         )}
