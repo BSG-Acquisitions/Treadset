@@ -16,7 +16,7 @@ import { useHaulers } from "@/hooks/useHaulers";
 import { useAuth } from "@/contexts/AuthContext";
 import { Calculator, FileText, CreditCard, DollarSign, Factory, Truck, Building2, Plus } from "lucide-react";
 import { CreateHaulerDialog } from "./CreateHaulerDialog";
-import { CreateGeneratorDialog } from "./CreateGeneratorDialog";
+import { CreateClientDialog } from "@/components/CreateClientDialog";
 import { calculateTotalPTE } from "@/lib/michigan-conversions";
 import { format } from "date-fns";
 import { SearchableDropdown } from "@/components/SearchableDropdown";
@@ -33,7 +33,7 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
   const [customerId, setCustomerId] = useState(selectedCustomerId || "");
   const [haulerId, setHaulerId] = useState("");
   const [showCreateHauler, setShowCreateHauler] = useState(false);
-  const [showCreateGenerator, setShowCreateGenerator] = useState(false);
+  const [showCreateClient, setShowCreateClient] = useState(false);
   const [customerType, setCustomerType] = useState<"existing" | "new">("existing");
   const [pteCount, setPteCount] = useState("");
   const [otrCount, setOtrCount] = useState("");
@@ -209,11 +209,11 @@ const subtotal = (Number(pteCount || 0) * ptePrice) +
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={() => setShowCreateGenerator(true)}
+                    onClick={() => setShowCreateClient(true)}
                     className="h-8"
                   >
                     <Plus className="h-4 w-4 mr-1" />
-                    Add Generator
+                    Add Client
                   </Button>
                 </div>
                 <SearchableDropdown
@@ -429,9 +429,9 @@ const subtotal = (Number(pteCount || 0) * ptePrice) +
         onOpenChange={setShowCreateHauler}
       />
 
-      <CreateGeneratorDialog
-        open={showCreateGenerator}
-        onOpenChange={setShowCreateGenerator}
+      <CreateClientDialog
+        open={showCreateClient}
+        onOpenChange={setShowCreateClient}
       />
     </Dialog>
   );

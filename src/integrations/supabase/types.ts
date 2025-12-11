@@ -161,13 +161,6 @@ export type Database = {
             foreignKeyName: "assignments_hauler_id_fkey"
             columns: ["hauler_id"]
             isOneToOne: false
-            referencedRelation: "hauler_overlay_view"
-            referencedColumns: ["hauler_id"]
-          },
-          {
-            foreignKeyName: "assignments_hauler_id_fkey"
-            columns: ["hauler_id"]
-            isOneToOne: false
             referencedRelation: "haulers"
             referencedColumns: ["id"]
           },
@@ -1234,13 +1227,6 @@ export type Database = {
             foreignKeyName: "dropoffs_hauler_id_fkey"
             columns: ["hauler_id"]
             isOneToOne: false
-            referencedRelation: "hauler_overlay_view"
-            referencedColumns: ["hauler_id"]
-          },
-          {
-            foreignKeyName: "dropoffs_hauler_id_fkey"
-            columns: ["hauler_id"]
-            isOneToOne: false
             referencedRelation: "haulers"
             referencedColumns: ["id"]
           },
@@ -1387,13 +1373,6 @@ export type Database = {
             foreignKeyName: "facility_hauler_rates_hauler_id_fkey"
             columns: ["hauler_id"]
             isOneToOne: false
-            referencedRelation: "hauler_overlay_view"
-            referencedColumns: ["hauler_id"]
-          },
-          {
-            foreignKeyName: "facility_hauler_rates_hauler_id_fkey"
-            columns: ["hauler_id"]
-            isOneToOne: false
             referencedRelation: "haulers"
             referencedColumns: ["id"]
           },
@@ -1405,57 +1384,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      generators: {
-        Row: {
-          created_at: string | null
-          generator_city: string | null
-          generator_city_2: string | null
-          generator_county: string | null
-          generator_mailing_address: string | null
-          generator_name: string
-          generator_phone: string | null
-          generator_physical_address: string | null
-          generator_state: string | null
-          generator_state_2: string | null
-          generator_zip: string | null
-          generator_zip_2: string | null
-          id: string
-          is_active: boolean | null
-        }
-        Insert: {
-          created_at?: string | null
-          generator_city?: string | null
-          generator_city_2?: string | null
-          generator_county?: string | null
-          generator_mailing_address?: string | null
-          generator_name: string
-          generator_phone?: string | null
-          generator_physical_address?: string | null
-          generator_state?: string | null
-          generator_state_2?: string | null
-          generator_zip?: string | null
-          generator_zip_2?: string | null
-          id?: string
-          is_active?: boolean | null
-        }
-        Update: {
-          created_at?: string | null
-          generator_city?: string | null
-          generator_city_2?: string | null
-          generator_county?: string | null
-          generator_mailing_address?: string | null
-          generator_name?: string
-          generator_phone?: string | null
-          generator_physical_address?: string | null
-          generator_state?: string | null
-          generator_state_2?: string | null
-          generator_zip?: string | null
-          generator_zip_2?: string | null
-          id?: string
-          is_active?: boolean | null
-        }
-        Relationships: []
       }
       hauler_customers: {
         Row: {
@@ -1510,13 +1438,6 @@ export type Database = {
           zip?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "hauler_customers_hauler_id_fkey"
-            columns: ["hauler_id"]
-            isOneToOne: false
-            referencedRelation: "hauler_overlay_view"
-            referencedColumns: ["hauler_id"]
-          },
           {
             foreignKeyName: "hauler_customers_hauler_id_fkey"
             columns: ["hauler_id"]
@@ -1576,13 +1497,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "hauler_reliability_beta_hauler_id_fkey"
-            columns: ["hauler_id"]
-            isOneToOne: false
-            referencedRelation: "hauler_overlay_view"
-            referencedColumns: ["hauler_id"]
-          },
           {
             foreignKeyName: "hauler_reliability_beta_hauler_id_fkey"
             columns: ["hauler_id"]
@@ -2393,13 +2307,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "manifests_hauler_id_fkey"
-            columns: ["hauler_id"]
-            isOneToOne: false
-            referencedRelation: "hauler_overlay_view"
-            referencedColumns: ["hauler_id"]
           },
           {
             foreignKeyName: "manifests_hauler_id_fkey"
@@ -3792,39 +3699,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "stops_generator_id_fkey"
-            columns: ["generator_id"]
-            isOneToOne: false
-            referencedRelation: "generator_overlay_view"
-            referencedColumns: ["generator_id"]
-          },
-          {
-            foreignKeyName: "stops_generator_id_fkey"
-            columns: ["generator_id"]
-            isOneToOne: false
-            referencedRelation: "generators"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stops_hauler_id_fkey"
-            columns: ["hauler_id"]
-            isOneToOne: false
-            referencedRelation: "hauler_overlay_view"
-            referencedColumns: ["hauler_id"]
-          },
-          {
             foreignKeyName: "stops_hauler_id_fkey"
             columns: ["hauler_id"]
             isOneToOne: false
             referencedRelation: "haulers"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stops_receiver_id_fkey"
-            columns: ["receiver_id"]
-            isOneToOne: false
-            referencedRelation: "receiver_overlay_view"
-            referencedColumns: ["receiver_id"]
           },
           {
             foreignKeyName: "stops_receiver_id_fkey"
@@ -4661,84 +4540,6 @@ export type Database = {
       }
     }
     Views: {
-      generator_overlay_view: {
-        Row: {
-          generator_city: string | null
-          generator_city_2: string | null
-          generator_county: string | null
-          generator_id: string | null
-          generator_mailing_address: string | null
-          generator_name: string | null
-          generator_phone: string | null
-          generator_physical_address: string | null
-          generator_state: string | null
-          generator_state_2: string | null
-          generator_zip: string | null
-          generator_zip_2: string | null
-        }
-        Insert: {
-          generator_city?: string | null
-          generator_city_2?: string | null
-          generator_county?: string | null
-          generator_id?: string | null
-          generator_mailing_address?: string | null
-          generator_name?: string | null
-          generator_phone?: string | null
-          generator_physical_address?: string | null
-          generator_state?: string | null
-          generator_state_2?: string | null
-          generator_zip?: string | null
-          generator_zip_2?: string | null
-        }
-        Update: {
-          generator_city?: string | null
-          generator_city_2?: string | null
-          generator_county?: string | null
-          generator_id?: string | null
-          generator_mailing_address?: string | null
-          generator_name?: string | null
-          generator_phone?: string | null
-          generator_physical_address?: string | null
-          generator_state?: string | null
-          generator_state_2?: string | null
-          generator_zip?: string | null
-          generator_zip_2?: string | null
-        }
-        Relationships: []
-      }
-      hauler_overlay_view: {
-        Row: {
-          hauler_city: string | null
-          hauler_id: string | null
-          hauler_mailing_address: string | null
-          hauler_mi_reg: string | null
-          hauler_name: string | null
-          hauler_phone: string | null
-          hauler_state: string | null
-          hauler_zip: string | null
-        }
-        Insert: {
-          hauler_city?: string | null
-          hauler_id?: string | null
-          hauler_mailing_address?: string | null
-          hauler_mi_reg?: string | null
-          hauler_name?: string | null
-          hauler_phone?: string | null
-          hauler_state?: string | null
-          hauler_zip?: string | null
-        }
-        Update: {
-          hauler_city?: string | null
-          hauler_id?: string | null
-          hauler_mailing_address?: string | null
-          hauler_mi_reg?: string | null
-          hauler_name?: string | null
-          hauler_phone?: string | null
-          hauler_state?: string | null
-          hauler_zip?: string | null
-        }
-        Relationships: []
-      }
       mv_monthly_entity_rollup: {
         Row: {
           by_destination: Json | null
@@ -4807,36 +4608,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      receiver_overlay_view: {
-        Row: {
-          receiver_city: string | null
-          receiver_id: string | null
-          receiver_mailing_address: string | null
-          receiver_name: string | null
-          receiver_phone: string | null
-          receiver_state: string | null
-          receiver_zip: string | null
-        }
-        Insert: {
-          receiver_city?: string | null
-          receiver_id?: string | null
-          receiver_mailing_address?: string | null
-          receiver_name?: string | null
-          receiver_phone?: string | null
-          receiver_state?: string | null
-          receiver_zip?: string | null
-        }
-        Update: {
-          receiver_city?: string | null
-          receiver_id?: string | null
-          receiver_mailing_address?: string | null
-          receiver_name?: string | null
-          receiver_phone?: string | null
-          receiver_state?: string | null
-          receiver_zip?: string | null
-        }
-        Relationships: []
       }
     }
     Functions: {
