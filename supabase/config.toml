@@ -135,9 +135,6 @@ verify_jwt = false
 [functions.calculate-hauler-reliability]
 verify_jwt = false
 
-[functions.manifest-followup-automation]
-verify_jwt = false
-
 [functions.system-health-check]
 verify_jwt = false
 
