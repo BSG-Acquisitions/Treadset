@@ -246,18 +246,34 @@ export default function Manifests() {
         ? `${format(fromDate, 'yyyyMMdd')}-${format(toDate, 'yyyyMMdd')}` 
         : format(new Date(), 'yyyyMMdd');
 
-      const { data, error } = await supabase.functions.invoke('batch-manifest-export', {
-        body: {
-          manifest_ids: manifestIds,
-          client_name: clientName,
-          date_range: dateRange,
-        },
-      });
+      // Get session for auth header
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      // Use direct fetch to properly receive binary ZIP data
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/batch-manifest-export`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`,
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({
+            manifest_ids: manifestIds,
+            client_name: clientName,
+            date_range: dateRange,
+          }),
+        }
+      );
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to export');
+      }
 
-      // The response is a blob (ZIP file)
-      const blob = new Blob([data], { type: 'application/zip' });
+      // Get response as proper binary blob
+      const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
