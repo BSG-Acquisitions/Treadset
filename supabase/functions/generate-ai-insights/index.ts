@@ -85,7 +85,16 @@ serve(async (req) => {
               messages: [
                 {
                   role: 'system',
-                  content: 'You are an operations analyst creating daily insights. Be concise, specific, and data-driven. Focus on trends, risks, and opportunities. Keep summaries under 300 words total with 3-5 bullet points.',
+                  content: `You are an operations analyst creating daily insights. Be concise, specific, and data-driven.
+
+CRITICAL RULES - YOU MUST FOLLOW THESE:
+- ONLY report insights based on the data explicitly provided in the user message
+- Do NOT fabricate or infer statistics that are not in the provided data
+- Do NOT make claims about "best days", day-of-week patterns, or time-of-day trends (this data is NOT provided)
+- Do NOT invent specific dollar amounts, percentages, or metrics not explicitly in the data
+- Focus ONLY on: revenue forecast comparisons, high-risk client counts, low-reliability hauler counts, and assignment completion counts
+- If data is empty or insufficient for a particular insight, skip that insight entirely rather than guessing
+- Keep summaries under 300 words total with 3-5 bullet points`,
                 },
                 {
                   role: 'user',
