@@ -54,14 +54,17 @@ Deno.serve(async (req) => {
 
       if (!incompleteManifests || incompleteManifests.length === 0) continue;
 
-      // Get admin users for this org
+      // Get admin users for this org - need auth_user_id for FK constraint
       const { data: adminUsers, error: usersError } = await supabase
         .from('user_organization_roles')
-        .select('user_id')
+        .select('user_id, users!inner(auth_user_id)')
         .eq('organization_id', org.id)
         .in('role', ['admin', 'ops_manager', 'dispatcher', 'receptionist']);
 
-      if (usersError || !adminUsers || adminUsers.length === 0) continue;
+      if (usersError || !adminUsers || adminUsers.length === 0) {
+        console.log(`[MANIFEST_REMINDERS] No admin users found for org ${org.id}`);
+        continue;
+      }
 
       for (const manifest of incompleteManifests) {
         const issues: string[] = [];
@@ -100,12 +103,18 @@ Deno.serve(async (req) => {
         const clientName = manifest.client?.company_name || 'Unknown Client';
         const priority = daysSinceCreation >= 7 ? 'high' : daysSinceCreation >= 3 ? 'medium' : 'low';
 
-        // Create notification for each admin
         for (const user of adminUsers) {
+          // Use auth_user_id from the joined users table for FK constraint
+          const authUserId = (user as any).users?.auth_user_id;
+          if (!authUserId) {
+            console.warn(`[MANIFEST_REMINDERS] No auth_user_id for user role, skipping`);
+            continue;
+          }
+
           const { error: insertError } = await supabase
             .from('notifications')
             .insert({
-              user_id: user.user_id,
+              user_id: authUserId,
               organization_id: org.id,
               title: `Incomplete Manifest: ${manifest.manifest_number || clientName}`,
               message: `Manifest for ${clientName} is ${issues.join(', ')}. Created ${daysSinceCreation} days ago.`,
@@ -122,10 +131,14 @@ Deno.serve(async (req) => {
               },
             });
 
-          if (!insertError) totalNotifications++;
+          if (insertError) {
+            console.error(`[MANIFEST_REMINDERS] Failed to insert notification for user ${user.user_id}:`, insertError.message);
+          } else {
+            totalNotifications++;
+          }
         }
 
-        console.log(`[MANIFEST_REMINDERS] Created notification for manifest ${manifest.manifest_number}`);
+        console.log(`[MANIFEST_REMINDERS] Processed manifest ${manifest.manifest_number}, notifications created for ${adminUsers.length} users`);
       }
     }
 
