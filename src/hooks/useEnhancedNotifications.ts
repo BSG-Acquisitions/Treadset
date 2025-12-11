@@ -94,18 +94,11 @@ export const useEnhancedNotifications = () => {
     queryFn: async () => {
       if (!user?.id) return [];
 
-      const { data: userData } = await supabase
-        .from('users')
-        .select('id')
-        .eq('auth_user_id', user.id)
-        .single();
-
-      if (!userData) return [];
-
+      // Query directly with user.id (which IS auth.users.id)
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
-        .eq('user_id', userData.id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(50);
 
@@ -171,18 +164,11 @@ export const useEnhancedNotifications = () => {
     mutationFn: async () => {
       if (!user?.id) return;
 
-      const { data: userData } = await supabase
-        .from('users')
-        .select('id')
-        .eq('auth_user_id', user.id)
-        .single();
-
-      if (!userData) return;
-
+      // Use user.id directly (which IS auth.users.id)
       const { error } = await supabase
         .from('notifications')
         .update({ is_read: true })
-        .eq('user_id', userData.id)
+        .eq('user_id', user.id)
         .eq('is_read', false);
 
       if (error) throw error;
