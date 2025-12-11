@@ -164,3 +164,9 @@ verify_jwt = false
 
 [functions.batch-manifest-export]
 verify_jwt = false
+
+[functions.check-manifest-reminders]
+verify_jwt = false
+
+[functions.check-missing-pickups]
+verify_jwt = false

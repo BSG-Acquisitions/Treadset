@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSystemUpdates } from './useSystemUpdates';
+import { useEffect, useRef } from 'react';
 
 export interface EnhancedNotification {
   id: string;
@@ -41,6 +42,52 @@ export const useEnhancedNotifications = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { createUpdate } = useSystemUpdates();
+  const triggeredRef = useRef(false);
+
+  // Auto-trigger notification checks once per session
+  useEffect(() => {
+    const triggerNotificationChecks = async () => {
+      if (!user?.id || triggeredRef.current || isQuietHours()) return;
+      
+      // Get user's organization
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id, user_organization_roles(organization_id)')
+        .eq('auth_user_id', user.id)
+        .single();
+
+      const orgId = userData?.user_organization_roles?.[0]?.organization_id;
+      if (!orgId) return;
+
+      triggeredRef.current = true;
+      console.log('[Notifications] Auto-triggering notification checks...');
+
+      try {
+        // Trigger missing pickups check
+        await supabase.functions.invoke('check-missing-pickups', {
+          body: { organization_id: orgId }
+        });
+
+        // Trigger manifest reminders check
+        await supabase.functions.invoke('check-manifest-reminders', {
+          body: {}
+        });
+
+        // Trigger trailer alerts check (if trailer feature is enabled)
+        await supabase.functions.invoke('check-trailer-alerts', {
+          body: {}
+        });
+
+        console.log('[Notifications] Auto-trigger complete');
+      } catch (error) {
+        console.error('[Notifications] Auto-trigger error:', error);
+      }
+    };
+
+    // Run after a short delay to not block initial render
+    const timer = setTimeout(triggerNotificationChecks, 5000);
+    return () => clearTimeout(timer);
+  }, [user?.id]);
 
   const { data: notifications, isLoading } = useQuery({
     queryKey: ['enhanced-notifications', user?.id],
@@ -66,6 +113,7 @@ export const useEnhancedNotifications = () => {
       return data as EnhancedNotification[];
     },
     enabled: !!user?.id,
+    refetchInterval: 60000, // Refetch every minute
   });
 
   const createNotification = useMutation({
