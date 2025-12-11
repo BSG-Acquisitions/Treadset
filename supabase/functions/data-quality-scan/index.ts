@@ -37,15 +37,34 @@ serve(async (req) => {
     for (const org of orgs || []) {
       console.log(`Scanning organization: ${org.id}`);
 
-      // Scan clients for missing data
+      // Scan clients for missing data - especially Michigan manifest requirements
       const { data: clients, error: clientsError } = await supabase
         .from('clients')
-        .select('id, company_name, email, phone, physical_address, is_active')
+        .select('id, company_name, email, phone, physical_address, mailing_address, city, state, county, zip, is_active')
         .eq('organization_id', org.id)
         .eq('is_active', true);
 
       if (!clientsError && clients) {
         for (const client of clients) {
+          // HIGH SEVERITY: Michigan manifest required fields
+          const missingManifestFields: string[] = [];
+          if (!client.city) missingManifestFields.push('city');
+          if (!client.state) missingManifestFields.push('state');
+          if (!client.county) missingManifestFields.push('county');
+          if (!client.zip) missingManifestFields.push('zip');
+          if (!client.mailing_address && !client.physical_address) missingManifestFields.push('address');
+          
+          if (missingManifestFields.length > 0) {
+            issues.push({
+              organization_id: org.id,
+              record_type: 'client',
+              record_id: client.id,
+              issue: `Client "${client.company_name}" is missing required manifest fields: ${missingManifestFields.join(', ')}`,
+              severity: 'high',
+            });
+          }
+
+          // MEDIUM: Missing email
           if (!client.email) {
             issues.push({
               organization_id: org.id,
@@ -55,6 +74,8 @@ serve(async (req) => {
               severity: 'medium',
             });
           }
+          
+          // LOW: Missing phone
           if (!client.phone) {
             issues.push({
               organization_id: org.id,
@@ -62,15 +83,6 @@ serve(async (req) => {
               record_id: client.id,
               issue: `Client "${client.company_name}" is missing phone number`,
               severity: 'low',
-            });
-          }
-          if (!client.physical_address) {
-            issues.push({
-              organization_id: org.id,
-              record_type: 'client',
-              record_id: client.id,
-              issue: `Client "${client.company_name}" is missing physical address`,
-              severity: 'high',
             });
           }
         }

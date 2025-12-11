@@ -13,6 +13,10 @@ interface ImportRow {
   phone?: string;
   locationName?: string;
   address?: string;
+  city?: string;
+  state?: string;
+  county?: string;
+  zip?: string;
   notes?: string;
   tags?: string;
   pricingTierName?: string;
@@ -135,6 +139,27 @@ Deno.serve(async (req) => {
         }
       }
 
+      // Validate required Michigan manifest fields
+      const missingManifestFields: string[] = [];
+      if (!row.address?.trim()) missingManifestFields.push('address');
+      if (!row.city?.trim()) missingManifestFields.push('city');
+      if (!row.state?.trim()) missingManifestFields.push('state');
+      if (!row.county?.trim()) missingManifestFields.push('county');
+      if (!row.zip?.trim()) missingManifestFields.push('zip');
+      
+      if (missingManifestFields.length > 0) {
+        errors.push({ 
+          row: rowNum, 
+          field: 'address', 
+          message: `Missing required manifest fields: ${missingManifestFields.join(', ')}. Michigan manifests require complete address information.`
+        });
+      }
+
+      // Validate state format (should be 2 characters)
+      if (row.state?.trim() && row.state.trim().length !== 2) {
+        errors.push({ row: rowNum, field: 'state', message: 'State must be 2-letter abbreviation (e.g., MI)' });
+      }
+
       // Get pricing tier ID if provided
       let pricingTierId = null;
       if (row.pricingTierName) {
@@ -147,13 +172,18 @@ Deno.serve(async (req) => {
       // Parse tags
       const tags = row.tags ? row.tags.split(';').map(tag => tag.trim()).filter(Boolean) : [];
 
-      // Prepare client data
+      // Prepare client data with all address fields
       const clientData = {
         company_name: row.clientName.trim(),
         type: row.type || null,
         contact_name: row.contactName?.trim() || null,
         email: row.email?.trim() || null,
         phone: row.phone?.trim() || null,
+        mailing_address: row.address?.trim() || null,
+        city: row.city?.trim() || null,
+        state: row.state?.trim()?.toUpperCase() || null,
+        county: row.county?.trim() || null,
+        zip: row.zip?.trim() || null,
         notes: row.notes?.trim() || null,
         tags: tags.length > 0 ? tags : null,
         pricing_tier_id: pricingTierId,
