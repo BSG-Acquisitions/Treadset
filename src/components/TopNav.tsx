@@ -65,7 +65,6 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
     { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics', roles: ['admin', 'ops_manager'] as const, featureFlag: null },
     { id: 'reports', label: 'Reports', icon: FileText, path: '/reports', roles: ['admin', 'ops_manager'] as const, featureFlag: null },
     { id: 'dropoffs', label: 'Drop-offs', icon: PackageOpen, path: '/dropoffs', roles: ['admin', 'ops_manager', 'sales'] as const, featureFlag: null },
-    { id: 'haulers', label: 'Independent Haulers', icon: Truck, path: '/haulers', roles: ['admin', 'ops_manager'] as const, featureFlag: null },
   ];
 
 
