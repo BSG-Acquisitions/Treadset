@@ -55,7 +55,7 @@ export function useRouteStatistics(activeDay: string) {
             status,
             computed_revenue,
             final_revenue,
-            manifests(id, total, signed_at)
+            manifests!manifests_pickup_id_fkey(id, total, signed_at)
           )
         `)
         .eq('scheduled_date', activeDay)
@@ -133,7 +133,7 @@ export function useRouteStatistics(activeDay: string) {
             id,
             computed_revenue,
             final_revenue,
-            manifests(id, total)
+            manifests!manifests_pickup_id_fkey(id, total)
           )
         `)
         .eq('scheduled_date', activeDay)
@@ -226,7 +226,7 @@ export function useRouteStatistics(activeDay: string) {
           pickup:pickups(
             computed_revenue,
             final_revenue,
-            manifests(total)
+            manifests!manifests_pickup_id_fkey(total)
           )
         `)
         .gte('scheduled_date', format(startDate, 'yyyy-MM-dd'))
