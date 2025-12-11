@@ -431,13 +431,21 @@ export const useClientAnalyticsDeep = (period: AnalyticsPeriod = 'month') => {
         }
       });
 
-      // Build set of clients who have ever had a pickup (not drop-off only clients)
+      // Build set of clients who have ever had a pickup AND track pickup counts
       const clientsWithPickupHistory = new Set<string>();
+      const clientPickupCounts = new Map<string, number>();
+      
       currentPickups?.forEach((p: any) => {
-        if (p.client_id) clientsWithPickupHistory.add(p.client_id);
+        if (p.client_id) {
+          clientsWithPickupHistory.add(p.client_id);
+          clientPickupCounts.set(p.client_id, (clientPickupCounts.get(p.client_id) || 0) + 1);
+        }
       });
       previousPickups?.forEach((p: any) => {
-        if (p.client_id) clientsWithPickupHistory.add(p.client_id);
+        if (p.client_id) {
+          clientsWithPickupHistory.add(p.client_id);
+          clientPickupCounts.set(p.client_id, (clientPickupCounts.get(p.client_id) || 0) + 1);
+        }
       });
       // Also check last_pickup_at on client record - indicates they've had pickups historically
       clientMap.forEach((client, clientId) => {
@@ -445,13 +453,18 @@ export const useClientAnalyticsDeep = (period: AnalyticsPeriod = 'month') => {
       });
 
       // Find at-risk clients (no activity in current period but had activity before)
-      // EXCLUDE drop-off only clients who have never had a pickup
+      // EXCLUDE drop-off only clients and one-time clients (< 2 pickups)
       clientMap.forEach((client, clientId) => {
         if (!clientCurrentStats.has(clientId)) {
           // Skip clients who have ONLY dropoff activity (never had a pickup)
-          // These are drop-off clients who bring tires TO us, not pickup clients we service
           if (!clientsWithPickupHistory.has(clientId)) {
             return; // Skip - they're drop-off only
+          }
+          
+          // Skip clients with fewer than 2 historical pickups - not regular clients
+          const pickupCount = clientPickupCounts.get(clientId) || 0;
+          if (pickupCount < 2) {
+            return; // Skip - one-time or occasional client
           }
 
           const pattern = patternMap.get(clientId);
