@@ -67,6 +67,8 @@ export function EditTrailerDialog({ trailer, open, onOpenChange }: EditTrailerDi
       trailer_number: formData.trailer_number,
       current_location: formData.current_location || null,
       current_status: formData.current_status,
+      ownership_type: formData.ownership_type || null,
+      owner_name: formData.owner_name || null,
       notes: formData.notes || null,
     } as any);
 
