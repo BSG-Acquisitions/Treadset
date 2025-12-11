@@ -31,8 +31,6 @@ const STATUS_OPTIONS: { value: TrailerStatus; label: string }[] = [
   { value: "empty", label: "Empty" },
   { value: "full", label: "Full" },
   { value: "staged", label: "Staged" },
-  { value: "in_transit", label: "In Transit" },
-  { value: "waiting_unload", label: "Waiting to Unload" },
 ];
 
 export function EditTrailerDialog({ trailer, open, onOpenChange }: EditTrailerDialogProps) {

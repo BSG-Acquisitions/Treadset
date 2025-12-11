@@ -33,8 +33,6 @@ const STATUS_COLUMNS: { status: TrailerStatus; label: string; icon: typeof Packa
   { status: 'empty', label: 'Empty', icon: PackageOpen, color: 'bg-green-500' },
   { status: 'full', label: 'Full', icon: Package, color: 'bg-red-500' },
   { status: 'staged', label: 'Staged', icon: ArrowDownToLine, color: 'bg-blue-500' },
-  { status: 'in_transit', label: 'In Transit', icon: Truck, color: 'bg-yellow-500' },
-  { status: 'waiting_unload', label: 'Waiting to Unload', icon: Clock, color: 'bg-orange-500' },
 ];
 
 export default function TrailerInventory() {
@@ -150,8 +148,6 @@ export default function TrailerInventory() {
       empty: [],
       full: [],
       staged: [],
-      in_transit: [],
-      waiting_unload: [],
     };
     
     filteredTrailers.forEach(trailer => {
@@ -360,7 +356,7 @@ export default function TrailerInventory() {
       </Card>
 
       {/* Status Board */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {STATUS_COLUMNS.map(column => {
           const columnTrailers = trailersByStatus[column.status];
           const Icon = column.icon;
@@ -421,7 +417,7 @@ export default function TrailerInventory() {
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         {STATUS_COLUMNS.map(column => {
           const count = trailersByStatus[column.status].length;
           const total = filteredTrailers.length;

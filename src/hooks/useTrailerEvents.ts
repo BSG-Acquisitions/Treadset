@@ -11,8 +11,7 @@ export type TrailerEventType =
   | 'swap'
   | 'stage_empty'
   | 'external_pickup'
-  | 'external_drop'
-  | 'waiting_unload';
+  | 'external_drop';
 
 export interface TrailerEvent {
   id: string;
@@ -121,5 +120,4 @@ export const EVENT_TYPE_LABELS: Record<TrailerEventType, string> = {
   stage_empty: 'Stage Empty',
   external_pickup: 'External Pickup',
   external_drop: 'External Drop',
-  waiting_unload: 'Waiting to Unload',
 };

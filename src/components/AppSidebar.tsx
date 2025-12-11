@@ -107,7 +107,6 @@ export function AppSidebar() {
     trailers: [
       { id: 'trailer-inventory', label: 'Trailer Inventory', icon: Container, path: '/trailers', roles: ['admin', 'ops_manager', 'dispatcher'] as const },
       { id: 'trailer-routes', label: 'Trailer Routes', icon: Route, path: '/trailers/routes', roles: ['admin', 'ops_manager', 'dispatcher'] as const },
-      { id: 'processor-queue', label: 'Processor Queue', icon: Clock, path: '/trailers/processor-queue', roles: ['admin', 'ops_manager', 'dispatcher'] as const },
       { id: 'trailer-vehicles', label: 'Trailer Vehicles', icon: Car, path: '/trailers/vehicles', roles: ['admin', 'ops_manager', 'dispatcher'] as const },
       { id: 'trailer-external', label: 'External Moves', icon: ArrowRightLeft, path: '/trailers/external-moves', roles: ['admin'] as const },
       { id: 'trailer-drivers', label: 'Driver Management', icon: UserCog, path: '/trailers/drivers', roles: ['admin', 'ops_manager'] as const },
@@ -149,7 +148,6 @@ export function AppSidebar() {
   const trailerItems = [
     { id: 'trailer-inventory', label: 'Trailer Inventory', icon: Container, path: '/trailers', roles: ['admin', 'ops_manager', 'dispatcher'] as const },
     { id: 'trailer-routes', label: 'Trailer Routes', icon: Route, path: '/trailers/routes', roles: ['admin', 'ops_manager', 'dispatcher'] as const },
-    { id: 'processor-queue', label: 'Processor Queue', icon: Clock, path: '/trailers/processor-queue', roles: ['admin', 'ops_manager', 'dispatcher'] as const },
     { id: 'trailer-vehicles', label: 'Trailer Vehicles', icon: Car, path: '/trailers/vehicles', roles: ['admin', 'ops_manager', 'dispatcher'] as const },
     { id: 'trailer-external', label: 'External Moves', icon: ArrowRightLeft, path: '/trailers/external-moves', roles: ['admin'] as const },
     { id: 'trailer-drivers', label: 'Driver Management', icon: UserCog, path: '/trailers/drivers', roles: ['admin', 'ops_manager'] as const },

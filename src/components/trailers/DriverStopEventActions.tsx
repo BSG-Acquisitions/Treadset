@@ -81,13 +81,6 @@ const EVENT_CONFIG: Record<TrailerEventType, {
     requiresSignature: false,
     color: 'text-orange-600'
   },
-  waiting_unload: { 
-    icon: Clock, 
-    label: 'Waiting to Unload', 
-    buttonText: 'Mark Trailer Waiting',
-    requiresSignature: false,
-    color: 'text-yellow-600'
-  },
   external_pickup: { 
     icon: ArrowUpFromLine, 
     label: 'External Pickup', 
@@ -111,7 +104,6 @@ const DRIVER_EVENT_TYPES: TrailerEventType[] = [
   'drop_full',
   'swap',
   'stage_empty',
-  'waiting_unload',
 ];
 
 export function DriverStopEventActions({

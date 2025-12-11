@@ -26,8 +26,6 @@ const STATUS_COLORS = {
   empty: '#22c55e',
   full: '#ef4444',
   staged: '#3b82f6',
-  in_transit: '#eab308',
-  waiting_unload: '#f97316',
 };
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
@@ -39,7 +37,6 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   stage_empty: 'Stage Empty',
   external_pickup: 'External Pickup',
   external_drop: 'External Drop',
-  waiting_unload: 'Waiting to Unload',
 };
 
 export default function TrailerReports() {
@@ -59,8 +56,6 @@ export default function TrailerReports() {
     { name: 'Empty', value: utilization.statusBreakdown.empty, color: STATUS_COLORS.empty },
     { name: 'Full', value: utilization.statusBreakdown.full, color: STATUS_COLORS.full },
     { name: 'Staged', value: utilization.statusBreakdown.staged, color: STATUS_COLORS.staged },
-    { name: 'In Transit', value: utilization.statusBreakdown.in_transit, color: STATUS_COLORS.in_transit },
-    { name: 'Waiting', value: utilization.statusBreakdown.waiting_unload, color: STATUS_COLORS.waiting_unload },
   ].filter(d => d.value > 0) : [];
 
   const eventTypeChartData = eventSummary 
@@ -216,8 +211,6 @@ export default function TrailerReports() {
                   { status: 'empty', label: 'Empty', icon: PackageOpen, color: 'text-green-600 bg-green-500/10' },
                   { status: 'full', label: 'Full', icon: Package, color: 'text-red-600 bg-red-500/10' },
                   { status: 'staged', label: 'Staged', icon: ArrowDownToLine, color: 'text-blue-600 bg-blue-500/10' },
-                  { status: 'in_transit', label: 'In Transit', icon: Truck, color: 'text-yellow-600 bg-yellow-500/10' },
-                  { status: 'waiting_unload', label: 'Waiting to Unload', icon: Clock, color: 'text-orange-600 bg-orange-500/10' },
                 ].map(({ status, label, icon: Icon, color }) => {
                   const count = utilization?.statusBreakdown[status as keyof typeof utilization.statusBreakdown] || 0;
                   const percentage = utilization?.activeTrailers 

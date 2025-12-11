@@ -152,12 +152,6 @@ export default function TrailerExternalMoves() {
       return;
     }
 
-    // Check if trailer is in transit and warn user
-    if (selectedTrailer?.current_status === 'in_transit' && !pendingSubmit) {
-      setShowInTransitWarning(true);
-      return;
-    }
-
     try {
       const { error } = await supabase
         .from('trailer_events')

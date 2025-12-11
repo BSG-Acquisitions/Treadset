@@ -488,7 +488,6 @@ function StopEventEditor({ stop, stopIndex, trailers, onAddEvent, onRemoveEvent 
     'pickup_full',
     'drop_full',
     'stage_empty',
-    'waiting_unload',
     'external_pickup',
     'external_drop',
     'swap',

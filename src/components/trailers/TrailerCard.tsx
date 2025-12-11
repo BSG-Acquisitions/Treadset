@@ -20,8 +20,6 @@ const STATUS_COLORS: Record<TrailerStatus, string> = {
   empty: 'border-l-green-500',
   full: 'border-l-red-500',
   staged: 'border-l-blue-500',
-  in_transit: 'border-l-yellow-500',
-  waiting_unload: 'border-l-orange-500',
 };
 
 export function TrailerCard({ trailer, onClick, compact = false, draggable = false, onDragStart }: TrailerCardProps) {

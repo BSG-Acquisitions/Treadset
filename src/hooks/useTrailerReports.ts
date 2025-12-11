@@ -11,8 +11,6 @@ export interface TrailerUtilizationStats {
     empty: number;
     full: number;
     staged: number;
-    in_transit: number;
-    waiting_unload: number;
   };
 }
 
@@ -55,8 +53,6 @@ export const useTrailerUtilization = () => {
         empty: 0,
         full: 0,
         staged: 0,
-        in_transit: 0,
-        waiting_unload: 0,
       };
 
       activeTrailers.forEach(t => {
@@ -66,8 +62,8 @@ export const useTrailerUtilization = () => {
         }
       });
 
-      // Utilization = trailers that are doing work (full, in_transit, waiting_unload) vs total
-      const workingTrailers = statusBreakdown.full + statusBreakdown.in_transit + statusBreakdown.waiting_unload;
+      // Utilization = trailers that are doing work (full) vs total
+      const workingTrailers = statusBreakdown.full;
       const utilizationRate = activeTrailers.length > 0 
         ? Math.round((workingTrailers / activeTrailers.length) * 100) 
         : 0;
