@@ -5,16 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { useClients } from "@/hooks/useClients";
 import { useCreateDropoffWithManifest } from "@/hooks/useCreateDropoffWithManifest";
-import { usePricingTiers } from "@/hooks/usePricingTiers";
 import { useHaulers } from "@/hooks/useHaulers";
 import { useAuth } from "@/contexts/AuthContext";
-import { Calculator, FileText, CreditCard, DollarSign, Factory, Truck, Building2, Plus } from "lucide-react";
+import { FileText, DollarSign, Factory, Truck, Building2, Plus } from "lucide-react";
 import { CreateHaulerDialog } from "./CreateHaulerDialog";
 import { CreateClientDialog } from "@/components/CreateClientDialog";
 import { calculateTotalPTE } from "@/lib/michigan-conversions";
@@ -40,6 +36,7 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
   const [tractorCount, setTractorCount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [notes, setNotes] = useState("");
+  const [manualRevenue, setManualRevenue] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false); // Prevents duplicate submissions
   
   // Selected items for searchable dropdowns
@@ -52,10 +49,9 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
   const [newCustomerPhone, setNewCustomerPhone] = useState("");
   const [newCustomerCompany, setNewCustomerCompany] = useState("");
 
-  const { data: clientsData, isLoading: isLoadingCustomers, error: customersError } = useClients();
+  const { data: clientsData } = useClients();
   const customers = Array.isArray(clientsData) ? clientsData : (clientsData?.data || []);
   const { data: haulers = [] } = useHaulers();
-  const { data: pricingTiers = [] } = usePricingTiers();
   const createDropoffWithManifest = useCreateDropoffWithManifest();
 
   const selectedCustomer = selectedGenerator || customers.find(c => c.id === customerId);
@@ -91,16 +87,6 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
     }
     return data || [];
   };
-  const defaultPricingTier = pricingTiers.find(pt => pt.name === "Standard") || pricingTiers[0];
-
-  // Calculate pricing
-  const ptePrice = (selectedCustomer?.pricing_tier_id ? pricingTiers.find(pt => pt.id === selectedCustomer.pricing_tier_id)?.pte_rate : defaultPricingTier?.pte_rate) || 0;
-  const otrPrice = (selectedCustomer?.pricing_tier_id ? pricingTiers.find(pt => pt.id === selectedCustomer.pricing_tier_id)?.otr_rate : defaultPricingTier?.otr_rate) || 0;
-  const tractorPrice = (selectedCustomer?.pricing_tier_id ? pricingTiers.find(pt => pt.id === selectedCustomer.pricing_tier_id)?.tractor_rate : defaultPricingTier?.tractor_rate) || 0;
-
-const subtotal = (Number(pteCount || 0) * ptePrice) + 
-                  (Number(otrCount || 0) * otrPrice) + 
-                  (Number(tractorCount || 0) * tractorPrice);
 
   const computedPTE = calculateTotalPTE({
     pte_count: Number(pteCount || 0),
@@ -143,10 +129,10 @@ const subtotal = (Number(pteCount || 0) * ptePrice) +
           pte_count: Number(pteCount || 0),
           otr_count: Number(otrCount || 0),
           tractor_count: Number(tractorCount || 0),
-          unit_price_pte: ptePrice,
-          unit_price_otr: otrPrice,
-          unit_price_tractor: tractorPrice,
-          computed_revenue: subtotal,
+          unit_price_pte: null,
+          unit_price_otr: null,
+          unit_price_tractor: null,
+          computed_revenue: Number(manualRevenue) || 0,
           payment_method: paymentMethod,
           payment_status: paymentMethod === 'invoice' ? 'pending' : 'paid',
           requires_manifest: true, // All dropoffs require manifests
@@ -165,6 +151,7 @@ const subtotal = (Number(pteCount || 0) * ptePrice) +
       setTractorCount("");
       setPaymentMethod("cash");
       setNotes("");
+      setManualRevenue("");
       setSelectedGenerator(null);
       setSelectedHauler(null);
       
@@ -287,8 +274,7 @@ const subtotal = (Number(pteCount || 0) * ptePrice) +
                   onChange={(e) => setPteCount(e.target.value)}
                   placeholder="0"
                 />
-                <div className="text-xs text-muted-foreground space-y-0.5">
-                  <div>${ptePrice}/tire • Car/Light Truck</div>
+                <div className="text-xs text-muted-foreground">
                   <div className="font-medium">1 tire = 1 PTE</div>
                 </div>
               </div>
@@ -304,8 +290,7 @@ const subtotal = (Number(pteCount || 0) * ptePrice) +
                   onChange={(e) => setOtrCount(e.target.value)}
                   placeholder="0"
                 />
-                <div className="text-xs text-muted-foreground space-y-0.5">
-                  <div>${otrPrice}/tire • Heavy Equipment</div>
+                <div className="text-xs text-muted-foreground">
                   <div className="font-medium">1 tire = 15 PTE</div>
                 </div>
               </div>
@@ -321,54 +306,45 @@ const subtotal = (Number(pteCount || 0) * ptePrice) +
                   onChange={(e) => setTractorCount(e.target.value)}
                   placeholder="0"
                 />
-                <div className="text-xs text-muted-foreground space-y-0.5">
-                  <div>${tractorPrice}/tire • 18-Wheeler/Semi</div>
+                <div className="text-xs text-muted-foreground">
                   <div className="font-medium">1 tire = 5 PTE</div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Pricing Summary */}
-          {subtotal > 0 && (
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <Calculator className="h-4 w-4" />
-                  <span className="font-medium">Pricing Summary</span>
+          {/* Amount Charged - Manual Entry */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-2 mb-3">
+                <DollarSign className="h-4 w-4 text-primary" />
+                <span className="font-medium">Amount Charged</span>
+              </div>
+              <div className="space-y-3">
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={manualRevenue}
+                    onChange={(e) => setManualRevenue(e.target.value)}
+                    className="pl-7 text-lg font-medium"
+                    placeholder="0.00"
+                  />
                 </div>
-                <div className="space-y-2 text-sm">
-                  {Number(pteCount || 0) > 0 && (
-                    <div className="flex justify-between">
-                      <span>{pteCount} PTE × ${ptePrice}</span>
-                      <span>${(Number(pteCount) * ptePrice).toFixed(2)}</span>
-                    </div>
-                  )}
-                  {Number(otrCount || 0) > 0 && (
-                    <div className="flex justify-between">
-                      <span>{otrCount} OTR × ${otrPrice}</span>
-                      <span>${(Number(otrCount) * otrPrice).toFixed(2)}</span>
-                    </div>
-                  )}
-                  {Number(tractorCount || 0) > 0 && (
-                    <div className="flex justify-between">
-                      <span>{tractorCount} Tractor × ${tractorPrice}</span>
-                      <span>${(Number(tractorCount) * tractorPrice).toFixed(2)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Total PTE</span>
+                <p className="text-xs text-muted-foreground">
+                  Enter the amount being charged for this drop-off
+                </p>
+                {computedPTE > 0 && (
+                  <div className="flex justify-between text-sm text-muted-foreground pt-2 border-t border-border">
+                    <span>Total PTE (for tracking)</span>
                     <span>{computedPTE}</span>
                   </div>
-                  <Separator />
-                  <div className="flex justify-between font-medium">
-                    <span>Total</span>
-                    <span>${subtotal.toFixed(2)}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Payment Method */}
           <div className="space-y-3">
@@ -417,7 +393,7 @@ const subtotal = (Number(pteCount || 0) * ptePrice) +
           </Button>
           <Button 
             onClick={handleSubmit} 
-            disabled={!customerId || (!pteCount && !otrCount && !tractorCount) || isSubmitting || createDropoffWithManifest.isPending || customers.length === 0}
+            disabled={!customerId || (!pteCount && !otrCount && !tractorCount) || !manualRevenue || Number(manualRevenue) <= 0 || isSubmitting || createDropoffWithManifest.isPending || customers.length === 0}
           >
             {isSubmitting || createDropoffWithManifest.isPending ? "Processing..." : "Process Drop-off"}
           </Button>
