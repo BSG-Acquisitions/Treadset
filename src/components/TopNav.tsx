@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Bell, Menu, User, Settings, Package, BarChart3, UserCheck, Home, Users, MapPin, DollarSign, CreditCard, PenTool, Truck, Building, FileText, PackageOpen, TrendingUp, Container } from 'lucide-react';
+import { Search, Bell, Menu, User, Settings, Package, BarChart3, UserCheck, Home, Users, MapPin, DollarSign, CreditCard, PenTool, Truck, Building, FileText, PackageOpen, Container } from 'lucide-react';
 import { FEATURE_FLAGS } from '@/lib/featureFlags';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,7 +25,7 @@ import { OrganizationSwitcher } from '@/components/auth/OrganizationSwitcher';
 import { useEnhancedNotifications } from '@/hooks/useEnhancedNotifications';
 import { useContextualNotifications } from '@/hooks/useContextualNotifications';
 import { useManifestReminders } from '@/hooks/useManifestReminders';
-import { useAnalyzePickupPatterns } from '@/hooks/usePickupPatterns';
+
 import { formatDistanceToNow } from 'date-fns';
 import { LiveSearch } from '@/components/LiveSearch';
 import { EnhancedNotificationCenter } from '@/components/notifications/EnhancedNotificationCenter';
@@ -41,7 +41,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
   const { unreadCount } = useEnhancedNotifications();
   useContextualNotifications(); // Enable background checks
   useManifestReminders(); // Enable manifest reminder checks
-  const analyzePatterns = useAnalyzePickupPatterns();
+  
 
   const getCurrentTab = () => {
     if (location.pathname === '/') return 'dashboard';
@@ -142,11 +142,37 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                 </p>
               </div>
               <DropdownMenuSeparator />
+              {/* Most frequently used - top */}
+              {hasAnyRole(['admin', 'ops_manager']) && (
+                <DropdownMenuItem asChild>
+                  <Link to="/receiver-signatures" className="flex items-center gap-2">
+                    <PenTool className="h-4 w-4" />
+                    Receiver Signatures
+                  </Link>
+                </DropdownMenuItem>
+              )}
+              {hasAnyRole(['admin', 'ops_manager', 'dispatcher']) && (
+                <DropdownMenuItem asChild>
+                  <Link to="/manifests" className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Manifests
+                  </Link>
+                </DropdownMenuItem>
+              )}
               {hasAnyRole(['admin','ops_manager']) && (
                 <DropdownMenuItem asChild>
                   <Link to="/settings" className="flex items-center gap-2">
                     <Settings className="h-4 w-4" />
                     Settings
+                  </Link>
+                </DropdownMenuItem>
+              )}
+              {/* Occasional use - middle */}
+              {hasAnyRole(['admin']) && (
+                <DropdownMenuItem asChild>
+                  <Link to="/employees" className="flex items-center gap-2">
+                    <UserCheck className="h-4 w-4" />
+                    Employees
                   </Link>
                 </DropdownMenuItem>
               )}
@@ -158,22 +184,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                   </Link>
                 </DropdownMenuItem>
               )}
-              {hasAnyRole(['admin']) && (
-                <DropdownMenuItem asChild>
-                  <Link to="/employees" className="flex items-center gap-2">
-                    <UserCheck className="h-4 w-4" />
-                    Employees
-                  </Link>
-                </DropdownMenuItem>
-              )}
-              {hasAnyRole(['admin', 'ops_manager']) && (
-                <DropdownMenuItem asChild>
-                  <Link to="/receiver-signatures" className="flex items-center gap-2">
-                    <PenTool className="h-4 w-4" />
-                    Receiver Signatures
-                  </Link>
-                </DropdownMenuItem>
-              )}
+              {/* Rarely used - bottom */}
               {hasAnyRole(['admin', 'ops_manager']) && (
                 <DropdownMenuItem asChild>
                   <Link to="/haulers" className="flex items-center gap-2">
@@ -188,24 +199,6 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                     <Building className="h-4 w-4" />
                     Receivers
                   </Link>
-                </DropdownMenuItem>
-              )}
-              {hasAnyRole(['admin', 'ops_manager', 'dispatcher']) && (
-                <DropdownMenuItem asChild>
-                  <Link to="/manifests" className="flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    Manifests
-                  </Link>
-                </DropdownMenuItem>
-              )}
-              {hasAnyRole(['admin', 'ops_manager', 'sales']) && (
-                <DropdownMenuItem 
-                  onClick={() => analyzePatterns.mutate()}
-                  disabled={analyzePatterns.isPending}
-                  className="flex items-center gap-2"
-                >
-                  <TrendingUp className="h-4 w-4" />
-                  {analyzePatterns.isPending ? 'Analyzing...' : 'Analyze Pickup Patterns'}
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
