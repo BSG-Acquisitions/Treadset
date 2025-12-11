@@ -167,7 +167,6 @@ const Dropoffs = () => {
       <Tabs defaultValue="dropoffs" className="space-y-4">
         <TabsList>
           <TabsTrigger value="dropoffs">Recent Drop-offs</TabsTrigger>
-          <TabsTrigger value="customers">Drop-off Customers</TabsTrigger>
           <TabsTrigger value="today">Today's Activity</TabsTrigger>
         </TabsList>
 
@@ -244,30 +243,6 @@ const Dropoffs = () => {
                 loading={dropoffsLoading}
                 searchTerm={searchTerm}
               />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="customers" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Drop-off Customers</CardTitle>
-              <CardDescription>
-                All customers are now managed in the main Clients section
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground mb-4">
-                  Drop-off customers are now unified with regular clients
-                </p>
-                <Button asChild variant="outline">
-                  <Link to="/clients">
-                    Go to Clients
-                  </Link>
-                </Button>
-              </div>
             </CardContent>
           </Card>
         </TabsContent>
