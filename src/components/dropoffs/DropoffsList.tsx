@@ -16,7 +16,8 @@ import {
   Receipt,
   Loader2,
   ChevronRight,
-  TrendingUp
+  TrendingUp,
+  Trash
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -29,6 +30,16 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { format, isWithinInterval, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, isToday, isYesterday, startOfDay } from "date-fns";
 import type { Database } from "@/integrations/supabase/types";
 import { EditDropoffDialog } from "./EditDropoffDialog";
@@ -38,6 +49,7 @@ import { useNavigate } from "react-router-dom";
 import { calculateTotalPTE } from "@/lib/michigan-conversions";
 import { cn } from "@/lib/utils";
 import { useGenerateDropoffManifest } from "@/hooks/useGenerateDropoffManifest";
+import { useDeleteDropoff } from "@/hooks/useDropoffs";
 
 type Dropoff = Database["public"]["Tables"]["dropoffs"]["Row"] & {
   clients?: {
@@ -67,8 +79,18 @@ interface DropopffsListProps {
 
 export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListProps) => {
   const [editDropoff, setEditDropoff] = useState<Dropoff | null>(null);
+  const [deleteDropoffId, setDeleteDropoffId] = useState<string | null>(null);
   const navigate = useNavigate();
   const generateManifest = useGenerateDropoffManifest();
+  const deleteDropoff = useDeleteDropoff();
+  
+  const handleDelete = () => {
+    if (deleteDropoffId) {
+      deleteDropoff.mutate(deleteDropoffId, {
+        onSuccess: () => setDeleteDropoffId(null)
+      });
+    }
+  };
   
   const filteredDropoffs = dropoffs.filter(dropoff => 
     dropoff.clients?.contact_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -354,6 +376,13 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
                         Mark as Paid
                       </DropdownMenuItem>
                     )}
+                    <DropdownMenuItem 
+                      onClick={() => setDeleteDropoffId(dropoff.id)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash className="h-4 w-4 mr-2" />
+                      Delete Drop-off
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -472,6 +501,26 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
         onOpenChange={(open) => !open && setEditDropoff(null)}
         dropoff={editDropoff}
       />
+
+      <AlertDialog open={!!deleteDropoffId} onOpenChange={(open) => !open && setDeleteDropoffId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Drop-off?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this drop-off record. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
