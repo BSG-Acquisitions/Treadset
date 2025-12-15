@@ -653,11 +653,8 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
         dropoffsData?.filter(d => d.manifest_id).map(d => d.manifest_id) || []
       );
 
-      // Fetch manifests - use wider date range to catch manifests created earlier but completed in target period
-      // Then filter by completion date (signed_at or created_at) in JavaScript to match the RPC logic
-      const lookbackDate = new Date(startDate);
-      lookbackDate.setDate(lookbackDate.getDate() - 30); // Look back 30 days for manifests created earlier
-      
+      // Fetch manifests for the target date range by created_at (pickup date)
+
       const { data: manifestsData, error: manifestsError } = await supabase
         .from('manifests')
         .select(`
@@ -676,30 +673,16 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
           location:locations(name)
         `)
         .eq('organization_id', user?.currentOrganization?.id)
-        .gte('created_at', format(lookbackDate, 'yyyy-MM-dd') + 'T00:00:00')
+        .gte('created_at', format(startDate, 'yyyy-MM-dd') + 'T00:00:00')
         .lte('created_at', format(endDate, 'yyyy-MM-dd') + 'T23:59:59')
-        .eq('status', 'COMPLETED')
+        .in('status', ['COMPLETED', 'AWAITING_RECEIVER_SIGNATURE'])
         .not('client_id', 'is', null);
 
       if (manifestsError) throw manifestsError;
 
-      // Date range strings for comparison
-      const startDateStr = format(startDate, 'yyyy-MM-dd');
-      const endDateStr = format(endDate, 'yyyy-MM-dd');
-
       // Filter and transform manifests with tire counts, excluding dropoff-linked manifests
-      // CRITICAL: Filter by completion date (signed_at if available, else created_at) to match RPC logic
       const pickupsData = manifestsData
         ?.filter(m => {
-          // Use signed_at as completion date, fallback to created_at
-          const completionDate = m.signed_at || m.created_at;
-          const completionDateStr = format(new Date(completionDate), 'yyyy-MM-dd');
-          
-          // Only include if completion date is within the target period
-          if (completionDateStr < startDateStr || completionDateStr > endDateStr) {
-            return false;
-          }
-          
           const totalPTE = calculateManifestPTE(m as any);
           const isDropoffPseudoClient = m.client?.company_name && /drop[- ]?off customers/i.test(m.client.company_name.trim());
           const isLinkedToDropoff = dropoffManifestIds.has(m.id);
@@ -707,7 +690,7 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
         })
         .map(m => ({
           id: m.id,
-          pickup_date: format(new Date(m.signed_at || m.created_at), 'yyyy-MM-dd'),
+          pickup_date: format(new Date(m.created_at), 'yyyy-MM-dd'),
           pte_count: calculateManifestPTE(m as any),
           otr_count: m.otr_count || 0,
           tractor_count: m.tractor_count || 0,
