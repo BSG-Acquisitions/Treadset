@@ -148,21 +148,9 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Check for recent notification (last 3 days)
+        // Build notification content
         const threeDaysAgo = new Date(today);
         threeDaysAgo.setDate(today.getDate() - 3);
-
-        const { data: existingNotifs } = await supabase
-          .from('notifications')
-          .select('id')
-          .eq('organization_id', orgId)
-          .eq('type', 'missing_pickup')
-          .ilike('title', `%${client.company_name}%`)
-          .gte('created_at', threeDaysAgo.toISOString());
-
-        if (existingNotifs && existingNotifs.length > 0) {
-          continue;
-        }
 
         const dayName = pattern.typical_day_of_week !== null 
           ? DAYS_OF_WEEK[pattern.typical_day_of_week] 
@@ -180,13 +168,30 @@ Deno.serve(async (req) => {
           ? '✓' 
           : '~';
 
-        // Create notification for EACH admin user using auth_user_id
+        const notificationTitle = `${client.company_name} may need scheduling`;
+
+        // Create notification for EACH admin user - with per-user deduplication
         for (const authUserId of authUserIds) {
+          // Check for recent notification for THIS USER (last 3 days)
+          const { data: existingNotifs } = await supabase
+            .from('notifications')
+            .select('id')
+            .eq('user_id', authUserId)
+            .eq('organization_id', orgId)
+            .eq('type', 'missing_pickup')
+            .ilike('title', `%${client.company_name}%`)
+            .gte('created_at', threeDaysAgo.toISOString());
+
+          if (existingNotifs && existingNotifs.length > 0) {
+            console.log(`[MISSING_PICKUPS] Skipping duplicate for user ${authUserId}, client ${client.company_name}`);
+            continue; // Skip creating for this user - they already have one
+          }
+
           notificationsToCreate.push({
             user_id: authUserId,
             organization_id: orgId,
             type: 'missing_pickup',
-            title: `${client.company_name} may need scheduling`,
+            title: notificationTitle,
             message: `${client.company_name} is ${scheduleReason}. They're not currently scheduled.\n\nPattern Details:\n• Frequency: ${frequencyText}${pattern.typical_day_of_week !== null ? ` on ${dayName}s` : ''}\n• Last pickup: ${daysSinceLastPickup} days ago\n• Confidence: ${pattern.confidence_score}% ${confidenceEmoji}`,
             priority: 'medium',
             metadata: {
@@ -200,7 +205,7 @@ Deno.serve(async (req) => {
           });
         }
 
-        console.log(`[MISSING_PICKUPS] Created notifications for ${client.company_name}`);
+        console.log(`[MISSING_PICKUPS] Processed notifications for ${client.company_name}`);
       }
 
       // Insert notifications for this org
