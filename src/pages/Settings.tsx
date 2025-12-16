@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { User, Bell, Shield, Palette, Database, Key, Loader2, Save, X, FileText, PenTool } from "lucide-react";
+import { User, Bell, Shield, Palette, Database, Key, Loader2, Save, X, FileText, PenTool, Users } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { SlideUp } from "@/components/motion/SlideUp";
@@ -16,6 +16,8 @@ import { useToast } from "@/hooks/use-toast";
 import { SignatureManager } from "@/components/settings/SignatureManager";
 import { TemplateUploadUtility } from "@/components/TemplateUploadUtility";
 import { supabase } from "@/integrations/supabase/client";
+import { InviteTeamDialog } from "@/components/settings/InviteTeamDialog";
+import { PendingInvitesTable } from "@/components/settings/PendingInvitesTable";
 
 export default function Settings() {
   const { user } = useAuth();
@@ -271,6 +273,35 @@ if (preferencesLoading) {
                   <Database className="h-4 w-4 mr-2" />
                   Data & Privacy
                 </Button>
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start"
+                  onClick={() => scrollToSection('team-section')}
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  Team Invites
+                </Button>
+              </CardContent>
+            </Card>
+          </SlideUp>
+
+          {/* Team Invites Section - Before other content */}
+          <SlideUp delay={0.15} className="lg:col-span-2">
+            <Card id="team-section">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Team Invites
+                  </CardTitle>
+                  <CardDescription>
+                    Invite team members via email or QR code
+                  </CardDescription>
+                </div>
+                <InviteTeamDialog />
+              </CardHeader>
+              <CardContent>
+                <PendingInvitesTable />
               </CardContent>
             </Card>
           </SlideUp>
