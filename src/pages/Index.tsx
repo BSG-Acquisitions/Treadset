@@ -17,7 +17,7 @@ import { StatsCard } from "@/components/enhanced/StatsCard";
 import { PTEBreakdownDialog } from "@/components/dashboard/PTEBreakdownDialog";
 import { InvoicePendingWidget } from "@/components/dashboard/InvoicePendingWidget";
 import { format, addDays } from "date-fns";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { StaggerList } from "@/components/motion/StaggerList";
 import { FadeIn } from "@/components/motion/FadeIn";
@@ -47,8 +47,12 @@ export default function Index() {
   }, []);
   
   // Redirect ONLY pure drivers (not admins who also have driver role) to their routes
+  const hasRedirectedDriver = useRef(false);
   useEffect(() => {
+    if (hasRedirectedDriver.current) return;
+    
     if (user && user.roles?.includes('driver') && !hasAnyRole(['admin', 'ops_manager', 'dispatcher', 'sales'])) {
+      hasRedirectedDriver.current = true;
       console.log('Redirecting pure driver to routes');
       navigate('/routes/driver', { replace: true });
     }

@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSystemUpdates } from './useSystemUpdates';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
 export interface EnhancedNotification {
   id: string;
@@ -40,28 +40,12 @@ const isQuietHours = (): boolean => {
 
 export const useEnhancedNotifications = () => {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const { createUpdate } = useSystemUpdates();
   const triggeredRef = useRef(false);
-  const [authUserId, setAuthUserId] = useState<string | null>(null);
-
-  // Get the actual auth.users.id from the session (not public.users.id)
-  useEffect(() => {
-    const getAuthUserId = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user?.id) {
-        setAuthUserId(session.user.id);
-      }
-    };
-    getAuthUserId();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      setAuthUserId(session?.user?.id ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+  
+  // Use session from AuthContext instead of creating duplicate listener
+  const authUserId = session?.user?.id ?? null;
 
   // Auto-trigger notification checks once per session
   useEffect(() => {
