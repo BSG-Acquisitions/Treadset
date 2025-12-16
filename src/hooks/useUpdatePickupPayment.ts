@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 
 interface UpdatePickupPaymentParams {
   pickupId: string;
+  transaction_type?: 'pickup' | 'dropoff';
   computed_revenue?: number;
   payment_method?: string;
 }
@@ -13,22 +14,28 @@ export const useUpdatePickupPayment = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ pickupId, computed_revenue, payment_method }: UpdatePickupPaymentParams) => {
-      const updateData: any = {
+    mutationFn: async ({ pickupId, transaction_type = 'pickup', computed_revenue, payment_method }: UpdatePickupPaymentParams) => {
+      const updateData: Record<string, unknown> = {
         updated_at: new Date().toISOString()
       };
       
       if (computed_revenue !== undefined) {
         updateData.computed_revenue = computed_revenue;
-        updateData.final_revenue = computed_revenue;
+        // Only pickups have final_revenue field
+        if (transaction_type === 'pickup') {
+          updateData.final_revenue = computed_revenue;
+        }
       }
       
       if (payment_method !== undefined) {
         updateData.payment_method = payment_method;
       }
 
+      // Select the correct table based on transaction type
+      const tableName = transaction_type === 'dropoff' ? 'dropoffs' : 'pickups';
+
       const { data, error } = await supabase
-        .from('pickups')
+        .from(tableName)
         .update(updateData)
         .eq('id', pickupId)
         .select()
@@ -40,6 +47,7 @@ export const useUpdatePickupPayment = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payment-history'] });
       queryClient.invalidateQueries({ queryKey: ['pickups'] });
+      queryClient.invalidateQueries({ queryKey: ['dropoffs'] });
       
       toast({
         title: "Payment Updated",
