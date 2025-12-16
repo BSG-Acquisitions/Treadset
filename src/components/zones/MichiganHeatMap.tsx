@@ -1,14 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import mapboxglModule from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, MapPin, Target, TrendingUp } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-
-// Handle mapbox-gl ESM/CJS interop
-const mapboxgl = (mapboxglModule as any).default || mapboxglModule;
 
 interface LocationData {
   lat: number;
@@ -27,7 +23,7 @@ interface OpportunityZone {
 
 export function MichiganHeatMap() {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
+  const map = useRef<any>(null);
   const { user } = useAuth();
   const organizationId = user?.currentOrganization?.id;
   const [loading, setLoading] = useState(true);
@@ -35,6 +31,14 @@ export function MichiganHeatMap() {
   const [opportunityZones, setOpportunityZones] = useState<OpportunityZone[]>([]);
   const [mapboxToken, setMapboxToken] = useState<string | null>(null);
   const [stats, setStats] = useState({ total: 0, hotZones: 0, coldZones: 0 });
+  const [mapboxgl, setMapboxgl] = useState<any>(null);
+
+  // Dynamically load mapbox-gl
+  useEffect(() => {
+    import('mapbox-gl').then((module) => {
+      setMapboxgl(module.default || module);
+    });
+  }, []);
 
   // Fetch Mapbox token
   useEffect(() => {
@@ -145,7 +149,7 @@ export function MichiganHeatMap() {
 
   // Initialize map
   useEffect(() => {
-    if (!mapContainer.current || !mapboxToken || locations.length === 0) return;
+    if (!mapContainer.current || !mapboxToken || !mapboxgl || locations.length === 0) return;
     if (map.current) return;
 
     mapboxgl.accessToken = mapboxToken;
@@ -301,7 +305,7 @@ export function MichiganHeatMap() {
       map.current?.remove();
       map.current = null;
     };
-  }, [mapboxToken, locations]);
+  }, [mapboxToken, locations, mapboxgl]);
 
   if (loading) {
     return (
