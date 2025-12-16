@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
 
     console.log(`Analyzing service zones for organization: ${organizationId}`);
 
-    // Get completed manifests from last 90 days with location data
+    // Get completed manifests from last 90 days with client data
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
@@ -53,17 +53,12 @@ Deno.serve(async (req) => {
         id,
         signed_at,
         created_at,
-        location_id,
-        locations!inner (
-          id,
-          address,
-          lat,
-          lng
-        ),
-        clients!inner (
+        clients (
           id,
           physical_zip,
-          zip
+          zip,
+          depot_lat,
+          depot_lng
         )
       `)
       .eq('organization_id', organizationId)
@@ -92,15 +87,16 @@ Deno.serve(async (req) => {
     const zipClusters: Map<string, ZipCluster> = new Map();
 
     for (const manifest of manifests) {
-      const zip = manifest.clients?.physical_zip || manifest.clients?.zip;
+      const client = manifest.clients;
+      const zip = client?.physical_zip || client?.zip;
       if (!zip) continue;
 
       const date = new Date(manifest.signed_at || manifest.created_at);
       const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
 
-      const location = manifest.locations;
-      const lat = location?.lat || 0;
-      const lng = location?.lng || 0;
+      // Use client depot coordinates
+      const lat = client?.depot_lat || 0;
+      const lng = client?.depot_lng || 0;
 
       if (!zipClusters.has(zip)) {
         zipClusters.set(zip, {
