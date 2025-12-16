@@ -66,35 +66,32 @@ export default function ClientDetail() {
     });
   }, [manifests, manifestSearch, manifestDateFrom, manifestDateTo]);
 
-  // Calculate last rate charged from most recent pickup
+  // Calculate last rate charged from most recent transaction
   const lastRateCharged = useMemo(() => {
     if (paymentHistory.length === 0) return null;
     
-    // Sort by date descending to get most recent
-    const sorted = [...paymentHistory].sort((a, b) => 
-      new Date(b.pickup_date).getTime() - new Date(a.pickup_date).getTime()
-    );
+    // Already sorted by date descending from hook
+    const lastTransaction = paymentHistory[0];
+    const revenue = lastTransaction.computed_revenue || 0;
     
-    const lastPickup = sorted[0];
-    const revenue = lastPickup.computed_revenue || 0;
-    
-    // Calculate total tires from manifest or pickup data
+    // Calculate total tires from manifest or transaction data
     let totalTires = 0;
-    const manifest = lastPickup.manifest;
+    const manifest = lastTransaction.manifest;
     if (manifest) {
       totalTires = (manifest.pte_on_rim || 0) + (manifest.pte_off_rim || 0) +
                    (manifest.commercial_17_5_19_5_on || 0) + (manifest.commercial_17_5_19_5_off || 0) +
                    (manifest.commercial_22_5_on || 0) + (manifest.commercial_22_5_off || 0) +
                    (manifest.otr_count || 0) + (manifest.tractor_count || 0);
     } else {
-      totalTires = (lastPickup.pte_count || 0) + (lastPickup.otr_count || 0) + (lastPickup.tractor_count || 0);
+      totalTires = (lastTransaction.pte_count || 0) + (lastTransaction.otr_count || 0) + (lastTransaction.tractor_count || 0);
     }
     
-    if (totalTires === 0) return { rate: 0, date: lastPickup.pickup_date };
+    if (totalTires === 0) return { rate: 0, date: lastTransaction.transaction_date, type: lastTransaction.transaction_type };
     
     return {
       rate: revenue / totalTires,
-      date: lastPickup.pickup_date
+      date: lastTransaction.transaction_date,
+      type: lastTransaction.transaction_type
     };
   }, [paymentHistory]);
 
@@ -115,8 +112,8 @@ export default function ClientDetail() {
     };
 
     payments.forEach(payment => {
-      const parsed = parseLocalDate(payment.pickup_date);
-      const paymentDate = parsed || new Date(payment.pickup_date);
+      const parsed = parseLocalDate(payment.transaction_date);
+      const paymentDate = parsed || new Date(payment.transaction_date);
       if (isWithinInterval(paymentDate, { start: weekStart, end: now })) {
         groups.thisWeek.push(payment);
       } else if (isWithinInterval(paymentDate, { start: monthStart, end: now })) {
@@ -140,7 +137,10 @@ export default function ClientDetail() {
       {payments.map((payment) => (
         <TableRow key={payment.id} className="hover:bg-muted/30">
           <TableCell className="font-medium">
-            {formatDateLocal(payment.pickup_date)}
+            {formatDateLocal(payment.transaction_date)}
+            {payment.transaction_type === 'dropoff' && (
+              <span className="ml-2 text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 px-1.5 py-0.5 rounded">Drop-off</span>
+            )}
           </TableCell>
           <TableCell>
             <div className="max-w-xs">
@@ -446,7 +446,7 @@ export default function ClientDetail() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Receipt className="h-5 w-5 text-primary" />
-                Avg Tires per Pickup
+                Avg Tires per Service
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -491,8 +491,8 @@ export default function ClientDetail() {
               </div>
               <p className="text-sm text-muted-foreground mt-1">
                 {lastRateCharged?.date
-                  ? `Rate from ${formatDateLocal(lastRateCharged.date)}`
-                  : 'No pickup history'
+                  ? `Rate from ${formatDateLocal(lastRateCharged.date)}${lastRateCharged.type === 'dropoff' ? ' (drop-off)' : ''}`
+                  : 'No transaction history'
                 }
               </p>
             </CardContent>
@@ -507,16 +507,16 @@ export default function ClientDetail() {
               Payment History
             </CardTitle>
             <p className="text-sm text-muted-foreground mt-2">
-              Complete record of all completed pickups and payments
+              Complete record of all pickups and drop-offs
             </p>
           </CardHeader>
           <CardContent>
             {paymentHistory.length === 0 ? (
               <div className="text-center py-12 bg-muted/20 rounded-lg border-2 border-dashed">
                 <Receipt className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
-                <p className="text-lg font-medium text-muted-foreground mb-2">No payment history yet</p>
+                <p className="text-lg font-medium text-muted-foreground mb-2">No transaction history yet</p>
                 <p className="text-sm text-muted-foreground">
-                  Completed pickups with payment details will appear here
+                  Completed pickups and drop-offs will appear here
                 </p>
               </div>
             ) : (
