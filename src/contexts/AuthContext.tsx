@@ -52,6 +52,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const validatingRef = useRef(false);
+  const hasCheckedOnboarding = useRef(false);
+  const lastUserJson = useRef<string | null>(null);
+
+  // Prevent unnecessary re-renders by comparing user state
+  const setUserIfChanged = (newUser: AuthUser | null) => {
+    const newJson = newUser ? JSON.stringify(newUser) : null;
+    if (lastUserJson.current !== newJson) {
+      lastUserJson.current = newJson;
+      setUser(newUser);
+    }
+  };
 
   // Session validation to prevent auth expiry
   const validateSession = useCallback(async () => {
@@ -118,7 +129,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       if (!authUser && !DISABLE_AUTH) {
         console.log('No auth user, setting user to null');
-        setUser(null);
+        setUserIfChanged(null);
         return;
       }
 
@@ -127,7 +138,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (DISABLE_AUTH) {
         // Demo mode - create a mock admin user with real organization
-        setUser({
+        setUserIfChanged({
           id: '00000000-0000-0000-0000-000000000000',
           email: 'admin@bsg.com',
           firstName: 'Demo',
@@ -171,7 +182,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (userError) {
         console.error('Error loading user data:', userError);
         // Provide fallback user with admin role
-        setUser({
+        setUserIfChanged({
           id: authUser.id,
           email: authUser.email || '',
           firstName: authUser.user_metadata?.first_name || 'User',
@@ -188,7 +199,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (!userData) {
         console.log('No user data found, providing fallback');
-        setUser({
+        setUserIfChanged({
           id: authUser.id,
           email: authUser.email || '',
           firstName: authUser.user_metadata?.first_name || 'User',
@@ -231,13 +242,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
 
       console.log('Setting final user:', finalUser);
-      setUser(finalUser);
+      setUserIfChanged(finalUser);
 
     } catch (error) {
       console.error('Error loading user data:', error);
       // Provide fallback user
       if (authUser) {
-        setUser({
+        setUserIfChanged({
           id: authUser.id,
           email: authUser.email || '',
           firstName: authUser.user_metadata?.first_name || 'User',
@@ -250,7 +261,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         });
       } else {
-        setUser(null);
+        setUserIfChanged(null);
       }
     } finally {
       setLoadingUserData(false);
@@ -276,7 +287,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               if (mounted) loadUserData(session.user);
             }, 0);
           } else {
-            setUser(null);
+            setUserIfChanged(null);
           }
           setLoading(false);
         }
@@ -300,7 +311,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               if (session?.user) {
                 loadUserData(session.user);
               } else {
-                setUser(null);
+                setUserIfChanged(null);
               }
             }
           }, 0);
@@ -342,10 +353,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   //   };
   // }, [session, validateSession]);
 
-  // Check if user needs onboarding
+  // Check if user needs onboarding - only once per session
   useEffect(() => {
     const checkOnboarding = async () => {
-      if (!user?.id || loading) return;
+      // Skip if already checked, not ready, or no user
+      if (hasCheckedOnboarding.current || loading || !user?.id) return;
+      hasCheckedOnboarding.current = true;
 
       try {
         // Check if user has an organization with a real name (not placeholder)
@@ -356,11 +369,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .limit(1)
           .maybeSingle();
 
-        // If org name is still "New Company", redirect to onboarding
+        // If org name is still "New Company", redirect to onboarding using SPA navigation
         if (orgData?.organizations?.name === 'New Company') {
           const currentPath = window.location.pathname;
           if (currentPath !== '/onboarding' && currentPath !== '/auth') {
-            window.location.href = '/onboarding';
+            // Use history API for SPA navigation instead of full page reload
+            window.history.pushState(null, '', '/onboarding');
+            window.dispatchEvent(new PopStateEvent('popstate'));
           }
         }
       } catch (error) {
@@ -369,7 +384,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     checkOnboarding();
-  }, [user, loading]);
+  }, [user?.id, loading]);
 
   const signIn = async (email: string, password: string) => {
     console.log('signIn called with email:', email);

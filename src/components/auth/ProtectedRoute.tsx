@@ -20,8 +20,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // Add delay before redirecting to allow token refresh to complete
   useEffect(() => {
     if (!loading && !user && requireAuth) {
-      // Set a short delay before redirect to prevent bouncing during token refresh
-      const timer = setTimeout(() => setShouldRedirect(true), 150);
+      // Extended delay (500ms) to allow token refresh to complete before redirecting
+      const timer = setTimeout(() => setShouldRedirect(true), 500);
       return () => clearTimeout(timer);
     }
     setShouldRedirect(false);
