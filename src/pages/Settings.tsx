@@ -18,6 +18,7 @@ import { TemplateUploadUtility } from "@/components/TemplateUploadUtility";
 import { supabase } from "@/integrations/supabase/client";
 import { InviteTeamDialog } from "@/components/settings/InviteTeamDialog";
 import { PendingInvitesTable } from "@/components/settings/PendingInvitesTable";
+import { RolePermissionsCard } from "@/components/settings/RolePermissionsCard";
 
 export default function Settings() {
   const { user } = useAuth();
@@ -281,6 +282,14 @@ if (preferencesLoading) {
                   <Users className="h-4 w-4 mr-2" />
                   Team Invites
                 </Button>
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start"
+                  onClick={() => scrollToSection('roles-section')}
+                >
+                  <Shield className="h-4 w-4 mr-2" />
+                  Role Permissions
+                </Button>
               </CardContent>
             </Card>
           </SlideUp>
@@ -304,6 +313,13 @@ if (preferencesLoading) {
                 <PendingInvitesTable />
               </CardContent>
             </Card>
+          </SlideUp>
+
+          {/* Role Permissions Section */}
+          <SlideUp delay={0.17} className="lg:col-span-2">
+            <div id="roles-section">
+              <RolePermissionsCard />
+            </div>
           </SlideUp>
 
           {/* Settings Content */}

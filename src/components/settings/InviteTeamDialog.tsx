@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,18 +6,26 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserPlus, Mail, QrCode, Loader2, Copy, Download, Check } from "lucide-react";
+import { UserPlus, Mail, QrCode, Loader2, Copy, Download, Check, AlertCircle } from "lucide-react";
 import { useSendEmailInvite, useCreateQRInvite } from "@/hooks/useOrganizationInvites";
 import { useAuth } from "@/contexts/AuthContext";
 import { QRCodeSVG } from "qrcode.react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
-const ROLES = [
-  { value: "driver", label: "Driver", description: "Can complete pickups and manifests" },
-  { value: "dispatcher", label: "Dispatcher", description: "Can manage routes and assignments" },
-  { value: "ops_manager", label: "Operations Manager", description: "Full operational access" },
-  { value: "admin", label: "Administrator", description: "Full access including settings" },
-  { value: "sales", label: "Sales", description: "Can manage clients and bookings" },
+// All available roles with descriptions
+const ALL_ROLES = [
+  { value: "admin", label: "Administrator", description: "Full access including settings and user management", tier: 1 },
+  { value: "ops_manager", label: "Operations Manager", description: "Full operational access, team management", tier: 2 },
+  { value: "dispatcher", label: "Dispatcher", description: "Manage routes, schedules, clients, manifests", tier: 3 },
+  { value: "driver", label: "Driver", description: "Complete pickups, manifests, view assignments", tier: 3 },
+  { value: "sales", label: "Sales", description: "Manage clients, bookings, view routes & trailers", tier: 3 },
 ];
+
+// Role hierarchy rules:
+// - admin can invite any role
+// - ops_manager can invite dispatcher, driver, sales (tier 3 only)
+// - dispatcher, driver, sales cannot invite anyone (no access to this dialog)
+// - client and hauler have separate invite flows
 
 interface InviteTeamDialogProps {
   trigger?: React.ReactNode;
@@ -38,6 +46,32 @@ export function InviteTeamDialog({ trigger }: InviteTeamDialogProps) {
 
   const appUrl = window.location.origin;
   const orgName = user?.currentOrganization?.name || "your organization";
+
+  // Determine which roles the current user can invite based on their role
+  const availableRoles = useMemo(() => {
+    const userRoles = user?.roles || [];
+    
+    // If user is admin, they can invite any role
+    if (userRoles.includes('admin')) {
+      return ALL_ROLES;
+    }
+    
+    // If user is ops_manager, they can invite tier 3 roles only
+    if (userRoles.includes('ops_manager')) {
+      return ALL_ROLES.filter(r => r.tier === 3);
+    }
+    
+    // Other roles cannot invite anyone (they shouldn't see this dialog anyway)
+    return [];
+  }, [user?.roles]);
+
+  // Get highest role for display purposes
+  const userHighestRole = useMemo(() => {
+    const userRoles = user?.roles || [];
+    if (userRoles.includes('admin')) return 'admin';
+    if (userRoles.includes('ops_manager')) return 'ops_manager';
+    return userRoles[0] || 'unknown';
+  }, [user?.roles]);
 
   const handleSendEmail = async () => {
     await sendEmailInvite.mutateAsync({ email, role, personal_message: message || undefined });
@@ -90,6 +124,11 @@ export function InviteTeamDialog({ trigger }: InviteTeamDialogProps) {
     setCopied(false);
   };
 
+  // If user has no available roles to invite, don't show the dialog
+  if (availableRoles.length === 0) {
+    return null;
+  }
+
   return (
     <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
       <DialogTrigger asChild>
@@ -107,6 +146,16 @@ export function InviteTeamDialog({ trigger }: InviteTeamDialogProps) {
             Add a new member to {orgName}
           </DialogDescription>
         </DialogHeader>
+
+        {/* Role restriction notice for ops_manager */}
+        {userHighestRole === 'ops_manager' && (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              As an Operations Manager, you can invite Drivers, Dispatchers, and Sales team members. Only Administrators can invite other Admins or Operations Managers.
+            </AlertDescription>
+          </Alert>
+        )}
 
         <Tabs value={tab} onValueChange={(v) => { setTab(v as "email" | "qr"); setGeneratedQR(null); }}>
           <TabsList className="grid w-full grid-cols-2">
@@ -139,7 +188,7 @@ export function InviteTeamDialog({ trigger }: InviteTeamDialogProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {ROLES.map((r) => (
+                  {availableRoles.map((r) => (
                     <SelectItem key={r.value} value={r.value}>
                       <div className="flex flex-col">
                         <span>{r.label}</span>
@@ -186,7 +235,7 @@ export function InviteTeamDialog({ trigger }: InviteTeamDialogProps) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {ROLES.map((r) => (
+                      {availableRoles.map((r) => (
                         <SelectItem key={r.value} value={r.value}>
                           <div className="flex flex-col">
                             <span>{r.label}</span>
@@ -199,7 +248,7 @@ export function InviteTeamDialog({ trigger }: InviteTeamDialogProps) {
                 </div>
 
                 <p className="text-sm text-muted-foreground">
-                  Generate a QR code that anyone can scan to join as a {ROLES.find((r) => r.value === role)?.label}. 
+                  Generate a QR code that anyone can scan to join as a {availableRoles.find((r) => r.value === role)?.label}. 
                   QR codes expire after 30 days.
                 </p>
 
@@ -229,7 +278,7 @@ export function InviteTeamDialog({ trigger }: InviteTeamDialogProps) {
                     fgColor="#1A4314"
                   />
                   <p className="mt-4 text-center font-medium">
-                    Scan to join as {ROLES.find((r) => r.value === generatedQR.role)?.label}
+                    Scan to join as {availableRoles.find((r) => r.value === generatedQR.role)?.label}
                   </p>
                   <p className="text-sm text-muted-foreground text-center">
                     {orgName}
