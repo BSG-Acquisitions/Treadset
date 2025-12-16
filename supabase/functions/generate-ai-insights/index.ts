@@ -39,7 +39,6 @@ serve(async (req) => {
       // Fetch comprehensive data for actionable insights
       const [
         patternsData,
-        overdueClientsData,
         inactiveClientsData,
         recentPickupsData,
         recentDropoffsData,
@@ -52,9 +51,6 @@ serve(async (req) => {
           .select('*, clients(company_name)')
           .eq('organization_id', org.id)
           .order('confidence_score', { ascending: false }),
-        
-        // Clients with patterns who are overdue for service
-        supabase.rpc('get_overdue_pattern_clients', { p_org_id: org.id }).catch(() => ({ data: null })),
         
         // Clients inactive for 30+ days
         supabase
