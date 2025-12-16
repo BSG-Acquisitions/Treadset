@@ -184,6 +184,7 @@ export default function ClientDetail() {
                     if (e.key === 'Enter') {
                       updatePickupPayment.mutate({
                         pickupId: payment.id,
+                        transaction_type: payment.transaction_type,
                         computed_revenue: parseFloat(editAmount)
                       });
                       setEditingAmount(null);
@@ -200,6 +201,7 @@ export default function ClientDetail() {
                   onClick={() => {
                     updatePickupPayment.mutate({
                       pickupId: payment.id,
+                      transaction_type: payment.transaction_type,
                       computed_revenue: parseFloat(editAmount)
                     });
                     setEditingAmount(null);
@@ -251,7 +253,8 @@ export default function ClientDetail() {
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
                   onClick={() => updatePickupPayment.mutate({ 
-                    pickupId: payment.id, 
+                    pickupId: payment.id,
+                    transaction_type: payment.transaction_type,
                     payment_method: 'CASH' 
                   })}
                   className="cursor-pointer"
@@ -261,7 +264,8 @@ export default function ClientDetail() {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => updatePickupPayment.mutate({ 
-                    pickupId: payment.id, 
+                    pickupId: payment.id,
+                    transaction_type: payment.transaction_type,
                     payment_method: 'CARD' 
                   })}
                   className="cursor-pointer"
@@ -271,7 +275,8 @@ export default function ClientDetail() {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => updatePickupPayment.mutate({ 
-                    pickupId: payment.id, 
+                    pickupId: payment.id,
+                    transaction_type: payment.transaction_type,
                     payment_method: 'CARD_ON_FILE' 
                   })}
                   className="cursor-pointer"
@@ -281,7 +286,8 @@ export default function ClientDetail() {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => updatePickupPayment.mutate({ 
-                    pickupId: payment.id, 
+                    pickupId: payment.id,
+                    transaction_type: payment.transaction_type,
                     payment_method: 'INVOICE' 
                   })}
                   className="cursor-pointer"
@@ -291,7 +297,8 @@ export default function ClientDetail() {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => updatePickupPayment.mutate({ 
-                    pickupId: payment.id, 
+                    pickupId: payment.id,
+                    transaction_type: payment.transaction_type,
                     payment_method: 'CHECK' 
                   })}
                   className="cursor-pointer"
