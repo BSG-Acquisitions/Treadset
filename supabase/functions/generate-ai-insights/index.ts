@@ -44,6 +44,7 @@ serve(async (req) => {
         recentDropoffsData,
         upcomingPickupsData,
         riskData,
+        pickupCountsData,
       ] = await Promise.all([
         // Client pickup patterns with client names
         supabase
@@ -52,7 +53,7 @@ serve(async (req) => {
           .eq('organization_id', org.id)
           .order('confidence_score', { ascending: false }),
         
-        // Clients inactive for 30+ days
+        // Clients inactive for 30+ days - we'll filter by pickup history later
         supabase
           .from('clients')
           .select('id, company_name, last_pickup_at')
@@ -60,12 +61,12 @@ serve(async (req) => {
           .eq('is_active', true)
           .lt('last_pickup_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
           .order('last_pickup_at', { ascending: true })
-          .limit(10),
+          .limit(20),
         
         // Recent completed pickups (last 7 days)
         supabase
           .from('pickups')
-          .select('id, final_revenue, computed_revenue, clients(company_name)')
+          .select('id, client_id, final_revenue, computed_revenue, clients(company_name)')
           .eq('organization_id', org.id)
           .eq('status', 'completed')
           .gte('pickup_date', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]),
@@ -73,7 +74,7 @@ serve(async (req) => {
         // Recent dropoffs (last 7 days)
         supabase
           .from('dropoffs')
-          .select('id, computed_revenue')
+          .select('id, client_id, computed_revenue, clients(company_name)')
           .eq('organization_id', org.id)
           .gte('dropoff_date', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]),
         
@@ -94,10 +95,26 @@ serve(async (req) => {
           .eq('organization_id', org.id)
           .eq('risk_level', 'high')
           .limit(5),
+        
+        // Get pickup counts per client to distinguish pickup clients from drop-off only clients
+        supabase
+          .from('pickups')
+          .select('client_id')
+          .eq('organization_id', org.id)
+          .eq('status', 'completed'),
       ]);
 
-      // Process patterns data
-      const patterns = patternsData.data || [];
+      // Build a map of clients with pickup history
+      const clientPickupCounts = new Map<string, number>();
+      for (const pickup of pickupCountsData.data || []) {
+        const count = clientPickupCounts.get(pickup.client_id) || 0;
+        clientPickupCounts.set(pickup.client_id, count + 1);
+      }
+
+      // Process patterns data - only for clients with pickup history
+      const patterns = (patternsData.data || []).filter((p: any) => 
+        clientPickupCounts.has(p.client_id) && (clientPickupCounts.get(p.client_id) || 0) >= 2
+      );
       const weeklyClients = patterns.filter((p: any) => p.frequency === 'weekly');
       const biweeklyClients = patterns.filter((p: any) => p.frequency === 'biweekly');
       const monthlyClients = patterns.filter((p: any) => p.frequency === 'monthly');
@@ -110,9 +127,14 @@ serve(async (req) => {
       const dropoffRevenue = recentDropoffs.reduce((sum: number, d: any) => 
         sum + (d.computed_revenue || 0), 0);
 
-      // Inactive clients
-      const inactiveClients = inactiveClientsData.data || [];
-      const highRiskClients = riskData.data || [];
+      // Inactive clients - ONLY include clients with at least 2 pickups (real pickup clients)
+      const inactiveClients = (inactiveClientsData.data || []).filter((c: any) => 
+        clientPickupCounts.has(c.id) && (clientPickupCounts.get(c.id) || 0) >= 2
+      );
+      
+      const highRiskClients = (riskData.data || []).filter((r: any) =>
+        clientPickupCounts.has(r.client_id) && (clientPickupCounts.get(r.client_id) || 0) >= 2
+      );
       const upcomingPickups = upcomingPickupsData.data || [];
 
       // Build context for AI
@@ -132,7 +154,8 @@ serve(async (req) => {
         },
         inactive: inactiveClients.map((c: any) => ({
           name: c.company_name,
-          daysSince: Math.floor((Date.now() - new Date(c.last_pickup_at).getTime()) / (1000 * 60 * 60 * 24))
+          daysSince: Math.floor((Date.now() - new Date(c.last_pickup_at).getTime()) / (1000 * 60 * 60 * 24)),
+          pickupCount: clientPickupCounts.get(c.id) || 0
         })).slice(0, 5),
         highRisk: highRiskClients.map((r: any) => r.clients?.company_name).filter(Boolean),
         upcoming: upcomingPickups.slice(0, 5).map((p: any) => ({
@@ -161,6 +184,8 @@ serve(async (req) => {
 
 CRITICAL RULES:
 - Be SPECIFIC with client names - use actual names from the data
+- ONLY suggest scheduling pickups for clients that have PICKUP HISTORY (listed in the data below)
+- NEVER suggest scheduling pickups for drop-off-only clients
 - Focus on ACTION items: who to call, who to schedule, who needs attention
 - DO NOT mention revenue forecasts (there's a separate tile for that)
 - Keep insights brief but actionable (3-5 bullet points max)
@@ -177,7 +202,7 @@ Format example:
                   role: 'user',
                   content: `Generate actionable insights from this data:
 
-CLIENT PATTERNS:
+CLIENT PICKUP PATTERNS (these are actual pickup clients - safe to suggest scheduling):
 - Total clients with patterns: ${context.patterns.total}
 - Weekly clients: ${context.patterns.weekly.join(', ') || 'None'}
 - Biweekly clients: ${context.patterns.biweekly.join(', ') || 'None'}
@@ -187,19 +212,19 @@ LAST 7 DAYS ACTIVITY:
 - Pickups completed: ${context.recentActivity.pickupCount}
 - Drop-offs received: ${context.recentActivity.dropoffCount}
 
-CLIENTS NEEDING ATTENTION:
+PICKUP CLIENTS NEEDING ATTENTION (these have 2+ pickups in history - safe to suggest scheduling):
 ${context.inactive.length > 0 
-  ? context.inactive.map(c => `- ${c.name}: ${c.daysSince} days since last pickup`).join('\n')
-  : '- All clients are active'}
+  ? context.inactive.map(c => `- ${c.name}: ${c.daysSince} days since last pickup (${c.pickupCount} total pickups)`).join('\n')
+  : '- All pickup clients are active'}
 
-HIGH-RISK CLIENTS: ${context.highRisk.length > 0 ? context.highRisk.join(', ') : 'None'}
+HIGH-RISK PICKUP CLIENTS: ${context.highRisk.length > 0 ? context.highRisk.join(', ') : 'None'}
 
 UPCOMING THIS WEEK:
 ${context.upcoming.length > 0
   ? context.upcoming.map(p => `- ${p.name} on ${p.date}`).join('\n')
   : '- No pickups scheduled'}
 
-Provide 3-5 actionable bullet points.`,
+Provide 3-5 actionable bullet points. ONLY suggest scheduling for clients listed above.`,
                 },
               ],
             }),
@@ -268,10 +293,10 @@ function generateFallbackSummary(context: any): string {
     bullets.push(`• SCHEDULED: ${context.upcoming.length} pickup${context.upcoming.length > 1 ? 's' : ''} this week including ${names}`);
   }
 
-  // Inactive clients needing attention
+  // Inactive clients needing attention (only pickup clients)
   if (context.inactive.length > 0) {
     const topInactive = context.inactive[0];
-    bullets.push(`• ATTENTION: ${topInactive.name} hasn't been serviced in ${topInactive.daysSince} days`);
+    bullets.push(`• ATTENTION: ${topInactive.name} hasn't been serviced in ${topInactive.daysSince} days (${topInactive.pickupCount} total pickups)`);
   }
 
   // High-risk clients
@@ -283,7 +308,7 @@ function generateFallbackSummary(context: any): string {
   if (context.patterns.total > 0) {
     const weekly = context.patterns.weekly.length;
     const biweekly = context.patterns.biweekly.length;
-    bullets.push(`• PATTERNS: Tracking ${weekly} weekly and ${biweekly} biweekly clients`);
+    bullets.push(`• PATTERNS: Tracking ${weekly} weekly and ${biweekly} biweekly pickup clients`);
   }
 
   // Recent activity

@@ -11,6 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { MapPin, Plus, Wand2, Trash2, Edit, Loader2, Calendar, Info } from 'lucide-react';
 import { SlideUp } from '@/components/motion/SlideUp';
 import { ZoneMapVisualization } from '@/components/zones/ZoneMapVisualization';
+import { MichiganHeatMap } from '@/components/zones/MichiganHeatMap';
 import { toast } from 'sonner';
 
 const DAYS_OF_WEEK = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -220,9 +221,14 @@ export default function ServiceZones() {
         </SlideUp>
       )}
 
+      {/* Michigan Heat Map - Always show */}
+      <SlideUp delay={0.15}>
+        <MichiganHeatMap />
+      </SlideUp>
+
       {/* Zone Map Visualization */}
       {zones.length > 0 && (
-        <SlideUp delay={0.15}>
+        <SlideUp delay={0.2}>
           <ZoneMapVisualization />
         </SlideUp>
       )}
