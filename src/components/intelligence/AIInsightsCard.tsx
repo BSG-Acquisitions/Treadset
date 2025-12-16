@@ -1,21 +1,13 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useAIInsights, useGenerateInsights } from '@/hooks/useAIInsights';
-import { Brain, ChevronDown, RefreshCw, Sparkles, Info } from 'lucide-react';
+import { Brain, RefreshCw, Sparkles } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { useState } from 'react';
 
 export const AIInsightsCard = () => {
-  const { data: insights, isLoading } = useAIInsights(7);
+  const { data: insights, isLoading } = useAIInsights(1); // Only get latest
   const generateInsights = useGenerateInsights();
-  const [openInsights, setOpenInsights] = useState<Record<string, boolean>>({});
-
-  const toggleInsight = (id: string) => {
-    setOpenInsights(prev => ({ ...prev, [id]: !prev[id] }));
-  };
 
   if (isLoading) {
     return (
@@ -29,18 +21,13 @@ export const AIInsightsCard = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-20 bg-muted/50 animate-pulse rounded-lg" />
-            ))}
-          </div>
+          <div className="h-32 bg-muted/50 animate-pulse rounded-lg" />
         </CardContent>
       </Card>
     );
   }
 
   const latestInsight = insights?.[0];
-  const olderInsights = insights?.slice(1) || [];
 
   return (
     <Card>
@@ -53,21 +40,6 @@ export const AIInsightsCard = () => {
               <Sparkles className="h-3 w-3" />
               Daily
             </Badge>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info className="h-3 w-3 text-muted-foreground cursor-help" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p className="text-xs max-w-xs">
-                    <strong>Data source:</strong> ai_insights table<br/>
-                    <strong>Analysis from:</strong> assignments, client_risk_scores, hauler_reliability<br/>
-                    <strong>Auto-refresh:</strong> Every 15 minutes<br/>
-                    <strong>Generation:</strong> AI-powered daily summaries
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
           </div>
           <Button
             variant="ghost"
@@ -79,10 +51,10 @@ export const AIInsightsCard = () => {
           </Button>
         </div>
         <CardDescription>
-          Automated operational summaries from all intelligence modules
+          Actionable recommendations based on your operations
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent>
         {!latestInsight && (
           <div className="text-center py-8 text-muted-foreground">
             <Brain className="h-12 w-12 mx-auto mb-3 opacity-50" />
@@ -94,16 +66,15 @@ export const AIInsightsCard = () => {
               onClick={() => generateInsights.mutate()}
               disabled={generateInsights.isPending}
             >
-              Generate First Insight
+              Generate Insights
             </Button>
           </div>
         )}
 
         {latestInsight && (
           <div className="space-y-3">
-            {/* Latest Insight - Always Expanded */}
             <div className="p-4 rounded-lg border border-primary/20 bg-primary/5">
-              <div className="flex items-start justify-between mb-2">
+              <div className="flex items-center justify-between mb-3">
                 <Badge variant="default" className="gap-1">
                   <Sparkles className="h-3 w-3" />
                   Latest
@@ -112,44 +83,10 @@ export const AIInsightsCard = () => {
                   {formatDistanceToNow(new Date(latestInsight.generated_at), { addSuffix: true })}
                 </span>
               </div>
-              <div className="prose prose-sm max-w-none text-foreground whitespace-pre-line">
+              <div className="prose prose-sm max-w-none text-foreground whitespace-pre-line leading-relaxed">
                 {latestInsight.summary_text}
               </div>
             </div>
-
-            {/* Older Insights - Collapsible */}
-            {olderInsights.map(insight => (
-              <Collapsible
-                key={insight.id}
-                open={openInsights[insight.id]}
-                onOpenChange={() => toggleInsight(insight.id)}
-              >
-                <div className="p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
-                  <CollapsibleTrigger className="w-full">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <ChevronDown className={`h-4 w-4 transition-transform ${openInsights[insight.id] ? 'rotate-180' : ''}`} />
-                        <span className="text-sm font-medium">
-                          {new Date(insight.generated_at).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                          })}
-                        </span>
-                      </div>
-                      <span className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(insight.generated_at), { addSuffix: true })}
-                      </span>
-                    </div>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <div className="mt-3 pt-3 border-t prose prose-sm max-w-none text-foreground whitespace-pre-line">
-                      {insight.summary_text}
-                    </div>
-                  </CollapsibleContent>
-                </div>
-              </Collapsible>
-            ))}
           </div>
         )}
       </CardContent>
