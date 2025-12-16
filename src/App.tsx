@@ -66,6 +66,8 @@ import TrailerVehicles from "./pages/TrailerVehicles";
 import DriverTrailerAssignments from "./pages/DriverTrailerAssignments";
 import TrailerDriverManagement from "./pages/TrailerDriverManagement";
 import TrailerReports from "./pages/TrailerReports";
+import BookingRequests from "./pages/BookingRequests";
+import ServiceZones from "./pages/ServiceZones";
 import { FEATURE_FLAGS } from "./lib/featureFlags";
 
 const queryClient = new QueryClient();
@@ -418,6 +420,22 @@ const App = () => (
                     </AppLayout>
                   </ProtectedRoute>
                 ) : <NotFound />
+              } />
+              
+              {/* Booking Management Routes */}
+              <Route path="/booking-requests" element={
+                <ProtectedRoute roles={['admin', 'ops_manager']}>
+                  <AppLayout>
+                    <BookingRequests />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/service-zones" element={
+                <ProtectedRoute roles={['admin', 'ops_manager']}>
+                  <AppLayout>
+                    <ServiceZones />
+                  </AppLayout>
+                </ProtectedRoute>
               } />
               
               {/* Catch-all 404 - Must be last */}

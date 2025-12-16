@@ -3,38 +3,35 @@ import { useSearchParams, Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Clock, MapPin, Truck, User, Calendar, Building2, Phone, Mail } from "lucide-react";
+import { Clock, MapPin, Truck, User, Calendar, Building2, Phone, Mail, Hourglass, CheckCircle } from "lucide-react";
 import { BrandHeader } from "@/components/BrandHeader";
 
 interface PublicConfirmationData {
   success: boolean;
-  bookingId: string;
-  client: {
+  bookingRequestId: string;
+  status: string;
+  message: string;
+  contact: {
     name: string;
     company: string;
     email: string;
-    phone?: string;
   };
   location: {
     address: string;
+    city?: string;
+    state?: string;
+    zip?: string;
   };
-  pickup: {
-    date: string;
-    pteCount: number;
-    otrCount: number;
-    tractorCount: number;
+  requestedDate: string;
+  preferredWindow: string;
+  tireEstimates: {
+    pte: number;
+    otr: number;
+    tractor: number;
   };
-  assignment: {
-    vehicleName: string;
-    eta: string;
-    windowLabel: string;
-  };
-  allOptions: Array<{
-    vehicleName: string;
-    eta: string;
-    windowLabel: string;
-    addedTravelTimeMinutes: number;
-  }>;
+  zoneMatched: boolean;
+  zoneName?: string;
+  suggestedDates?: string[];
 }
 
 export default function PublicBookingConfirmation() {
@@ -42,7 +39,7 @@ export default function PublicBookingConfirmation() {
   const [confirmationData, setConfirmationData] = useState<PublicConfirmationData | null>(null);
   
   useEffect(() => {
-    document.title = "Pickup Confirmed – TreadSet Tire Collection";
+    document.title = "Request Submitted – TreadSet Tire Collection";
     
     // Get confirmation data from URL params
     const dataParam = searchParams.get('data');
@@ -76,7 +73,7 @@ export default function PublicBookingConfirmation() {
   }
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-US', {
+    return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -84,12 +81,10 @@ export default function PublicBookingConfirmation() {
     });
   };
 
-  const formatTime = (isoString: string) => {
-    return new Date(isoString).toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
+  const windowLabels: Record<string, string> = {
+    'AM': 'Morning (8 AM - 12 PM)',
+    'PM': 'Afternoon (12 PM - 5 PM)',
+    'Any': 'Anytime (8 AM - 5 PM)'
   };
 
   return (
@@ -98,19 +93,57 @@ export default function PublicBookingConfirmation() {
       
       <div className="container py-12">
         <div className="max-w-2xl mx-auto space-y-6">
-          {/* Success Header */}
-          <Card className="border-primary/20 bg-primary/5">
+          {/* Pending Status Header */}
+          <Card className="border-amber-500/30 bg-amber-50/50 dark:bg-amber-900/10">
             <CardContent className="pt-6">
               <div className="text-center space-y-2">
-                <CheckCircle className="h-16 w-16 text-primary mx-auto" />
-                <h1 className="text-2xl font-semibold text-foreground">Pickup Confirmed!</h1>
+                <Hourglass className="h-16 w-16 text-amber-600 mx-auto" />
+                <h1 className="text-2xl font-semibold text-foreground">Request Submitted!</h1>
                 <p className="text-muted-foreground">
-                  Your tire pickup has been scheduled and our driver will arrive at the confirmed time.
+                  Your pickup request has been submitted and is pending review by our team.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  You'll receive an email confirmation once your request is approved.
                 </p>
                 <div className="pt-2">
-                  <Badge variant="secondary" className="text-sm">
-                    Confirmation: {confirmationData.bookingId.slice(0, 8).toUpperCase()}
+                  <Badge variant="secondary" className="text-sm bg-amber-100 text-amber-800 border-amber-300">
+                    Reference: {confirmationData.bookingRequestId.slice(0, 8).toUpperCase()}
                   </Badge>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* What Happens Next */}
+          <Card className="border-primary/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Clock className="h-5 w-5" />
+                What Happens Next
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-medium text-primary">1</div>
+                  <div>
+                    <p className="font-medium">Review</p>
+                    <p className="text-sm text-muted-foreground">Our team will review your request within 24 hours</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-medium text-primary">2</div>
+                  <div>
+                    <p className="font-medium">Confirmation</p>
+                    <p className="text-sm text-muted-foreground">You'll receive an email with your confirmed pickup date and time</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-medium text-primary">3</div>
+                  <div>
+                    <p className="font-medium">Pickup</p>
+                    <p className="text-sm text-muted-foreground">Our driver will arrive at the scheduled time to collect your tires</p>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -121,7 +154,7 @@ export default function PublicBookingConfirmation() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Building2 className="h-5 w-5" />
-                Pickup Information
+                Request Details
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -130,26 +163,17 @@ export default function PublicBookingConfirmation() {
                   <div className="flex items-start gap-3">
                     <User className="h-5 w-5 text-muted-foreground mt-0.5" />
                     <div>
-                      <p className="font-medium">{confirmationData.client.name}</p>
-                      <p className="text-sm text-muted-foreground">{confirmationData.client.company}</p>
+                      <p className="font-medium">{confirmationData.contact.name}</p>
+                      <p className="text-sm text-muted-foreground">{confirmationData.contact.company}</p>
                     </div>
                   </div>
                   
                   <div className="flex items-start gap-3">
                     <Mail className="h-5 w-5 text-muted-foreground mt-0.5" />
                     <div>
-                      <p className="text-sm text-muted-foreground">{confirmationData.client.email}</p>
+                      <p className="text-sm text-muted-foreground">{confirmationData.contact.email}</p>
                     </div>
                   </div>
-
-                  {confirmationData.client.phone && (
-                    <div className="flex items-start gap-3">
-                      <Phone className="h-5 w-5 text-muted-foreground mt-0.5" />
-                      <div>
-                        <p className="text-sm text-muted-foreground">{confirmationData.client.phone}</p>
-                      </div>
-                    </div>
-                  )}
                   
                   <div className="flex items-start gap-3">
                     <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
@@ -158,28 +182,44 @@ export default function PublicBookingConfirmation() {
                       <p className="text-sm text-muted-foreground">{confirmationData.location.address}</p>
                     </div>
                   </div>
+
+                  {confirmationData.zoneMatched && confirmationData.zoneName && (
+                    <div className="flex items-center gap-2 mt-2">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      <span className="text-sm text-green-700">In service zone: {confirmationData.zoneName}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium">Requested Date</p>
+                      <p className="text-sm text-muted-foreground">{formatDate(confirmationData.requestedDate)}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{windowLabels[confirmationData.preferredWindow] || confirmationData.preferredWindow}</p>
+                    </div>
+                  </div>
+
                   <div>
-                    <p className="text-sm font-medium mb-2">Tire Quantities</p>
+                    <p className="text-sm font-medium mb-2">Tire Estimates</p>
                     <div className="space-y-2">
-                      {confirmationData.pickup.pteCount > 0 && (
+                      {confirmationData.tireEstimates.pte > 0 && (
                         <div className="flex justify-between text-sm p-2 bg-muted rounded">
                           <span>Passenger/Light Truck:</span>
-                          <span className="font-medium">{confirmationData.pickup.pteCount}</span>
+                          <span className="font-medium">{confirmationData.tireEstimates.pte}</span>
                         </div>
                       )}
-                      {confirmationData.pickup.otrCount > 0 && (
+                      {confirmationData.tireEstimates.otr > 0 && (
                         <div className="flex justify-between text-sm p-2 bg-muted rounded">
                           <span>OTR (Off-Road):</span>
-                          <span className="font-medium">{confirmationData.pickup.otrCount}</span>
+                          <span className="font-medium">{confirmationData.tireEstimates.otr}</span>
                         </div>
                       )}
-                      {confirmationData.pickup.tractorCount > 0 && (
+                      {confirmationData.tireEstimates.tractor > 0 && (
                         <div className="flex justify-between text-sm p-2 bg-muted rounded">
                           <span>Tractor Trailer:</span>
-                          <span className="font-medium">{confirmationData.pickup.tractorCount}</span>
+                          <span className="font-medium">{confirmationData.tireEstimates.tractor}</span>
                         </div>
                       )}
                     </div>
@@ -189,73 +229,10 @@ export default function PublicBookingConfirmation() {
             </CardContent>
           </Card>
 
-          {/* Scheduled Pickup */}
-          <Card className="border-primary/20">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Truck className="h-5 w-5" />
-                Scheduled Pickup
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between p-4 bg-primary/5 rounded-lg border border-primary/20">
-                <div className="space-y-1">
-                  <p className="font-medium text-lg">{confirmationData.assignment.vehicleName}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {formatDate(confirmationData.pickup.date)}
-                  </p>
-                </div>
-                <div className="text-right space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-primary" />
-                    <span className="font-medium text-lg">{formatTime(confirmationData.assignment.eta)}</span>
-                  </div>
-                  <Badge variant="outline" className="border-primary text-primary">
-                    {confirmationData.assignment.windowLabel}
-                  </Badge>
-                </div>
-              </div>
-              
-              <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                <p className="text-sm text-amber-800">
-                  <strong>Please note:</strong> Our driver will arrive within a 30-minute window of the scheduled time. 
-                  Please ensure someone is available to assist with the pickup.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* What to Expect */}
-          <Card>
-            <CardHeader>
-              <CardTitle>What to Expect</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-2 text-sm">
-                <div className="flex items-start gap-2">
-                  <div className="w-2 h-2 bg-primary rounded-full mt-2"></div>
-                  <p>Our driver will contact you when they're on their way</p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <div className="w-2 h-2 bg-primary rounded-full mt-2"></div>
-                  <p>Please have your tires accessible and ready for pickup</p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <div className="w-2 h-2 bg-primary rounded-full mt-2"></div>
-                  <p>Our driver will provide a receipt and calculate any fees on-site</p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <div className="w-2 h-2 bg-primary rounded-full mt-2"></div>
-                  <p>Payment can be made by cash, check, or card</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Actions */}
           <div className="flex flex-col sm:flex-row gap-3">
             <Button asChild className="flex-1">
-              <Link to="/public-book">Schedule Another Pickup</Link>
+              <Link to="/public-book">Submit Another Request</Link>
             </Button>
             <Button variant="outline" asChild className="flex-1">
               <a href="mailto:support@bsglogistics.com">Contact Support</a>
@@ -266,9 +243,9 @@ export default function PublicBookingConfirmation() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center text-sm text-muted-foreground">
-                <p className="mb-2">Need to modify or cancel your pickup?</p>
+                <p className="mb-2">Have questions about your request?</p>
                 <p>Contact us at <span className="font-medium">support@bsglogistics.com</span> or <span className="font-medium">(555) 123-4567</span></p>
-                <p className="text-xs mt-2">Reference confirmation: {confirmationData.bookingId.slice(0, 8).toUpperCase()}</p>
+                <p className="text-xs mt-2">Reference: {confirmationData.bookingRequestId.slice(0, 8).toUpperCase()}</p>
               </div>
             </CardContent>
           </Card>

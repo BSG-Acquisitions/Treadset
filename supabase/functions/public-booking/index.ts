@@ -24,19 +24,6 @@ interface Coordinates {
   lng: number;
 }
 
-// Haversine distance calculation
-function haversineDistance(point1: Coordinates, point2: Coordinates): number {
-  const R = 6371; // Earth's radius in kilometers
-  const dLat = (point2.lat - point1.lat) * Math.PI / 180;
-  const dLng = (point2.lng - point1.lng) * Math.PI / 180;
-  const a = 
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(point1.lat * Math.PI / 180) * Math.cos(point2.lat * Math.PI / 180) * 
-    Math.sin(dLng/2) * Math.sin(dLng/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c;
-}
-
 // Geocoding functions
 async function geocodeWithGoogle(address: string): Promise<Coordinates | null> {
   try {
@@ -108,6 +95,32 @@ async function geocodeAddress(address: string): Promise<Coordinates | null> {
   return coords;
 }
 
+// Parse address components
+function parseAddress(fullAddress: string): { city?: string; state?: string; zip?: string } {
+  const parts = fullAddress.split(',').map(p => p.trim());
+  const result: { city?: string; state?: string; zip?: string } = {};
+  
+  if (parts.length >= 2) {
+    result.city = parts[parts.length - 3] || parts[0];
+    
+    // Parse state and zip from last part (e.g., "MI 48000" or "Michigan 48000")
+    const lastPart = parts[parts.length - 2] || parts[parts.length - 1];
+    const stateZipMatch = lastPart.match(/([A-Za-z]+)\s*(\d{5})?/);
+    if (stateZipMatch) {
+      result.state = stateZipMatch[1];
+      result.zip = stateZipMatch[2];
+    }
+    
+    // Try to extract zip from end of address
+    const zipMatch = fullAddress.match(/\b(\d{5})(?:-\d{4})?\b/);
+    if (zipMatch) {
+      result.zip = zipMatch[1];
+    }
+  }
+  
+  return result;
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -120,7 +133,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const bookingData: BookingRequest = await req.json();
-    console.log('Processing booking request:', bookingData);
+    console.log('[PUBLIC_BOOKING] Processing booking request:', bookingData);
 
     // Get the default BSG organization
     const { data: organization, error: orgError } = await supabase
@@ -130,205 +143,125 @@ Deno.serve(async (req) => {
       .single();
 
     if (orgError || !organization) {
-      console.error('Error finding organization:', orgError);
+      console.error('[PUBLIC_BOOKING] Error finding organization:', orgError);
       throw new Error('Organization not found');
     }
 
     const organizationId = organization.id;
 
-    // Step 1: Find or create client
-    let client;
-    const { data: existingClients } = await supabase
-      .from('clients')
-      .select('*')
-      .eq('email', bookingData.email)
-      .eq('organization_id', organizationId)
-      .limit(1);
-
-    if (existingClients && existingClients.length > 0) {
-      client = existingClients[0];
-      console.log('Found existing client:', client.id);
-    } else {
-      // Create new client
-      const { data: newClient, error: clientError } = await supabase
-        .from('clients')
-        .insert({
-          company_name: bookingData.company,
-          contact_name: bookingData.name,
-          email: bookingData.email,
-          phone: bookingData.phone || null,
-          type: 'commercial',
-          organization_id: organizationId
-        })
-        .select()
-        .single();
-
-      if (clientError) {
-        console.error('Error creating client:', clientError);
-        throw clientError;
-      }
-
-      client = newClient;
-      console.log('Created new client:', client.id);
-    }
-
-    // Step 2: Geocode address
+    // Geocode the address
     const coordinates = await geocodeAddress(bookingData.address);
-    if (!coordinates) {
-      throw new Error('Unable to geocode the provided address');
-    }
+    console.log('[PUBLIC_BOOKING] Geocoded coordinates:', coordinates);
 
-    console.log('Geocoded coordinates:', coordinates);
+    // Parse address components
+    const addressParts = parseAddress(bookingData.address);
+    console.log('[PUBLIC_BOOKING] Parsed address:', addressParts);
 
-    // Step 3: Find or create location
-    let location;
-    const { data: existingLocations } = await supabase
-      .from('locations')
-      .select('*')
-      .eq('client_id', client.id)
-      .eq('address', bookingData.address)
-      .limit(1);
-
-    if (existingLocations && existingLocations.length > 0) {
-      location = existingLocations[0];
-      console.log('Found existing location:', location.id);
-    } else {
-      // Create new location
-      const { data: newLocation, error: locationError } = await supabase
-        .from('locations')
-        .insert({
-          client_id: client.id,
-          address: bookingData.address,
-          latitude: coordinates.lat,
-          longitude: coordinates.lng,
-          organization_id: organizationId
-        })
-        .select()
-        .single();
-
-      if (locationError) {
-        console.error('Error creating location:', locationError);
-        throw locationError;
-      }
-
-      location = newLocation;
-      console.log('Created new location:', location.id);
-    }
-
-    // Step 4: Generate route options for multiple days
-    const dates = [];
-    const baseDate = new Date(bookingData.preferredDate);
+    // Check for matching service zone by ZIP code
+    let matchedZone = null;
+    let zoneSuggestedDates: string[] = [];
     
-    // Include preferred date + next 4-7 days
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(baseDate);
-      date.setDate(baseDate.getDate() + i);
-      dates.push(date.toISOString().split('T')[0]);
-    }
+    if (addressParts.zip) {
+      const { data: zones } = await supabase
+        .from('service_zones')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .eq('is_active', true)
+        .contains('zip_codes', [addressParts.zip]);
 
-    let allOptions: any[] = [];
-
-    for (const date of dates) {
-      try {
-        const { data: routeData, error: routeError } = await supabase.functions.invoke('route-planner', {
-          body: {
-            clientId: client.id,
-            locationId: location.id,
-            pickupDate: date,
-            pteCount: bookingData.pteCount,
-            otrCount: bookingData.otrCount,
-            tractorCount: bookingData.tractorCount,
-            preferredWindow: bookingData.preferredWindow
+      if (zones && zones.length > 0) {
+        matchedZone = zones[0];
+        console.log('[PUBLIC_BOOKING] Matched service zone:', matchedZone.name);
+        
+        // Generate suggested dates based on zone service days
+        if (matchedZone.service_days && matchedZone.service_days.length > 0) {
+          const today = new Date();
+          const suggestedDates = [];
+          
+          for (let i = 0; i < 14 && suggestedDates.length < 3; i++) {
+            const checkDate = new Date(today);
+            checkDate.setDate(today.getDate() + i);
+            const dayName = checkDate.toLocaleDateString('en-US', { weekday: 'long' });
+            
+            if (matchedZone.service_days.includes(dayName)) {
+              suggestedDates.push(checkDate.toISOString().split('T')[0]);
+            }
           }
-        });
-
-        if (!routeError && routeData?.options) {
-          allOptions.push(...routeData.options.map((opt: any) => ({
-            ...opt,
-            pickupDate: date
-          })));
+          
+          zoneSuggestedDates = suggestedDates;
         }
-      } catch (error) {
-        console.error(`Error getting routes for ${date}:`, error);
       }
     }
 
-    if (allOptions.length === 0) {
-      throw new Error('No available slots found for the requested dates');
-    }
+    // Calculate estimated PTE value for prioritization
+    const estimatedPteValue = 
+      (bookingData.pteCount * 1) + 
+      (bookingData.otrCount * 15) + 
+      (bookingData.tractorCount * 5);
 
-    // Sort all options by added travel time and pick the best one
-    allOptions.sort((a, b) => a.addedTravelTimeMinutes - b.addedTravelTimeMinutes);
-    const bestOption = allOptions[0];
-
-    console.log('Best route option:', bestOption);
-
-    // Step 5: Create pickup and assignment
-    const { data: pickup, error: pickupError } = await supabase
-      .from('pickups')
+    // Create booking request (goes to approval queue)
+    const { data: bookingRequest, error: bookingError } = await supabase
+      .from('booking_requests')
       .insert({
-        client_id: client.id,
-        location_id: location.id,
-        pickup_date: bestOption.pickupDate,
-        pte_count: bookingData.pteCount,
-        otr_count: bookingData.otrCount,
-        tractor_count: bookingData.tractorCount,
-        preferred_window: bookingData.preferredWindow,
+        organization_id: organizationId,
+        contact_name: bookingData.name,
+        contact_email: bookingData.email,
+        contact_phone: bookingData.phone || null,
+        company_name: bookingData.company,
+        pickup_address: bookingData.address,
+        pickup_city: addressParts.city || null,
+        pickup_state: addressParts.state || null,
+        pickup_zip: addressParts.zip || null,
+        pickup_lat: coordinates?.lat || null,
+        pickup_lng: coordinates?.lng || null,
+        requested_date: bookingData.preferredDate,
+        preferred_time_window: bookingData.preferredWindow,
+        tire_estimate_pte: bookingData.pteCount,
+        tire_estimate_otr: bookingData.otrCount,
+        tire_estimate_tractor: bookingData.tractorCount,
         notes: bookingData.notes || null,
-        status: 'scheduled',
-        organization_id: organizationId
+        status: 'pending',
+        zone_id: matchedZone?.id || null,
+        zone_matched: !!matchedZone,
+        estimated_value: estimatedPteValue
       })
       .select()
       .single();
 
-    if (pickupError) {
-      console.error('Error creating pickup:', pickupError);
-      throw pickupError;
+    if (bookingError) {
+      console.error('[PUBLIC_BOOKING] Error creating booking request:', bookingError);
+      throw bookingError;
     }
 
-    const { data: assignment, error: assignmentError } = await supabase
-      .from('assignments')
-      .insert({
-        pickup_id: pickup.id,
-        vehicle_id: bestOption.vehicleId,
-        scheduled_date: bestOption.pickupDate,
-        estimated_arrival: bestOption.eta,
-        sequence_order: bestOption.insertionIndex || 0,
-        status: 'assigned',
-        organization_id: organizationId
-      })
-      .select()
-      .single();
-
-    if (assignmentError) {
-      console.error('Error creating assignment:', assignmentError);
-      throw assignmentError;
-    }
+    console.log('[PUBLIC_BOOKING] Created booking request:', bookingRequest.id);
 
     // Return confirmation data
     const confirmation = {
       success: true,
-      bookingId: pickup.id,
-      client: {
-        name: client.contact_name,
-        company: client.company_name,
-        email: client.email
+      bookingRequestId: bookingRequest.id,
+      status: 'pending',
+      message: 'Your pickup request has been submitted and is pending review.',
+      contact: {
+        name: bookingData.name,
+        company: bookingData.company,
+        email: bookingData.email
       },
       location: {
-        address: location.address
+        address: bookingData.address,
+        city: addressParts.city,
+        state: addressParts.state,
+        zip: addressParts.zip
       },
-      pickup: {
-        date: pickup.pickup_date,
-        pteCount: pickup.pte_count,
-        otrCount: pickup.otr_count,
-        tractorCount: pickup.tractor_count
+      requestedDate: bookingData.preferredDate,
+      preferredWindow: bookingData.preferredWindow,
+      tireEstimates: {
+        pte: bookingData.pteCount,
+        otr: bookingData.otrCount,
+        tractor: bookingData.tractorCount
       },
-      assignment: {
-        vehicleName: bestOption.vehicleName,
-        eta: bestOption.eta,
-        windowLabel: bestOption.windowLabel
-      },
-      allOptions: allOptions.slice(0, 5) // Return top 5 options for display
+      zoneMatched: !!matchedZone,
+      zoneName: matchedZone?.name || null,
+      suggestedDates: zoneSuggestedDates
     };
 
     return new Response(
@@ -337,7 +270,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error: any) {
-    console.error('Booking error:', error);
+    console.error('[PUBLIC_BOOKING] Booking error:', error);
     return new Response(
       JSON.stringify({ 
         success: false, 
