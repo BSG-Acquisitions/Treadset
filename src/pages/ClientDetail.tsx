@@ -184,6 +184,7 @@ export default function ClientDetail() {
                     if (e.key === 'Enter') {
                       updatePickupPayment.mutate({
                         pickupId: payment.id,
+                        clientId: id!,
                         transaction_type: payment.transaction_type,
                         computed_revenue: parseFloat(editAmount)
                       });
@@ -201,6 +202,7 @@ export default function ClientDetail() {
                   onClick={() => {
                     updatePickupPayment.mutate({
                       pickupId: payment.id,
+                      clientId: id!,
                       transaction_type: payment.transaction_type,
                       computed_revenue: parseFloat(editAmount)
                     });
@@ -254,6 +256,7 @@ export default function ClientDetail() {
                 <DropdownMenuItem
                   onClick={() => updatePickupPayment.mutate({ 
                     pickupId: payment.id,
+                    clientId: id!,
                     transaction_type: payment.transaction_type,
                     payment_method: 'CASH' 
                   })}
@@ -265,6 +268,7 @@ export default function ClientDetail() {
                 <DropdownMenuItem
                   onClick={() => updatePickupPayment.mutate({ 
                     pickupId: payment.id,
+                    clientId: id!,
                     transaction_type: payment.transaction_type,
                     payment_method: 'CARD' 
                   })}
@@ -276,6 +280,7 @@ export default function ClientDetail() {
                 <DropdownMenuItem
                   onClick={() => updatePickupPayment.mutate({ 
                     pickupId: payment.id,
+                    clientId: id!,
                     transaction_type: payment.transaction_type,
                     payment_method: 'CARD_ON_FILE' 
                   })}
@@ -287,6 +292,7 @@ export default function ClientDetail() {
                 <DropdownMenuItem
                   onClick={() => updatePickupPayment.mutate({ 
                     pickupId: payment.id,
+                    clientId: id!,
                     transaction_type: payment.transaction_type,
                     payment_method: 'INVOICE' 
                   })}
@@ -298,6 +304,7 @@ export default function ClientDetail() {
                 <DropdownMenuItem
                   onClick={() => updatePickupPayment.mutate({ 
                     pickupId: payment.id,
+                    clientId: id!,
                     transaction_type: payment.transaction_type,
                     payment_method: 'CHECK' 
                   })}

@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 
 interface UpdatePickupPaymentParams {
   pickupId: string;
+  clientId: string;
   transaction_type?: 'pickup' | 'dropoff';
   computed_revenue?: number;
   payment_method?: string;
@@ -44,10 +45,12 @@ export const useUpdatePickupPayment = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['payment-history'] });
       queryClient.invalidateQueries({ queryKey: ['pickups'] });
       queryClient.invalidateQueries({ queryKey: ['dropoffs'] });
+      queryClient.invalidateQueries({ queryKey: ['client', variables.clientId] });
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
       
       toast({
         title: "Payment Updated",
