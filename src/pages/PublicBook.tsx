@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -11,9 +11,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarDays, Phone, Mail, MapPin, Truck, Clock, Building2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { CalendarDays, Phone, Mail, MapPin, Truck, Clock, Building2, CheckCircle2, Info, Star } from "lucide-react";
 import { PlacesAutocomplete } from "@/components/PlacesAutocomplete";
 import { BrandHeader } from "@/components/BrandHeader";
+import { format, addDays, getDay } from "date-fns";
 
 const publicBookingSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -37,8 +39,27 @@ const publicBookingSchema = z.object({
 
 type PublicBookingData = z.infer<typeof publicBookingSchema>;
 
+interface ServiceZone {
+  id: string;
+  zone_name: string;
+  primary_service_days: string[] | number[];
+  zip_codes: string[];
+}
+
+interface SuggestedDate {
+  date: string;
+  dayName: string;
+  isRecommended: boolean;
+}
+
+const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
 export default function PublicBook() {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [matchedZone, setMatchedZone] = useState<ServiceZone | null>(null);
+  const [suggestedDates, setSuggestedDates] = useState<SuggestedDate[]>([]);
+  const [estimatedPteValue, setEstimatedPteValue] = useState(0);
+  const [isHighValue, setIsHighValue] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -59,11 +80,115 @@ export default function PublicBook() {
     },
   });
 
+  const pteCount = form.watch("pteCount");
+  const otrCount = form.watch("otrCount");
+  const tractorCount = form.watch("tractorCount");
+  const address = form.watch("address");
+
+  // Calculate estimated PTE value when tire counts change
+  useEffect(() => {
+    const totalPte = (pteCount || 0) + (otrCount || 0) * 15 + (tractorCount || 0) * 5;
+    setEstimatedPteValue(totalPte);
+    setIsHighValue(totalPte >= 200);
+  }, [pteCount, otrCount, tractorCount]);
+
+  // Extract ZIP code and check service zones when address changes
+  useEffect(() => {
+    const checkServiceZone = async () => {
+      if (!address) {
+        setMatchedZone(null);
+        setSuggestedDates([]);
+        return;
+      }
+
+      // Extract ZIP code from address
+      const zipMatch = address.match(/\b\d{5}\b/);
+      if (!zipMatch) return;
+
+      const zipCode = zipMatch[0];
+
+      try {
+        // Query service zones that contain this ZIP code
+        const { data: zones, error } = await supabase
+          .from('service_zones')
+          .select('id, zone_name, primary_service_days, zip_codes')
+          .eq('is_active', true)
+          .contains('zip_codes', [zipCode]);
+
+        if (error) {
+          console.error('Error checking service zones:', error);
+          return;
+        }
+
+        if (zones && zones.length > 0) {
+          const zone = zones[0];
+          setMatchedZone(zone as ServiceZone);
+          
+          // Generate suggested dates based on service days (convert strings to numbers if needed)
+          const serviceDays = (zone.primary_service_days || []).map((d: string | number) => 
+            typeof d === 'string' ? parseInt(d, 10) : d
+          );
+          const dates = generateSuggestedDates(serviceDays);
+          setSuggestedDates(dates);
+        } else {
+          setMatchedZone(null);
+          // Generate generic dates for the next 2 weeks
+          setSuggestedDates(generateGenericDates());
+        }
+      } catch (err) {
+        console.error('Error checking service zones:', err);
+      }
+    };
+
+    checkServiceZone();
+  }, [address]);
+
+  const generateSuggestedDates = (serviceDays: number[]): SuggestedDate[] => {
+    const dates: SuggestedDate[] = [];
+    const today = new Date();
+    
+    // Look at next 21 days for service day matches
+    for (let i = 1; i <= 21 && dates.length < 6; i++) {
+      const date = addDays(today, i);
+      const dayOfWeek = getDay(date);
+      
+      if (serviceDays.includes(dayOfWeek)) {
+        dates.push({
+          date: format(date, 'yyyy-MM-dd'),
+          dayName: DAYS_OF_WEEK[dayOfWeek],
+          isRecommended: true,
+        });
+      }
+    }
+
+    return dates;
+  };
+
+  const generateGenericDates = (): SuggestedDate[] => {
+    const dates: SuggestedDate[] = [];
+    const today = new Date();
+    
+    // Generate next 5 weekdays
+    for (let i = 1; dates.length < 5; i++) {
+      const date = addDays(today, i);
+      const dayOfWeek = getDay(date);
+      
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Exclude weekends
+        dates.push({
+          date: format(date, 'yyyy-MM-dd'),
+          dayName: DAYS_OF_WEEK[dayOfWeek],
+          isRecommended: false,
+        });
+      }
+    }
+
+    return dates;
+  };
+
   const handleSubmit = async (data: PublicBookingData) => {
     setIsSubmitting(true);
 
     try {
-      // Call the public-booking edge function
       const { data: result, error } = await supabase.functions.invoke('public-booking', {
         body: {
           name: data.name,
@@ -83,7 +208,6 @@ export default function PublicBook() {
       if (error) throw error;
 
       if (result?.success) {
-        // Navigate to confirmation page with booking details
         const confirmationData = encodeURIComponent(JSON.stringify(result));
         navigate(`/public-booking-confirmation?data=${confirmationData}`);
       } else {
@@ -101,6 +225,10 @@ export default function PublicBook() {
     }
   };
 
+  const handleSelectSuggestedDate = (date: string) => {
+    form.setValue("preferredDate", date);
+  };
+
   const minDate = new Date().toISOString().split('T')[0];
 
   return (
@@ -116,6 +244,22 @@ export default function PublicBook() {
               Get your used tires collected quickly and responsibly
             </p>
           </div>
+
+          {/* Approval Process Info */}
+          <Card className="mb-8 border-brand-primary/20 bg-brand-primary/5">
+            <CardContent className="py-4">
+              <div className="flex items-start gap-3">
+                <Info className="h-5 w-5 text-brand-primary mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-medium text-foreground">How It Works</p>
+                  <p className="text-sm text-muted-foreground">
+                    Submit your request and our team will confirm your pickup within 24 hours. 
+                    You'll receive an email with your confirmed date and any details.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
             {/* Contact Information */}
@@ -197,7 +341,7 @@ export default function PublicBook() {
                   Pickup Location
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="address">Pickup Address *</Label>
                   <PlacesAutocomplete
@@ -209,6 +353,19 @@ export default function PublicBook() {
                     <p className="text-sm text-destructive">{form.formState.errors.address.message}</p>
                   )}
                 </div>
+
+                {/* Zone Match Indicator */}
+                {matchedZone && (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    <div>
+                      <p className="text-sm font-medium text-green-700">We service your area!</p>
+                      <p className="text-xs text-muted-foreground">
+                        Our trucks are typically in your zone on {(matchedZone.primary_service_days || []).map(d => DAYS_OF_WEEK[typeof d === 'string' ? parseInt(d, 10) : d]).join(', ')}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -218,6 +375,12 @@ export default function PublicBook() {
                 <CardTitle className="flex items-center gap-2">
                   <Truck className="h-5 w-5" />
                   Tire Information
+                  {isHighValue && (
+                    <Badge variant="secondary" className="ml-auto bg-amber-100 text-amber-800">
+                      <Star className="h-3 w-3 mr-1" />
+                      Priority Pickup
+                    </Badge>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -258,6 +421,16 @@ export default function PublicBook() {
                     <p className="text-xs text-muted-foreground">Semi-truck, commercial tires</p>
                   </div>
                 </div>
+
+                {estimatedPteValue > 0 && (
+                  <div className="text-sm text-muted-foreground">
+                    Estimated volume: <span className="font-medium">{estimatedPteValue} PTE</span>
+                    {isHighValue && (
+                      <span className="ml-2 text-amber-600">(Priority scheduling available)</span>
+                    )}
+                  </div>
+                )}
+
                 {form.formState.errors.pteCount && (
                   <p className="text-sm text-destructive">{form.formState.errors.pteCount.message}</p>
                 )}
@@ -273,9 +446,38 @@ export default function PublicBook() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Suggested Dates */}
+                {suggestedDates.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>
+                      {matchedZone ? 'Recommended Dates' : 'Available Dates'}
+                      {matchedZone && (
+                        <span className="text-xs text-muted-foreground ml-2">(Based on your service zone)</span>
+                      )}
+                    </Label>
+                    <div className="flex flex-wrap gap-2">
+                      {suggestedDates.map((sd) => (
+                        <Button
+                          key={sd.date}
+                          type="button"
+                          variant={form.watch("preferredDate") === sd.date ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handleSelectSuggestedDate(sd.date)}
+                          className={sd.isRecommended ? "border-green-500/50" : ""}
+                        >
+                          {sd.dayName} {format(new Date(sd.date + 'T12:00:00'), 'MMM d')}
+                          {sd.isRecommended && <CheckCircle2 className="h-3 w-3 ml-1 text-green-600" />}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="preferredDate">Preferred Date *</Label>
+                    <Label htmlFor="preferredDate">
+                      {suggestedDates.length > 0 ? 'Or Select a Different Date' : 'Preferred Date *'}
+                    </Label>
                     <Input
                       id="preferredDate"
                       type="date"
@@ -341,15 +543,18 @@ export default function PublicBook() {
             </Card>
 
             {/* Submit Button */}
-            <div className="flex justify-center">
+            <div className="flex flex-col items-center gap-3">
               <Button
                 type="submit"
                 size="lg"
                 disabled={isSubmitting}
                 className="min-w-[200px]"
               >
-                {isSubmitting ? "Scheduling..." : "Schedule Pickup"}
+                {isSubmitting ? "Submitting..." : "Request Pickup"}
               </Button>
+              <p className="text-xs text-muted-foreground text-center">
+                Your request will be reviewed and you'll receive confirmation within 24 hours
+              </p>
             </div>
           </form>
 

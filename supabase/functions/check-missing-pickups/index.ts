@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
+import { Resend } from 'npm:resend@2.0.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -6,6 +7,7 @@ const corsHeaders = {
 };
 
 const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const EMAIL_FREQUENCY_DAYS = 14; // Only email clients every 14 days
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -18,25 +20,31 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    const resend = resendApiKey ? new Resend(resendApiKey) : null;
+
     let organization_id: string | null = null;
+    let sendEmails = true; // Default to sending emails
     try {
       const body = await req.json();
       organization_id = body.organization_id;
+      if (body.sendEmails === false) sendEmails = false;
     } catch {
       // No body - will check all orgs
     }
 
     // Get organizations to check
-    let orgsQuery = supabase.from('organizations').select('id');
+    let orgsQuery = supabase.from('organizations').select('id, name, logo_url');
     if (organization_id) {
       orgsQuery = orgsQuery.eq('id', organization_id);
     }
     const { data: orgs, error: orgsError } = await orgsQuery;
     if (orgsError) throw orgsError;
 
-    console.log(`[MISSING_PICKUPS] Checking ${orgs?.length || 0} organization(s)`);
+    console.log(`[MISSING_PICKUPS] Checking ${orgs?.length || 0} organization(s), sendEmails: ${sendEmails}`);
     
     let totalNotifications = 0;
+    let totalEmailsSent = 0;
     const today = new Date();
     const currentDayOfWeek = today.getDay();
     const currentWeekOfMonth = Math.ceil(today.getDate() / 7);
@@ -45,14 +53,16 @@ Deno.serve(async (req) => {
     
     for (const org of orgs || []) {
       const orgId = org.id;
+      const orgName = org.name || 'TreadSet';
+      const orgLogo = org.logo_url || '/treadset-logo.png';
       console.log(`[MISSING_PICKUPS] Processing org: ${orgId}`);
 
-      // Get admin users to create notifications for - need auth_user_id for FK constraint
+      // Get admin users to create notifications for
       const { data: adminUsers, error: usersError } = await supabase
         .from('user_organization_roles')
         .select('user_id, users!inner(auth_user_id)')
         .eq('organization_id', orgId)
-        .in('role', ['admin', 'ops_manager', 'dispatcher', 'receptionist']);
+        .in('role', ['admin', 'ops_manager', 'dispatcher']);
 
       if (usersError) {
         console.error(`[MISSING_PICKUPS] Error getting admin users for org ${orgId}:`, usersError);
@@ -64,7 +74,6 @@ Deno.serve(async (req) => {
         continue;
       }
       
-      // Extract auth_user_ids
       const authUserIds = adminUsers
         .map(u => (u as any).users?.auth_user_id)
         .filter(Boolean);
@@ -74,7 +83,7 @@ Deno.serve(async (req) => {
         .from('client_pickup_patterns')
         .select(`
           *,
-          client:clients(id, company_name, email)
+          client:clients(id, company_name, email, contact_name)
         `)
         .eq('organization_id', orgId)
         .gte('confidence_score', 60)
@@ -148,7 +157,24 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Build notification content
+        // ============ SEND AUTOMATED OUTREACH EMAIL ============
+        if (sendEmails && resend && client.email) {
+          await sendOutreachEmail(
+            supabase,
+            resend,
+            orgId,
+            orgName,
+            orgLogo,
+            client,
+            daysSinceLastPickup,
+            pattern.frequency,
+            pattern.typical_day_of_week
+          ).then(sent => {
+            if (sent) totalEmailsSent++;
+          });
+        }
+
+        // ============ CREATE IN-APP NOTIFICATION ============
         const threeDaysAgo = new Date(today);
         threeDaysAgo.setDate(today.getDate() - 3);
 
@@ -172,7 +198,6 @@ Deno.serve(async (req) => {
 
         // Create notification for EACH admin user - with per-user deduplication
         for (const authUserId of authUserIds) {
-          // Check for recent notification for THIS USER (last 3 days)
           const { data: existingNotifs } = await supabase
             .from('notifications')
             .select('id')
@@ -184,7 +209,7 @@ Deno.serve(async (req) => {
 
           if (existingNotifs && existingNotifs.length > 0) {
             console.log(`[MISSING_PICKUPS] Skipping duplicate for user ${authUserId}, client ${client.company_name}`);
-            continue; // Skip creating for this user - they already have one
+            continue;
           }
 
           notificationsToCreate.push({
@@ -223,12 +248,13 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`[MISSING_PICKUPS] Complete. Total notifications: ${totalNotifications}`);
+    console.log(`[MISSING_PICKUPS] Complete. Notifications: ${totalNotifications}, Emails sent: ${totalEmailsSent}`);
 
     return new Response(
       JSON.stringify({
         success: true,
         notifications_created: totalNotifications,
+        emails_sent: totalEmailsSent,
         organizations_checked: orgs?.length || 0,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -241,3 +267,178 @@ Deno.serve(async (req) => {
     );
   }
 });
+
+// Helper function to send outreach email
+async function sendOutreachEmail(
+  supabase: any,
+  resend: any,
+  orgId: string,
+  orgName: string,
+  orgLogo: string,
+  client: { id: string; company_name: string; email: string; contact_name?: string },
+  daysSinceLastPickup: number,
+  frequency: string,
+  typicalDay: number | null
+): Promise<boolean> {
+  try {
+    // Check email preferences
+    const { data: prefs } = await supabase
+      .from('client_email_preferences')
+      .select('*')
+      .eq('client_id', client.id)
+      .eq('organization_id', orgId)
+      .single();
+
+    // Check if can send outreach
+    if (prefs?.can_receive_outreach === false) {
+      console.log(`[EMAIL] Client ${client.company_name} has opted out of outreach`);
+      return false;
+    }
+
+    // Check frequency limit (14 days)
+    if (prefs?.last_outreach_sent_at) {
+      const lastSent = new Date(prefs.last_outreach_sent_at);
+      const daysSinceLastEmail = Math.round((Date.now() - lastSent.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysSinceLastEmail < EMAIL_FREQUENCY_DAYS) {
+        console.log(`[EMAIL] Skipping ${client.company_name} - last emailed ${daysSinceLastEmail} days ago`);
+        return false;
+      }
+    }
+
+    // Generate suggested dates based on service pattern
+    const suggestedDates = generateSuggestedDates(typicalDay);
+    const bookingUrl = `${Deno.env.get('SITE_URL') || 'https://treadset.com'}/book?client=${client.id}`;
+    
+    const contactName = client.contact_name || 'there';
+    const frequencyText = frequency === 'weekly' ? 'weekly' : frequency === 'biweekly' ? 'every two weeks' : 'monthly';
+
+    const emailHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background-color: #f4f4f5;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #1A4314 0%, #2d5a24 100%); padding: 30px; text-align: center;">
+              <h1 style="color: white; margin: 0; font-size: 24px;">${orgName}</h1>
+              <p style="color: rgba(255,255,255,0.8); margin: 10px 0 0 0;">Tire Recycling Services</p>
+            </div>
+            
+            <!-- Content -->
+            <div style="padding: 30px;">
+              <h2 style="color: #1A4314; margin: 0 0 20px 0;">Hi ${contactName}!</h2>
+              
+              <p style="color: #374151; line-height: 1.6; margin: 0 0 20px 0;">
+                We noticed it's been <strong>${daysSinceLastPickup} days</strong> since your last tire pickup. 
+                Based on your usual schedule (${frequencyText}), we wanted to check in and see if you need a pickup soon.
+              </p>
+
+              ${suggestedDates.length > 0 ? `
+              <div style="background: #f0fdf4; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                <h3 style="color: #166534; margin: 0 0 10px 0; font-size: 16px;">📅 Suggested Dates</h3>
+                <p style="color: #374151; margin: 0;">
+                  ${suggestedDates.join(' • ')}
+                </p>
+              </div>
+              ` : ''}
+
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${bookingUrl}" 
+                   style="display: inline-block; background: #1A4314; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">
+                  Schedule Your Pickup
+                </a>
+              </div>
+
+              <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">
+                Need to talk to someone? Give us a call or reply to this email. We're happy to help!
+              </p>
+            </div>
+            
+            <!-- Footer -->
+            <div style="background: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+              <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+                ${orgName} • Professional Tire Recycling
+              </p>
+              <p style="color: #9ca3af; font-size: 11px; margin: 10px 0 0 0;">
+                <a href="${bookingUrl}&unsubscribe=true" style="color: #9ca3af;">Unsubscribe from these emails</a>
+              </p>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Send email
+    const { error: emailError } = await resend.emails.send({
+      from: `${orgName} <onboarding@resend.dev>`,
+      to: [client.email],
+      subject: `${client.company_name} - Time for a tire pickup?`,
+      html: emailHtml,
+    });
+
+    if (emailError) {
+      console.error(`[EMAIL] Error sending to ${client.email}:`, emailError);
+      return false;
+    }
+
+    console.log(`[EMAIL] Sent outreach email to ${client.email}`);
+
+    // Update or create email preferences
+    if (prefs) {
+      await supabase
+        .from('client_email_preferences')
+        .update({
+          last_outreach_sent_at: new Date().toISOString(),
+          outreach_count: (prefs.outreach_count || 0) + 1,
+        })
+        .eq('id', prefs.id);
+    } else {
+      await supabase
+        .from('client_email_preferences')
+        .insert({
+          client_id: client.id,
+          organization_id: orgId,
+          can_receive_outreach: true,
+          can_receive_reminders: true,
+          can_receive_confirmations: true,
+          last_outreach_sent_at: new Date().toISOString(),
+          outreach_count: 1,
+        });
+    }
+
+    return true;
+  } catch (err) {
+    console.error(`[EMAIL] Exception sending to ${client.email}:`, err);
+    return false;
+  }
+}
+
+function generateSuggestedDates(typicalDay: number | null): string[] {
+  const dates: string[] = [];
+  const today = new Date();
+  
+  for (let i = 1; i <= 14 && dates.length < 3; i++) {
+    const date = new Date(today);
+    date.setDate(today.getDate() + i);
+    const dayOfWeek = date.getDay();
+    
+    // Skip weekends
+    if (dayOfWeek === 0 || dayOfWeek === 6) continue;
+    
+    // Prioritize typical day if known
+    if (typicalDay !== null && dayOfWeek === typicalDay) {
+      const formatted = date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+      dates.unshift(formatted); // Add to beginning
+    } else if (dates.length < 3) {
+      const formatted = date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+      dates.push(formatted);
+    }
+  }
+  
+  return dates.slice(0, 3);
+}
