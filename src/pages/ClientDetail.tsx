@@ -66,6 +66,16 @@ export default function ClientDetail() {
     });
   }, [manifests, manifestSearch, manifestDateFrom, manifestDateTo]);
 
+  // Calculate last service date from combined pickup/dropoff history
+  const lastServiceDate = useMemo(() => {
+    if (paymentHistory.length === 0) {
+      // Fall back to client.last_pickup_at if no payment history
+      return client?.last_pickup_at ? new Date(client.last_pickup_at) : null;
+    }
+    // paymentHistory is already sorted by date descending
+    return paymentHistory[0].transaction_date;
+  }, [paymentHistory, client?.last_pickup_at]);
+
   // Calculate last rate charged from most recent transaction
   const lastRateCharged = useMemo(() => {
     if (paymentHistory.length === 0) return null;
@@ -406,7 +416,7 @@ export default function ClientDetail() {
                 {client.company_name}
               </h1>
               <p className="text-muted-foreground">
-                <span className="font-semibold">Last pickup:</span> {client.last_pickup_at ? new Date(client.last_pickup_at).toLocaleDateString() : 'Never'}
+                <span className="font-semibold">Last service:</span> {lastServiceDate ? formatDateLocal(lastServiceDate) : 'Never'}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
