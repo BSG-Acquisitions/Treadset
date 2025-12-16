@@ -1,11 +1,8 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { PickupPatternsCard } from '@/components/intelligence/PickupPatternsCard';
 import { RevenueForecastCard } from '@/components/intelligence/RevenueForecastCard';
 import { OperationalMetricsCard } from '@/components/intelligence/OperationalMetricsCard';
 import { AIInsightsCard } from '@/components/intelligence/AIInsightsCard';
-import { CapacityForecastCard } from '@/components/intelligence/CapacityForecastCard';
 import { BookingRequestsWidget } from '@/components/intelligence/BookingRequestsWidget';
 import { EmailOutreachWidget } from '@/components/intelligence/EmailOutreachWidget';
 import { BookingFunnelWidget } from '@/components/intelligence/BookingFunnelWidget';
@@ -54,12 +51,9 @@ const IntelligenceDashboard = () => {
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-brand-accent" />
-            <h2 className="text-xl font-semibold text-foreground">Forecasting & Predictions</h2>
+            <h2 className="text-xl font-semibold text-foreground">Revenue Forecasting</h2>
           </div>
-          <div className="grid gap-6 md:grid-cols-2">
-            <RevenueForecastCard />
-            <CapacityForecastCard />
-          </div>
+          <RevenueForecastCard />
         </div>
       </SlideUp>
 
