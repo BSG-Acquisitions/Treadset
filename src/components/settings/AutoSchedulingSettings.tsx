@@ -37,8 +37,8 @@ export function AutoSchedulingSettings() {
       if (!organizationId) return;
       
       try {
-        const { data } = await supabase
-          .from('organization_settings')
+        const { data } = await (supabase
+          .from('organization_settings') as any)
           .select('min_tire_threshold, auto_approve_existing_clients, auto_approve_in_zone, outreach_frequency_days, booking_email_subject')
           .eq('organization_id', organizationId)
           .maybeSingle();
