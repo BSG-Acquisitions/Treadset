@@ -43,18 +43,19 @@ Deno.serve(async (req) => {
 
     console.log(`Analyzing service zones for organization: ${organizationId}`);
 
-    // Get completed manifests from last 90 days with client data
+    // Get completed pickups from last 90 days with client data (NOT manifests)
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
-    const { data: manifests, error: manifestError } = await supabase
-      .from('manifests')
+    const { data: pickups, error: pickupError } = await supabase
+      .from('pickups')
       .select(`
         id,
-        signed_at,
-        created_at,
+        pickup_date,
+        status,
         clients (
           id,
+          company_name,
           physical_zip,
           zip,
           depot_lat,
@@ -62,39 +63,40 @@ Deno.serve(async (req) => {
         )
       `)
       .eq('organization_id', organizationId)
-      .in('status', ['COMPLETED', 'AWAITING_RECEIVER_SIGNATURE'])
-      .gte('signed_at', ninetyDaysAgo.toISOString());
+      .eq('status', 'completed')
+      .gte('pickup_date', ninetyDaysAgo.toISOString().split('T')[0]);
 
-    if (manifestError) {
-      console.error('Error fetching manifests:', manifestError);
-      throw manifestError;
+    if (pickupError) {
+      console.error('Error fetching pickups:', pickupError);
+      throw pickupError;
     }
 
-    console.log(`Found ${manifests?.length || 0} manifests to analyze`);
+    console.log(`Found ${pickups?.length || 0} completed pickups to analyze`);
 
-    if (!manifests || manifests.length === 0) {
+    if (!pickups || pickups.length === 0) {
       return new Response(
         JSON.stringify({ 
           success: true, 
           suggestedZones: [],
-          message: 'No manifest data available for zone analysis'
+          message: 'No completed pickup data available for zone analysis'
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Cluster by ZIP code and day of week
+    // Cluster by ZIP code and day of week based on COMPLETED PICKUPS
     const zipClusters: Map<string, ZipCluster> = new Map();
 
-    for (const manifest of manifests) {
-      const client = manifest.clients;
+    for (const pickup of pickups) {
+      const client = pickup.clients;
       const zip = client?.physical_zip || client?.zip;
       if (!zip) continue;
 
-      const date = new Date(manifest.signed_at || manifest.created_at);
+      // Use the pickup_date to determine which day of week this pickup occurred
+      const date = new Date(pickup.pickup_date);
       const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
 
-      // Use client depot coordinates
+      // Use client depot coordinates for geographic clustering
       const lat = client?.depot_lat || 0;
       const lng = client?.depot_lng || 0;
 
@@ -197,13 +199,13 @@ Deno.serve(async (req) => {
       if (suggestedZones.length >= 10) break;
     }
 
-    console.log(`Generated ${suggestedZones.length} suggested zones`);
+    console.log(`Generated ${suggestedZones.length} suggested zones from ${pickups.length} completed pickups`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         suggestedZones,
-        analyzedManifests: manifests.length,
+        analyzedPickups: pickups.length,
         uniqueZipCodes: zipClusters.size,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
