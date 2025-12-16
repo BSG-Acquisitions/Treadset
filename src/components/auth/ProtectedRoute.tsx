@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
@@ -15,6 +15,17 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requireAuth = true 
 }) => {
   const { user, loading, hasAnyRole } = useAuth();
+  const [shouldRedirect, setShouldRedirect] = useState(false);
+
+  // Add delay before redirecting to allow token refresh to complete
+  useEffect(() => {
+    if (!loading && !user && requireAuth) {
+      // Set a short delay before redirect to prevent bouncing during token refresh
+      const timer = setTimeout(() => setShouldRedirect(true), 150);
+      return () => clearTimeout(timer);
+    }
+    setShouldRedirect(false);
+  }, [loading, user, requireAuth]);
 
   if (loading) {
     return (
@@ -29,9 +40,18 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <>{children}</>;
   }
 
-  // Check if user is authenticated
-  if (!user) {
+  // Check if user is authenticated - use delayed redirect
+  if (!user && shouldRedirect) {
     return <Navigate to="/auth" replace />;
+  }
+
+  // Still waiting for redirect delay or user exists
+  if (!user && !shouldRedirect) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
   // Check if user has required roles

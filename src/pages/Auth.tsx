@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -16,8 +16,9 @@ export default function Auth() {
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
   const [activeTab, setActiveTab] = useState('login');
-  const { signIn, signUp, user } = useAuth();
+  const { signIn, signUp, user, loading } = useAuth();
   const navigate = useNavigate();
+  const hasRedirected = useRef(false);
 
   // Form states
   const [email, setEmail] = useState('');
@@ -28,12 +29,16 @@ export default function Auth() {
   useEffect(() => {
     document.title = "Sign In – TreadSet";
     
-    // Redirect if already authenticated
-    if (user) {
+    // Don't redirect while still loading auth state
+    if (loading) return;
+    
+    // Only redirect once per mount, and only if user is authenticated
+    if (user && !hasRedirected.current) {
+      hasRedirected.current = true;
       console.log('User detected, redirecting to home:', user);
-      navigate('/');
+      navigate('/', { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, loading, navigate]);
 
   // Debug form state changes
   useEffect(() => {
