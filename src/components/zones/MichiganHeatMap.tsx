@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
-import mapboxgl from 'mapbox-gl';
+import mapboxglModule from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, MapPin, Target, TrendingUp } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+
+// Handle mapbox-gl ESM/CJS interop
+const mapboxgl = (mapboxglModule as any).default || mapboxglModule;
 
 interface LocationData {
   lat: number;
