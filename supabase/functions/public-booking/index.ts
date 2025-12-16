@@ -17,11 +17,19 @@ interface BookingRequest {
   preferredDate: string;
   preferredWindow: 'AM' | 'PM' | 'Any';
   notes?: string;
+  source?: string;
 }
 
 interface Coordinates {
   lat: number;
   lng: number;
+}
+
+interface OrgSettings {
+  min_tire_threshold: number;
+  auto_approve_existing_clients: boolean;
+  auto_approve_in_zone: boolean;
+  outreach_frequency_days: number;
 }
 
 // Geocoding functions
@@ -60,7 +68,7 @@ async function geocodeWithNominatim(address: string): Promise<Coordinates | null
       `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1`,
       {
         headers: {
-          'User-Agent': 'BSG Route Planner/1.0 (support@bsglogistics.com)'
+          'User-Agent': 'TreadSet Route Planner/1.0'
         }
       }
     );
@@ -87,7 +95,6 @@ async function geocodeAddress(address: string): Promise<Coordinates | null> {
     coords = await geocodeWithGoogle(address);
   }
   
-  // Fallback to Nominatim if Google fails or isn't configured
   if (!coords) {
     coords = await geocodeWithNominatim(address);
   }
@@ -103,7 +110,6 @@ function parseAddress(fullAddress: string): { city?: string; state?: string; zip
   if (parts.length >= 2) {
     result.city = parts[parts.length - 3] || parts[0];
     
-    // Parse state and zip from last part (e.g., "MI 48000" or "Michigan 48000")
     const lastPart = parts[parts.length - 2] || parts[parts.length - 1];
     const stateZipMatch = lastPart.match(/([A-Za-z]+)\s*(\d{5})?/);
     if (stateZipMatch) {
@@ -111,7 +117,6 @@ function parseAddress(fullAddress: string): { city?: string; state?: string; zip
       result.zip = stateZipMatch[2];
     }
     
-    // Try to extract zip from end of address
     const zipMatch = fullAddress.match(/\b(\d{5})(?:-\d{4})?\b/);
     if (zipMatch) {
       result.zip = zipMatch[1];
@@ -121,8 +126,20 @@ function parseAddress(fullAddress: string): { city?: string; state?: string; zip
   return result;
 }
 
+// Day name to number conversion
+const DAY_NAME_TO_NUMBER: Record<string, number> = {
+  'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3,
+  'thursday': 4, 'friday': 5, 'saturday': 6
+};
+
+function convertServiceDays(days: (string | number)[]): number[] {
+  return days.map(d => {
+    if (typeof d === 'number') return d;
+    return DAY_NAME_TO_NUMBER[d.toLowerCase()] ?? -1;
+  }).filter(d => d >= 0);
+}
+
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -149,6 +166,42 @@ Deno.serve(async (req) => {
 
     const organizationId = organization.id;
 
+    // Get organization settings for minimum tire threshold and auto-approval
+    const { data: orgSettings } = await supabase
+      .from('organization_settings')
+      .select('min_tire_threshold, auto_approve_existing_clients, auto_approve_in_zone, outreach_frequency_days')
+      .eq('organization_id', organizationId)
+      .single();
+
+    const settings: OrgSettings = {
+      min_tire_threshold: orgSettings?.min_tire_threshold ?? 50,
+      auto_approve_existing_clients: orgSettings?.auto_approve_existing_clients ?? false,
+      auto_approve_in_zone: orgSettings?.auto_approve_in_zone ?? false,
+      outreach_frequency_days: orgSettings?.outreach_frequency_days ?? 14,
+    };
+
+    // Calculate total PTE value
+    const estimatedPteValue = 
+      (bookingData.pteCount * 1) + 
+      (bookingData.otrCount * 15) + 
+      (bookingData.tractorCount * 5);
+
+    // Validate minimum tire threshold
+    if (estimatedPteValue < settings.min_tire_threshold) {
+      console.log(`[PUBLIC_BOOKING] Below minimum threshold: ${estimatedPteValue} < ${settings.min_tire_threshold}`);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Minimum ${settings.min_tire_threshold} PTE required for pickup. You have ${estimatedPteValue} PTE.`,
+          code: 'BELOW_MINIMUM'
+        }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
     // Geocode the address
     const coordinates = await geocodeAddress(bookingData.address);
     console.log('[PUBLIC_BOOKING] Geocoded coordinates:', coordinates);
@@ -158,7 +211,7 @@ Deno.serve(async (req) => {
     console.log('[PUBLIC_BOOKING] Parsed address:', addressParts);
 
     // Check for matching service zone by ZIP code
-    let matchedZone = null;
+    let matchedZone: any = null;
     let zoneSuggestedDates: string[] = [];
     
     if (addressParts.zip) {
@@ -171,35 +224,48 @@ Deno.serve(async (req) => {
 
       if (zones && zones.length > 0) {
         matchedZone = zones[0];
-        console.log('[PUBLIC_BOOKING] Matched service zone:', matchedZone.name);
+        console.log('[PUBLIC_BOOKING] Matched service zone:', matchedZone.zone_name);
         
         // Generate suggested dates based on zone service days
-        if (matchedZone.service_days && matchedZone.service_days.length > 0) {
+        const serviceDays = convertServiceDays(matchedZone.primary_service_days || []);
+        if (serviceDays.length > 0) {
           const today = new Date();
-          const suggestedDates = [];
-          
-          for (let i = 0; i < 14 && suggestedDates.length < 3; i++) {
+          for (let i = 1; i < 21 && zoneSuggestedDates.length < 3; i++) {
             const checkDate = new Date(today);
             checkDate.setDate(today.getDate() + i);
-            const dayName = checkDate.toLocaleDateString('en-US', { weekday: 'long' });
-            
-            if (matchedZone.service_days.includes(dayName)) {
-              suggestedDates.push(checkDate.toISOString().split('T')[0]);
+            if (serviceDays.includes(checkDate.getDay())) {
+              zoneSuggestedDates.push(checkDate.toISOString().split('T')[0]);
             }
           }
-          
-          zoneSuggestedDates = suggestedDates;
         }
       }
     }
 
-    // Calculate estimated PTE value for prioritization
-    const estimatedPteValue = 
-      (bookingData.pteCount * 1) + 
-      (bookingData.otrCount * 15) + 
-      (bookingData.tractorCount * 5);
+    // Check if this is an existing client (for auto-approval)
+    let existingClient: any = null;
+    if (bookingData.email) {
+      const { data: clients } = await supabase
+        .from('clients')
+        .select('id, company_name')
+        .eq('organization_id', organizationId)
+        .ilike('email', bookingData.email)
+        .limit(1);
+      
+      if (clients && clients.length > 0) {
+        existingClient = clients[0];
+        console.log('[PUBLIC_BOOKING] Matched existing client:', existingClient.company_name);
+      }
+    }
 
-    // Create booking request (goes to approval queue)
+    // Determine if we should auto-approve
+    const shouldAutoApprove = 
+      (settings.auto_approve_existing_clients && existingClient) ||
+      (settings.auto_approve_in_zone && matchedZone);
+    
+    const bookingStatus = shouldAutoApprove ? 'approved' : 'pending';
+    console.log('[PUBLIC_BOOKING] Auto-approve decision:', { shouldAutoApprove, bookingStatus, existingClient: !!existingClient, matchedZone: !!matchedZone });
+
+    // Create booking request
     const { data: bookingRequest, error: bookingError } = await supabase
       .from('booking_requests')
       .insert({
@@ -220,10 +286,11 @@ Deno.serve(async (req) => {
         tire_estimate_otr: bookingData.otrCount,
         tire_estimate_tractor: bookingData.tractorCount,
         notes: bookingData.notes || null,
-        status: 'pending',
+        status: bookingStatus,
         zone_id: matchedZone?.id || null,
         zone_matched: !!matchedZone,
-        estimated_value: estimatedPteValue
+        estimated_value: estimatedPteValue,
+        client_id: existingClient?.id || null,
       })
       .select()
       .single();
@@ -235,12 +302,96 @@ Deno.serve(async (req) => {
 
     console.log('[PUBLIC_BOOKING] Created booking request:', bookingRequest.id);
 
+    // Log analytics event
+    await supabase.from('booking_analytics').insert({
+      organization_id: organizationId,
+      event_type: 'booking_completed',
+      booking_request_id: bookingRequest.id,
+      client_id: existingClient?.id || null,
+      source: bookingData.source || 'direct',
+      metadata: {
+        estimated_pte: estimatedPteValue,
+        zone_matched: !!matchedZone,
+        auto_approved: shouldAutoApprove,
+        existing_client: !!existingClient,
+      }
+    });
+
+    // If auto-approved, create the pickup and client if needed
+    if (shouldAutoApprove) {
+      let clientId = existingClient?.id;
+      
+      // Create client if doesn't exist
+      if (!clientId) {
+        const { data: newClient } = await supabase
+          .from('clients')
+          .insert({
+            organization_id: organizationId,
+            company_name: bookingData.company,
+            contact_name: bookingData.name,
+            email: bookingData.email,
+            phone: bookingData.phone,
+            physical_address: bookingData.address,
+            physical_city: addressParts.city,
+            physical_state: addressParts.state,
+            physical_zip: addressParts.zip,
+            depot_lat: coordinates?.lat,
+            depot_lng: coordinates?.lng,
+          })
+          .select()
+          .single();
+        
+        if (newClient) {
+          clientId = newClient.id;
+        }
+      }
+
+      // Create pickup
+      if (clientId) {
+        const { data: pickup } = await supabase
+          .from('pickups')
+          .insert({
+            organization_id: organizationId,
+            client_id: clientId,
+            pickup_date: bookingData.preferredDate,
+            status: 'scheduled',
+            pte_count: bookingData.pteCount,
+            otr_count: bookingData.otrCount,
+            tractor_count: bookingData.tractorCount,
+            notes: `Self-scheduled via booking form. ${bookingData.notes || ''}`.trim(),
+          })
+          .select()
+          .single();
+
+        if (pickup) {
+          // Link pickup to booking request
+          await supabase
+            .from('booking_requests')
+            .update({ pickup_id: pickup.id })
+            .eq('id', bookingRequest.id);
+
+          // Log approval analytics
+          await supabase.from('booking_analytics').insert({
+            organization_id: organizationId,
+            event_type: 'booking_approved',
+            booking_request_id: bookingRequest.id,
+            client_id: clientId,
+            source: bookingData.source || 'direct',
+            metadata: { auto_approved: true }
+          });
+        }
+      }
+    }
+
     // Return confirmation data
     const confirmation = {
       success: true,
       bookingRequestId: bookingRequest.id,
-      status: 'pending',
-      message: 'Your pickup request has been submitted and is pending review.',
+      status: bookingStatus,
+      autoApproved: shouldAutoApprove,
+      message: shouldAutoApprove 
+        ? 'Your pickup has been automatically approved and scheduled!'
+        : 'Your pickup request has been submitted and is pending review.',
       contact: {
         name: bookingData.name,
         company: bookingData.company,
@@ -257,11 +408,13 @@ Deno.serve(async (req) => {
       tireEstimates: {
         pte: bookingData.pteCount,
         otr: bookingData.otrCount,
-        tractor: bookingData.tractorCount
+        tractor: bookingData.tractorCount,
+        totalPte: estimatedPteValue
       },
       zoneMatched: !!matchedZone,
-      zoneName: matchedZone?.name || null,
-      suggestedDates: zoneSuggestedDates
+      zoneName: matchedZone?.zone_name || null,
+      suggestedDates: zoneSuggestedDates,
+      existingClient: !!existingClient
     };
 
     return new Response(

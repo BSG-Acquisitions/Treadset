@@ -247,6 +247,75 @@ export type Database = {
           },
         ]
       }
+      booking_analytics: {
+        Row: {
+          booking_request_id: string | null
+          client_id: string | null
+          created_at: string | null
+          event_type: string
+          id: string
+          metadata: Json | null
+          organization_id: string
+          source: string | null
+        }
+        Insert: {
+          booking_request_id?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          organization_id: string
+          source?: string | null
+        }
+        Update: {
+          booking_request_id?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          organization_id?: string
+          source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_analytics_booking_request_id_fkey"
+            columns: ["booking_request_id"]
+            isOneToOne: false
+            referencedRelation: "booking_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_analytics_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_analytics_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_monthly_entity_rollup"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "booking_analytics_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_revenue_summary"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "booking_analytics_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       booking_requests: {
         Row: {
           admin_notes: string | null
@@ -2567,32 +2636,50 @@ export type Database = {
       }
       organization_settings: {
         Row: {
+          auto_approve_existing_clients: boolean | null
+          auto_approve_in_zone: boolean | null
+          booking_email_subject: string | null
+          booking_email_template: string | null
           created_at: string
           default_otr_rate: number | null
           default_pte_rate: number | null
           default_tractor_rate: number | null
           id: string
+          min_tire_threshold: number | null
           name: string
+          outreach_frequency_days: number | null
           tax_rate: number | null
           updated_at: string
         }
         Insert: {
+          auto_approve_existing_clients?: boolean | null
+          auto_approve_in_zone?: boolean | null
+          booking_email_subject?: string | null
+          booking_email_template?: string | null
           created_at?: string
           default_otr_rate?: number | null
           default_pte_rate?: number | null
           default_tractor_rate?: number | null
           id?: string
+          min_tire_threshold?: number | null
           name?: string
+          outreach_frequency_days?: number | null
           tax_rate?: number | null
           updated_at?: string
         }
         Update: {
+          auto_approve_existing_clients?: boolean | null
+          auto_approve_in_zone?: boolean | null
+          booking_email_subject?: string | null
+          booking_email_template?: string | null
           created_at?: string
           default_otr_rate?: number | null
           default_pte_rate?: number | null
           default_tractor_rate?: number | null
           id?: string
+          min_tire_threshold?: number | null
           name?: string
+          outreach_frequency_days?: number | null
           tax_rate?: number | null
           updated_at?: string
         }

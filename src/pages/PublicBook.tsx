@@ -12,10 +12,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Phone, Mail, MapPin, Truck, Clock, Building2, CheckCircle2, Info, Star } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CalendarDays, Phone, Mail, MapPin, Truck, Clock, Building2, CheckCircle2, Info, Star, AlertTriangle } from "lucide-react";
 import { PlacesAutocomplete } from "@/components/PlacesAutocomplete";
 import { BrandHeader } from "@/components/BrandHeader";
 import { format, addDays, getDay } from "date-fns";
+
+const MIN_TIRE_THRESHOLD = 50; // Minimum 50 PTE required
 
 const publicBookingSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -29,20 +32,14 @@ const publicBookingSchema = z.object({
   preferredDate: z.string().min(1, "Please select a preferred date"),
   preferredWindow: z.enum(['AM', 'PM', 'Any']),
   notes: z.string().optional(),
-}).refine(
-  (data) => data.pteCount > 0 || data.otrCount > 0 || data.tractorCount > 0,
-  {
-    message: "Please specify at least one tire for pickup",
-    path: ["pteCount"],
-  }
-);
+});
 
 type PublicBookingData = z.infer<typeof publicBookingSchema>;
 
 interface ServiceZone {
   id: string;
   zone_name: string;
-  primary_service_days: string[] | number[];
+  primary_service_days: string[];
   zip_codes: string[];
 }
 
@@ -53,6 +50,10 @@ interface SuggestedDate {
 }
 
 const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const DAY_NAME_TO_NUMBER: Record<string, number> = {
+  'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3,
+  'thursday': 4, 'friday': 5, 'saturday': 6
+};
 
 export default function PublicBook() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -60,6 +61,7 @@ export default function PublicBook() {
   const [suggestedDates, setSuggestedDates] = useState<SuggestedDate[]>([]);
   const [estimatedPteValue, setEstimatedPteValue] = useState(0);
   const [isHighValue, setIsHighValue] = useState(false);
+  const [isBelowMinimum, setIsBelowMinimum] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -90,6 +92,7 @@ export default function PublicBook() {
     const totalPte = (pteCount || 0) + (otrCount || 0) * 15 + (tractorCount || 0) * 5;
     setEstimatedPteValue(totalPte);
     setIsHighValue(totalPte >= 200);
+    setIsBelowMinimum(totalPte < MIN_TIRE_THRESHOLD);
   }, [pteCount, otrCount, tractorCount]);
 
   // Extract ZIP code and check service zones when address changes
@@ -101,53 +104,55 @@ export default function PublicBook() {
         return;
       }
 
-      // Extract ZIP code from address
       const zipMatch = address.match(/\b\d{5}\b/);
       if (!zipMatch) return;
 
       const zipCode = zipMatch[0];
 
       try {
-        // Query service zones that contain this ZIP code
-        const { data: zones, error } = await supabase
-          .from('service_zones')
-          .select('id, zone_name, primary_service_days, zip_codes')
-          .eq('is_active', true)
-          .contains('zip_codes', [zipCode]);
+        // Call edge function to get zone info (avoids RLS issues)
+        const { data, error } = await supabase.functions.invoke('public-booking', {
+          body: {
+            action: 'check-zone',
+            zipCode,
+          }
+        });
 
-        if (error) {
-          console.error('Error checking service zones:', error);
+        // If this fails, fall back to local date generation
+        if (error || !data?.zone) {
+          setSuggestedDates(generateGenericDates());
           return;
         }
 
-        if (zones && zones.length > 0) {
-          const zone = zones[0];
-          setMatchedZone(zone as ServiceZone);
-          
-          // Generate suggested dates based on service days (convert strings to numbers if needed)
-          const serviceDays = (zone.primary_service_days || []).map((d: string | number) => 
-            typeof d === 'string' ? parseInt(d, 10) : d
-          );
+        const zone = data.zone;
+        setMatchedZone(zone as ServiceZone);
+        
+        // Generate suggested dates based on service days
+        const serviceDays = (zone.primary_service_days || []).map((d: string) => 
+          DAY_NAME_TO_NUMBER[d.toLowerCase()] ?? -1
+        ).filter((d: number) => d >= 0);
+        
+        if (serviceDays.length > 0) {
           const dates = generateSuggestedDates(serviceDays);
           setSuggestedDates(dates);
         } else {
-          setMatchedZone(null);
-          // Generate generic dates for the next 2 weeks
           setSuggestedDates(generateGenericDates());
         }
       } catch (err) {
         console.error('Error checking service zones:', err);
+        setSuggestedDates(generateGenericDates());
       }
     };
 
-    checkServiceZone();
+    // Debounce the zone check
+    const timer = setTimeout(checkServiceZone, 500);
+    return () => clearTimeout(timer);
   }, [address]);
 
   const generateSuggestedDates = (serviceDays: number[]): SuggestedDate[] => {
     const dates: SuggestedDate[] = [];
     const today = new Date();
     
-    // Look at next 21 days for service day matches
     for (let i = 1; i <= 21 && dates.length < 6; i++) {
       const date = addDays(today, i);
       const dayOfWeek = getDay(date);
@@ -168,12 +173,11 @@ export default function PublicBook() {
     const dates: SuggestedDate[] = [];
     const today = new Date();
     
-    // Generate next 5 weekdays
     for (let i = 1; dates.length < 5; i++) {
       const date = addDays(today, i);
       const dayOfWeek = getDay(date);
       
-      if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Exclude weekends
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
         dates.push({
           date: format(date, 'yyyy-MM-dd'),
           dayName: DAYS_OF_WEEK[dayOfWeek],
@@ -186,6 +190,17 @@ export default function PublicBook() {
   };
 
   const handleSubmit = async (data: PublicBookingData) => {
+    // Final validation for minimum tires
+    const totalPte = (data.pteCount || 0) + (data.otrCount || 0) * 15 + (data.tractorCount || 0) * 5;
+    if (totalPte < MIN_TIRE_THRESHOLD) {
+      toast({
+        title: "Minimum Not Met",
+        description: `A minimum of ${MIN_TIRE_THRESHOLD} PTE is required for pickup scheduling. You currently have ${totalPte} PTE.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -202,6 +217,7 @@ export default function PublicBook() {
           preferredDate: data.preferredDate,
           preferredWindow: data.preferredWindow,
           notes: data.notes,
+          source: 'direct',
         }
       });
 
@@ -244,6 +260,15 @@ export default function PublicBook() {
               Get your used tires collected quickly and responsibly
             </p>
           </div>
+
+          {/* Minimum Requirement Notice */}
+          <Alert className="mb-8 border-amber-500/30 bg-amber-500/10">
+            <AlertTriangle className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="text-amber-800">
+              <strong>Minimum {MIN_TIRE_THRESHOLD} tires required</strong> — We require a minimum of {MIN_TIRE_THRESHOLD} PTE 
+              (Passenger Tire Equivalents) for scheduled pickups. OTR tires count as 15 PTE each, and tractor tires count as 5 PTE each.
+            </AlertDescription>
+          </Alert>
 
           {/* Approval Process Info */}
           <Card className="mb-8 border-brand-primary/20 bg-brand-primary/5">
@@ -361,7 +386,9 @@ export default function PublicBook() {
                     <div>
                       <p className="text-sm font-medium text-green-700">We service your area!</p>
                       <p className="text-xs text-muted-foreground">
-                        Our trucks are typically in your zone on {(matchedZone.primary_service_days || []).map(d => DAYS_OF_WEEK[typeof d === 'string' ? parseInt(d, 10) : d]).join(', ')}
+                        Our trucks are typically in your zone on {(matchedZone.primary_service_days || []).map(d => 
+                          d.charAt(0).toUpperCase() + d.slice(1)
+                        ).join(', ')}
                       </p>
                     </div>
                   </div>
@@ -394,7 +421,7 @@ export default function PublicBook() {
                       {...form.register("pteCount", { valueAsNumber: true })}
                       placeholder="0"
                     />
-                    <p className="text-xs text-muted-foreground">Car, SUV, pickup truck tires</p>
+                    <p className="text-xs text-muted-foreground">= 1 PTE each</p>
                   </div>
 
                   <div className="space-y-2">
@@ -406,7 +433,7 @@ export default function PublicBook() {
                       {...form.register("otrCount", { valueAsNumber: true })}
                       placeholder="0"
                     />
-                    <p className="text-xs text-muted-foreground">Heavy equipment, mining, farm tires</p>
+                    <p className="text-xs text-muted-foreground">= 15 PTE each</p>
                   </div>
 
                   <div className="space-y-2">
@@ -418,17 +445,34 @@ export default function PublicBook() {
                       {...form.register("tractorCount", { valueAsNumber: true })}
                       placeholder="0"
                     />
-                    <p className="text-xs text-muted-foreground">Semi-truck, commercial tires</p>
+                    <p className="text-xs text-muted-foreground">= 5 PTE each</p>
                   </div>
                 </div>
 
-                {estimatedPteValue > 0 && (
-                  <div className="text-sm text-muted-foreground">
-                    Estimated volume: <span className="font-medium">{estimatedPteValue} PTE</span>
-                    {isHighValue && (
-                      <span className="ml-2 text-amber-600">(Priority scheduling available)</span>
-                    )}
+                {/* PTE Counter */}
+                <div className={`p-4 rounded-lg border ${isBelowMinimum ? 'bg-destructive/10 border-destructive/30' : 'bg-green-500/10 border-green-500/30'}`}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Total PTE</p>
+                      <p className="text-sm text-muted-foreground">Minimum {MIN_TIRE_THRESHOLD} required</p>
+                    </div>
+                    <div className="text-right">
+                      <p className={`text-3xl font-bold ${isBelowMinimum ? 'text-destructive' : 'text-green-600'}`}>
+                        {estimatedPteValue}
+                      </p>
+                      {isBelowMinimum ? (
+                        <p className="text-sm text-destructive">Need {MIN_TIRE_THRESHOLD - estimatedPteValue} more</p>
+                      ) : (
+                        <p className="text-sm text-green-600">✓ Minimum met</p>
+                      )}
+                    </div>
                   </div>
+                </div>
+
+                {isHighValue && (
+                  <p className="text-sm text-amber-600">
+                    ⭐ High volume pickups (200+ PTE) receive priority scheduling
+                  </p>
                 )}
 
                 {form.formState.errors.pteCount && (
@@ -463,10 +507,11 @@ export default function PublicBook() {
                           variant={form.watch("preferredDate") === sd.date ? "default" : "outline"}
                           size="sm"
                           onClick={() => handleSelectSuggestedDate(sd.date)}
-                          className={sd.isRecommended ? "border-green-500/50" : ""}
+                          className={sd.isRecommended ? 'border-green-500/50' : ''}
                         >
+                          <CalendarDays className="h-3 w-3 mr-1" />
                           {sd.dayName} {format(new Date(sd.date + 'T12:00:00'), 'MMM d')}
-                          {sd.isRecommended && <CheckCircle2 className="h-3 w-3 ml-1 text-green-600" />}
+                          {sd.isRecommended && <CheckCircle2 className="h-3 w-3 ml-1 text-green-500" />}
                         </Button>
                       ))}
                     </div>
@@ -475,9 +520,7 @@ export default function PublicBook() {
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="preferredDate">
-                      {suggestedDates.length > 0 ? 'Or Select a Different Date' : 'Preferred Date *'}
-                    </Label>
+                    <Label htmlFor="preferredDate">Preferred Date *</Label>
                     <Input
                       id="preferredDate"
                       type="date"
@@ -490,31 +533,31 @@ export default function PublicBook() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="preferredWindow">Preferred Time Window</Label>
+                    <Label>Preferred Time Window</Label>
                     <Select
                       value={form.watch("preferredWindow")}
-                      onValueChange={(value) => form.setValue("preferredWindow", value as "AM" | "PM" | "Any")}
+                      onValueChange={(value: 'AM' | 'PM' | 'Any') => form.setValue("preferredWindow", value)}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select time preference" />
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="AM">
                           <div className="flex items-center gap-2">
                             <Clock className="h-4 w-4" />
-                            Morning (8 AM - 12 PM)
+                            Morning (8am - 12pm)
                           </div>
                         </SelectItem>
                         <SelectItem value="PM">
                           <div className="flex items-center gap-2">
                             <Clock className="h-4 w-4" />
-                            Afternoon (12 PM - 5 PM)
+                            Afternoon (12pm - 5pm)
                           </div>
                         </SelectItem>
                         <SelectItem value="Any">
                           <div className="flex items-center gap-2">
                             <Clock className="h-4 w-4" />
-                            Anytime (8 AM - 5 PM)
+                            Anytime
                           </div>
                         </SelectItem>
                       </SelectContent>
@@ -527,40 +570,40 @@ export default function PublicBook() {
             {/* Additional Notes */}
             <Card>
               <CardHeader>
-                <CardTitle>Additional Information</CardTitle>
+                <CardTitle>Additional Notes</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Special Instructions (Optional)</Label>
-                  <Textarea
-                    id="notes"
-                    {...form.register("notes")}
-                    placeholder="Any special instructions for our driver (e.g., gate codes, specific entrance, etc.)"
-                    className="min-h-[100px]"
-                  />
-                </div>
+                <Textarea
+                  {...form.register("notes")}
+                  placeholder="Any special instructions, gate codes, or details about tire location..."
+                  rows={3}
+                />
               </CardContent>
             </Card>
 
-            {/* Submit Button */}
-            <div className="flex flex-col items-center gap-3">
-              <Button
-                type="submit"
-                size="lg"
-                disabled={isSubmitting}
-                className="min-w-[200px]"
-              >
-                {isSubmitting ? "Submitting..." : "Request Pickup"}
-              </Button>
-              <p className="text-xs text-muted-foreground text-center">
-                Your request will be reviewed and you'll receive confirmation within 24 hours
-              </p>
-            </div>
+            {/* Submit */}
+            <Button 
+              type="submit" 
+              size="lg" 
+              className="w-full"
+              disabled={isSubmitting || isBelowMinimum}
+            >
+              {isSubmitting ? (
+                <>Processing...</>
+              ) : isBelowMinimum ? (
+                <>Minimum {MIN_TIRE_THRESHOLD} PTE Required</>
+              ) : (
+                <>
+                  <CalendarDays className="h-5 w-5 mr-2" />
+                  Submit Pickup Request
+                </>
+              )}
+            </Button>
           </form>
 
-          {/* Footer Info */}
-          <div className="mt-12 text-center text-sm text-muted-foreground">
-            <p>Questions? Contact us at <span className="font-medium">support@bsglogistics.com</span> or <span className="font-medium">(555) 123-4567</span></p>
+          {/* Footer */}
+          <div className="text-center mt-8 text-sm text-muted-foreground">
+            <p>Questions? Contact us at <a href="tel:+15551234567" className="text-brand-primary hover:underline">(555) 123-4567</a></p>
           </div>
         </div>
       </div>
