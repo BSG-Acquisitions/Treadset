@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useServiceZones, useCreateServiceZone, useUpdateServiceZone, useDeleteServiceZone, useAnalyzeServiceZones, ServiceZone, SuggestedZone } from '@/hooks/useServiceZones';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,8 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { MapPin, Plus, Wand2, Trash2, Edit, Loader2, Calendar } from 'lucide-react';
+import { MapPin, Plus, Wand2, Trash2, Edit, Loader2, Calendar, Info } from 'lucide-react';
 import { SlideUp } from '@/components/motion/SlideUp';
+import { ZoneMapVisualization } from '@/components/zones/ZoneMapVisualization';
 import { toast } from 'sonner';
 
 const DAYS_OF_WEEK = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -20,11 +21,13 @@ export default function ServiceZones() {
   const updateZone = useUpdateServiceZone();
   const deleteZone = useDeleteServiceZone();
   const analyzeZones = useAnalyzeServiceZones();
+  const hasAutoAnalyzed = useRef(false);
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingZone, setEditingZone] = useState<ServiceZone | null>(null);
   const [suggestedZones, setSuggestedZones] = useState<SuggestedZone[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [autoAnalyzing, setAutoAnalyzing] = useState(false);
 
   const [formData, setFormData] = useState({
     zone_name: '',
@@ -37,6 +40,25 @@ export default function ServiceZones() {
   useEffect(() => {
     document.title = 'Service Zones | TreadSet';
   }, []);
+
+  // Auto-analyze on first visit if no zones exist
+  useEffect(() => {
+    if (!isLoading && zones.length === 0 && !hasAutoAnalyzed.current && !analyzeZones.isPending) {
+      hasAutoAnalyzed.current = true;
+      setAutoAnalyzing(true);
+      analyzeZones.mutateAsync().then(result => {
+        if (result.suggestedZones.length > 0) {
+          setSuggestedZones(result.suggestedZones);
+          setShowSuggestions(true);
+          toast.success(`Found ${result.suggestedZones.length} zone suggestions`);
+        }
+      }).catch(() => {
+        // Silently fail auto-analysis
+      }).finally(() => {
+        setAutoAnalyzing(false);
+      });
+    }
+  }, [isLoading, zones.length]);
 
   const resetForm = () => {
     setFormData({
@@ -198,24 +220,71 @@ export default function ServiceZones() {
         </SlideUp>
       )}
 
+      {/* Zone Map Visualization */}
+      {zones.length > 0 && (
+        <SlideUp delay={0.15}>
+          <ZoneMapVisualization />
+        </SlideUp>
+      )}
+
+      {/* Getting Started Guide - show when no zones and not auto-analyzing */}
+      {!isLoading && zones.length === 0 && !autoAnalyzing && suggestedZones.length === 0 && (
+        <SlideUp delay={0.1}>
+          <Card className="border-brand-primary/30 bg-brand-primary/5">
+            <CardContent className="py-8">
+              <div className="flex items-start gap-4">
+                <div className="p-3 rounded-full bg-brand-primary/10">
+                  <Info className="h-6 w-6 text-brand-primary" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold mb-2">What are Service Zones?</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Service zones help you organize your pickup areas by geography and schedule. 
+                    When clients book pickups, the system automatically matches them to the right zone 
+                    and suggests optimal pickup dates based on your service schedule.
+                  </p>
+                  <div className="grid md:grid-cols-3 gap-4 mb-4">
+                    <div className="p-3 bg-background rounded-lg">
+                      <p className="font-medium text-sm">📍 Geographic Coverage</p>
+                      <p className="text-xs text-muted-foreground">Group ZIP codes into logical service areas</p>
+                    </div>
+                    <div className="p-3 bg-background rounded-lg">
+                      <p className="font-medium text-sm">📅 Service Schedules</p>
+                      <p className="text-xs text-muted-foreground">Set which days you service each zone</p>
+                    </div>
+                    <div className="p-3 bg-background rounded-lg">
+                      <p className="font-medium text-sm">🚀 Auto-Scheduling</p>
+                      <p className="text-xs text-muted-foreground">Smart booking suggestions for clients</p>
+                    </div>
+                  </div>
+                  <Button onClick={() => { resetForm(); setShowCreateDialog(true); }}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Your First Zone
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </SlideUp>
+      )}
+
+      {/* Auto-analyzing state */}
+      {autoAnalyzing && (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Loader2 className="h-12 w-12 mx-auto text-brand-primary mb-4 animate-spin" />
+            <h3 className="text-lg font-medium mb-2">Analyzing your pickup history...</h3>
+            <p className="text-muted-foreground">
+              We're looking for patterns to suggest optimal service zones
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Existing Zones */}
       {isLoading ? (
         <div className="text-center py-12 text-muted-foreground">Loading...</div>
-      ) : zones.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <MapPin className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2">No service zones defined</h3>
-            <p className="text-muted-foreground mb-4">
-              Create zones to organize your service areas by geography and schedule
-            </p>
-            <Button onClick={handleAnalyze} disabled={analyzeZones.isPending}>
-              <Wand2 className="h-4 w-4 mr-2" />
-              Auto-Detect from History
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
+      ) : zones.length > 0 ? (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {zones.map((zone, index) => (
             <SlideUp key={zone.id} delay={index * 0.05}>
@@ -265,7 +334,7 @@ export default function ServiceZones() {
             </SlideUp>
           ))}
         </div>
-      )}
+      ) : null}
 
       {/* Create/Edit Dialog */}
       <Dialog open={showCreateDialog || !!editingZone} onOpenChange={() => { setShowCreateDialog(false); setEditingZone(null); resetForm(); }}>

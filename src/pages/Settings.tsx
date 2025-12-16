@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { User, Bell, Shield, Palette, Database, Key, Loader2, Save, X, FileText, PenTool, Users } from "lucide-react";
+import { User, Bell, Shield, Palette, Database, Key, Loader2, Save, X, FileText, PenTool, Users, CalendarClock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { SlideUp } from "@/components/motion/SlideUp";
@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { InviteTeamDialog } from "@/components/settings/InviteTeamDialog";
 import { PendingInvitesTable } from "@/components/settings/PendingInvitesTable";
 import { RolePermissionsCard } from "@/components/settings/RolePermissionsCard";
+import { AutoSchedulingSettings } from "@/components/settings/AutoSchedulingSettings";
 
 export default function Settings() {
   const { user } = useAuth();
@@ -290,6 +291,14 @@ if (preferencesLoading) {
                   <Shield className="h-4 w-4 mr-2" />
                   Role Permissions
                 </Button>
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start"
+                  onClick={() => scrollToSection('scheduling-section')}
+                >
+                  <CalendarClock className="h-4 w-4 mr-2" />
+                  Self-Scheduling
+                </Button>
               </CardContent>
             </Card>
           </SlideUp>
@@ -319,6 +328,13 @@ if (preferencesLoading) {
           <SlideUp delay={0.17} className="lg:col-span-2">
             <div id="roles-section">
               <RolePermissionsCard />
+            </div>
+          </SlideUp>
+
+          {/* Self-Scheduling Settings */}
+          <SlideUp delay={0.18} className="lg:col-span-2">
+            <div id="scheduling-section">
+              <AutoSchedulingSettings />
             </div>
           </SlideUp>
 
