@@ -1,6 +1,7 @@
 import { useEmployees } from '@/hooks/useEmployees';
 import { CreateEmployeeDialog } from '@/components/employees/CreateEmployeeDialog';
 import { EditEmployeeDialog } from '@/components/employees/EditEmployeeDialog';
+import { InviteTeamDialog } from '@/components/settings/InviteTeamDialog';
 import { DriverPerformanceTable } from '@/components/driver/DriverPerformanceTable';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -88,7 +89,10 @@ export default function EmployeesPage() {
             <h2 className="text-xl font-semibold text-foreground">Employee Directory</h2>
             <p className="text-muted-foreground">Track team performance and manage access permissions</p>
           </div>
-          <CreateEmployeeDialog />
+          <div className="flex gap-2">
+            <InviteTeamDialog />
+            <CreateEmployeeDialog />
+          </div>
         </div>
 
         {/* Enhanced Stats Grid */}
