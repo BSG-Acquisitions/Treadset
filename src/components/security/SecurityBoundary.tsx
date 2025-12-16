@@ -44,12 +44,20 @@ class SecurityBoundary extends Component<SecurityBoundaryProps, SecurityBoundary
       console.error('[Security] Security boundary caught error:', error, errorInfo);
       this.props.onSecurityError?.(error, errorInfo);
       
-      // Clear potentially compromised session data
-      try {
-        localStorage.removeItem('supabase.auth.token');
-        sessionStorage.clear();
-      } catch (e) {
-        console.error('[Security] Failed to clear session data:', e);
+      // ONLY clear session for actual auth failures (401/403/jwt expired), not generic permission errors
+      const isAuthFailure = 
+        error.message.includes('401') ||
+        error.message.includes('403') ||
+        error.message.toLowerCase().includes('jwt expired') ||
+        error.message.toLowerCase().includes('invalid jwt');
+      
+      if (isAuthFailure) {
+        try {
+          localStorage.removeItem('supabase.auth.token');
+          sessionStorage.clear();
+        } catch (e) {
+          console.error('[Security] Failed to clear session data:', e);
+        }
       }
     }
 
