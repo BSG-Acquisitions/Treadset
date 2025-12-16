@@ -28,7 +28,8 @@ export interface SuggestedZone {
 }
 
 export function useServiceZones() {
-  const { organizationId } = useAuth();
+  const { user } = useAuth();
+  const organizationId = user?.currentOrganization?.id;
 
   return useQuery({
     queryKey: ['service-zones', organizationId],
@@ -55,7 +56,8 @@ export function useServiceZones() {
 
 export function useCreateServiceZone() {
   const queryClient = useQueryClient();
-  const { organizationId } = useAuth();
+  const { user } = useAuth();
+  const organizationId = user?.currentOrganization?.id;
 
   return useMutation({
     mutationFn: async (zone: Omit<ServiceZone, 'id' | 'created_at' | 'updated_at' | 'organization_id'>) => {
@@ -131,7 +133,8 @@ export function useDeleteServiceZone() {
 }
 
 export function useAnalyzeServiceZones() {
-  const { organizationId } = useAuth();
+  const { user } = useAuth();
+  const organizationId = user?.currentOrganization?.id;
 
   return useMutation({
     mutationFn: async () => {
@@ -156,7 +159,8 @@ export function useAnalyzeServiceZones() {
 }
 
 export function useZoneForZipCode(zipCode: string | null) {
-  const { organizationId } = useAuth();
+  const { user } = useAuth();
+  const organizationId = user?.currentOrganization?.id;
 
   return useQuery({
     queryKey: ['zone-for-zip', organizationId, zipCode],

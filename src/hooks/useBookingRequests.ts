@@ -52,7 +52,8 @@ export interface BookingRequest {
 }
 
 export function useBookingRequests(status?: string) {
-  const { organizationId } = useAuth();
+  const { user } = useAuth();
+  const organizationId = user?.currentOrganization?.id;
 
   return useQuery({
     queryKey: ['booking-requests', organizationId, status],
@@ -93,7 +94,8 @@ export function useBookingRequests(status?: string) {
 }
 
 export function usePendingBookingCount() {
-  const { organizationId } = useAuth();
+  const { user } = useAuth();
+  const organizationId = user?.currentOrganization?.id;
 
   return useQuery({
     queryKey: ['pending-booking-count', organizationId],
