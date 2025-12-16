@@ -5,12 +5,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface PickupData {
-  created_at: string;
-  final_revenue: number | null;
-  computed_revenue: number | null;
-}
-
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -45,26 +39,53 @@ Deno.serve(async (req) => {
     }
 
     const { data: pickups, error: pickupsError } = await pickupsQuery;
-
     if (pickupsError) throw pickupsError;
 
-    // Calculate monthly revenue totals using actual revenue from pickups
-    const monthlyRevenue: { [key: string]: number } = {};
+    // Query dropoffs with actual revenue
+    let dropoffsQuery = supabaseClient
+      .from('dropoffs')
+      .select('created_at, computed_revenue, organization_id')
+      .gte('created_at', twelveMonthsAgo.toISOString())
+      .order('created_at', { ascending: true });
+
+    if (organizationId) {
+      dropoffsQuery = dropoffsQuery.eq('organization_id', organizationId);
+    }
+
+    const { data: dropoffs, error: dropoffsError } = await dropoffsQuery;
+    if (dropoffsError) throw dropoffsError;
+
+    // Calculate monthly revenue totals from BOTH pickups AND dropoffs
+    const monthlyPickupRevenue: { [key: string]: number } = {};
+    const monthlyDropoffRevenue: { [key: string]: number } = {};
+    const monthlyTotalRevenue: { [key: string]: number } = {};
     
+    // Process pickup revenue
     pickups?.forEach((pickup: any) => {
       const month = pickup.created_at.substring(0, 7); // YYYY-MM
-      // Use final_revenue if available, otherwise computed_revenue
       const revenue = pickup.final_revenue || pickup.computed_revenue || 0;
       
-      monthlyRevenue[month] = (monthlyRevenue[month] || 0) + revenue;
+      monthlyPickupRevenue[month] = (monthlyPickupRevenue[month] || 0) + revenue;
+      monthlyTotalRevenue[month] = (monthlyTotalRevenue[month] || 0) + revenue;
     });
 
-    // Calculate rolling averages and forecasts
-    const months = Object.keys(monthlyRevenue).sort();
-    const revenues = months.map(m => monthlyRevenue[m]);
+    // Process dropoff revenue
+    dropoffs?.forEach((dropoff: any) => {
+      const month = dropoff.created_at.substring(0, 7); // YYYY-MM
+      const revenue = dropoff.computed_revenue || 0;
+      
+      monthlyDropoffRevenue[month] = (monthlyDropoffRevenue[month] || 0) + revenue;
+      monthlyTotalRevenue[month] = (monthlyTotalRevenue[month] || 0) + revenue;
+    });
+
+    // Calculate rolling averages and forecasts using combined data
+    const months = Object.keys(monthlyTotalRevenue).sort();
+    const revenues = months.map(m => monthlyTotalRevenue[m]);
     
     // Simple moving average for trend
-    const avgMonthlyRevenue = revenues.reduce((a, b) => a + b, 0) / revenues.length;
+    const avgMonthlyRevenue = revenues.length > 0 
+      ? revenues.reduce((a, b) => a + b, 0) / revenues.length 
+      : 0;
     
     // Calculate growth rate from last 3 months vs previous 3 months
     const recentRevenue = revenues.slice(-3).reduce((a, b) => a + b, 0);
@@ -75,8 +96,16 @@ Deno.serve(async (req) => {
 
     // Seasonal adjustment (simple: use month-over-month variance)
     const seasonalWeight = revenues.length > 3 
-      ? 1 + (revenues[revenues.length - 1] - avgMonthlyRevenue) / avgMonthlyRevenue 
+      ? 1 + (revenues[revenues.length - 1] - avgMonthlyRevenue) / (avgMonthlyRevenue || 1)
       : 1;
+
+    // Calculate pickup vs dropoff breakdown for the most recent 3 months
+    const recentMonths = months.slice(-3);
+    const pickupTotal = recentMonths.reduce((sum, m) => sum + (monthlyPickupRevenue[m] || 0), 0);
+    const dropoffTotal = recentMonths.reduce((sum, m) => sum + (monthlyDropoffRevenue[m] || 0), 0);
+    const combinedTotal = pickupTotal + dropoffTotal;
+    const pickupPercentage = combinedTotal > 0 ? Math.round((pickupTotal / combinedTotal) * 100) : 0;
+    const dropoffPercentage = combinedTotal > 0 ? Math.round((dropoffTotal / combinedTotal) * 100) : 0;
 
     // Generate forecasts for 30, 60, 90 days
     const now = new Date();
@@ -92,26 +121,46 @@ Deno.serve(async (req) => {
       const predicted = baseRevenue + trendAdjustment + seasonalAdjustment;
       
       // Confidence level based on data consistency
-      const variance = revenues.reduce((sum, r) => sum + Math.pow(r - avgMonthlyRevenue, 2), 0) / revenues.length;
+      const variance = revenues.length > 0 
+        ? revenues.reduce((sum, r) => sum + Math.pow(r - avgMonthlyRevenue, 2), 0) / revenues.length 
+        : 0;
       const stdDev = Math.sqrt(variance);
-      const coefficientOfVariation = stdDev / avgMonthlyRevenue;
+      const coefficientOfVariation = avgMonthlyRevenue > 0 ? stdDev / avgMonthlyRevenue : 1;
       
+      // Confidence explanation
       let confidence: string;
-      if (coefficientOfVariation < 0.2) confidence = 'high';
-      else if (coefficientOfVariation < 0.4) confidence = 'medium';
-      else confidence = 'low';
+      let confidenceExplanation: string;
+      if (coefficientOfVariation < 0.2) {
+        confidence = 'high';
+        confidenceExplanation = 'Your revenue is very consistent month-to-month, making predictions reliable.';
+      } else if (coefficientOfVariation < 0.4) {
+        confidence = 'medium';
+        confidenceExplanation = 'Your revenue varies moderately, predictions are reasonably reliable.';
+      } else {
+        confidence = 'low';
+        confidenceExplanation = 'Your revenue varies significantly month-to-month, predictions may be less accurate.';
+      }
 
       return {
         forecast_month: targetDate.toISOString().substring(0, 10),
         predicted_revenue: Math.round(predicted * 100) / 100,
         confidence_level: confidence,
+        confidence_explanation: confidenceExplanation,
         based_on_months: revenues.length,
         growth_rate: Math.round(growthRate * 100) / 100,
+        pickup_revenue_pct: pickupPercentage,
+        dropoff_revenue_pct: dropoffPercentage,
+        avg_monthly_pickups: Math.round(pickupTotal / Math.max(recentMonths.length, 1) * 100) / 100,
+        avg_monthly_dropoffs: Math.round(dropoffTotal / Math.max(recentMonths.length, 1) * 100) / 100,
       };
     });
 
     // Store forecasts in revenue_forecasts table
     let targetOrgId: string | null = organizationId || (pickups && pickups.length > 0 ? (pickups[0] as any).organization_id : null);
+
+    if (!targetOrgId && dropoffs && dropoffs.length > 0) {
+      targetOrgId = (dropoffs[0] as any).organization_id;
+    }
 
     if (!targetOrgId) {
       const { data: fallbackOrg } = await supabaseClient
@@ -131,7 +180,11 @@ Deno.serve(async (req) => {
 
       // Insert new forecasts
       const forecastsToInsert = forecasts.map(f => ({
-        ...f,
+        forecast_month: f.forecast_month,
+        predicted_revenue: f.predicted_revenue,
+        confidence_level: f.confidence_level,
+        based_on_months: f.based_on_months,
+        growth_rate: f.growth_rate,
         organization_id: targetOrgId as string,
       }));
 
@@ -143,33 +196,39 @@ Deno.serve(async (req) => {
 
       // Log model training metrics
       const trainingDuration = Date.now() - trainingStart;
-      const actualRevenues = revenues.slice(-3); // Last 3 months actual
+      const actualRevenues = revenues.slice(-3);
       const predictedRevenue = forecasts[0].predicted_revenue;
-      const mae = Math.abs(actualRevenues[actualRevenues.length - 1] - predictedRevenue);
-      const mape = (mae / actualRevenues[actualRevenues.length - 1]) * 100;
+      const mae = actualRevenues.length > 0 
+        ? Math.abs(actualRevenues[actualRevenues.length - 1] - predictedRevenue) 
+        : 0;
+      const mape = actualRevenues.length > 0 && actualRevenues[actualRevenues.length - 1] > 0 
+        ? (mae / actualRevenues[actualRevenues.length - 1]) * 100 
+        : 0;
 
       await supabaseClient.from('model_training_logs').insert({
         organization_id: targetOrgId,
         model_name: 'revenue_forecast',
-        model_version: 'v2.0-12month',
+        model_version: 'v3.0-combined-revenue',
         data_range_start: dataRangeStart,
         data_range_end: new Date().toISOString().split('T')[0],
-        records_used: pickups?.length || 0,
+        records_used: (pickups?.length || 0) + (dropoffs?.length || 0),
         performance_metrics: {
           mae: Math.round(mae * 100) / 100,
           mape: Math.round(mape * 100) / 100,
           growth_rate: Math.round(growthRate * 100) / 100,
           seasonal_weight: Math.round(seasonalWeight * 100) / 100,
-          confidence_levels: forecasts.map(f => f.confidence_level)
+          confidence_levels: forecasts.map(f => f.confidence_level),
+          pickup_revenue_pct: pickupPercentage,
+          dropoff_revenue_pct: dropoffPercentage,
         },
         hyperparameters: {
           lookback_months: 12,
           seasonal_adjustment: true,
-          revenue_source: 'actual_pickup_revenue'
+          revenue_sources: ['pickups', 'dropoffs'],
         },
         training_duration_ms: trainingDuration,
         deployed: true,
-        notes: 'Uses actual pickup revenue with 12-month historical data and seasonal adjustment'
+        notes: 'Combined pickup + dropoff revenue with 12-month historical data and seasonal adjustment'
       });
     }
 
@@ -182,7 +241,11 @@ Deno.serve(async (req) => {
           growthRate: Math.round(growthRate * 100) / 100,
           dataPoints: revenues.length,
           seasonalWeight: Math.round(seasonalWeight * 100) / 100,
-          training_duration_ms: Date.now() - trainingStart
+          training_duration_ms: Date.now() - trainingStart,
+          pickupRevenueContribution: pickupPercentage,
+          dropoffRevenueContribution: dropoffPercentage,
+          totalPickupsAnalyzed: pickups?.length || 0,
+          totalDropoffsAnalyzed: dropoffs?.length || 0,
         }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
