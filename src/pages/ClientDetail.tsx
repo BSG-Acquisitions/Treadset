@@ -434,10 +434,10 @@ export default function ClientDetail() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-foreground">
-                ${paymentHistory.reduce((sum, p) => sum + (p.computed_revenue || 0), 0).toFixed(2)}
+                ${(client.lifetime_revenue || 0).toFixed(2)}
               </div>
               <p className="text-sm text-muted-foreground mt-1">
-                Total revenue from all completed pickups
+                Total revenue from pickups and drop-offs
               </p>
             </CardContent>
           </Card>
