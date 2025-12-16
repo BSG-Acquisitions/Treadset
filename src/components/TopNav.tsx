@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Bell, Menu, User, Settings, Package, BarChart3, UserCheck, Home, Users, MapPin, DollarSign, CreditCard, PenTool, Truck, Building, FileText, PackageOpen, Container } from 'lucide-react';
+import { Search, Bell, Menu, User, Settings, Package, BarChart3, UserCheck, Home, Users, MapPin, DollarSign, CreditCard, PenTool, Truck, Building, FileText, PackageOpen, Container, CalendarCheck, Map } from 'lucide-react';
 import { FEATURE_FLAGS } from '@/lib/featureFlags';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +25,7 @@ import { OrganizationSwitcher } from '@/components/auth/OrganizationSwitcher';
 import { useEnhancedNotifications } from '@/hooks/useEnhancedNotifications';
 import { useContextualNotifications } from '@/hooks/useContextualNotifications';
 import { useManifestReminders } from '@/hooks/useManifestReminders';
+import { usePendingBookingCount } from '@/hooks/useBookingRequests';
 
 import { formatDistanceToNow } from 'date-fns';
 import { LiveSearch } from '@/components/LiveSearch';
@@ -39,6 +40,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
   const { user, signOut, hasAnyRole } = useAuth();
   const location = useLocation();
   const { unreadCount } = useEnhancedNotifications();
+  const { data: pendingBookingCount } = usePendingBookingCount();
   useContextualNotifications(); // Enable background checks
   useManifestReminders(); // Enable manifest reminder checks
   
@@ -181,6 +183,28 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                   <Link to="/integrations" className="flex items-center gap-2">
                     <CreditCard className="h-4 w-4" />
                     Integrations
+                  </Link>
+                </DropdownMenuItem>
+              )}
+              {/* Booking Management */}
+              {hasAnyRole(['admin', 'ops_manager']) && (
+                <DropdownMenuItem asChild>
+                  <Link to="/booking-requests" className="flex items-center gap-2">
+                    <CalendarCheck className="h-4 w-4" />
+                    Booking Requests
+                    {(pendingBookingCount ?? 0) > 0 && (
+                      <Badge variant="destructive" className="ml-auto h-5 min-w-[20px] px-1">
+                        {pendingBookingCount}
+                      </Badge>
+                    )}
+                  </Link>
+                </DropdownMenuItem>
+              )}
+              {hasAnyRole(['admin', 'ops_manager']) && (
+                <DropdownMenuItem asChild>
+                  <Link to="/service-zones" className="flex items-center gap-2">
+                    <Map className="h-4 w-4" />
+                    Service Zones
                   </Link>
                 </DropdownMenuItem>
               )}
