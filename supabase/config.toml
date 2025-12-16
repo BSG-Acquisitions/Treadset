@@ -170,3 +170,6 @@ verify_jwt = false
 
 [functions.check-missing-pickups]
 verify_jwt = false
+
+[functions.send-team-invite]
+verify_jwt = false

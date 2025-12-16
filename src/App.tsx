@@ -34,6 +34,7 @@ import DriverAssignmentView from "./pages/DriverAssignmentView";
 import PublicBook from "./pages/PublicBook";
 import PublicBookingConfirmation from "./pages/PublicBookingConfirmation";
 import ManifestViewer from './pages/ManifestViewer';
+import Invite from './pages/Invite';
 import ReceiverSignatures from './pages/ReceiverSignatures';
 import ReceiverManagement from './pages/ReceiverManagement';
 import Reports from './pages/Reports';
@@ -78,9 +79,10 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
-              {/* Public Routes - No Authentication Required */}
+{/* Public Routes - No Authentication Required */}
               <Route path="/public-book" element={<PublicBook />} />
               <Route path="/public-booking-confirmation" element={<PublicBookingConfirmation />} />
+              <Route path="/invite/:token" element={<Invite />} />
               
               {/* Auth Routes */}
               <Route path="/auth" element={<Auth />} />

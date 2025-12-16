@@ -2233,6 +2233,79 @@ export type Database = {
           },
         ]
       }
+      organization_invites: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          email: string | null
+          expires_at: string
+          id: string
+          invite_type: string
+          organization_id: string
+          personal_message: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          sent_at: string | null
+          token: string
+          updated_at: string
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          expires_at?: string
+          id?: string
+          invite_type?: string
+          organization_id: string
+          personal_message?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+          sent_at?: string | null
+          token?: string
+          updated_at?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          expires_at?: string
+          id?: string
+          invite_type?: string
+          organization_id?: string
+          personal_message?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+          sent_at?: string | null
+          token?: string
+          updated_at?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_invites_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_invites_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_invites_used_by_fkey"
+            columns: ["used_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_settings: {
         Row: {
           created_at: string
@@ -4410,6 +4483,10 @@ export type Database = {
         Returns: number
       }
       check_performance_thresholds: { Args: never; Returns: undefined }
+      claim_invite_token: {
+        Args: { claiming_user_id: string; invite_token: string }
+        Returns: boolean
+      }
       cleanup_expired_rate_limits: { Args: never; Returns: undefined }
       create_followup_workflows_for_inactive_clients: {
         Args: never
@@ -4520,6 +4597,19 @@ export type Database = {
           user_role: Database["public"]["Enums"]["app_role"]
         }
         Returns: boolean
+      }
+      validate_invite_token: {
+        Args: { invite_token: string }
+        Returns: {
+          email: string
+          error_message: string
+          id: string
+          is_valid: boolean
+          organization_id: string
+          organization_logo: string
+          organization_name: string
+          role: Database["public"]["Enums"]["app_role"]
+        }[]
       }
     }
     Enums: {
