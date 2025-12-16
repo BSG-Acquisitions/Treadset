@@ -103,28 +103,28 @@ const App = () => (
                 </ProtectedRoute>
               } />
               <Route path="/clients" element={
-                <ProtectedRoute roles={['admin', 'ops_manager', 'sales']}>
+                <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher', 'sales']}>
                   <AppLayout>
                     <Clients />
                   </AppLayout>
                 </ProtectedRoute>
               } />
               <Route path="/clients/:id" element={
-                <ProtectedRoute roles={['admin', 'ops_manager', 'sales']}>
+                <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher', 'sales']}>
                   <AppLayout>
                     <ClientDetail />
                   </AppLayout>
                 </ProtectedRoute>
               } />
               <Route path="/routes/today" element={
-                <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
+                <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher', 'sales']}>
                   <AppLayout>
                     <EnhancedRoutesToday />
                   </AppLayout>
                 </ProtectedRoute>
               } />
               <Route path="/routes/print/today" element={
-                <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
+                <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher', 'sales']}>
                   <AppLayout>
                     <RoutesPrintToday />
                   </AppLayout>
@@ -173,7 +173,7 @@ const App = () => (
                 </ProtectedRoute>
               } />
               <Route path="/manifests" element={
-                <ProtectedRoute roles={['admin', 'ops_manager', 'sales']}>
+                <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher', 'sales']}>
                   <AppLayout>
                     <Manifests />
                   </AppLayout>
@@ -286,7 +286,7 @@ const App = () => (
                 </ProtectedRoute>
               } />
               <Route path="/dropoffs" element={
-                <ProtectedRoute roles={['admin', 'ops_manager', 'sales']}>
+                <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher', 'sales']}>
                   <AppLayout>
                     <Dropoffs />
                   </AppLayout>
@@ -321,7 +321,7 @@ const App = () => (
                 </ProtectedRoute>
               } />
               <Route path="/test/manifest-reminders" element={
-                <ProtectedRoute roles={['admin', 'receptionist']}>
+                <ProtectedRoute roles={['admin']}>
                   <AppLayout>
                     <ManifestRemindersTest />
                   </AppLayout>
@@ -338,7 +338,7 @@ const App = () => (
               {/* Trailer Management Routes - Feature Flag Protected */}
               <Route path="/trailers" element={
                 FEATURE_FLAGS.TRAILERS ? (
-                  <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
+                  <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher', 'sales']}>
                     <AppLayout>
                       <TrailerInventory />
                     </AppLayout>
@@ -347,7 +347,7 @@ const App = () => (
               } />
               <Route path="/trailers/inventory" element={
                 FEATURE_FLAGS.TRAILERS ? (
-                  <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
+                  <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher', 'sales']}>
                     <AppLayout>
                       <TrailerInventory />
                     </AppLayout>
@@ -356,7 +356,7 @@ const App = () => (
               } />
               <Route path="/trailers/routes" element={
                 FEATURE_FLAGS.TRAILERS ? (
-                  <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
+                  <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher', 'sales']}>
                     <AppLayout>
                       <TrailerRoutes />
                     </AppLayout>
@@ -365,7 +365,7 @@ const App = () => (
               } />
               <Route path="/trailers/routes/:routeId" element={
                 FEATURE_FLAGS.TRAILERS ? (
-                  <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
+                  <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher', 'sales']}>
                     <AppLayout>
                       <TrailerRouteDetail />
                     </AppLayout>
@@ -374,7 +374,7 @@ const App = () => (
               } />
               <Route path="/trailers/vehicles" element={
                 FEATURE_FLAGS.TRAILERS ? (
-                  <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
+                  <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher', 'sales']}>
                     <AppLayout>
                       <TrailerVehicles />
                     </AppLayout>
