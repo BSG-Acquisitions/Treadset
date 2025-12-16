@@ -247,6 +247,176 @@ export type Database = {
           },
         ]
       }
+      booking_requests: {
+        Row: {
+          admin_notes: string | null
+          client_id: string | null
+          company_name: string | null
+          confirmation_email_sent_at: string | null
+          contact_email: string | null
+          contact_name: string
+          contact_phone: string | null
+          created_at: string
+          decline_reason: string | null
+          detour_distance_miles: number | null
+          estimated_value: number | null
+          id: string
+          modification_confirmed: boolean | null
+          modification_confirmed_at: string | null
+          modification_reason: string | null
+          notes: string | null
+          organization_id: string
+          pickup_address: string
+          pickup_city: string | null
+          pickup_id: string | null
+          pickup_lat: number | null
+          pickup_lng: number | null
+          pickup_state: string | null
+          pickup_zip: string | null
+          preferred_time_window: string | null
+          requested_date: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          route_efficiency_impact: number | null
+          status: string
+          suggested_date: string | null
+          tire_estimate_otr: number | null
+          tire_estimate_pte: number | null
+          tire_estimate_tractor: number | null
+          updated_at: string
+          zone_id: string | null
+          zone_matched: boolean | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          client_id?: string | null
+          company_name?: string | null
+          confirmation_email_sent_at?: string | null
+          contact_email?: string | null
+          contact_name: string
+          contact_phone?: string | null
+          created_at?: string
+          decline_reason?: string | null
+          detour_distance_miles?: number | null
+          estimated_value?: number | null
+          id?: string
+          modification_confirmed?: boolean | null
+          modification_confirmed_at?: string | null
+          modification_reason?: string | null
+          notes?: string | null
+          organization_id: string
+          pickup_address: string
+          pickup_city?: string | null
+          pickup_id?: string | null
+          pickup_lat?: number | null
+          pickup_lng?: number | null
+          pickup_state?: string | null
+          pickup_zip?: string | null
+          preferred_time_window?: string | null
+          requested_date: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          route_efficiency_impact?: number | null
+          status?: string
+          suggested_date?: string | null
+          tire_estimate_otr?: number | null
+          tire_estimate_pte?: number | null
+          tire_estimate_tractor?: number | null
+          updated_at?: string
+          zone_id?: string | null
+          zone_matched?: boolean | null
+        }
+        Update: {
+          admin_notes?: string | null
+          client_id?: string | null
+          company_name?: string | null
+          confirmation_email_sent_at?: string | null
+          contact_email?: string | null
+          contact_name?: string
+          contact_phone?: string | null
+          created_at?: string
+          decline_reason?: string | null
+          detour_distance_miles?: number | null
+          estimated_value?: number | null
+          id?: string
+          modification_confirmed?: boolean | null
+          modification_confirmed_at?: string | null
+          modification_reason?: string | null
+          notes?: string | null
+          organization_id?: string
+          pickup_address?: string
+          pickup_city?: string | null
+          pickup_id?: string | null
+          pickup_lat?: number | null
+          pickup_lng?: number | null
+          pickup_state?: string | null
+          pickup_zip?: string | null
+          preferred_time_window?: string | null
+          requested_date?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          route_efficiency_impact?: number | null
+          status?: string
+          suggested_date?: string | null
+          tire_estimate_otr?: number | null
+          tire_estimate_pte?: number | null
+          tire_estimate_tractor?: number | null
+          updated_at?: string
+          zone_id?: string | null
+          zone_matched?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_monthly_entity_rollup"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "booking_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_revenue_summary"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "booking_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_requests_pickup_id_fkey"
+            columns: ["pickup_id"]
+            isOneToOne: false
+            referencedRelation: "pickups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_requests_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "service_zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       capacity_preview: {
         Row: {
           capacity_percentage: number | null
@@ -284,6 +454,95 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "capacity_preview_beta_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_email_preferences: {
+        Row: {
+          bookings_from_email: number | null
+          can_receive_confirmations: boolean | null
+          can_receive_outreach: boolean | null
+          can_receive_reminders: boolean | null
+          client_id: string
+          created_at: string
+          emails_clicked: number | null
+          emails_opened: number | null
+          id: string
+          last_outreach_sent_at: string | null
+          last_reminder_sent_at: string | null
+          organization_id: string
+          outreach_count: number | null
+          reminder_count: number | null
+          unsubscribe_reason: string | null
+          unsubscribed_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          bookings_from_email?: number | null
+          can_receive_confirmations?: boolean | null
+          can_receive_outreach?: boolean | null
+          can_receive_reminders?: boolean | null
+          client_id: string
+          created_at?: string
+          emails_clicked?: number | null
+          emails_opened?: number | null
+          id?: string
+          last_outreach_sent_at?: string | null
+          last_reminder_sent_at?: string | null
+          organization_id: string
+          outreach_count?: number | null
+          reminder_count?: number | null
+          unsubscribe_reason?: string | null
+          unsubscribed_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bookings_from_email?: number | null
+          can_receive_confirmations?: boolean | null
+          can_receive_outreach?: boolean | null
+          can_receive_reminders?: boolean | null
+          client_id?: string
+          created_at?: string
+          emails_clicked?: number | null
+          emails_opened?: number | null
+          id?: string
+          last_outreach_sent_at?: string | null
+          last_reminder_sent_at?: string | null
+          organization_id?: string
+          outreach_count?: number | null
+          reminder_count?: number | null
+          unsubscribe_reason?: string | null
+          unsubscribed_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_email_preferences_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_email_preferences_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_monthly_entity_rollup"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "client_email_preferences_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_revenue_summary"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "client_email_preferences_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -3384,6 +3643,59 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "revenue_forecasts_beta_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_zones: {
+        Row: {
+          center_lat: number | null
+          center_lng: number | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          max_detour_miles: number | null
+          organization_id: string
+          primary_service_days: string[]
+          updated_at: string
+          zip_codes: string[]
+          zone_name: string
+        }
+        Insert: {
+          center_lat?: number | null
+          center_lng?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_detour_miles?: number | null
+          organization_id: string
+          primary_service_days?: string[]
+          updated_at?: string
+          zip_codes?: string[]
+          zone_name: string
+        }
+        Update: {
+          center_lat?: number | null
+          center_lng?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_detour_miles?: number | null
+          organization_id?: string
+          primary_service_days?: string[]
+          updated_at?: string
+          zip_codes?: string[]
+          zone_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_zones_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
