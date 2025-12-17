@@ -53,11 +53,48 @@ export const useCreateLocation = () => {
         .single();
 
       if (error) throw error;
+
+      // Auto-geocode the new location if it has an address but no coordinates
+      if (data && data.address && (!data.latitude || !data.longitude)) {
+        try {
+          console.log('Auto-geocoding new location:', data.id);
+          const { error: geocodeError } = await supabase.functions.invoke('geocode-locations', {
+            body: { locationId: data.id }
+          });
+          
+          if (geocodeError) {
+            console.warn('Auto-geocode failed:', geocodeError);
+          } else {
+            // Fetch the updated location with coordinates
+            const { data: updatedLocation } = await supabase
+              .from('locations')
+              .select()
+              .eq('id', data.id)
+              .single();
+            
+            if (updatedLocation) {
+              // Also backfill the client's geographic data if location was geocoded
+              if (updatedLocation.latitude && updatedLocation.longitude && updatedLocation.client_id) {
+                console.log('Auto-backfilling client geography for:', updatedLocation.client_id);
+                await supabase.functions.invoke('backfill-client-geography', {
+                  body: { clientId: updatedLocation.client_id }
+                });
+              }
+              return updatedLocation;
+            }
+          }
+        } catch (err) {
+          console.warn('Auto-geocode error:', err);
+        }
+      }
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['locations'] });
-      toast({ title: "Success", description: "Location created successfully" });
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['data-quality-stats'] });
+      toast({ title: "Success", description: "Location created and geocoded" });
     },
     onError: (error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });

@@ -30,7 +30,7 @@ export const useBackfillGeography = () => {
       const { data, error } = await supabase.functions.invoke('backfill-client-geography', {
         body: {
           forceUpdate: options?.forceUpdate ?? false,
-          batchSize: options?.batchSize ?? 100
+          batchSize: options?.batchSize ?? 250
         }
       });
 
