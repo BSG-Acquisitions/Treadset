@@ -27,17 +27,18 @@ export function CreateClientDialog({ trigger, open: controlledOpen, onOpenChange
 
   const handleSubmit = async (data: ClientFormData) => {
     try {
+      // Trim all text fields to prevent whitespace issues
       const clientData = {
-        company_name: data.company_name,
-        contact_name: data.contact_name || null,
-        email: data.email || null,
-        phone: data.phone || null,
-        notes: data.notes || null,
-        mailing_address: data.mailing_address || null,
-        city: data.city || null,
-        state: data.state || null,
-        zip: data.zip || null,
-        county: data.county || null,
+        company_name: data.company_name.trim(),
+        contact_name: data.contact_name?.trim() || null,
+        email: data.email?.trim() || null,
+        phone: data.phone?.trim() || null,
+        notes: data.notes?.trim() || null,
+        mailing_address: data.mailing_address?.trim() || null,
+        city: data.city?.trim() || null,
+        state: data.state?.trim() || null,
+        zip: data.zip?.trim() || null,
+        county: data.county?.trim() || null,
         organization_id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73', // Default org ID
       };
 
