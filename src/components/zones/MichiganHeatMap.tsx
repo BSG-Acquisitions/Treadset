@@ -1,15 +1,16 @@
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
-import { Loader2, MapPin, Target, TrendingUp, Search, Maximize2, Filter, Building2, AlertTriangle, DollarSign, Phone, Calendar, ExternalLink } from 'lucide-react';
+import { Loader2, MapPin, Target, TrendingUp, Search, Maximize2, Filter, Building2, AlertTriangle, RefreshCw, Wrench, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '@/lib/formatters';
+import { useMapDataCompleteness } from '@/hooks/useMapDataCompleteness';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 interface LocationData {
@@ -53,6 +54,10 @@ export function MichiganHeatMap() {
   const [mapboxToken, setMapboxToken] = useState<string | null>(null);
   const [mapboxgl, setMapboxgl] = useState<any>(null);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Data completeness tracking
+  const { stats: completenessStats, isFixing, fixMissingData, refreshMapData } = useMapDataCompleteness();
   
   // UI State
   const [searchQuery, setSearchQuery] = useState('');
@@ -164,101 +169,111 @@ export function MichiganHeatMap() {
     fetchToken();
   }, []);
 
-  // Fetch location data with client details, revenue, and risk
-  useEffect(() => {
-    async function fetchLocationData() {
-      if (!organizationId) return;
-      setLoading(true);
+  // Fetch location data function
+  const fetchLocationData = useCallback(async () => {
+    if (!organizationId) return;
+    setLoading(true);
 
-      try {
-        // Fetch locations with client data
-        const { data: locationsData, error: locationsError } = await supabase
-          .from('locations')
-          .select('id, latitude, longitude, address, client_id, name, clients(id, company_name, physical_city, physical_zip, phone, last_pickup_at)')
-          .eq('organization_id', organizationId)
-          .not('latitude', 'is', null)
-          .not('longitude', 'is', null);
+    try {
+      // Fetch locations with client data
+      const { data: locationsData, error: locationsError } = await supabase
+        .from('locations')
+        .select('id, latitude, longitude, address, client_id, name, clients(id, company_name, physical_city, physical_zip, phone, last_pickup_at)')
+        .eq('organization_id', organizationId)
+        .not('latitude', 'is', null)
+        .not('longitude', 'is', null);
 
-        if (locationsError) {
-          console.error('Failed to fetch locations:', locationsError);
-          setMapError('Failed to load location data');
-          setLoading(false);
-          return;
-        }
-
-        // Fetch pickups with revenue data
-        const { data: pickupsData } = await supabase
-          .from('pickups')
-          .select('location_id, computed_revenue')
-          .eq('organization_id', organizationId)
-          .eq('status', 'completed');
-
-        // Fetch at-risk clients
-        const { data: riskData } = await supabase
-          .from('client_risk_scores')
-          .select('client_id, risk_level, risk_score')
-          .eq('organization_id', organizationId);
-
-        // Build pickup counts and revenue by location
-        const locationStats = new Map<string, { count: number; revenue: number }>();
-        for (const p of pickupsData || []) {
-          if (p.location_id) {
-            const existing = locationStats.get(p.location_id) || { count: 0, revenue: 0 };
-            existing.count += 1;
-            existing.revenue += p.computed_revenue || 0;
-            locationStats.set(p.location_id, existing);
-          }
-        }
-
-        // Build risk lookup by client
-        const clientRisk = new Map<string, { level: string; score: number }>();
-        for (const r of riskData || []) {
-          clientRisk.set(r.client_id, { level: r.risk_level, score: r.risk_score });
-        }
-
-        const combinedLocations: LocationData[] = [];
-        for (const loc of locationsData || []) {
-          if (loc.latitude && loc.longitude) {
-            const stats = locationStats.get(loc.id) || { count: 0, revenue: 0 };
-            const clientData = loc.clients as { id?: string; company_name?: string; physical_city?: string; physical_zip?: string; phone?: string; last_pickup_at?: string } | null;
-            const clientId = clientData?.id || loc.client_id;
-            const risk = clientId ? clientRisk.get(clientId) : null;
-            
-            const lastPickup = clientData?.last_pickup_at ? new Date(clientData.last_pickup_at) : null;
-            const daysSince = lastPickup 
-              ? Math.floor((Date.now() - lastPickup.getTime()) / (1000 * 60 * 60 * 24))
-              : null;
-
-            combinedLocations.push({
-              id: loc.id,
-              clientId: clientId || '',
-              lat: loc.latitude,
-              lng: loc.longitude,
-              pickupCount: stats.count,
-              revenue: stats.revenue,
-              zip: clientData?.physical_zip || null,
-              city: clientData?.physical_city || null,
-              clientName: clientData?.company_name || loc.name || 'Unknown Location',
-              address: loc.address || null,
-              phone: clientData?.phone || null,
-              isAtRisk: risk?.level === 'high' || risk?.level === 'medium',
-              riskLevel: (risk?.level as 'high' | 'medium' | 'low') || null,
-              daysSinceLastPickup: daysSince,
-            });
-          }
-        }
-
-        setLocations(combinedLocations);
-      } catch (error) {
-        console.error('Error fetching location data:', error);
+      if (locationsError) {
+        console.error('Failed to fetch locations:', locationsError);
         setMapError('Failed to load location data');
-      } finally {
         setLoading(false);
+        return;
       }
-    }
 
-    fetchLocationData();
+      // Fetch pickups with revenue data
+      const { data: pickupsData } = await supabase
+        .from('pickups')
+        .select('location_id, computed_revenue')
+        .eq('organization_id', organizationId)
+        .eq('status', 'completed');
+
+      // Fetch at-risk clients
+      const { data: riskData } = await supabase
+        .from('client_risk_scores')
+        .select('client_id, risk_level, risk_score')
+        .eq('organization_id', organizationId);
+
+      // Build pickup counts and revenue by location
+      const locationStats = new Map<string, { count: number; revenue: number }>();
+      for (const p of pickupsData || []) {
+        if (p.location_id) {
+          const existing = locationStats.get(p.location_id) || { count: 0, revenue: 0 };
+          existing.count += 1;
+          existing.revenue += p.computed_revenue || 0;
+          locationStats.set(p.location_id, existing);
+        }
+      }
+
+      // Build risk lookup by client
+      const clientRisk = new Map<string, { level: string; score: number }>();
+      for (const r of riskData || []) {
+        clientRisk.set(r.client_id, { level: r.risk_level, score: r.risk_score });
+      }
+
+      const combinedLocations: LocationData[] = [];
+      for (const loc of locationsData || []) {
+        if (loc.latitude && loc.longitude) {
+          const stats = locationStats.get(loc.id) || { count: 0, revenue: 0 };
+          const clientData = loc.clients as { id?: string; company_name?: string; physical_city?: string; physical_zip?: string; phone?: string; last_pickup_at?: string } | null;
+          const clientId = clientData?.id || loc.client_id;
+          const risk = clientId ? clientRisk.get(clientId) : null;
+          
+          const lastPickup = clientData?.last_pickup_at ? new Date(clientData.last_pickup_at) : null;
+          const daysSince = lastPickup 
+            ? Math.floor((Date.now() - lastPickup.getTime()) / (1000 * 60 * 60 * 24))
+            : null;
+
+          combinedLocations.push({
+            id: loc.id,
+            clientId: clientId || '',
+            lat: loc.latitude,
+            lng: loc.longitude,
+            pickupCount: stats.count,
+            revenue: stats.revenue,
+            zip: clientData?.physical_zip || null,
+            city: clientData?.physical_city || null,
+            clientName: clientData?.company_name || loc.name || 'Unknown Location',
+            address: loc.address || null,
+            phone: clientData?.phone || null,
+            isAtRisk: risk?.level === 'high' || risk?.level === 'medium',
+            riskLevel: (risk?.level as 'high' | 'medium' | 'low') || null,
+            daysSinceLastPickup: daysSince,
+          });
+        }
+      }
+
+      setLocations(combinedLocations);
+    } catch (error) {
+      console.error('Error fetching location data:', error);
+      setMapError('Failed to load location data');
+    } finally {
+      setLoading(false);
+    }
   }, [organizationId]);
+
+  // Initial data fetch
+  useEffect(() => {
+    fetchLocationData();
+  }, [fetchLocationData]);
+
+  // Refresh handler
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchLocationData();
+    await refreshMapData();
+    setIsRefreshing(false);
+    toast.success('Map data refreshed');
+  };
 
   // Get marker color based on view mode
   const getMarkerColor = (loc: LocationData): string => {
@@ -664,13 +679,69 @@ export function MichiganHeatMap() {
                   Click markers to view client details. Marker size and color indicate activity level.
                 </CardDescription>
               </div>
-              <Button variant="outline" size="sm" onClick={fitAllLocations}>
-                <Maximize2 className="h-4 w-4 mr-1" />
-                Fit All
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+                <Button variant="outline" size="sm" onClick={fitAllLocations}>
+                  <Maximize2 className="h-4 w-4 mr-1" />
+                  Fit All
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
+            {/* Data Completeness Indicator */}
+            {completenessStats.totalClients > 0 && completenessStats.completionPercentage < 100 && (
+              <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-amber-500" />
+                    <span className="text-sm font-medium">
+                      {completenessStats.clientsWithCoordinates} of {completenessStats.totalClients} clients mapped ({completenessStats.completionPercentage}%)
+                    </span>
+                  </div>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={fixMissingData}
+                    disabled={isFixing}
+                    className="text-xs"
+                  >
+                    {isFixing ? (
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    ) : (
+                      <Wrench className="h-3 w-3 mr-1" />
+                    )}
+                    Fix Missing Data
+                  </Button>
+                </div>
+                <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
+                  {completenessStats.clientsNeedingGeocode > 0 && (
+                    <span>{completenessStats.clientsNeedingGeocode} need geocoding</span>
+                  )}
+                  {completenessStats.clientsMissingLocation > 0 && (
+                    <span>{completenessStats.clientsMissingLocation} missing address</span>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            {completenessStats.completionPercentage === 100 && completenessStats.totalClients > 0 && (
+              <div className="mb-4 p-3 bg-green-500/10 border border-green-500/20 rounded-lg flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                <span className="text-sm font-medium text-green-700">
+                  All {completenessStats.totalClients} clients mapped
+                </span>
+              </div>
+            )}
+
             {/* Stats */}
             <div className="grid grid-cols-4 gap-3 mb-4">
               <div className="text-center p-3 bg-muted/30 rounded-lg">

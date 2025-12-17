@@ -109,10 +109,50 @@ export const useCreateClient = () => {
         .single();
 
       if (error) throw error;
+
+      // Auto-create location record and geocode for new clients with address
+      if (data && (client.physical_address || (client.physical_city && client.physical_zip))) {
+        try {
+          const address = client.physical_address || 
+            [client.physical_city, client.physical_state || 'MI', client.physical_zip].filter(Boolean).join(', ');
+          
+          // Create location record
+          const { data: locData, error: locError } = await supabase
+            .from('locations')
+            .insert({
+              client_id: data.id,
+              organization_id: data.organization_id,
+              name: data.company_name,
+              address: address,
+              is_primary: true
+            })
+            .select()
+            .single();
+
+          if (!locError && locData) {
+            // Auto-geocode the new location
+            console.log('Auto-geocoding new client location:', locData.id);
+            await supabase.functions.invoke('geocode-locations', {
+              body: { locationId: locData.id }
+            });
+            
+            // Backfill geography
+            await supabase.functions.invoke('backfill-client-geography', {
+              body: { clientId: data.id }
+            });
+          }
+        } catch (err) {
+          console.warn('Auto-geocode for new client failed:', err);
+        }
+      }
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['locations'] });
+      queryClient.invalidateQueries({ queryKey: ['all-locations'] });
+      queryClient.invalidateQueries({ queryKey: ['map-data-completeness'] });
       toast({
         title: "Success",
         description: "Client created successfully",
