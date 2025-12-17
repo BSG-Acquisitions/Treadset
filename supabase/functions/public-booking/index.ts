@@ -163,9 +163,10 @@ Deno.serve(async (req) => {
         );
       }
 
+      // Get client with their primary location for address fallback
       const { data: client, error: clientError } = await supabase
         .from('clients')
-        .select('id, company_name, contact_name, email, phone, physical_address, physical_city, physical_state, physical_zip')
+        .select('id, company_name, contact_name, email, phone, physical_address, physical_city, physical_state, physical_zip, mailing_address, city, state, zip')
         .eq('id', body.clientId)
         .single();
 
@@ -177,18 +178,36 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Return ONLY safe pre-fill data - no financial/business sensitive info
+      // Also check for location address as fallback
+      const { data: location } = await supabase
+        .from('locations')
+        .select('address')
+        .eq('client_id', body.clientId)
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle();
+
+      // Build address with multiple fallbacks
+      let fullAddress = '';
+      if (client.physical_address) {
+        fullAddress = `${client.physical_address}${client.physical_city ? ', ' + client.physical_city : ''}${client.physical_state ? ', ' + client.physical_state : ''}${client.physical_zip ? ' ' + client.physical_zip : ''}`;
+      } else if (client.mailing_address) {
+        fullAddress = `${client.mailing_address}${client.city ? ', ' + client.city : ''}${client.state ? ', ' + client.state : ''}${client.zip ? ' ' + client.zip : ''}`;
+      } else if (location?.address) {
+        fullAddress = location.address;
+      }
+
+      // Return safe pre-fill data with proper fallbacks
       const safeClientData = {
-        name: client.contact_name || '',
+        name: client.contact_name || client.company_name || '',
         company: client.company_name || '',
         email: client.email || '',
         phone: client.phone || '',
-        address: client.physical_address 
-          ? `${client.physical_address}${client.physical_city ? ', ' + client.physical_city : ''}${client.physical_state ? ', ' + client.physical_state : ''}${client.physical_zip ? ' ' + client.physical_zip : ''}`
-          : '',
+        address: fullAddress,
+        isReturningClient: true,
       };
 
-      console.log('[PUBLIC_BOOKING] Returning safe client data for pre-fill');
+      console.log('[PUBLIC_BOOKING] Returning safe client data for pre-fill:', safeClientData);
       return new Response(
         JSON.stringify({ success: true, client: safeClientData }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
