@@ -528,7 +528,6 @@ export default function PublicBook() {
                       {...form.register("pteCount", { valueAsNumber: true })}
                       placeholder="0"
                     />
-                    <p className="text-xs text-muted-foreground">= 1 PTE each</p>
                   </div>
 
                   <div className="space-y-2">
@@ -540,7 +539,6 @@ export default function PublicBook() {
                       {...form.register("otrCount", { valueAsNumber: true })}
                       placeholder="0"
                     />
-                    <p className="text-xs text-muted-foreground">= 15 PTE each</p>
                   </div>
 
                   <div className="space-y-2">
@@ -552,7 +550,6 @@ export default function PublicBook() {
                       {...form.register("tractorCount", { valueAsNumber: true })}
                       placeholder="0"
                     />
-                    <p className="text-xs text-muted-foreground">= 5 PTE each</p>
                   </div>
                 </div>
 
