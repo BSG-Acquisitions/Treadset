@@ -149,17 +149,18 @@ export default function ServiceZones() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto p-4 space-y-4">
+      {/* Header */}
       <SlideUp>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Service Zones</h1>
-            <p className="text-muted-foreground mt-1">
+            <h1 className="text-2xl font-bold text-foreground">Service Zones</h1>
+            <p className="text-sm text-muted-foreground">
               Define geographic zones for efficient route planning
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleAnalyze} disabled={analyzeZones.isPending}>
+            <Button variant="outline" size="sm" onClick={handleAnalyze} disabled={analyzeZones.isPending}>
               {analyzeZones.isPending ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
@@ -167,7 +168,7 @@ export default function ServiceZones() {
               )}
               Auto-Detect Zones
             </Button>
-            <Button onClick={() => { resetForm(); setShowCreateDialog(true); }}>
+            <Button size="sm" onClick={() => { resetForm(); setShowCreateDialog(true); }}>
               <Plus className="h-4 w-4 mr-2" />
               Add Zone
             </Button>
@@ -175,40 +176,35 @@ export default function ServiceZones() {
         </div>
       </SlideUp>
 
-      {/* Suggested Zones */}
+      {/* Suggested Zones - Compact */}
       {showSuggestions && suggestedZones.length > 0 && (
         <SlideUp delay={0.1}>
           <Card className="border-primary/50">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Wand2 className="h-5 w-5" />
-                Suggested Zones
-              </CardTitle>
-              <CardDescription>
-                Based on your pickup history. Click to accept or dismiss.
-              </CardDescription>
+            <CardHeader className="py-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Wand2 className="h-4 w-4" />
+                  Suggested Zones
+                </CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => setShowSuggestions(false)}>
+                  Hide
+                </Button>
+              </div>
             </CardHeader>
-            <CardContent>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <CardContent className="pt-0">
+              <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {suggestedZones.map((suggestion) => (
                   <Card key={suggestion.zone_name} className="bg-muted/30">
-                    <CardContent className="pt-4">
-                      <h4 className="font-medium">{suggestion.zone_name}</h4>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {suggestion.zip_codes.length} ZIP codes • {suggestion.pickup_count} pickups
+                    <CardContent className="p-3">
+                      <h4 className="font-medium text-sm">{suggestion.zone_name}</h4>
+                      <p className="text-xs text-muted-foreground">
+                        {suggestion.zip_codes.length} ZIPs • {suggestion.pickup_count} pickups
                       </p>
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {suggestion.primary_service_days.map(day => (
-                          <Badge key={day} variant="outline" className="text-xs capitalize">
-                            {day}
-                          </Badge>
-                        ))}
-                      </div>
-                      <div className="flex gap-2 mt-3">
-                        <Button size="sm" onClick={() => handleAcceptSuggestion(suggestion)}>
+                      <div className="flex gap-1 mt-2">
+                        <Button size="sm" className="h-7 text-xs" onClick={() => handleAcceptSuggestion(suggestion)}>
                           Accept
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => setSuggestedZones(prev => prev.filter(s => s !== suggestion))}>
+                        <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setSuggestedZones(prev => prev.filter(s => s !== suggestion))}>
                           Dismiss
                         </Button>
                       </div>
@@ -216,40 +212,40 @@ export default function ServiceZones() {
                   </Card>
                 ))}
               </div>
-              <Button variant="ghost" className="mt-4" onClick={() => setShowSuggestions(false)}>
-                Hide Suggestions
-              </Button>
             </CardContent>
           </Card>
         </SlideUp>
       )}
 
-      {/* Michigan Heat Map - Always show */}
-      <SlideUp delay={0.15}>
-        <MichiganHeatMap />
-      </SlideUp>
-
-      {/* Data Quality & Zone Performance Row */}
-      <div className="grid lg:grid-cols-4 gap-4">
-        <div className="lg:col-span-1">
-          <SlideUp delay={0.2}>
+      {/* Main Content Grid - Map with sidebar widgets */}
+      <div className="grid lg:grid-cols-12 gap-4">
+        {/* Left Sidebar - Data Quality & At Risk */}
+        <div className="lg:col-span-2 space-y-4">
+          <SlideUp delay={0.15}>
             <DataQualityWidget />
           </SlideUp>
-        </div>
-        <div className="lg:col-span-2">
-          <SlideUp delay={0.25}>
-            <ZonePerformanceTable />
+          <SlideUp delay={0.2}>
+            <AtRiskClientsPanel />
           </SlideUp>
         </div>
-        <div className="lg:col-span-1">
-          <SlideUp delay={0.3}>
-            <AtRiskClientsPanel />
+        
+        {/* Map - Takes most of the width */}
+        <div className="lg:col-span-7">
+          <SlideUp delay={0.1}>
+            <MichiganHeatMap />
+          </SlideUp>
+        </div>
+        
+        {/* Right Sidebar - Zone Performance */}
+        <div className="lg:col-span-3">
+          <SlideUp delay={0.2}>
+            <ZonePerformanceTable />
           </SlideUp>
         </div>
       </div>
 
-      {/* Growth Opportunities */}
-      <SlideUp delay={0.3}>
+      {/* Growth Opportunities - Full width below */}
+      <SlideUp delay={0.25}>
         <GrowthOpportunitiesPanel />
       </SlideUp>
 
