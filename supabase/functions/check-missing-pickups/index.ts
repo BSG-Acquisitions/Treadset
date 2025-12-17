@@ -418,7 +418,8 @@ async function sendOutreachEmail(
 
     // Generate suggested dates based on service pattern
     const suggestedDates = generateSuggestedDates(typicalDay);
-    const bookingUrl = `${Deno.env.get('SITE_URL') || 'https://treadset.com'}/book?client=${client.id}`;
+    // Use public booking URL so clients don't need to login
+    const bookingUrl = `${Deno.env.get('SITE_URL') || 'https://treadset.com'}/public-book?client=${client.id}`;
     
     const contactName = client.contact_name || 'there';
     
@@ -498,13 +499,16 @@ async function sendOutreachEmail(
       </html>
     `;
 
-    // Send email
-    const { error: emailError } = await resend.emails.send({
-      from: `${orgName} <onboarding@resend.dev>`,
+    // Send email using verified domain
+    console.log(`[EMAIL] Attempting to send ${emailType} email to ${client.email} from noreply@bsgtires.com`);
+    const emailResult = await resend.emails.send({
+      from: `${orgName} <noreply@bsgtires.com>`,
       to: [client.email],
       subject: subjectLine,
       html: emailHtml,
     });
+
+    const emailError = emailResult?.error;
 
     if (emailError) {
       console.error(`[EMAIL] Error sending to ${client.email}:`, emailError);

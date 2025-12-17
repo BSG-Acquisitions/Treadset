@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -62,8 +62,11 @@ export default function PublicBook() {
   const [estimatedPteValue, setEstimatedPteValue] = useState(0);
   const [isHighValue, setIsHighValue] = useState(false);
   const [isBelowMinimum, setIsBelowMinimum] = useState(true);
+  const [isLoadingClient, setIsLoadingClient] = useState(false);
+  const [returningClientName, setReturningClientName] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
 
   const form = useForm<PublicBookingData>({
     resolver: zodResolver(publicBookingSchema),
@@ -86,6 +89,47 @@ export default function PublicBook() {
   const otrCount = form.watch("otrCount");
   const tractorCount = form.watch("tractorCount");
   const address = form.watch("address");
+
+  // Check for client pre-fill from URL parameter (from outreach emails)
+  useEffect(() => {
+    const clientId = searchParams.get('client');
+    if (!clientId) return;
+
+    const loadClientData = async () => {
+      setIsLoadingClient(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('public-booking', {
+          body: { action: 'check-client', clientId }
+        });
+
+        if (error || !data?.success || !data?.client) {
+          console.log('Client not found or error:', error);
+          return;
+        }
+
+        const client = data.client;
+        setReturningClientName(client.company || client.name);
+        
+        // Pre-fill form with client data
+        if (client.name) form.setValue('name', client.name);
+        if (client.company) form.setValue('company', client.company);
+        if (client.email) form.setValue('email', client.email);
+        if (client.phone) form.setValue('phone', client.phone);
+        if (client.address) form.setValue('address', client.address);
+
+        toast({
+          title: "Welcome back!",
+          description: `We've pre-filled your information. Just add your tire counts and pick a date.`,
+        });
+      } catch (err) {
+        console.error('Error loading client data:', err);
+      } finally {
+        setIsLoadingClient(false);
+      }
+    };
+
+    loadClientData();
+  }, [searchParams, form, toast]);
 
   // Calculate estimated PTE value when tire counts change
   useEffect(() => {
@@ -255,11 +299,29 @@ export default function PublicBook() {
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2">Schedule Your Tire Pickup</h1>
-            <p className="text-muted-foreground text-lg">
-              Get your used tires collected quickly and responsibly
-            </p>
+            {returningClientName ? (
+              <>
+                <h1 className="text-3xl font-bold mb-2">Welcome Back, {returningClientName}!</h1>
+                <p className="text-muted-foreground text-lg">
+                  Ready to schedule your next tire pickup? We've pre-filled your details.
+                </p>
+              </>
+            ) : (
+              <>
+                <h1 className="text-3xl font-bold mb-2">Schedule Your Tire Pickup</h1>
+                <p className="text-muted-foreground text-lg">
+                  Get your used tires collected quickly and responsibly
+                </p>
+              </>
+            )}
           </div>
+
+          {/* Loading state for client data */}
+          {isLoadingClient && (
+            <div className="text-center py-4 text-muted-foreground">
+              Loading your information...
+            </div>
+          )}
 
           {/* Minimum Requirement Notice */}
           <Alert className="mb-8 border-amber-500/30 bg-amber-500/10">
