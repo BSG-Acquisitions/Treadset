@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import GridLayout from 'react-grid-layout';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import GridLayoutBase from 'react-grid-layout';
+import type ReactGridLayout from 'react-grid-layout';
 import { Button } from '@/components/ui/button';
 import { Lock, Unlock, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import 'react-grid-layout/css/styles.css';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const WidthProvider = require('react-grid-layout').WidthProvider;
-const ReactGridLayout = WidthProvider(GridLayout);
+// Cast to properly typed component
+const GridLayout = GridLayoutBase as unknown as React.ComponentType<ReactGridLayout.ReactGridLayoutProps>;
 
 export interface LayoutItem {
   i: string;
@@ -40,6 +40,8 @@ export function DashboardGrid({
 }: DashboardGridProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [layout, setLayout] = useState<LayoutItem[]>(defaultLayout);
+  const [containerWidth, setContainerWidth] = useState(1200);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Load saved layout from localStorage
   useEffect(() => {
@@ -52,6 +54,18 @@ export function DashboardGrid({
       }
     }
   }, [storageKey, defaultLayout]);
+
+  // Measure container width
+  useEffect(() => {
+    const updateWidth = () => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.offsetWidth);
+      }
+    };
+    updateWidth();
+    window.addEventListener('resize', updateWidth);
+    return () => window.removeEventListener('resize', updateWidth);
+  }, []);
 
   const handleLayoutChange = useCallback((newLayout: LayoutItem[]) => {
     setLayout(newLayout);
@@ -74,7 +88,7 @@ export function DashboardGrid({
   });
 
   return (
-    <div className={cn("relative", className)}>
+    <div ref={containerRef} className={cn("relative", className)}>
       {/* Edit Controls */}
       <div className="flex items-center gap-2 mb-4 justify-end">
         <Button
@@ -107,11 +121,12 @@ export function DashboardGrid({
       </div>
 
       {/* Grid Layout */}
-      <ReactGridLayout
+      <GridLayout
         className="layout"
         layout={layout}
         cols={cols}
         rowHeight={rowHeight}
+        width={containerWidth}
         onLayoutChange={handleLayoutChange}
         isDraggable={isEditing}
         isResizable={isEditing}
@@ -122,7 +137,7 @@ export function DashboardGrid({
         useCSSTransforms={true}
       >
         {childrenWithProps}
-      </ReactGridLayout>
+      </GridLayout>
 
       {/* Edit Mode Indicator */}
       {isEditing && (
