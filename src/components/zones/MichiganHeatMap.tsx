@@ -39,25 +39,21 @@ export function MichiganHeatMap() {
 
     (async () => {
       try {
-        const module: any = await import('mapbox-gl');
+        // Import mapbox-gl - with Vite pre-bundling, default export should work
+        const mapboxModule = await import('mapbox-gl');
         await import('mapbox-gl/dist/mapbox-gl.css');
 
-        const candidateDefault = module?.default;
-        const candidate =
-          candidateDefault && typeof candidateDefault.Map === 'function'
-            ? candidateDefault
-            : module;
+        if (cancelled) return;
 
-        if (typeof candidate?.Map !== 'function') {
-          console.error('Mapbox GL module shape unexpected:', {
-            moduleKeys: Object.keys(module || {}),
-            defaultKeys: candidateDefault ? Object.keys(candidateDefault) : null,
-          });
-          if (!cancelled) setMapError('Failed to initialize map library');
-          return;
+        // mapbox-gl default export contains Map, NavigationControl, Popup, etc.
+        const gl = mapboxModule.default;
+        
+        if (gl && typeof gl.Map === 'function') {
+          setMapboxgl(gl);
+        } else {
+          console.error('Mapbox GL Map constructor not found');
+          setMapError('Failed to initialize map library');
         }
-
-        if (!cancelled) setMapboxgl(candidate);
       } catch (err) {
         console.error('Failed to load mapbox-gl:', err);
         if (!cancelled) setMapError('Failed to load map library');

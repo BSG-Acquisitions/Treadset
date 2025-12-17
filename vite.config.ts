@@ -55,12 +55,12 @@ export default defineConfig(({ mode }) => ({
       'react-dom',
       'react-router-dom',
       '@tanstack/react-query',
+      'mapbox-gl',
     ],
     exclude: [
       'pdf-lib',
       'jspdf',
       'html2canvas',
-      'mapbox-gl',
       'fabric',
     ],
   },
