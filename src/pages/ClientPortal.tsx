@@ -118,11 +118,11 @@ export default function ClientPortal() {
   // Get signed URL for a PDF path
   const getSignedUrl = async (path: string): Promise<string | null> => {
     const normalized = normalizePath(path);
-    const storagePath = normalized.replace(/^manifests\//, '');
+    // Files are stored WITH manifests/ prefix inside the bucket
     
     const { data, error } = await supabase.storage
       .from('manifests')
-      .createSignedUrl(storagePath, 3600);
+      .createSignedUrl(normalized, 3600);
     
     if (error) {
       console.error('Error getting signed URL:', error);
