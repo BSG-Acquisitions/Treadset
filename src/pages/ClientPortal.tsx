@@ -6,17 +6,24 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileText, Download, Calendar, Package, LogOut, Eye, ArrowLeft, Printer, CalendarPlus } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FileText, Download, Calendar, Package, LogOut, Eye, ArrowLeft, Printer, CalendarPlus, X } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { PdfInlineViewer } from "@/components/PdfInlineViewer";
 
 export default function ClientPortal() {
   const { user, signOut, hasRole } = useAuth();
   const navigate = useNavigate();
   const isAdmin = hasRole('admin') || hasRole('ops_manager');
   const [previewClientId, setPreviewClientId] = useState<string | null>(null);
+  
+  // PDF viewer state
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [currentPdfPath, setCurrentPdfPath] = useState<string | null>(null);
+  const [currentPdfTitle, setCurrentPdfTitle] = useState<string>('');
 
   // Fetch all clients for admin preview mode
   const { data: allClients } = useQuery({
@@ -94,33 +101,117 @@ export default function ClientPortal() {
     enabled: !!clientInfo?.id,
   });
 
-  const handleViewManifest = async (pdfPath: string | null, manifestNumber: string, action: 'view' | 'download' | 'print') => {
+  // Normalize path to ensure it has the correct format for storage
+  const normalizePath = (path: string): string => {
+    // Remove leading slash if present
+    let normalized = path.startsWith('/') ? path.slice(1) : path;
+    // Don't double-add manifests/ prefix
+    if (!normalized.startsWith('manifests/')) {
+      normalized = `manifests/${normalized}`;
+    }
+    // Remove duplicate manifests/ prefix
+    normalized = normalized.replace(/^manifests\/manifests\//, 'manifests/');
+    return normalized;
+  };
+
+  // Get signed URL for a PDF path
+  const getSignedUrl = async (path: string): Promise<string | null> => {
+    const normalized = normalizePath(path);
+    const storagePath = normalized.replace(/^manifests\//, '');
+    
+    const { data, error } = await supabase.storage
+      .from('manifests')
+      .createSignedUrl(storagePath, 3600);
+    
+    if (error) {
+      console.error('Error getting signed URL:', error);
+      return null;
+    }
+    return data.signedUrl;
+  };
+
+  // View PDF in inline dialog
+  const handleView = (pdfPath: string | null, manifestNumber: string, label: string = '') => {
+    if (!pdfPath) {
+      toast.error('No PDF available for this manifest');
+      return;
+    }
+    setCurrentPdfPath(pdfPath);
+    setCurrentPdfTitle(`${manifestNumber}${label ? ` - ${label}` : ''}`);
+    setViewerOpen(true);
+  };
+
+  // Download PDF as blob
+  const handleDownload = async (pdfPath: string | null, manifestNumber: string) => {
     if (!pdfPath) {
       toast.error('No PDF available for this manifest');
       return;
     }
 
     try {
-      const { data, error } = await supabase.storage
-        .from('manifests')
-        .createSignedUrl(pdfPath, 3600);
-
-      if (error) throw error;
-      
-      if (action === 'print') {
-        // Open in new window and trigger print
-        const printWindow = window.open(data.signedUrl, '_blank');
-        if (printWindow) {
-          printWindow.onload = () => {
-            printWindow.print();
-          };
-        }
-      } else {
-        window.open(data.signedUrl, '_blank');
+      const signedUrl = await getSignedUrl(pdfPath);
+      if (!signedUrl) {
+        toast.error('Failed to access manifest');
+        return;
       }
+
+      const response = await fetch(signedUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${manifestNumber}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('Download started');
     } catch (error) {
-      console.error('Error accessing manifest:', error);
-      toast.error('Failed to access manifest');
+      console.error('Error downloading manifest:', error);
+      toast.error('Failed to download manifest');
+    }
+  };
+
+  // Print PDF - open window synchronously then load content
+  const handlePrint = async (pdfPath: string | null) => {
+    if (!pdfPath) {
+      toast.error('No PDF available for this manifest');
+      return;
+    }
+
+    // Open window synchronously (user gesture)
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error('Please allow popups to print manifests');
+      return;
+    }
+
+    // Show loading state
+    printWindow.document.write('<html><head><title>Loading...</title></head><body style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;"><p>Loading manifest...</p></body></html>');
+
+    try {
+      const signedUrl = await getSignedUrl(pdfPath);
+      if (!signedUrl) {
+        printWindow.close();
+        toast.error('Failed to access manifest');
+        return;
+      }
+
+      // Navigate to the PDF
+      printWindow.location.href = signedUrl;
+      
+      // Trigger print after load
+      printWindow.onload = () => {
+        setTimeout(() => {
+          printWindow.print();
+        }, 500);
+      };
+    } catch (error) {
+      console.error('Error printing manifest:', error);
+      printWindow.close();
+      toast.error('Failed to print manifest');
     }
   };
 
@@ -358,14 +449,24 @@ export default function ClientPortal() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleViewManifest(manifest.pdf_path, manifest.manifest_number, 'view')}
+                                  onClick={() => handleView(manifest.pdf_path, manifest.manifest_number, 'Initial')}
+                                  title="View"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDownload(manifest.pdf_path, `${manifest.manifest_number}-initial`)}
+                                  title="Download"
                                 >
                                   <Download className="w-4 h-4" />
                                 </Button>
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleViewManifest(manifest.pdf_path, manifest.manifest_number, 'print')}
+                                  onClick={() => handlePrint(manifest.pdf_path)}
+                                  title="Print"
                                 >
                                   <Printer className="w-4 h-4" />
                                 </Button>
@@ -375,14 +476,24 @@ export default function ClientPortal() {
                                 <Button
                                   variant="default"
                                   size="sm"
-                                  onClick={() => handleViewManifest(manifest.acroform_pdf_path, manifest.manifest_number, 'view')}
+                                  onClick={() => handleView(manifest.acroform_pdf_path, manifest.manifest_number, 'Final')}
+                                  title="View"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  onClick={() => handleDownload(manifest.acroform_pdf_path, `${manifest.manifest_number}-final`)}
+                                  title="Download"
                                 >
                                   <Download className="w-4 h-4" />
                                 </Button>
                                 <Button
                                   variant="default"
                                   size="sm"
-                                  onClick={() => handleViewManifest(manifest.acroform_pdf_path, manifest.manifest_number, 'print')}
+                                  onClick={() => handlePrint(manifest.acroform_pdf_path)}
+                                  title="Print"
                                 >
                                   <Printer className="w-4 h-4" />
                                 </Button>
@@ -397,25 +508,36 @@ export default function ClientPortal() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleViewManifest(
+                                  onClick={() => handleView(
                                     manifest.acroform_pdf_path || manifest.pdf_path, 
-                                    manifest.manifest_number, 
-                                    'view'
+                                    manifest.manifest_number
                                   )}
                                   disabled={!manifest.acroform_pdf_path && !manifest.pdf_path}
+                                  title="View"
                                 >
-                                  <Download className="w-4 h-4 mr-1" />
+                                  <Eye className="w-4 h-4 mr-1" />
                                   View
                                 </Button>
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleViewManifest(
+                                  onClick={() => handleDownload(
                                     manifest.acroform_pdf_path || manifest.pdf_path, 
-                                    manifest.manifest_number, 
-                                    'print'
+                                    manifest.manifest_number
                                   )}
                                   disabled={!manifest.acroform_pdf_path && !manifest.pdf_path}
+                                  title="Download"
+                                >
+                                  <Download className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handlePrint(
+                                    manifest.acroform_pdf_path || manifest.pdf_path
+                                  )}
+                                  disabled={!manifest.acroform_pdf_path && !manifest.pdf_path}
+                                  title="Print"
                                 >
                                   <Printer className="w-4 h-4" />
                                 </Button>
@@ -448,6 +570,38 @@ export default function ClientPortal() {
           </CardContent>
         </Card>
       </main>
+
+      {/* PDF Inline Viewer Dialog */}
+      <Dialog open={viewerOpen} onOpenChange={setViewerOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <span>{currentPdfTitle}</span>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => currentPdfPath && handleDownload(currentPdfPath, currentPdfTitle.replace(' - ', '-'))}
+                >
+                  <Download className="w-4 h-4 mr-1" />
+                  Download
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => currentPdfPath && handlePrint(currentPdfPath)}
+                >
+                  <Printer className="w-4 h-4 mr-1" />
+                  Print
+                </Button>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+          {currentPdfPath && (
+            <PdfInlineViewer filePath={currentPdfPath} className="min-h-[60vh]" />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
