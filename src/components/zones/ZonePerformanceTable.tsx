@@ -89,10 +89,10 @@ export function ZonePerformanceTable() {
         atRisk: number 
       }>();
 
-      // Build client -> city mapping
+      // Build client -> city mapping (normalize with trim to prevent duplicates)
       const clientCityMap = new Map<string, string>();
       (clients || []).forEach(c => {
-        const city = c.physical_city || 'Unknown Location';
+        const city = (c.physical_city || 'Unknown Location').trim();
         clientCityMap.set(c.id, city);
         
         const existing = cityStats.get(city) || { 
