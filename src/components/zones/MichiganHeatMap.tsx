@@ -93,25 +93,27 @@ export function MichiganHeatMap() {
       setLoading(true);
 
       try {
-        // Get all clients with coordinates (primary source)
-        const { data: clientsData } = await supabase
-          .from('clients')
-          .select('id, depot_lat, depot_lng, physical_zip, physical_city, company_name')
+        // Get all locations with geocoded coordinates (from locations table which has proper Michigan data)
+        const { data: locationsData } = await supabase
+          .from('locations')
+          .select('id, latitude, longitude, address, client_id, name, clients(company_name, physical_city, physical_zip)')
           .eq('organization_id', organizationId)
-          .not('depot_lat', 'is', null)
-          .not('depot_lng', 'is', null);
+          .not('latitude', 'is', null)
+          .not('longitude', 'is', null)
+          .gte('latitude', 41.5)  // Filter to Michigan latitude range
+          .lte('latitude', 46.5);
 
-        // Get pickup counts per client
-        const { data: clientPickups } = await supabase
+        // Get pickup counts per location
+        const { data: locationPickups } = await supabase
           .from('pickups')
-          .select('client_id')
+          .select('location_id')
           .eq('organization_id', organizationId)
           .eq('status', 'completed');
 
-        const clientPickupCounts = new Map<string, number>();
-        for (const p of clientPickups || []) {
-          if (p.client_id) {
-            clientPickupCounts.set(p.client_id, (clientPickupCounts.get(p.client_id) || 0) + 1);
+        const locationPickupCounts = new Map<string, number>();
+        for (const p of locationPickups || []) {
+          if (p.location_id) {
+            locationPickupCounts.set(p.location_id, (locationPickupCounts.get(p.location_id) || 0) + 1);
           }
         }
 
@@ -119,22 +121,27 @@ export function MichiganHeatMap() {
         const combinedLocations: LocationData[] = [];
         const zipCounts = new Map<string, { count: number; city: string | null }>();
 
-        // Add client-based data
-        for (const client of clientsData || []) {
-          const count = clientPickupCounts.get(client.id) || 0;
-          if (client.depot_lat && client.depot_lng) {
+        // Add location-based data
+        for (const loc of locationsData || []) {
+          const count = locationPickupCounts.get(loc.id) || 0;
+          if (loc.latitude && loc.longitude) {
+            // Get city/zip from client data or extract from address
+            const clientData = loc.clients as { company_name?: string; physical_city?: string; physical_zip?: string } | null;
+            const cityName = clientData?.physical_city || null;
+            const zipCode = clientData?.physical_zip || (loc.address?.match(/\d{5}(?:-\d{4})?$/)?.[0]) || null;
+            
             combinedLocations.push({
-              lat: client.depot_lat,
-              lng: client.depot_lng,
+              lat: loc.latitude,
+              lng: loc.longitude,
               pickupCount: count,
-              zip: client.physical_zip,
-              city: client.physical_city,
+              zip: zipCode,
+              city: cityName,
             });
-            if (client.physical_zip) {
-              const existing = zipCounts.get(client.physical_zip);
-              zipCounts.set(client.physical_zip, {
+            if (zipCode) {
+              const existing = zipCounts.get(zipCode);
+              zipCounts.set(zipCode, {
                 count: (existing?.count || 0) + count,
-                city: client.physical_city || existing?.city || null
+                city: cityName || existing?.city || null
               });
             }
           }
