@@ -246,40 +246,28 @@ export function GrowthOpportunitiesPanel() {
   };
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <Lightbulb className="h-5 w-5 text-amber-500" />
+    <Card className="h-full flex flex-col">
+      <CardHeader className="pb-2 flex-shrink-0">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Lightbulb className="h-4 w-4 text-amber-500" />
           Growth Opportunities
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+      <CardContent className="flex-1 overflow-auto">
+        <div className="space-y-2">
           {opportunities.map((opp, index) => (
             <div 
               key={index}
-              className="p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors"
+              className="flex items-center gap-3 p-2 rounded-lg border bg-card hover:bg-muted/30 transition-colors"
             >
-              <div className="flex items-start gap-2 mb-2">
+              <div className="flex-shrink-0">
                 {getIcon(opp.type)}
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm truncate">{opp.title}</p>
-                  {opp.city && (
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <MapPin className="h-3 w-3" />
-                      {opp.city}
-                    </p>
-                  )}
-                </div>
               </div>
-              <p className="text-xs text-muted-foreground mb-2">{opp.description}</p>
-              <div className="flex items-center justify-between">
-                <Badge variant="outline" className="text-xs">
-                  {opp.type === 'underserved_city' && 'Needs Attention'}
-                  {opp.type === 'expansion' && 'Expansion'}
-                  {opp.type === 'reactivation' && 'Reactivation'}
-                  {opp.type === 'high_performer' && 'Top Performer'}
-                </Badge>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm truncate">{opp.title}</p>
+                <p className="text-xs text-muted-foreground truncate">{opp.description}</p>
+              </div>
+              <div className="flex-shrink-0">
                 {getActionButton(opp)}
               </div>
             </div>

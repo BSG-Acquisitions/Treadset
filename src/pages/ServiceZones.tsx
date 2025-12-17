@@ -12,7 +12,7 @@ import { MapPin, Plus, Wand2, Trash2, Edit, Loader2, Calendar, Info } from 'luci
 import { SlideUp } from '@/components/motion/SlideUp';
 import { MichiganHeatMap } from '@/components/zones/MichiganHeatMap';
 import { ZonePerformanceTable } from '@/components/zones/ZonePerformanceTable';
-import { AtRiskClientsPanel } from '@/components/zones/AtRiskClientsPanel';
+
 import { GrowthOpportunitiesPanel } from '@/components/zones/GrowthOpportunitiesPanel';
 import { DataQualityWidget } from '@/components/zones/DataQualityWidget';
 import { toast } from 'sonner';
@@ -229,22 +229,17 @@ export default function ServiceZones() {
             <DataQualityWidget />
           </SlideUp>
         </div>
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-5">
           <SlideUp delay={0.2}>
-            <AtRiskClientsPanel />
-          </SlideUp>
-        </div>
-        <div className="lg:col-span-6">
-          <SlideUp delay={0.25}>
             <ZonePerformanceTable />
           </SlideUp>
         </div>
+        <div className="lg:col-span-4">
+          <SlideUp delay={0.25}>
+            <GrowthOpportunitiesPanel />
+          </SlideUp>
+        </div>
       </div>
-
-      {/* Growth Opportunities - Full width */}
-      <SlideUp delay={0.3}>
-        <GrowthOpportunitiesPanel />
-      </SlideUp>
 
       {/* Getting Started Guide - show when no zones and not auto-analyzing */}
       {!isLoading && zones.length === 0 && !autoAnalyzing && suggestedZones.length === 0 && (
