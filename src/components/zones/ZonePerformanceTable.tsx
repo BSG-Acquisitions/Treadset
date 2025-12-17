@@ -1,15 +1,17 @@
-import { useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useMemo, useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { TrendingUp, TrendingDown, Minus, AlertTriangle, Calendar, Users } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, AlertTriangle, Calendar, Users, Loader2, Database } from 'lucide-react';
 import { useServiceZones } from '@/hooks/useServiceZones';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '@/lib/formatters';
+import { useBackfillGeography } from '@/hooks/useBackfillGeography';
+import { toast } from 'sonner';
 
 interface ZonePerformance {
   id: string;
@@ -27,19 +29,27 @@ export function ZonePerformanceTable() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const organizationId = user?.currentOrganization?.id;
+  const { runBackfill, isLoading: isBackfilling } = useBackfillGeography();
+  const [showDataQuality, setShowDataQuality] = useState(false);
 
-  // Fetch zone performance data
-  const { data: performance = [], isLoading } = useQuery({
-    queryKey: ['zone-performance', organizationId],
+  // Fetch zone performance data - group by CITY when no zones defined
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['zone-performance', organizationId, zones.length],
     queryFn: async () => {
-      if (!organizationId || zones.length === 0) return [];
+      if (!organizationId) return { performance: [], dataQuality: { total: 0, withCity: 0, withZip: 0 } };
 
-      // Get clients with their ZIP codes
+      // Get clients with their geographic data
       const { data: clients } = await supabase
         .from('clients')
-        .select('id, physical_zip, company_name')
+        .select('id, physical_zip, physical_city, company_name')
         .eq('organization_id', organizationId)
         .eq('is_active', true);
+
+      // Calculate data quality stats
+      const total = clients?.length || 0;
+      const withCity = clients?.filter(c => c.physical_city).length || 0;
+      const withZip = clients?.filter(c => c.physical_zip).length || 0;
+      const dataQuality = { total, withCity, withZip };
 
       // Get completed pickups with revenue
       const thirtyDaysAgo = new Date();
@@ -69,49 +79,112 @@ export function ZonePerformanceTable() {
         .eq('organization_id', organizationId)
         .in('risk_level', ['high', 'medium']);
 
-      // Map clients to zones by ZIP code
-      const zonePerformance: ZonePerformance[] = zones.map(zone => {
-        const zoneClients = (clients || []).filter(c => 
-          c.physical_zip && zone.zip_codes.includes(c.physical_zip)
-        );
-        const clientIds = new Set(zoneClients.map(c => c.id));
+      // Group by city instead of zone for city-based performance
+      const cityStats = new Map<string, { 
+        clients: string[], 
+        recentPickups: number, 
+        recentRevenue: number,
+        previousPickups: number,
+        previousRevenue: number,
+        atRisk: number 
+      }>();
 
-        const zoneRecentPickups = (recentPickups || []).filter(p => clientIds.has(p.client_id));
-        const zonePreviousPickups = (previousPickups || []).filter(p => clientIds.has(p.client_id));
+      // Build client -> city mapping
+      const clientCityMap = new Map<string, string>();
+      (clients || []).forEach(c => {
+        const city = c.physical_city || 'Unknown Location';
+        clientCityMap.set(c.id, city);
         
-        const recentRevenue = zoneRecentPickups.reduce((sum, p) => sum + (p.computed_revenue || 0), 0);
-        const previousRevenue = zonePreviousPickups.reduce((sum, p) => sum + (p.computed_revenue || 0), 0);
-        
-        const trendPercent = previousRevenue > 0 
-          ? ((recentRevenue - previousRevenue) / previousRevenue) * 100 
-          : recentRevenue > 0 ? 100 : 0;
-
-        const atRiskInZone = (atRiskClients || []).filter(r => clientIds.has(r.client_id)).length;
-
-        return {
-          id: zone.id,
-          name: zone.zone_name,
-          clientCount: zoneClients.length,
-          pickupCount: zoneRecentPickups.length,
-          revenue: recentRevenue,
-          atRiskCount: atRiskInZone,
-          trend: trendPercent > 5 ? 'up' : trendPercent < -5 ? 'down' : 'flat',
-          trendPercent: Math.abs(Math.round(trendPercent)),
+        const existing = cityStats.get(city) || { 
+          clients: [], 
+          recentPickups: 0, 
+          recentRevenue: 0,
+          previousPickups: 0,
+          previousRevenue: 0,
+          atRisk: 0 
         };
+        existing.clients.push(c.id);
+        cityStats.set(city, existing);
       });
 
-      return zonePerformance.sort((a, b) => b.revenue - a.revenue);
+      // Add pickup data
+      (recentPickups || []).forEach(p => {
+        const city = clientCityMap.get(p.client_id);
+        if (city) {
+          const stats = cityStats.get(city);
+          if (stats) {
+            stats.recentPickups++;
+            stats.recentRevenue += p.computed_revenue || 0;
+          }
+        }
+      });
+
+      (previousPickups || []).forEach(p => {
+        const city = clientCityMap.get(p.client_id);
+        if (city) {
+          const stats = cityStats.get(city);
+          if (stats) {
+            stats.previousPickups++;
+            stats.previousRevenue += p.computed_revenue || 0;
+          }
+        }
+      });
+
+      // Add at-risk data
+      (atRiskClients || []).forEach(r => {
+        const city = clientCityMap.get(r.client_id);
+        if (city) {
+          const stats = cityStats.get(city);
+          if (stats) {
+            stats.atRisk++;
+          }
+        }
+      });
+
+      // Convert to performance array
+      const performance: ZonePerformance[] = Array.from(cityStats.entries())
+        .filter(([city]) => city !== 'Unknown Location' || cityStats.get(city)!.clients.length > 0)
+        .map(([city, stats]) => {
+          const trendPercent = stats.previousRevenue > 0 
+            ? ((stats.recentRevenue - stats.previousRevenue) / stats.previousRevenue) * 100 
+            : stats.recentRevenue > 0 ? 100 : 0;
+
+          const trend: 'up' | 'down' | 'flat' = trendPercent > 5 ? 'up' : trendPercent < -5 ? 'down' : 'flat';
+
+          return {
+            id: city,
+            name: city,
+            clientCount: stats.clients.length,
+            pickupCount: stats.recentPickups,
+            revenue: stats.recentRevenue,
+            atRiskCount: stats.atRisk,
+            trend,
+            trendPercent: Math.abs(Math.round(trendPercent)),
+          };
+        })
+        .filter(z => z.clientCount > 0 || z.pickupCount > 0)
+        .sort((a, b) => b.revenue - a.revenue);
+
+      return { performance, dataQuality };
     },
-    enabled: !!organizationId && zones.length > 0,
+    enabled: !!organizationId,
   });
 
-  const handleScheduleRoute = (zoneId: string, zoneName: string) => {
-    navigate('/routes-today', { state: { filterZone: zoneName } });
+  const performance = data?.performance || [];
+  const dataQuality = data?.dataQuality || { total: 0, withCity: 0, withZip: 0 };
+
+  const handleBackfill = async () => {
+    try {
+      await runBackfill({ batchSize: 100 });
+      refetch();
+    } catch (error) {
+      // Error handled in hook
+    }
   };
 
-  if (zones.length === 0) {
-    return null;
-  }
+  const handleScheduleRoute = (cityName: string) => {
+    navigate('/routes-today', { state: { filterCity: cityName } });
+  };
 
   const TrendIcon = ({ trend, percent }: { trend: string; percent: number }) => {
     if (trend === 'up') return <span className="flex items-center text-green-600 text-xs"><TrendingUp className="h-3 w-3 mr-1" />{percent}%</span>;
@@ -119,24 +192,65 @@ export function ZonePerformanceTable() {
     return <span className="flex items-center text-muted-foreground text-xs"><Minus className="h-3 w-3 mr-1" />Stable</span>;
   };
 
+  const coveragePercent = dataQuality.total > 0 
+    ? Math.round((dataQuality.withCity / dataQuality.total) * 100) 
+    : 0;
+
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <TrendingUp className="h-5 w-5" />
-          Zone Performance (Last 30 Days)
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <TrendingUp className="h-5 w-5" />
+              {zones.length > 0 ? 'Zone Performance' : 'City Performance'} (Last 30 Days)
+            </CardTitle>
+            {dataQuality.total > 0 && (
+              <CardDescription className="flex items-center gap-2 mt-1">
+                <Database className="h-3 w-3" />
+                {coveragePercent}% of clients have city data ({dataQuality.withCity}/{dataQuality.total})
+              </CardDescription>
+            )}
+          </div>
+          {coveragePercent < 80 && (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleBackfill}
+              disabled={isBackfilling}
+            >
+              {isBackfilling ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Database className="h-4 w-4 mr-2" />
+              )}
+              Fix Missing Data
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <div className="text-center py-8 text-muted-foreground">Loading performance data...</div>
         ) : performance.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">No zone data available</div>
+          <div className="text-center py-8">
+            <div className="text-muted-foreground mb-4">No geographic data available</div>
+            {dataQuality.total > 0 && dataQuality.withCity === 0 && (
+              <Button onClick={handleBackfill} disabled={isBackfilling}>
+                {isBackfilling ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Database className="h-4 w-4 mr-2" />
+                )}
+                Populate Geographic Data
+              </Button>
+            )}
+          </div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Zone</TableHead>
+                <TableHead>{zones.length > 0 ? 'Zone' : 'City'}</TableHead>
                 <TableHead className="text-center">Clients</TableHead>
                 <TableHead className="text-center">Pickups</TableHead>
                 <TableHead className="text-right">Revenue</TableHead>
@@ -146,7 +260,7 @@ export function ZonePerformanceTable() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {performance.map((zone) => (
+              {performance.slice(0, 10).map((zone) => (
                 <TableRow key={zone.id}>
                   <TableCell className="font-medium">{zone.name}</TableCell>
                   <TableCell className="text-center">
@@ -176,7 +290,7 @@ export function ZonePerformanceTable() {
                     <Button 
                       variant="outline" 
                       size="sm"
-                      onClick={() => handleScheduleRoute(zone.id, zone.name)}
+                      onClick={() => handleScheduleRoute(zone.name)}
                     >
                       <Calendar className="h-3 w-3 mr-1" />
                       Schedule
