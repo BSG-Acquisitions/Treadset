@@ -46,7 +46,6 @@ export default function ClientPortal() {
           pte_off_rim,
           otr_count,
           tractor_count,
-          total,
           locations:location_id (name, address)
         `)
         .eq('client_id', clientInfo?.id)
@@ -209,9 +208,6 @@ export default function ClientPortal() {
                             {format(new Date(manifest.signed_at || manifest.created_at), 'MMM d, yyyy')}
                           </span>
                           <span>{totalPTE} PTE</span>
-                          {manifest.total > 0 && (
-                            <span>${manifest.total.toFixed(2)}</span>
-                          )}
                         </div>
                         {manifest.locations && (
                           <p className="text-xs text-muted-foreground">
