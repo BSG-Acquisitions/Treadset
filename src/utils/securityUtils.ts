@@ -121,13 +121,17 @@ export const applyCSP = (): void => {
     meta.content = [
       "default-src 'self'",
       // Allow unsafe-inline for scripts to enable printing functionality
-      "script-src 'self' 'unsafe-inline' https://js.stripe.com https://maps.googleapis.com",
+      "script-src 'self' 'unsafe-inline' blob: https://js.stripe.com https://maps.googleapis.com https://api.mapbox.com",
       // Allow inline styles from same origin (Tailwind requires this)
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: https: blob:",
       "font-src 'self' data: https://fonts.gstatic.com",
       // Allow embedding/printing PDFs and plugin-like content
       "object-src 'self' blob: data:",
+      // Mapbox GL needs workers; allow blob workers for the bundled CSP worker
+      "worker-src 'self' blob: https://api.mapbox.com",
+      // Fallback for older browsers that don't support worker-src
+      "child-src 'self' blob:",
       "connect-src 'self' https://wvjehbozyxhmgdljwsiz.supabase.co wss://wvjehbozyxhmgdljwsiz.supabase.co https://api.stripe.com https://api.mapbox.com https://events.mapbox.com",
       "frame-src 'self' https://js.stripe.com blob: data:",
       "frame-ancestors 'none'",
