@@ -68,6 +68,7 @@ import TrailerDriverManagement from "./pages/TrailerDriverManagement";
 import TrailerReports from "./pages/TrailerReports";
 import BookingRequests from "./pages/BookingRequests";
 import ServiceZones from "./pages/ServiceZones";
+import ClientPortal from "./pages/ClientPortal";
 import { FEATURE_FLAGS } from "./lib/featureFlags";
 
 const queryClient = new QueryClient();
@@ -435,6 +436,13 @@ const App = () => (
                   <AppLayout>
                     <ServiceZones />
                   </AppLayout>
+                </ProtectedRoute>
+              } />
+              
+              {/* Client Portal - For external clients to view their manifests */}
+              <Route path="/client-portal" element={
+                <ProtectedRoute roles={['client']}>
+                  <ClientPortal />
                 </ProtectedRoute>
               } />
               
