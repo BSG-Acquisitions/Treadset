@@ -4,28 +4,37 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
-import { Loader2, MapPin, Target, TrendingUp, Search, Maximize2, Filter, Building2 } from 'lucide-react';
+import { Loader2, MapPin, Target, TrendingUp, Search, Maximize2, Filter, Building2, AlertTriangle, DollarSign, Phone, Calendar, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { formatCurrency } from '@/lib/formatters';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 interface LocationData {
   id: string;
+  clientId: string;
   lat: number;
   lng: number;
   pickupCount: number;
+  revenue: number;
   zip: string | null;
   city: string | null;
   clientName: string;
   address: string | null;
   phone: string | null;
+  isAtRisk: boolean;
+  riskLevel: 'high' | 'medium' | 'low' | null;
+  daysSinceLastPickup: number | null;
 }
 
 interface ActivityZone {
   city: string;
   pickupCount: number;
   locationCount: number;
+  revenue: number;
+  atRiskCount: number;
   status: 'hot' | 'warm' | 'cold' | 'opportunity';
   topClients: string[];
 }
@@ -35,6 +44,7 @@ export function MichiganHeatMap() {
   const map = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
   const popupRef = useRef<any>(null);
+  const navigate = useNavigate();
 
   const { user } = useAuth();
   const organizationId = user?.currentOrganization?.id;
@@ -48,16 +58,20 @@ export function MichiganHeatMap() {
   const [searchQuery, setSearchQuery] = useState('');
   const [minPickups, setMinPickups] = useState(0);
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'activity' | 'revenue' | 'risk'>('activity');
+  const [showAtRiskOnly, setShowAtRiskOnly] = useState(false);
 
   // Calculate activity zones by city
   const activityZones = useMemo(() => {
-    const cityMap = new Map<string, { count: number; locations: number; clients: Set<string> }>();
+    const cityMap = new Map<string, { count: number; locations: number; revenue: number; atRisk: number; clients: Set<string> }>();
     
     locations.forEach(loc => {
       const city = loc.city || 'Unknown';
-      const existing = cityMap.get(city) || { count: 0, locations: 0, clients: new Set() };
+      const existing = cityMap.get(city) || { count: 0, locations: 0, revenue: 0, atRisk: 0, clients: new Set() };
       existing.count += loc.pickupCount;
       existing.locations += 1;
+      existing.revenue += loc.revenue;
+      if (loc.isAtRisk) existing.atRisk += 1;
       existing.clients.add(loc.clientName);
       cityMap.set(city, existing);
     });
@@ -74,6 +88,8 @@ export function MichiganHeatMap() {
         city,
         pickupCount: data.count,
         locationCount: data.locations,
+        revenue: data.revenue,
+        atRiskCount: data.atRisk,
         status,
         topClients: Array.from(data.clients).slice(0, 3),
       });
@@ -88,9 +104,11 @@ export function MichiganHeatMap() {
     hotZones: activityZones.filter(z => z.status === 'hot' || z.status === 'warm').length,
     coldZones: activityZones.filter(z => z.status === 'cold' || z.status === 'opportunity').length,
     totalPickups: locations.reduce((sum, l) => sum + l.pickupCount, 0),
+    totalRevenue: locations.reduce((sum, l) => sum + l.revenue, 0),
+    atRiskCount: locations.filter(l => l.isAtRisk).length,
   }), [locations, activityZones]);
 
-  // Filtered locations based on search and min pickups
+  // Filtered locations based on search, min pickups, and at-risk filter
   const filteredLocations = useMemo(() => {
     return locations.filter(loc => {
       const matchesSearch = !searchQuery || 
@@ -98,9 +116,10 @@ export function MichiganHeatMap() {
         loc.city?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         loc.zip?.includes(searchQuery);
       const matchesMinPickups = loc.pickupCount >= minPickups;
-      return matchesSearch && matchesMinPickups;
+      const matchesAtRisk = !showAtRiskOnly || loc.isAtRisk;
+      return matchesSearch && matchesMinPickups && matchesAtRisk;
     });
-  }, [locations, searchQuery, minPickups]);
+  }, [locations, searchQuery, minPickups, showAtRiskOnly]);
 
   // Max pickups for slider
   const maxPickups = useMemo(() => Math.max(...locations.map(l => l.pickupCount), 1), [locations]);
@@ -145,16 +164,17 @@ export function MichiganHeatMap() {
     fetchToken();
   }, []);
 
-  // Fetch location data with client details
+  // Fetch location data with client details, revenue, and risk
   useEffect(() => {
     async function fetchLocationData() {
       if (!organizationId) return;
       setLoading(true);
 
       try {
+        // Fetch locations with client data
         const { data: locationsData, error: locationsError } = await supabase
           .from('locations')
-          .select('id, latitude, longitude, address, client_id, name, clients(company_name, physical_city, physical_zip, phone)')
+          .select('id, latitude, longitude, address, client_id, name, clients(id, company_name, physical_city, physical_zip, phone, last_pickup_at)')
           .eq('organization_id', organizationId)
           .not('latitude', 'is', null)
           .not('longitude', 'is', null);
@@ -166,38 +186,64 @@ export function MichiganHeatMap() {
           return;
         }
 
-        const { data: locationPickups, error: pickupsError } = await supabase
+        // Fetch pickups with revenue data
+        const { data: pickupsData } = await supabase
           .from('pickups')
-          .select('location_id')
+          .select('location_id, computed_revenue')
           .eq('organization_id', organizationId)
           .eq('status', 'completed');
 
-        if (pickupsError) {
-          console.error('Failed to fetch pickups:', pickupsError);
+        // Fetch at-risk clients
+        const { data: riskData } = await supabase
+          .from('client_risk_scores')
+          .select('client_id, risk_level, risk_score')
+          .eq('organization_id', organizationId);
+
+        // Build pickup counts and revenue by location
+        const locationStats = new Map<string, { count: number; revenue: number }>();
+        for (const p of pickupsData || []) {
+          if (p.location_id) {
+            const existing = locationStats.get(p.location_id) || { count: 0, revenue: 0 };
+            existing.count += 1;
+            existing.revenue += p.computed_revenue || 0;
+            locationStats.set(p.location_id, existing);
+          }
         }
 
-        const locationPickupCounts = new Map<string, number>();
-        for (const p of locationPickups || []) {
-          if (p.location_id) {
-            locationPickupCounts.set(p.location_id, (locationPickupCounts.get(p.location_id) || 0) + 1);
-          }
+        // Build risk lookup by client
+        const clientRisk = new Map<string, { level: string; score: number }>();
+        for (const r of riskData || []) {
+          clientRisk.set(r.client_id, { level: r.risk_level, score: r.risk_score });
         }
 
         const combinedLocations: LocationData[] = [];
         for (const loc of locationsData || []) {
-          const count = locationPickupCounts.get(loc.id) || 0;
           if (loc.latitude && loc.longitude) {
-            const clientData = loc.clients as { company_name?: string; physical_city?: string; physical_zip?: string; phone?: string } | null;
+            const stats = locationStats.get(loc.id) || { count: 0, revenue: 0 };
+            const clientData = loc.clients as { id?: string; company_name?: string; physical_city?: string; physical_zip?: string; phone?: string; last_pickup_at?: string } | null;
+            const clientId = clientData?.id || loc.client_id;
+            const risk = clientId ? clientRisk.get(clientId) : null;
+            
+            const lastPickup = clientData?.last_pickup_at ? new Date(clientData.last_pickup_at) : null;
+            const daysSince = lastPickup 
+              ? Math.floor((Date.now() - lastPickup.getTime()) / (1000 * 60 * 60 * 24))
+              : null;
+
             combinedLocations.push({
               id: loc.id,
+              clientId: clientId || '',
               lat: loc.latitude,
               lng: loc.longitude,
-              pickupCount: count,
+              pickupCount: stats.count,
+              revenue: stats.revenue,
               zip: clientData?.physical_zip || null,
               city: clientData?.physical_city || null,
               clientName: clientData?.company_name || loc.name || 'Unknown Location',
               address: loc.address || null,
               phone: clientData?.phone || null,
+              isAtRisk: risk?.level === 'high' || risk?.level === 'medium',
+              riskLevel: (risk?.level as 'high' | 'medium' | 'low') || null,
+              daysSinceLastPickup: daysSince,
             });
           }
         }
@@ -214,11 +260,23 @@ export function MichiganHeatMap() {
     fetchLocationData();
   }, [organizationId]);
 
-  // Get marker color based on pickup count
-  const getMarkerColor = (pickupCount: number): string => {
-    if (pickupCount >= 10) return '#ef4444'; // Red - high activity
-    if (pickupCount >= 5) return '#f59e0b'; // Orange - moderate
-    if (pickupCount >= 1) return '#3b82f6'; // Blue - low activity
+  // Get marker color based on view mode
+  const getMarkerColor = (loc: LocationData): string => {
+    if (viewMode === 'risk') {
+      if (loc.riskLevel === 'high') return '#dc2626'; // Red
+      if (loc.riskLevel === 'medium') return '#f59e0b'; // Amber
+      return '#22c55e'; // Green - healthy
+    }
+    if (viewMode === 'revenue') {
+      if (loc.revenue >= 1000) return '#22c55e'; // Green - high revenue
+      if (loc.revenue >= 500) return '#3b82f6'; // Blue - moderate
+      if (loc.revenue > 0) return '#f59e0b'; // Amber - low
+      return '#94a3b8'; // Gray - no revenue
+    }
+    // Activity view (default)
+    if (loc.pickupCount >= 10) return '#ef4444'; // Red - high activity
+    if (loc.pickupCount >= 5) return '#f59e0b'; // Orange - moderate
+    if (loc.pickupCount >= 1) return '#3b82f6'; // Blue - low activity
     return '#94a3b8'; // Gray - no pickups
   };
 
@@ -226,8 +284,12 @@ export function MichiganHeatMap() {
   const createMarkerElement = (loc: LocationData, isSelected: boolean = false): HTMLDivElement => {
     const el = document.createElement('div');
     el.className = 'marker-container';
-    const size = isSelected ? 40 : (loc.pickupCount >= 10 ? 32 : loc.pickupCount >= 5 ? 28 : 24);
-    const color = getMarkerColor(loc.pickupCount);
+    const baseSize = loc.pickupCount >= 10 ? 32 : loc.pickupCount >= 5 ? 28 : 24;
+    const size = isSelected ? 40 : baseSize;
+    const color = getMarkerColor(loc);
+    
+    // Add at-risk ring if applicable
+    const riskRing = loc.isAtRisk ? `box-shadow: 0 0 0 3px ${loc.riskLevel === 'high' ? '#dc2626' : '#f59e0b'}, 0 2px 8px rgba(0,0,0,0.3);` : 'box-shadow: 0 2px 8px rgba(0,0,0,0.3);';
     
     el.innerHTML = `
       <div style="
@@ -236,7 +298,7 @@ export function MichiganHeatMap() {
         border-radius: 50%;
         background: ${color};
         border: 3px solid white;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        ${riskRing}
         display: flex;
         align-items: center;
         justify-content: center;
@@ -245,19 +307,21 @@ export function MichiganHeatMap() {
         font-size: ${size > 28 ? 12 : 10}px;
         cursor: pointer;
         transition: transform 0.2s;
-        ${isSelected ? 'transform: scale(1.2); box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.5);' : ''}
+        position: relative;
+        ${isSelected ? 'transform: scale(1.2);' : ''}
       ">
-        ${loc.pickupCount}
+        ${viewMode === 'revenue' ? '$' : loc.pickupCount}
       </div>
+      ${loc.isAtRisk ? `<div style="position: absolute; top: -4px; right: -4px; width: 12px; height: 12px; background: ${loc.riskLevel === 'high' ? '#dc2626' : '#f59e0b'}; border-radius: 50%; border: 2px solid white;"></div>` : ''}
     `;
     
     el.addEventListener('mouseenter', () => {
-      el.querySelector('div')!.style.transform = 'scale(1.15)';
+      const innerDiv = el.querySelector('div');
+      if (innerDiv) innerDiv.style.transform = 'scale(1.15)';
     });
     el.addEventListener('mouseleave', () => {
-      if (!isSelected) {
-        el.querySelector('div')!.style.transform = 'scale(1)';
-      }
+      const innerDiv = el.querySelector('div');
+      if (innerDiv && !isSelected) innerDiv.style.transform = 'scale(1)';
     });
     
     return el;
@@ -350,25 +414,23 @@ export function MichiganHeatMap() {
         popupRef.current = new mapboxgl.Popup({ offset: 25, closeButton: true })
           .setLngLat([loc.lng, loc.lat])
           .setHTML(`
-            <div style="padding: 12px; min-width: 200px;">
-              <h3 style="margin: 0 0 8px; font-weight: 600; font-size: 14px; color: #1a1a1a;">
-                ${loc.clientName}
-              </h3>
+            <div style="padding: 12px; min-width: 220px;">
+              <div style="display: flex; align-items: start; justify-content: space-between; margin-bottom: 8px;">
+                <h3 style="margin: 0; font-weight: 600; font-size: 14px; color: #1a1a1a;">
+                  ${loc.clientName}
+                </h3>
+                ${loc.isAtRisk ? `<span style="background: ${loc.riskLevel === 'high' ? '#fef2f2' : '#fffbeb'}; color: ${loc.riskLevel === 'high' ? '#dc2626' : '#d97706'}; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">${loc.riskLevel === 'high' ? 'HIGH RISK' : 'AT RISK'}</span>` : ''}
+              </div>
               ${loc.address ? `<p style="margin: 0 0 4px; font-size: 12px; color: #666;">${loc.address}</p>` : ''}
               ${loc.city || loc.zip ? `<p style="margin: 0 0 8px; font-size: 12px; color: #666;">${[loc.city, loc.zip].filter(Boolean).join(', ')}</p>` : ''}
-              ${loc.phone ? `<p style="margin: 0 0 8px; font-size: 12px; color: #3b82f6;">${loc.phone}</p>` : ''}
-              <div style="display: flex; align-items: center; gap: 8px; padding-top: 8px; border-top: 1px solid #eee;">
-                <span style="
-                  background: ${getMarkerColor(loc.pickupCount)};
-                  color: white;
-                  padding: 2px 8px;
-                  border-radius: 12px;
-                  font-size: 11px;
-                  font-weight: 600;
-                ">${loc.pickupCount} pickup${loc.pickupCount !== 1 ? 's' : ''}</span>
-                <span style="font-size: 11px; color: #888;">
-                  ${loc.pickupCount >= 10 ? 'High Activity' : loc.pickupCount >= 5 ? 'Moderate' : loc.pickupCount >= 1 ? 'Low Activity' : 'No Pickups'}
-                </span>
+              <div style="display: flex; gap: 12px; margin-bottom: 8px; font-size: 11px;">
+                <span><strong>${loc.pickupCount}</strong> pickups</span>
+                <span><strong>$${loc.revenue.toLocaleString()}</strong> revenue</span>
+              </div>
+              ${loc.daysSinceLastPickup !== null ? `<p style="margin: 0 0 8px; font-size: 11px; color: #888;">Last pickup: ${loc.daysSinceLastPickup} days ago</p>` : ''}
+              <div style="display: flex; gap: 6px; padding-top: 8px; border-top: 1px solid #eee;">
+                <a href="/clients/${loc.clientId}" style="flex: 1; text-align: center; padding: 6px 8px; background: #f1f5f9; color: #334155; border-radius: 6px; font-size: 11px; text-decoration: none; font-weight: 500;">View Details</a>
+                ${loc.phone ? `<a href="tel:${loc.phone}" style="padding: 6px 8px; background: #dbeafe; color: #1d4ed8; border-radius: 6px; font-size: 11px; text-decoration: none;">📞 Call</a>` : ''}
               </div>
             </div>
           `)
@@ -519,8 +581,9 @@ export function MichiganHeatMap() {
                   <Badge 
                     variant="secondary" 
                     className="shrink-0 text-xs"
-                    style={{ backgroundColor: `${getMarkerColor(loc.pickupCount)}20`, color: getMarkerColor(loc.pickupCount) }}
+                    style={{ backgroundColor: `${getMarkerColor(loc)}20`, color: getMarkerColor(loc) }}
                   >
+                    {loc.isAtRisk && <AlertTriangle className="h-3 w-3 mr-1" />}
                     {loc.pickupCount}
                   </Badge>
                 </div>

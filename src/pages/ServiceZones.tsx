@@ -10,8 +10,10 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { MapPin, Plus, Wand2, Trash2, Edit, Loader2, Calendar, Info } from 'lucide-react';
 import { SlideUp } from '@/components/motion/SlideUp';
-import { ZoneMapVisualization } from '@/components/zones/ZoneMapVisualization';
 import { MichiganHeatMap } from '@/components/zones/MichiganHeatMap';
+import { ZonePerformanceTable } from '@/components/zones/ZonePerformanceTable';
+import { AtRiskClientsPanel } from '@/components/zones/AtRiskClientsPanel';
+import { GrowthOpportunitiesPanel } from '@/components/zones/GrowthOpportunitiesPanel';
 import { toast } from 'sonner';
 
 const DAYS_OF_WEEK = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -226,12 +228,24 @@ export default function ServiceZones() {
         <MichiganHeatMap />
       </SlideUp>
 
-      {/* Zone Map Visualization */}
-      {zones.length > 0 && (
-        <SlideUp delay={0.2}>
-          <ZoneMapVisualization />
-        </SlideUp>
-      )}
+      {/* Zone Performance & At-Risk Clients Row */}
+      <div className="grid lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2">
+          <SlideUp delay={0.2}>
+            <ZonePerformanceTable />
+          </SlideUp>
+        </div>
+        <div className="lg:col-span-1">
+          <SlideUp delay={0.25}>
+            <AtRiskClientsPanel />
+          </SlideUp>
+        </div>
+      </div>
+
+      {/* Growth Opportunities */}
+      <SlideUp delay={0.3}>
+        <GrowthOpportunitiesPanel />
+      </SlideUp>
 
       {/* Getting Started Guide - show when no zones and not auto-analyzing */}
       {!isLoading && zones.length === 0 && !autoAnalyzing && suggestedZones.length === 0 && (
