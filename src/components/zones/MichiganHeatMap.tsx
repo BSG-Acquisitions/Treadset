@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, MapPin, Target, TrendingUp } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import 'mapbox-gl/dist/mapbox-gl.css';
 
 interface LocationData {
   lat: number;
@@ -41,7 +42,7 @@ export function MichiganHeatMap() {
       try {
         // Import mapbox-gl - with Vite pre-bundling, default export should work
         const mapboxModule = await import('mapbox-gl');
-        await import('mapbox-gl/dist/mapbox-gl.css');
+        // CSS is now imported statically at the top of the file
 
         if (cancelled) return;
 
@@ -422,6 +423,7 @@ export function MichiganHeatMap() {
           <div 
             ref={mapContainer} 
             className="w-full h-[500px] rounded-lg overflow-hidden border border-border"
+            style={{ minHeight: '500px' }}
           />
 
           {/* Legend */}
