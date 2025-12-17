@@ -93,22 +93,37 @@ export function MichiganHeatMap() {
       setLoading(true);
 
       try {
-        // Get all locations with geocoded coordinates (from locations table which has proper Michigan data)
-        const { data: locationsData } = await supabase
+        console.log('Fetching location data for organization:', organizationId);
+        
+        // Get all locations with geocoded coordinates - NO lat/lng filters
+        const { data: locationsData, error: locationsError } = await supabase
           .from('locations')
           .select('id, latitude, longitude, address, client_id, name, clients(company_name, physical_city, physical_zip)')
           .eq('organization_id', organizationId)
           .not('latitude', 'is', null)
-          .not('longitude', 'is', null)
-          .gte('latitude', 41.5)  // Filter to Michigan latitude range
-          .lte('latitude', 46.5);
+          .not('longitude', 'is', null);
+
+        if (locationsError) {
+          console.error('Failed to fetch locations:', locationsError);
+          setMapError('Failed to load location data');
+          setLoading(false);
+          return;
+        }
+
+        console.log('Fetched', locationsData?.length || 0, 'locations from database');
 
         // Get pickup counts per location
-        const { data: locationPickups } = await supabase
+        const { data: locationPickups, error: pickupsError } = await supabase
           .from('pickups')
           .select('location_id')
           .eq('organization_id', organizationId)
           .eq('status', 'completed');
+
+        if (pickupsError) {
+          console.error('Failed to fetch pickups:', pickupsError);
+        }
+
+        console.log('Fetched', locationPickups?.length || 0, 'completed pickups');
 
         const locationPickupCounts = new Map<string, number>();
         for (const p of locationPickups || []) {
@@ -152,6 +167,7 @@ export function MichiganHeatMap() {
           }
         }
 
+        console.log('Processed', combinedLocations.length, 'locations for heatmap');
         setLocations(combinedLocations);
 
         // Calculate activity zones from grid cells
@@ -187,8 +203,11 @@ export function MichiganHeatMap() {
           coldZones: zones.filter(z => z.status === 'cold' || z.status === 'opportunity').length,
         });
 
+        console.log('Stats:', { total: combinedLocations.length, zones: zones.length });
+
       } catch (error) {
         console.error('Error fetching location data:', error);
+        setMapError('Failed to load location data');
       } finally {
         setLoading(false);
       }
@@ -299,84 +318,82 @@ export function MichiganHeatMap() {
         source: 'pickups',
         maxzoom: 15,
         paint: {
-          // Weight by pickup count - more visible for low counts
+          // Weight by pickup count - high weight even for single pickups
           'heatmap-weight': [
             'interpolate',
             ['linear'],
             ['get', 'pickupCount'],
-            0, 0.3,
-            3, 0.6,
+            0, 0.5,
+            1, 0.7,
+            5, 0.9,
             10, 1
           ],
-          // Intensity based on zoom - higher intensity
+          // Intensity - much higher for visibility
           'heatmap-intensity': [
             'interpolate',
             ['linear'],
             ['zoom'],
-            0, 2,
-            10, 4,
-            15, 5
+            0, 3,
+            8, 4,
+            12, 5,
+            15, 6
           ],
-          // Color ramp
+          // Color ramp - START VISIBLE instead of transparent
           'heatmap-color': [
             'interpolate',
             ['linear'],
             ['heatmap-density'],
-            0, 'rgba(33,102,172,0)',
+            0, 'rgba(103,169,207,0.3)',
             0.1, 'rgb(103,169,207)',
             0.3, 'rgb(209,229,240)',
             0.5, 'rgb(253,219,199)',
             0.7, 'rgb(239,138,98)',
             1, 'rgb(178,24,43)'
           ],
-          // Radius based on zoom - much larger for visibility
+          // Radius based on zoom - very large for few points
           'heatmap-radius': [
             'interpolate',
             ['linear'],
             ['zoom'],
-            0, 40,
-            8, 60,
-            12, 80,
-            15, 100
+            0, 50,
+            6, 60,
+            8, 80,
+            10, 100,
+            15, 120
           ],
-          // Opacity
-          'heatmap-opacity': [
-            'interpolate',
-            ['linear'],
-            ['zoom'],
-            7, 0.9,
-            15, 0.7
-          ],
+          // Constant opacity - no fade out
+          'heatmap-opacity': 0.85,
         },
       });
       console.log('Heatmap layer added');
 
-      // Add circle layer for high zoom
+      // Add circle layer - visible at ALL zoom levels
       map.current.addLayer({
         id: 'pickups-points',
         type: 'circle',
         source: 'pickups',
-        minzoom: 10,
+        minzoom: 0, // Show at ALL zoom levels
         paint: {
           'circle-radius': [
             'interpolate',
             ['linear'],
-            ['get', 'pickupCount'],
-            0, 4,
-            10, 8,
-            50, 15
+            ['zoom'],
+            0, 6,
+            8, 8,
+            12, 12,
+            15, 16
           ],
           'circle-color': [
             'interpolate',
             ['linear'],
             ['get', 'pickupCount'],
             0, '#3b82f6',
-            10, '#f59e0b',
-            50, '#ef4444'
+            5, '#f59e0b',
+            10, '#ef4444'
           ],
           'circle-stroke-color': '#ffffff',
-          'circle-stroke-width': 1,
-          'circle-opacity': 0.8,
+          'circle-stroke-width': 2,
+          'circle-opacity': 0.9,
         },
       });
       console.log('Circle layer added');
