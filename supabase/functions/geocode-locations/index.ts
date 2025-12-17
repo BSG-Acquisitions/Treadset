@@ -24,11 +24,12 @@ interface MapboxGeocodeResponse {
   features: MapboxGeocodeFeature[];
 }
 
-// Detroit Metro Area Boundaries (Wayne, Oakland, Macomb counties)
+// Detroit Metro Area Boundaries (expanded to include downriver communities)
+// Covers Wayne, Oakland, Macomb counties plus downriver (Monroe, Flat Rock, etc.)
 const DETROIT_BOUNDS = {
-  minLat: 42.1,
-  maxLat: 42.8,
-  minLng: -83.6,
+  minLat: 41.9,  // Extended south to include Monroe, Flat Rock, Rockwood
+  maxLat: 42.85, // Extended north slightly
+  minLng: -84.0, // Extended west to include Ann Arbor area
   maxLng: -82.4
 };
 
@@ -36,11 +37,114 @@ const DETROIT_METRO_COUNTIES = ['Wayne', 'Oakland', 'Macomb'];
 // St. Clair County (includes Cottrellville) is NOT a valid service area - reject these results
 const EXCLUDED_COUNTIES = ['St. Clair', 'St Clair', 'Saint Clair'];
 const MAX_DISTANCE_FROM_DEPOT_KM = 160; // ~100 miles
+const MAX_DISTANCE_FROM_ZIP_KM = 15; // ~9 miles - geocode must be within this distance of ZIP code center
 
 // Known bad coordinates that have been incorrectly assigned in the past
 const KNOWN_BAD_COORDINATES = [
-  { lat: 42.71278770, lng: -82.58916040, reason: 'Cottrellville - outside service area' }
+  { lat: 42.71278770, lng: -82.58916040, reason: 'Cottrellville - outside service area' },
+  { lat: 42.51445660, lng: -83.01465260, reason: 'Duplicate coordinate - needs re-geocoding' }
 ];
+
+// Michigan ZIP code approximate centers for validation
+// This helps catch geocoding errors where the result is in the wrong city
+const MI_ZIP_CENTERS: Record<string, { lat: number; lng: number; city: string }> = {
+  // Detroit Metro
+  '48134': { lat: 42.0973, lng: -83.2918, city: 'Flat Rock' },
+  '48093': { lat: 42.4987, lng: -82.9892, city: 'Warren' },
+  '48215': { lat: 42.4006, lng: -82.9591, city: 'Detroit' },
+  '48089': { lat: 42.4419, lng: -82.9339, city: 'Warren' },
+  '48212': { lat: 42.4103, lng: -83.0574, city: 'Hamtramck' },
+  '48205': { lat: 42.4317, lng: -82.9819, city: 'Detroit' },
+  '48234': { lat: 42.4392, lng: -83.0217, city: 'Detroit' },
+  '48091': { lat: 42.4675, lng: -82.9575, city: 'Warren' },
+  '48092': { lat: 42.5203, lng: -82.9858, city: 'Warren' },
+  '48088': { lat: 42.5194, lng: -82.9453, city: 'Warren' },
+  '48030': { lat: 42.4625, lng: -83.1003, city: 'Hazel Park' },
+  '48220': { lat: 42.4589, lng: -83.1406, city: 'Ferndale' },
+  '48071': { lat: 42.4806, lng: -83.1456, city: 'Madison Heights' },
+  '48073': { lat: 42.5089, lng: -83.1761, city: 'Royal Oak' },
+  '48067': { lat: 42.4897, lng: -83.1419, city: 'Royal Oak' },
+  '48237': { lat: 42.4653, lng: -83.1800, city: 'Oak Park' },
+  '48075': { lat: 42.4642, lng: -83.2189, city: 'Southfield' },
+  '48076': { lat: 42.4931, lng: -83.2194, city: 'Southfield' },
+  '48034': { lat: 42.5200, lng: -83.2458, city: 'Southfield' },
+  '48025': { lat: 42.5247, lng: -83.2897, city: 'Beverly Hills' },
+  '48009': { lat: 42.5467, lng: -83.2114, city: 'Birmingham' },
+  '48017': { lat: 42.5297, lng: -83.1558, city: 'Clawson' },
+  '48083': { lat: 42.5494, lng: -83.1086, city: 'Troy' },
+  '48084': { lat: 42.5608, lng: -83.1519, city: 'Troy' },
+  '48085': { lat: 42.5869, lng: -83.1175, city: 'Troy' },
+  '48098': { lat: 42.6000, lng: -83.1483, city: 'Troy' },
+  '48310': { lat: 42.5392, lng: -83.0311, city: 'Sterling Heights' },
+  '48312': { lat: 42.5639, lng: -83.0003, city: 'Sterling Heights' },
+  '48313': { lat: 42.5894, lng: -82.9853, city: 'Sterling Heights' },
+  '48314': { lat: 42.5772, lng: -83.0442, city: 'Sterling Heights' },
+  '48315': { lat: 42.6117, lng: -82.9731, city: 'Utica' },
+  '48316': { lat: 42.6367, lng: -83.0269, city: 'Utica' },
+  '48317': { lat: 42.6269, lng: -82.9689, city: 'Utica' },
+  '48322': { lat: 42.5439, lng: -83.3361, city: 'West Bloomfield' },
+  '48323': { lat: 42.5647, lng: -83.3653, city: 'West Bloomfield' },
+  '48324': { lat: 42.5806, lng: -83.3131, city: 'West Bloomfield' },
+  '48331': { lat: 42.5047, lng: -83.3711, city: 'Farmington Hills' },
+  '48334': { lat: 42.5200, lng: -83.3408, city: 'Farmington Hills' },
+  '48335': { lat: 42.4592, lng: -83.3958, city: 'Farmington Hills' },
+  '48336': { lat: 42.4714, lng: -83.3503, city: 'Farmington Hills' },
+  '48127': { lat: 42.3222, lng: -83.2594, city: 'Dearborn Heights' },
+  '48125': { lat: 42.3022, lng: -83.2403, city: 'Dearborn Heights' },
+  '48126': { lat: 42.3242, lng: -83.1733, city: 'Dearborn' },
+  '48124': { lat: 42.2936, lng: -83.2108, city: 'Dearborn' },
+  '48128': { lat: 42.3219, lng: -83.2097, city: 'Dearborn' },
+  '48146': { lat: 42.2706, lng: -83.1497, city: 'Lincoln Park' },
+  '48229': { lat: 42.2694, lng: -83.1175, city: 'Ecorse' },
+  '48192': { lat: 42.2044, lng: -83.1611, city: 'Wyandotte' },
+  '48195': { lat: 42.2083, lng: -83.2353, city: 'Southgate' },
+  '48180': { lat: 42.2317, lng: -83.2728, city: 'Taylor' },
+  '48183': { lat: 42.1964, lng: -83.2336, city: 'Trenton' },
+  '48173': { lat: 42.1458, lng: -83.2272, city: 'Rockwood' },
+  '48138': { lat: 42.1208, lng: -83.1789, city: 'Grosse Ile' },
+  '48162': { lat: 41.9558, lng: -83.3889, city: 'Monroe' },
+  '48161': { lat: 41.9164, lng: -83.4019, city: 'Monroe' },
+  '48150': { lat: 42.4178, lng: -83.3617, city: 'Livonia' },
+  '48152': { lat: 42.4394, lng: -83.3742, city: 'Livonia' },
+  '48154': { lat: 42.3972, lng: -83.3806, city: 'Livonia' },
+  '48167': { lat: 42.4278, lng: -83.4811, city: 'Northville' },
+  '48170': { lat: 42.3703, lng: -83.4689, city: 'Plymouth' },
+  '48188': { lat: 42.2403, lng: -83.4803, city: 'Canton' },
+  '48187': { lat: 42.3081, lng: -83.4608, city: 'Canton' },
+  '48185': { lat: 42.3217, lng: -83.3639, city: 'Westland' },
+  '48186': { lat: 42.2936, lng: -83.3569, city: 'Westland' },
+  '48135': { lat: 42.3169, lng: -83.2958, city: 'Garden City' },
+  '48228': { lat: 42.3536, lng: -83.2483, city: 'Detroit' },
+  '48239': { lat: 42.3922, lng: -83.2756, city: 'Redford' },
+  '48240': { lat: 42.4153, lng: -83.3014, city: 'Redford' },
+  '48219': { lat: 42.4397, lng: -83.2619, city: 'Detroit' },
+  '48223': { lat: 42.3878, lng: -83.2456, city: 'Detroit' },
+  '48227': { lat: 42.3892, lng: -83.1892, city: 'Detroit' },
+  '48235': { lat: 42.4269, lng: -83.1894, city: 'Detroit' },
+  '48221': { lat: 42.4269, lng: -83.1497, city: 'Detroit' },
+  '48203': { lat: 42.4183, lng: -83.1094, city: 'Highland Park' },
+  '48202': { lat: 42.3744, lng: -83.0758, city: 'Detroit' },
+  '48201': { lat: 42.3456, lng: -83.0644, city: 'Detroit' },
+  '48226': { lat: 42.3317, lng: -83.0453, city: 'Detroit' },
+  '48207': { lat: 42.3500, lng: -83.0214, city: 'Detroit' },
+  '48214': { lat: 42.3728, lng: -82.9892, city: 'Detroit' },
+  '48224': { lat: 42.4100, lng: -82.9508, city: 'Detroit' },
+  '48225': { lat: 42.4306, lng: -82.9153, city: 'Harper Woods' },
+  '48236': { lat: 42.4358, lng: -82.8994, city: 'Grosse Pointe' },
+  '48021': { lat: 42.4694, lng: -82.9483, city: 'Eastpointe' },
+  '48066': { lat: 42.4936, lng: -82.9131, city: 'Roseville' },
+  '48081': { lat: 42.4978, lng: -82.8792, city: 'St Clair Shores' },
+  '48080': { lat: 42.4728, lng: -82.8853, city: 'St Clair Shores' },
+  '48082': { lat: 42.5236, lng: -82.8814, city: 'St Clair Shores' },
+  '48038': { lat: 42.5433, lng: -82.9183, city: 'Clinton Township' },
+  '48035': { lat: 42.5581, lng: -82.8933, city: 'Clinton Township' },
+  '48036': { lat: 42.5811, lng: -82.9175, city: 'Clinton Township' },
+  '48042': { lat: 42.6083, lng: -82.9242, city: 'Macomb' },
+  '48044': { lat: 42.6472, lng: -82.9278, city: 'Macomb' },
+  '48047': { lat: 42.6256, lng: -82.8283, city: 'New Baltimore' },
+  '48050': { lat: 42.6717, lng: -82.7628, city: 'New Haven' },
+  '48051': { lat: 42.6639, lng: -82.8631, city: 'New Baltimore' },
+};
 
 function toRadians(deg: number) {
   return (deg * Math.PI) / 180;
@@ -96,6 +200,38 @@ function isKnownBadCoordinate(lat: number, lng: number): boolean {
   return KNOWN_BAD_COORDINATES.some(bad => 
     Math.abs(bad.lat - lat) < 0.0001 && Math.abs(bad.lng - lng) < 0.0001
   );
+}
+
+// Extract ZIP code from address string
+function extractZipCode(address: string): string | null {
+  const match = address.match(/\b(\d{5})(?:-\d{4})?\b/);
+  return match ? match[1] : null;
+}
+
+// Validate geocoded coordinates against expected ZIP code center
+function validateAgainstZipCode(
+  lat: number, 
+  lng: number, 
+  address: string
+): { valid: boolean; message?: string; expectedCity?: string } {
+  const zip = extractZipCode(address);
+  if (!zip || !MI_ZIP_CENTERS[zip]) {
+    // No ZIP code validation possible - allow but log
+    return { valid: true };
+  }
+  
+  const expected = MI_ZIP_CENTERS[zip];
+  const distanceKm = haversineDistance({ lat, lng }, { lat: expected.lat, lng: expected.lng });
+  
+  if (distanceKm > MAX_DISTANCE_FROM_ZIP_KM) {
+    return { 
+      valid: false, 
+      message: `Geocoded coordinates (${lat.toFixed(4)}, ${lng.toFixed(4)}) are ${distanceKm.toFixed(1)}km from expected ${expected.city} (ZIP ${zip}) center - likely wrong city`,
+      expectedCity: expected.city
+    };
+  }
+  
+  return { valid: true, expectedCity: expected.city };
 }
 
 function enhanceAddress(address: string, clientCity?: string, clientState?: string): string {
@@ -192,6 +328,13 @@ async function geocodeAddress(
         // CRITICAL: Reject known bad coordinates
         if (isKnownBadCoordinate(lat, lng)) {
           console.log(`⚠️ Rejected known bad coordinate: (${lat}, ${lng})`);
+          continue;
+        }
+        
+        // CRITICAL: Validate against ZIP code center to catch wrong-city errors
+        const zipValidation = validateAgainstZipCode(lat, lng, address);
+        if (!zipValidation.valid) {
+          console.log(`⚠️ ZIP validation failed: ${zipValidation.message}`);
           continue;
         }
         
