@@ -168,9 +168,8 @@ export function MichiganHeatMap() {
     if (!mapContainer.current || !mapboxToken || !mapboxgl || locations.length === 0) return;
     if (map.current) return;
 
-    mapboxgl.accessToken = mapboxToken;
-
     map.current = new mapboxgl.Map({
+      accessToken: mapboxToken,
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/dark-v11',
       center: [-84.5, 44.0], // Center of Michigan
