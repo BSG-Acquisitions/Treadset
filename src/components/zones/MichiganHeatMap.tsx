@@ -14,9 +14,9 @@ interface LocationData {
   city: string | null;
 }
 
-interface OpportunityZone {
-  zip: string;
-  city: string | null;
+interface ActivityZone {
+  gridKey: string;
+  label: string;
   pickupCount: number;
   status: 'hot' | 'warm' | 'cold' | 'opportunity';
 }
@@ -28,7 +28,7 @@ export function MichiganHeatMap() {
   const organizationId = user?.currentOrganization?.id;
   const [loading, setLoading] = useState(true);
   const [locations, setLocations] = useState<LocationData[]>([]);
-  const [opportunityZones, setOpportunityZones] = useState<OpportunityZone[]>([]);
+  const [activityZones, setActivityZones] = useState<ActivityZone[]>([]);
   const [mapboxToken, setMapboxToken] = useState<string | null>(null);
   const [stats, setStats] = useState({ total: 0, hotZones: 0, coldZones: 0 });
   const [mapboxgl, setMapboxgl] = useState<any>(null);
@@ -119,16 +119,19 @@ export function MichiganHeatMap() {
 
         // Combine location data
         const combinedLocations: LocationData[] = [];
-        const zipCounts = new Map<string, { count: number; city: string | null }>();
+        
+        // Use grid-based clustering instead of ZIP codes (since ZIP data is missing)
+        // Grid cells are ~0.05° lat/lng squares (roughly 3-5 km)
+        const gridCells = new Map<string, { count: number; lat: number; lng: number; locations: string[] }>();
 
         // Add location-based data
         for (const loc of locationsData || []) {
-          const count = locationPickupCounts.get(loc.id) || 0;
+          const count = locationPickupCounts.get(loc.id) || 1; // Count at least 1 for each location
           if (loc.latitude && loc.longitude) {
-            // Get city/zip from client data or extract from address
             const clientData = loc.clients as { company_name?: string; physical_city?: string; physical_zip?: string } | null;
             const cityName = clientData?.physical_city || null;
-            const zipCode = clientData?.physical_zip || (loc.address?.match(/\d{5}(?:-\d{4})?$/)?.[0]) || null;
+            const zipCode = clientData?.physical_zip || null;
+            const locationName = clientData?.company_name || loc.name || 'Location';
             
             combinedLocations.push({
               lat: loc.latitude,
@@ -137,32 +140,37 @@ export function MichiganHeatMap() {
               zip: zipCode,
               city: cityName,
             });
-            if (zipCode) {
-              const existing = zipCounts.get(zipCode);
-              zipCounts.set(zipCode, {
-                count: (existing?.count || 0) + count,
-                city: cityName || existing?.city || null
-              });
+            
+            // Grid-based clustering
+            const gridKey = `${Math.floor(loc.latitude * 20) / 20}_${Math.floor(loc.longitude * 20) / 20}`;
+            const existing = gridCells.get(gridKey) || { count: 0, lat: loc.latitude, lng: loc.longitude, locations: [] };
+            existing.count += count;
+            if (!existing.locations.includes(locationName)) {
+              existing.locations.push(locationName);
             }
+            gridCells.set(gridKey, existing);
           }
         }
 
         setLocations(combinedLocations);
 
-        // Calculate opportunity zones
-        const zones: OpportunityZone[] = [];
-        const maxCount = Math.max(...Array.from(zipCounts.values()).map(v => v.count), 1);
+        // Calculate activity zones from grid cells
+        const zones: ActivityZone[] = [];
+        const maxCount = Math.max(...Array.from(gridCells.values()).map(v => v.count), 1);
 
-        for (const [zip, data] of zipCounts) {
-          let status: OpportunityZone['status'];
-          if (data.count >= maxCount * 0.6) status = 'hot';
-          else if (data.count >= maxCount * 0.3) status = 'warm';
+        for (const [gridKey, data] of gridCells) {
+          let status: ActivityZone['status'];
+          if (data.count >= 5) status = 'hot';
+          else if (data.count >= 3) status = 'warm';
           else if (data.count > 0) status = 'cold';
           else status = 'opportunity';
 
+          // Create a readable label from the locations
+          const label = data.locations.slice(0, 2).join(', ') + (data.locations.length > 2 ? ` +${data.locations.length - 2}` : '');
+
           zones.push({
-            zip,
-            city: data.city,
+            gridKey,
+            label,
             pickupCount: data.count,
             status
           });
@@ -170,12 +178,12 @@ export function MichiganHeatMap() {
 
         // Sort by pickup count descending
         zones.sort((a, b) => b.pickupCount - a.pickupCount);
-        setOpportunityZones(zones);
+        setActivityZones(zones);
 
         // Calculate stats
         setStats({
           total: combinedLocations.length,
-          hotZones: zones.filter(z => z.status === 'hot').length,
+          hotZones: zones.filter(z => z.status === 'hot' || z.status === 'warm').length,
           coldZones: zones.filter(z => z.status === 'cold' || z.status === 'opportunity').length,
         });
 
@@ -205,12 +213,25 @@ export function MichiganHeatMap() {
         // ignore (module namespace objects can be read-only)
       }
 
+      // Calculate bounds from data to center the map properly
+      let initialCenter: [number, number] = [-84.5, 44.0];
+      let initialZoom = 5.5;
+      
+      if (locations.length > 0) {
+        const lats = locations.map(l => l.lat);
+        const lngs = locations.map(l => l.lng);
+        const avgLat = lats.reduce((a, b) => a + b, 0) / lats.length;
+        const avgLng = lngs.reduce((a, b) => a + b, 0) / lngs.length;
+        initialCenter = [avgLng, avgLat];
+        initialZoom = 9; // Closer zoom for concentrated data
+      }
+
       map.current = new mapboxgl.Map({
         accessToken: mapboxToken,
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/navigation-night-v1',
-        center: [-84.5, 44.0], // Center of Michigan
-        zoom: 5.5,
+        center: initialCenter,
+        zoom: initialZoom,
         pitch: 0,
       });
 
@@ -254,22 +275,23 @@ export function MichiganHeatMap() {
         source: 'pickups',
         maxzoom: 15,
         paint: {
-          // Weight by pickup count
+          // Weight by pickup count - more visible for low counts
           'heatmap-weight': [
             'interpolate',
             ['linear'],
             ['get', 'pickupCount'],
-            0, 0.1,
-            10, 0.5,
-            50, 1
+            0, 0.3,
+            3, 0.6,
+            10, 1
           ],
-          // Intensity based on zoom
+          // Intensity based on zoom - higher intensity
           'heatmap-intensity': [
             'interpolate',
             ['linear'],
             ['zoom'],
-            0, 1,
-            15, 3
+            0, 2,
+            10, 4,
+            15, 5
           ],
           // Color ramp
           'heatmap-color': [
@@ -277,27 +299,29 @@ export function MichiganHeatMap() {
             ['linear'],
             ['heatmap-density'],
             0, 'rgba(33,102,172,0)',
-            0.2, 'rgb(103,169,207)',
-            0.4, 'rgb(209,229,240)',
-            0.6, 'rgb(253,219,199)',
-            0.8, 'rgb(239,138,98)',
+            0.1, 'rgb(103,169,207)',
+            0.3, 'rgb(209,229,240)',
+            0.5, 'rgb(253,219,199)',
+            0.7, 'rgb(239,138,98)',
             1, 'rgb(178,24,43)'
           ],
-          // Radius based on zoom
+          // Radius based on zoom - much larger for visibility
           'heatmap-radius': [
             'interpolate',
             ['linear'],
             ['zoom'],
-            0, 15,
-            15, 30
+            0, 40,
+            8, 60,
+            12, 80,
+            15, 100
           ],
-          // Opacity fades at high zoom
+          // Opacity
           'heatmap-opacity': [
             'interpolate',
             ['linear'],
             ['zoom'],
-            7, 1,
-            15, 0.6
+            7, 0.9,
+            15, 0.7
           ],
         },
       });
@@ -418,11 +442,11 @@ export function MichiganHeatMap() {
             </div>
             <div className="text-center p-3 bg-red-500/10 rounded-lg">
               <p className="text-2xl font-bold text-red-500">{stats.hotZones}</p>
-              <p className="text-xs text-muted-foreground">Hot Zones</p>
+              <p className="text-xs text-muted-foreground">High Activity Areas</p>
             </div>
             <div className="text-center p-3 bg-emerald-500/10 rounded-lg">
               <p className="text-2xl font-bold text-emerald-500">{stats.coldZones}</p>
-              <p className="text-xs text-muted-foreground">Growth Opportunities</p>
+              <p className="text-xs text-muted-foreground">Low Activity Areas</p>
             </div>
           </div>
 
@@ -456,10 +480,10 @@ export function MichiganHeatMap() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5" />
-            Zone Analysis by ZIP Code
+            Activity Zone Analysis
           </CardTitle>
           <CardDescription>
-            Identify areas with growth potential for business expansion.
+            Geographic clustering of pickup activity by area.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -471,17 +495,16 @@ export function MichiganHeatMap() {
                 Strong Markets
               </h4>
               <div className="space-y-2 max-h-48 overflow-y-auto">
-                {opportunityZones.filter(z => z.status === 'hot').slice(0, 5).map(zone => (
-                  <div key={zone.zip} className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                {activityZones.filter(z => z.status === 'hot' || z.status === 'warm').slice(0, 5).map(zone => (
+                  <div key={zone.gridKey} className="flex items-center justify-between p-2 bg-muted/30 rounded">
                     <div>
-                      <span className="font-medium">{zone.zip}</span>
-                      {zone.city && <span className="text-muted-foreground text-sm ml-2">{zone.city}</span>}
+                      <span className="font-medium text-sm">{zone.label}</span>
                     </div>
                     <Badge variant="secondary">{zone.pickupCount} pickups</Badge>
                   </div>
                 ))}
-                {opportunityZones.filter(z => z.status === 'hot').length === 0 && (
-                  <p className="text-sm text-muted-foreground">No hot zones yet</p>
+                {activityZones.filter(z => z.status === 'hot' || z.status === 'warm').length === 0 && (
+                  <p className="text-sm text-muted-foreground">No high activity areas yet</p>
                 )}
               </div>
             </div>
@@ -493,16 +516,15 @@ export function MichiganHeatMap() {
                 Growth Opportunities
               </h4>
               <div className="space-y-2 max-h-48 overflow-y-auto">
-                {opportunityZones.filter(z => z.status === 'cold' || z.status === 'opportunity').slice(0, 5).map(zone => (
-                  <div key={zone.zip} className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                {activityZones.filter(z => z.status === 'cold' || z.status === 'opportunity').slice(0, 5).map(zone => (
+                  <div key={zone.gridKey} className="flex items-center justify-between p-2 bg-muted/30 rounded">
                     <div>
-                      <span className="font-medium">{zone.zip}</span>
-                      {zone.city && <span className="text-muted-foreground text-sm ml-2">{zone.city}</span>}
+                      <span className="font-medium text-sm">{zone.label}</span>
                     </div>
                     <Badge variant="outline">{zone.pickupCount} pickups</Badge>
                   </div>
                 ))}
-                {opportunityZones.filter(z => z.status === 'cold' || z.status === 'opportunity').length === 0 && (
+                {activityZones.filter(z => z.status === 'cold' || z.status === 'opportunity').length === 0 && (
                   <p className="text-sm text-muted-foreground">All areas are well covered!</p>
                 )}
               </div>
