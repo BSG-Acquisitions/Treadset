@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ClientForm } from "@/components/forms/ClientForm";
 import { useCreateClient } from "@/hooks/useClients";
 import { useCreateLocation } from "@/hooks/useLocations";
+import { useGeocodeLocations } from "@/hooks/useGeocodeLocations";
 import { ClientFormData } from "@/lib/validations";
 import { useToast } from "@/hooks/use-toast";
 
@@ -16,6 +17,7 @@ export function CreateClientDialog({ trigger, open: controlledOpen, onOpenChange
   const [internalOpen, setInternalOpen] = useState(false);
   const createClient = useCreateClient();
   const createLocation = useCreateLocation();
+  const { geocodeLocation } = useGeocodeLocations();
   const { toast } = useToast();
 
   // Support both controlled and uncontrolled modes
@@ -41,17 +43,28 @@ export function CreateClientDialog({ trigger, open: controlledOpen, onOpenChange
 
       const client = await createClient.mutateAsync(clientData);
 
-      // Create primary location if address provided
+      // Create primary location if address provided and trigger geocoding
       if (data.mailing_address && data.mailing_address.trim()) {
-        await createLocation.mutateAsync({
+        const fullAddress = [
+          data.mailing_address,
+          data.city,
+          [data.state, data.zip].filter(Boolean).join(' ')
+        ].filter(Boolean).join(', ');
+
+        const location = await createLocation.mutateAsync({
           client_id: client.id,
           name: `${data.company_name} - Primary Location`,
-          address: data.mailing_address,
+          address: fullAddress,
           access_notes: null,
           pricing_tier_id: null,
           is_active: true,
-          organization_id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73', // Default org ID
+          organization_id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
         });
+
+        // Trigger geocoding for the new location
+        if (location?.id) {
+          geocodeLocation(location.id, true);
+        }
       }
 
       toast({
