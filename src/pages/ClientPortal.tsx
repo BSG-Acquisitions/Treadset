@@ -84,6 +84,7 @@ export default function ClientPortal() {
           signed_at,
           created_at,
           pdf_path,
+          initial_pdf_path,
           acroform_pdf_path,
           pte_on_rim,
           pte_off_rim,
@@ -234,8 +235,8 @@ export default function ClientPortal() {
 
   // Check if manifest has both initial and final PDFs (different paths)
   const hasBothVersions = (manifest: any) => {
-    return manifest.pdf_path && manifest.acroform_pdf_path && 
-           manifest.pdf_path !== manifest.acroform_pdf_path;
+    return manifest.initial_pdf_path && manifest.acroform_pdf_path && 
+           manifest.initial_pdf_path !== manifest.acroform_pdf_path;
   };
 
   // Admin landing - show client selector
@@ -449,7 +450,7 @@ export default function ClientPortal() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleView(manifest.pdf_path, manifest.manifest_number, 'Initial')}
+                                  onClick={() => handleView(manifest.initial_pdf_path, manifest.manifest_number, 'Initial')}
                                   title="View"
                                 >
                                   <Eye className="w-4 h-4" />
@@ -457,7 +458,7 @@ export default function ClientPortal() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleDownload(manifest.pdf_path, `${manifest.manifest_number}-initial`)}
+                                  onClick={() => handleDownload(manifest.initial_pdf_path, `${manifest.manifest_number}-initial`)}
                                   title="Download"
                                 >
                                   <Download className="w-4 h-4" />
@@ -465,7 +466,7 @@ export default function ClientPortal() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handlePrint(manifest.pdf_path)}
+                                  onClick={() => handlePrint(manifest.initial_pdf_path)}
                                   title="Print"
                                 >
                                   <Printer className="w-4 h-4" />
@@ -509,10 +510,10 @@ export default function ClientPortal() {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handleView(
-                                    manifest.acroform_pdf_path || manifest.pdf_path, 
+                                    manifest.acroform_pdf_path || manifest.initial_pdf_path || manifest.pdf_path, 
                                     manifest.manifest_number
                                   )}
-                                  disabled={!manifest.acroform_pdf_path && !manifest.pdf_path}
+                                  disabled={!manifest.acroform_pdf_path && !manifest.initial_pdf_path && !manifest.pdf_path}
                                   title="View"
                                 >
                                   <Eye className="w-4 h-4 mr-1" />
@@ -522,10 +523,10 @@ export default function ClientPortal() {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handleDownload(
-                                    manifest.acroform_pdf_path || manifest.pdf_path, 
+                                    manifest.acroform_pdf_path || manifest.initial_pdf_path || manifest.pdf_path, 
                                     manifest.manifest_number
                                   )}
-                                  disabled={!manifest.acroform_pdf_path && !manifest.pdf_path}
+                                  disabled={!manifest.acroform_pdf_path && !manifest.initial_pdf_path && !manifest.pdf_path}
                                   title="Download"
                                 >
                                   <Download className="w-4 h-4" />
@@ -534,9 +535,9 @@ export default function ClientPortal() {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handlePrint(
-                                    manifest.acroform_pdf_path || manifest.pdf_path
+                                    manifest.acroform_pdf_path || manifest.initial_pdf_path || manifest.pdf_path
                                   )}
-                                  disabled={!manifest.acroform_pdf_path && !manifest.pdf_path}
+                                  disabled={!manifest.acroform_pdf_path && !manifest.initial_pdf_path && !manifest.pdf_path}
                                   title="Print"
                                 >
                                   <Printer className="w-4 h-4" />
