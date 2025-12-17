@@ -388,7 +388,6 @@ Deno.serve(async (req) => {
         status: bookingStatus,
         zone_id: matchedZone?.id || null,
         zone_matched: !!matchedZone,
-        estimated_value: estimatedPteValue,
         client_id: existingClient?.id || null,
       })
       .select()
