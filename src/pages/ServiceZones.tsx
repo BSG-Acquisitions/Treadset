@@ -12,9 +12,10 @@ import { MapPin, Plus, Wand2, Trash2, Edit, Loader2, Calendar, Info } from 'luci
 import { SlideUp } from '@/components/motion/SlideUp';
 import { MichiganHeatMap } from '@/components/zones/MichiganHeatMap';
 import { ZonePerformanceTable } from '@/components/zones/ZonePerformanceTable';
-
 import { GrowthOpportunitiesPanel } from '@/components/zones/GrowthOpportunitiesPanel';
 import { DataQualityWidget } from '@/components/zones/DataQualityWidget';
+import { DashboardGrid, LayoutItem } from '@/components/ui/dashboard-grid';
+import { DraggableWidget } from '@/components/ui/draggable-widget';
 import { toast } from 'sonner';
 
 const DAYS_OF_WEEK = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -217,29 +218,30 @@ export default function ServiceZones() {
         </SlideUp>
       )}
 
-      {/* Map - Full Width */}
-      <SlideUp delay={0.1}>
-        <MichiganHeatMap />
-      </SlideUp>
-
-      {/* Widget Row - 3 Column Layout */}
-      <div className="grid lg:grid-cols-12 gap-4">
-        <div className="lg:col-span-3">
-          <SlideUp delay={0.15}>
-            <DataQualityWidget />
-          </SlideUp>
-        </div>
-        <div className="lg:col-span-5">
-          <SlideUp delay={0.2}>
-            <ZonePerformanceTable />
-          </SlideUp>
-        </div>
-        <div className="lg:col-span-4">
-          <SlideUp delay={0.25}>
-            <GrowthOpportunitiesPanel />
-          </SlideUp>
-        </div>
-      </div>
+      {/* Draggable Dashboard Grid */}
+      <DashboardGrid
+        storageKey="service-zones"
+        defaultLayout={[
+          { i: 'map', x: 0, y: 0, w: 12, h: 6, minH: 4, minW: 6 },
+          { i: 'dataQuality', x: 0, y: 6, w: 3, h: 4, minH: 3, minW: 2 },
+          { i: 'zonePerformance', x: 3, y: 6, w: 5, h: 4, minH: 3, minW: 3 },
+          { i: 'growthOpportunities', x: 8, y: 6, w: 4, h: 4, minH: 3, minW: 2 },
+        ]}
+        rowHeight={80}
+      >
+        <DraggableWidget key="map" title="Michigan Heat Map">
+          <MichiganHeatMap />
+        </DraggableWidget>
+        <DraggableWidget key="dataQuality" title="Data Quality">
+          <DataQualityWidget />
+        </DraggableWidget>
+        <DraggableWidget key="zonePerformance" title="Zone Performance">
+          <ZonePerformanceTable />
+        </DraggableWidget>
+        <DraggableWidget key="growthOpportunities" title="Growth Opportunities">
+          <GrowthOpportunitiesPanel />
+        </DraggableWidget>
+      </DashboardGrid>
 
       {/* Getting Started Guide - show when no zones and not auto-analyzing */}
       {!isLoading && zones.length === 0 && !autoAnalyzing && suggestedZones.length === 0 && (

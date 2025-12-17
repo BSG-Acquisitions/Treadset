@@ -132,6 +132,10 @@ export default {
 				'float': {
 					'0%, 100%': { transform: 'translateY(0px)' },
 					'50%': { transform: 'translateY(-6px)' }
+				},
+				'wiggle': {
+					'0%, 100%': { transform: 'rotate(-1deg)' },
+					'50%': { transform: 'rotate(1deg)' }
 				}
 			},
 			animation: {
@@ -142,7 +146,8 @@ export default {
 				'scale-in': 'scale-in 0.2s ease-out',
 				'shimmer': 'shimmer 2s infinite',
 				'pulse-glow': 'pulse-glow 2s ease-in-out infinite alternate',
-				'float': 'float 3s ease-in-out infinite'
+				'float': 'float 3s ease-in-out infinite',
+				'wiggle': 'wiggle 0.15s ease-in-out infinite'
 			}
 		}
 	},
