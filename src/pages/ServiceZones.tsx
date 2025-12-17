@@ -14,6 +14,7 @@ import { MichiganHeatMap } from '@/components/zones/MichiganHeatMap';
 import { ZonePerformanceTable } from '@/components/zones/ZonePerformanceTable';
 import { AtRiskClientsPanel } from '@/components/zones/AtRiskClientsPanel';
 import { GrowthOpportunitiesPanel } from '@/components/zones/GrowthOpportunitiesPanel';
+import { DataQualityWidget } from '@/components/zones/DataQualityWidget';
 import { toast } from 'sonner';
 
 const DAYS_OF_WEEK = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -228,15 +229,20 @@ export default function ServiceZones() {
         <MichiganHeatMap />
       </SlideUp>
 
-      {/* Zone Performance & At-Risk Clients Row */}
-      <div className="grid lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2">
+      {/* Data Quality & Zone Performance Row */}
+      <div className="grid lg:grid-cols-4 gap-4">
+        <div className="lg:col-span-1">
           <SlideUp delay={0.2}>
+            <DataQualityWidget />
+          </SlideUp>
+        </div>
+        <div className="lg:col-span-2">
+          <SlideUp delay={0.25}>
             <ZonePerformanceTable />
           </SlideUp>
         </div>
         <div className="lg:col-span-1">
-          <SlideUp delay={0.25}>
+          <SlideUp delay={0.3}>
             <AtRiskClientsPanel />
           </SlideUp>
         </div>
