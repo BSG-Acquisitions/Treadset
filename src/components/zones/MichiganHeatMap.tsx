@@ -201,7 +201,7 @@ export function MichiganHeatMap() {
       map.current = new mapboxgl.Map({
         accessToken: mapboxToken,
         container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/dark-v11',
+        style: 'mapbox://styles/mapbox/navigation-night-v1',
         center: [-84.5, 44.0], // Center of Michigan
         zoom: 5.5,
         pitch: 0,
