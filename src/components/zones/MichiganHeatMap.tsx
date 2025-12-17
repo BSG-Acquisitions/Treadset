@@ -1,62 +1,121 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, MapPin, Target, TrendingUp } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Slider } from '@/components/ui/slider';
+import { Loader2, MapPin, Target, TrendingUp, Search, Maximize2, Filter, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 interface LocationData {
+  id: string;
   lat: number;
   lng: number;
   pickupCount: number;
   zip: string | null;
   city: string | null;
+  clientName: string;
+  address: string | null;
+  phone: string | null;
 }
 
 interface ActivityZone {
-  gridKey: string;
-  label: string;
+  city: string;
   pickupCount: number;
+  locationCount: number;
   status: 'hot' | 'warm' | 'cold' | 'opportunity';
+  topClients: string[];
 }
 
 export function MichiganHeatMap() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<any>(null);
-  const markers = useRef<any[]>([]);
-  const hasShownMapErrorToast = useRef(false);
+  const markersRef = useRef<any[]>([]);
+  const popupRef = useRef<any>(null);
 
   const { user } = useAuth();
   const organizationId = user?.currentOrganization?.id;
   const [loading, setLoading] = useState(true);
   const [locations, setLocations] = useState<LocationData[]>([]);
-  const [activityZones, setActivityZones] = useState<ActivityZone[]>([]);
   const [mapboxToken, setMapboxToken] = useState<string | null>(null);
-  const [stats, setStats] = useState({ total: 0, hotZones: 0, coldZones: 0 });
   const [mapboxgl, setMapboxgl] = useState<any>(null);
   const [mapError, setMapError] = useState<string | null>(null);
+  
+  // UI State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [minPickups, setMinPickups] = useState(0);
+  const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
 
-  // Dynamically load mapbox-gl and its CSS
+  // Calculate activity zones by city
+  const activityZones = useMemo(() => {
+    const cityMap = new Map<string, { count: number; locations: number; clients: Set<string> }>();
+    
+    locations.forEach(loc => {
+      const city = loc.city || 'Unknown';
+      const existing = cityMap.get(city) || { count: 0, locations: 0, clients: new Set() };
+      existing.count += loc.pickupCount;
+      existing.locations += 1;
+      existing.clients.add(loc.clientName);
+      cityMap.set(city, existing);
+    });
+
+    const zones: ActivityZone[] = [];
+    cityMap.forEach((data, city) => {
+      let status: ActivityZone['status'];
+      if (data.count >= 10) status = 'hot';
+      else if (data.count >= 5) status = 'warm';
+      else if (data.count > 0) status = 'cold';
+      else status = 'opportunity';
+
+      zones.push({
+        city,
+        pickupCount: data.count,
+        locationCount: data.locations,
+        status,
+        topClients: Array.from(data.clients).slice(0, 3),
+      });
+    });
+
+    return zones.sort((a, b) => b.pickupCount - a.pickupCount);
+  }, [locations]);
+
+  // Stats
+  const stats = useMemo(() => ({
+    total: locations.length,
+    hotZones: activityZones.filter(z => z.status === 'hot' || z.status === 'warm').length,
+    coldZones: activityZones.filter(z => z.status === 'cold' || z.status === 'opportunity').length,
+    totalPickups: locations.reduce((sum, l) => sum + l.pickupCount, 0),
+  }), [locations, activityZones]);
+
+  // Filtered locations based on search and min pickups
+  const filteredLocations = useMemo(() => {
+    return locations.filter(loc => {
+      const matchesSearch = !searchQuery || 
+        loc.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        loc.city?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        loc.zip?.includes(searchQuery);
+      const matchesMinPickups = loc.pickupCount >= minPickups;
+      return matchesSearch && matchesMinPickups;
+    });
+  }, [locations, searchQuery, minPickups]);
+
+  // Max pickups for slider
+  const maxPickups = useMemo(() => Math.max(...locations.map(l => l.pickupCount), 1), [locations]);
+
+  // Dynamically load mapbox-gl
   useEffect(() => {
     let cancelled = false;
-
     (async () => {
       try {
-        // Import mapbox-gl - with Vite pre-bundling, default export should work
         const mapboxModule = await import('mapbox-gl');
-        // CSS is now imported statically at the top of the file
-
         if (cancelled) return;
-
-        // mapbox-gl default export contains Map, NavigationControl, Popup, etc.
         const gl = mapboxModule.default;
-        
         if (gl && typeof gl.Map === 'function') {
           setMapboxgl(gl);
         } else {
-          console.error('Mapbox GL Map constructor not found');
           setMapError('Failed to initialize map library');
         }
       } catch (err) {
@@ -64,10 +123,7 @@ export function MichiganHeatMap() {
         if (!cancelled) setMapError('Failed to load map library');
       }
     })();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
   // Fetch Mapbox token
@@ -75,7 +131,6 @@ export function MichiganHeatMap() {
     async function fetchToken() {
       try {
         const { data, error } = await supabase.functions.invoke('get-mapbox-token');
-        console.log('Mapbox token response:', { data, error });
         if (error) {
           console.error('Error fetching Mapbox token:', error);
           return;
@@ -90,19 +145,16 @@ export function MichiganHeatMap() {
     fetchToken();
   }, []);
 
-  // Fetch location data
+  // Fetch location data with client details
   useEffect(() => {
     async function fetchLocationData() {
       if (!organizationId) return;
       setLoading(true);
 
       try {
-        console.log('Fetching location data for organization:', organizationId);
-        
-        // Get all locations with geocoded coordinates - NO lat/lng filters
         const { data: locationsData, error: locationsError } = await supabase
           .from('locations')
-          .select('id, latitude, longitude, address, client_id, name, clients(company_name, physical_city, physical_zip)')
+          .select('id, latitude, longitude, address, client_id, name, clients(company_name, physical_city, physical_zip, phone)')
           .eq('organization_id', organizationId)
           .not('latitude', 'is', null)
           .not('longitude', 'is', null);
@@ -114,9 +166,6 @@ export function MichiganHeatMap() {
           return;
         }
 
-        console.log('Fetched', locationsData?.length || 0, 'locations from database');
-
-        // Get pickup counts per location
         const { data: locationPickups, error: pickupsError } = await supabase
           .from('pickups')
           .select('location_id')
@@ -127,8 +176,6 @@ export function MichiganHeatMap() {
           console.error('Failed to fetch pickups:', pickupsError);
         }
 
-        console.log('Fetched', locationPickups?.length || 0, 'completed pickups');
-
         const locationPickupCounts = new Map<string, number>();
         for (const p of locationPickups || []) {
           if (p.location_id) {
@@ -136,79 +183,26 @@ export function MichiganHeatMap() {
           }
         }
 
-        // Combine location data
         const combinedLocations: LocationData[] = [];
-        
-        // Use grid-based clustering instead of ZIP codes (since ZIP data is missing)
-        // Grid cells are ~0.05° lat/lng squares (roughly 3-5 km)
-        const gridCells = new Map<string, { count: number; lat: number; lng: number; locations: string[] }>();
-
-        // Add location-based data
         for (const loc of locationsData || []) {
-          const count = locationPickupCounts.get(loc.id) || 1; // Count at least 1 for each location
+          const count = locationPickupCounts.get(loc.id) || 0;
           if (loc.latitude && loc.longitude) {
-            const clientData = loc.clients as { company_name?: string; physical_city?: string; physical_zip?: string } | null;
-            const cityName = clientData?.physical_city || null;
-            const zipCode = clientData?.physical_zip || null;
-            const locationName = clientData?.company_name || loc.name || 'Location';
-            
+            const clientData = loc.clients as { company_name?: string; physical_city?: string; physical_zip?: string; phone?: string } | null;
             combinedLocations.push({
+              id: loc.id,
               lat: loc.latitude,
               lng: loc.longitude,
               pickupCount: count,
-              zip: zipCode,
-              city: cityName,
+              zip: clientData?.physical_zip || null,
+              city: clientData?.physical_city || null,
+              clientName: clientData?.company_name || loc.name || 'Unknown Location',
+              address: loc.address || null,
+              phone: clientData?.phone || null,
             });
-            
-            // Grid-based clustering
-            const gridKey = `${Math.floor(loc.latitude * 20) / 20}_${Math.floor(loc.longitude * 20) / 20}`;
-            const existing = gridCells.get(gridKey) || { count: 0, lat: loc.latitude, lng: loc.longitude, locations: [] };
-            existing.count += count;
-            if (!existing.locations.includes(locationName)) {
-              existing.locations.push(locationName);
-            }
-            gridCells.set(gridKey, existing);
           }
         }
 
-        console.log('Processed', combinedLocations.length, 'locations for heatmap');
         setLocations(combinedLocations);
-
-        // Calculate activity zones from grid cells
-        const zones: ActivityZone[] = [];
-        const maxCount = Math.max(...Array.from(gridCells.values()).map(v => v.count), 1);
-
-        for (const [gridKey, data] of gridCells) {
-          let status: ActivityZone['status'];
-          if (data.count >= 5) status = 'hot';
-          else if (data.count >= 3) status = 'warm';
-          else if (data.count > 0) status = 'cold';
-          else status = 'opportunity';
-
-          // Create a readable label from the locations
-          const label = data.locations.slice(0, 2).join(', ') + (data.locations.length > 2 ? ` +${data.locations.length - 2}` : '');
-
-          zones.push({
-            gridKey,
-            label,
-            pickupCount: data.count,
-            status
-          });
-        }
-
-        // Sort by pickup count descending
-        zones.sort((a, b) => b.pickupCount - a.pickupCount);
-        setActivityZones(zones);
-
-        // Calculate stats
-        setStats({
-          total: combinedLocations.length,
-          hotZones: zones.filter(z => z.status === 'hot' || z.status === 'warm').length,
-          coldZones: zones.filter(z => z.status === 'cold' || z.status === 'opportunity').length,
-        });
-
-        console.log('Stats:', { total: combinedLocations.length, zones: zones.length });
-
       } catch (error) {
         console.error('Error fetching location data:', error);
         setMapError('Failed to load location data');
@@ -220,9 +214,61 @@ export function MichiganHeatMap() {
     fetchLocationData();
   }, [organizationId]);
 
-  // Cleanup map on unmount only
+  // Get marker color based on pickup count
+  const getMarkerColor = (pickupCount: number): string => {
+    if (pickupCount >= 10) return '#ef4444'; // Red - high activity
+    if (pickupCount >= 5) return '#f59e0b'; // Orange - moderate
+    if (pickupCount >= 1) return '#3b82f6'; // Blue - low activity
+    return '#94a3b8'; // Gray - no pickups
+  };
+
+  // Create marker HTML element
+  const createMarkerElement = (loc: LocationData, isSelected: boolean = false): HTMLDivElement => {
+    const el = document.createElement('div');
+    el.className = 'marker-container';
+    const size = isSelected ? 40 : (loc.pickupCount >= 10 ? 32 : loc.pickupCount >= 5 ? 28 : 24);
+    const color = getMarkerColor(loc.pickupCount);
+    
+    el.innerHTML = `
+      <div style="
+        width: ${size}px;
+        height: ${size}px;
+        border-radius: 50%;
+        background: ${color};
+        border: 3px solid white;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: ${size > 28 ? 12 : 10}px;
+        cursor: pointer;
+        transition: transform 0.2s;
+        ${isSelected ? 'transform: scale(1.2); box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.5);' : ''}
+      ">
+        ${loc.pickupCount}
+      </div>
+    `;
+    
+    el.addEventListener('mouseenter', () => {
+      el.querySelector('div')!.style.transform = 'scale(1.15)';
+    });
+    el.addEventListener('mouseleave', () => {
+      if (!isSelected) {
+        el.querySelector('div')!.style.transform = 'scale(1)';
+      }
+    });
+    
+    return el;
+  };
+
+  // Cleanup map on unmount
   useEffect(() => {
     return () => {
+      markersRef.current.forEach(m => m.remove());
+      markersRef.current = [];
+      if (popupRef.current) popupRef.current.remove();
       if (map.current) {
         map.current.remove();
         map.current = null;
@@ -230,40 +276,31 @@ export function MichiganHeatMap() {
     };
   }, []);
 
-  // Initialize map
+  // Initialize map and add markers
   useEffect(() => {
-    // Wait for loading to complete so mapContainer div is in DOM
     if (loading || !mapContainer.current || !mapboxToken || !mapboxgl || locations.length === 0) return;
     if (map.current) return;
 
-    console.log('Initializing Mapbox map with', locations.length, 'locations');
-    let layerTimeout: ReturnType<typeof setTimeout> | null = null;
-    let layersAdded = false;
+    try {
+      if (mapboxgl && typeof mapboxgl === 'object') {
+        (mapboxgl as any).accessToken = mapboxToken;
+      }
+    } catch { /* ignore */ }
+
+    // Calculate initial bounds
+    let initialCenter: [number, number] = [-84.5, 44.0];
+    let initialZoom = 6;
+    
+    if (locations.length > 0) {
+      const lats = locations.map(l => l.lat);
+      const lngs = locations.map(l => l.lng);
+      const avgLat = lats.reduce((a, b) => a + b, 0) / lats.length;
+      const avgLng = lngs.reduce((a, b) => a + b, 0) / lngs.length;
+      initialCenter = [avgLng, avgLat];
+      initialZoom = 8;
+    }
 
     try {
-      // Some Mapbox builds expect a global token, others support the per-map option.
-      try {
-        if (mapboxgl && typeof mapboxgl === 'object') {
-          (mapboxgl as any).accessToken = mapboxToken;
-        }
-      } catch {
-        // ignore (module namespace objects can be read-only)
-      }
-
-      // Calculate bounds from data to center the map properly
-      let initialCenter: [number, number] = [-84.5, 44.0];
-      let initialZoom = 5.5;
-      
-      if (locations.length > 0) {
-        const lats = locations.map(l => l.lat);
-        const lngs = locations.map(l => l.lng);
-        const avgLat = lats.reduce((a, b) => a + b, 0) / lats.length;
-        const avgLng = lngs.reduce((a, b) => a + b, 0) / lngs.length;
-        initialCenter = [avgLng, avgLat];
-        initialZoom = 9; // Closer zoom for concentrated data
-        console.log('Map center calculated:', initialCenter, 'zoom:', initialZoom);
-      }
-
       map.current = new mapboxgl.Map({
         accessToken: mapboxToken,
         container: mapContainer.current,
@@ -274,237 +311,119 @@ export function MichiganHeatMap() {
       });
 
       map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
-      console.log('Map created successfully');
+
+      // Add markers after map loads
+      map.current.on('load', () => {
+        updateMarkers();
+      });
+
     } catch (err) {
       console.error('Failed to initialize Mapbox map:', err);
       setMapError('Something went wrong loading the map');
-      return;
     }
+  }, [mapboxToken, locations, mapboxgl, loading]);
 
-    // Function to add heatmap layers
-    const addHeatmapLayers = () => {
-      if (!map.current || layersAdded) return;
+  // Update markers when filtered locations change
+  const updateMarkers = () => {
+    if (!map.current || !mapboxgl) return;
+
+    // Clear existing markers
+    markersRef.current.forEach(m => m.remove());
+    markersRef.current = [];
+
+    // Add new markers for filtered locations
+    filteredLocations.forEach(loc => {
+      const el = createMarkerElement(loc, loc.id === selectedLocation);
       
-      // Check if source already exists
-      if (map.current.getSource('pickups')) {
-        console.log('Heatmap source already exists, skipping');
-        layersAdded = true;
-        return;
-      }
+      const marker = new mapboxgl.Marker({ element: el })
+        .setLngLat([loc.lng, loc.lat])
+        .addTo(map.current!);
 
-      console.log('Adding heatmap source with', locations.length, 'features');
-      layersAdded = true;
-
-      // Prepare GeoJSON data for heatmap
-      const geojsonData = {
-        type: 'FeatureCollection' as const,
-        features: locations.map(loc => ({
-          type: 'Feature' as const,
-          properties: {
-            pickupCount: loc.pickupCount,
-            zip: loc.zip,
-            city: loc.city,
-          },
-          geometry: {
-            type: 'Point' as const,
-            coordinates: [loc.lng, loc.lat],
-          },
-        })),
-      };
-
-      // Add source
-      map.current.addSource('pickups', {
-        type: 'geojson',
-        data: geojsonData,
-      });
-      console.log('Source added, adding heatmap layer');
-
-      // Add heatmap layer
-      map.current.addLayer({
-        id: 'pickups-heat',
-        type: 'heatmap',
-        source: 'pickups',
-        maxzoom: 15,
-        paint: {
-          // Weight by pickup count - high weight even for single pickups
-          'heatmap-weight': [
-            'interpolate',
-            ['linear'],
-            ['get', 'pickupCount'],
-            0, 0.5,
-            1, 0.7,
-            5, 0.9,
-            10, 1
-          ],
-          // Intensity - much higher for visibility
-          'heatmap-intensity': [
-            'interpolate',
-            ['linear'],
-            ['zoom'],
-            0, 3,
-            8, 4,
-            12, 5,
-            15, 6
-          ],
-          // Color ramp - START VISIBLE instead of transparent
-          'heatmap-color': [
-            'interpolate',
-            ['linear'],
-            ['heatmap-density'],
-            0, 'rgba(103,169,207,0.3)',
-            0.1, 'rgb(103,169,207)',
-            0.3, 'rgb(209,229,240)',
-            0.5, 'rgb(253,219,199)',
-            0.7, 'rgb(239,138,98)',
-            1, 'rgb(178,24,43)'
-          ],
-          // Radius based on zoom - very large for few points
-          'heatmap-radius': [
-            'interpolate',
-            ['linear'],
-            ['zoom'],
-            0, 50,
-            6, 60,
-            8, 80,
-            10, 100,
-            15, 120
-          ],
-          // Constant opacity - no fade out
-          'heatmap-opacity': 0.85,
-        },
-      });
-      console.log('Heatmap layer added');
-
-      // Add circle layer - visible at ALL zoom levels
-      map.current.addLayer({
-        id: 'pickups-points',
-        type: 'circle',
-        source: 'pickups',
-        minzoom: 0, // Show at ALL zoom levels
-        paint: {
-          'circle-radius': [
-            'interpolate',
-            ['linear'],
-            ['zoom'],
-            0, 6,
-            8, 8,
-            12, 12,
-            15, 16
-          ],
-          'circle-color': [
-            'interpolate',
-            ['linear'],
-            ['get', 'pickupCount'],
-            0, '#3b82f6',
-            5, '#f59e0b',
-            10, '#ef4444'
-          ],
-          'circle-stroke-color': '#ffffff',
-          'circle-stroke-width': 2,
-          'circle-opacity': 0.9,
-        },
-      });
-      console.log('Circle layer added');
-
-      // Add popup on click
-      map.current.on('click', 'pickups-points', (e: any) => {
-        if (!e.features || e.features.length === 0) return;
-        const props = e.features[0].properties;
-        const coords = e.features[0].geometry.coordinates.slice();
-
-        new mapboxgl.Popup()
-          .setLngLat(coords)
+      // Click handler for popup
+      el.addEventListener('click', () => {
+        setSelectedLocation(loc.id);
+        
+        // Close existing popup
+        if (popupRef.current) popupRef.current.remove();
+        
+        // Create popup with client details
+        popupRef.current = new mapboxgl.Popup({ offset: 25, closeButton: true })
+          .setLngLat([loc.lng, loc.lat])
           .setHTML(`
-            <div style="padding: 8px;">
-              <strong>${props?.city || 'Unknown'}</strong><br/>
-              ZIP: ${props?.zip || 'N/A'}<br/>
-              Pickups: ${props?.pickupCount || 0}
+            <div style="padding: 12px; min-width: 200px;">
+              <h3 style="margin: 0 0 8px; font-weight: 600; font-size: 14px; color: #1a1a1a;">
+                ${loc.clientName}
+              </h3>
+              ${loc.address ? `<p style="margin: 0 0 4px; font-size: 12px; color: #666;">${loc.address}</p>` : ''}
+              ${loc.city || loc.zip ? `<p style="margin: 0 0 8px; font-size: 12px; color: #666;">${[loc.city, loc.zip].filter(Boolean).join(', ')}</p>` : ''}
+              ${loc.phone ? `<p style="margin: 0 0 8px; font-size: 12px; color: #3b82f6;">${loc.phone}</p>` : ''}
+              <div style="display: flex; align-items: center; gap: 8px; padding-top: 8px; border-top: 1px solid #eee;">
+                <span style="
+                  background: ${getMarkerColor(loc.pickupCount)};
+                  color: white;
+                  padding: 2px 8px;
+                  border-radius: 12px;
+                  font-size: 11px;
+                  font-weight: 600;
+                ">${loc.pickupCount} pickup${loc.pickupCount !== 1 ? 's' : ''}</span>
+                <span style="font-size: 11px; color: #888;">
+                  ${loc.pickupCount >= 10 ? 'High Activity' : loc.pickupCount >= 5 ? 'Moderate' : loc.pickupCount >= 1 ? 'Low Activity' : 'No Pickups'}
+                </span>
+              </div>
             </div>
           `)
           .addTo(map.current!);
+
+        popupRef.current.on('close', () => {
+          setSelectedLocation(null);
+        });
       });
 
-      map.current.on('mouseenter', 'pickups-points', () => {
-        if (map.current) map.current.getCanvas().style.cursor = 'pointer';
-      });
+      markersRef.current.push(marker);
+    });
+  };
 
-      map.current.on('mouseleave', 'pickups-points', () => {
-        if (map.current) map.current.getCanvas().style.cursor = '';
-      });
+  // Re-render markers when filters change
+  useEffect(() => {
+    if (map.current && mapboxgl && !loading) {
+      updateMarkers();
+    }
+  }, [filteredLocations, selectedLocation]);
 
-      // Force resize and repaint
-      setTimeout(() => {
-        if (map.current) {
-          map.current.resize();
-          map.current.triggerRepaint();
-          console.log('Map resize and repaint triggered');
-        }
-      }, 100);
-    };
+  // Fit all locations in view
+  const fitAllLocations = () => {
+    if (!map.current || !mapboxgl || filteredLocations.length === 0) return;
 
-    // Add DEBUG MARKERS - visible immediately without waiting for layers
-    const addDebugMarkers = () => {
-      console.log('Adding', locations.length, 'debug markers');
-      locations.forEach((loc, i) => {
-        const marker = new mapboxgl.Marker({ color: '#ef4444' })
-          .setLngLat([loc.lng, loc.lat])
-          .setPopup(new mapboxgl.Popup().setHTML(`
-            <div style="padding: 4px;">
-              <strong>Location ${i + 1}</strong><br/>
-              ${loc.city || 'N/A'}<br/>
-              Pickups: ${loc.pickupCount}
-            </div>
-          `))
-          .addTo(map.current!);
-      });
-      console.log('Debug markers added');
-    };
+    const bounds = new mapboxgl.LngLatBounds();
+    filteredLocations.forEach(loc => bounds.extend([loc.lng, loc.lat]));
+    
+    map.current.fitBounds(bounds, {
+      padding: 50,
+      maxZoom: 12,
+      duration: 1000,
+    });
+  };
 
-    // Use multiple strategies to ensure layers are added
-
-    // Strategy 1: 'idle' event - fires when map is fully rendered
-    map.current.once('idle', () => {
-      console.log('Map idle event fired');
-      if (!layersAdded) {
-        addHeatmapLayers();
-      }
+  // Fly to specific location
+  const flyToLocation = (loc: LocationData) => {
+    if (!map.current) return;
+    
+    setSelectedLocation(loc.id);
+    map.current.flyTo({
+      center: [loc.lng, loc.lat],
+      zoom: 14,
+      duration: 1500,
     });
 
-    // Strategy 2: 'load' event - traditional approach
-    map.current.on('load', () => {
-      console.log('Map load event fired');
-      if (!layersAdded) {
-        addHeatmapLayers();
+    // Trigger marker click after flying
+    setTimeout(() => {
+      const markerIndex = filteredLocations.findIndex(l => l.id === loc.id);
+      if (markerIndex >= 0 && markersRef.current[markerIndex]) {
+        const el = markersRef.current[markerIndex].getElement();
+        el?.click();
       }
-      // Add debug markers after load
-      addDebugMarkers();
-    });
-
-    // Strategy 3: 'style.load' event - fires when style is ready
-    map.current.on('style.load', () => {
-      console.log('Style.load event fired');
-      if (!layersAdded) {
-        addHeatmapLayers();
-      }
-    });
-
-    // Strategy 4: Timeout fallback - force add after 3 seconds
-    layerTimeout = setTimeout(() => {
-      console.log('Timeout fallback triggered');
-      if (!layersAdded && map.current) {
-        console.log('Forcing layer addition via timeout');
-        addHeatmapLayers();
-        addDebugMarkers();
-      }
-    }, 3000);
-
-    // Cleanup timeout on unmount
-    return () => {
-      if (layerTimeout) {
-        clearTimeout(layerTimeout);
-      }
-    };
-  }, [mapboxToken, locations, mapboxgl, loading]);
+    }, 1600);
+  };
 
   if (loading) {
     return (
@@ -540,116 +459,226 @@ export function MichiganHeatMap() {
   }
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Target className="h-5 w-5" />
-            Michigan Service Coverage Heat Map
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+      {/* Sidebar - Location List */}
+      <Card className="lg:col-span-1 h-fit max-h-[calc(100vh-200px)] flex flex-col">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Building2 className="h-4 w-4" />
+            Locations ({filteredLocations.length})
           </CardTitle>
-          <CardDescription>
-            Visualize pickup frequency across Michigan. Red = high activity, Blue = low activity.
-          </CardDescription>
         </CardHeader>
-        <CardContent>
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-4 mb-4">
-            <div className="text-center p-3 bg-muted/30 rounded-lg">
-              <p className="text-2xl font-bold">{stats.total}</p>
-              <p className="text-xs text-muted-foreground">Total Locations</p>
-            </div>
-            <div className="text-center p-3 bg-red-500/10 rounded-lg">
-              <p className="text-2xl font-bold text-red-500">{stats.hotZones}</p>
-              <p className="text-xs text-muted-foreground">High Activity Areas</p>
-            </div>
-            <div className="text-center p-3 bg-emerald-500/10 rounded-lg">
-              <p className="text-2xl font-bold text-emerald-500">{stats.coldZones}</p>
-              <p className="text-xs text-muted-foreground">Low Activity Areas</p>
-            </div>
+        <CardContent className="flex-1 overflow-hidden flex flex-col gap-3">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search client, city, ZIP..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
           </div>
 
-          {/* Map */}
-          <div 
-            ref={mapContainer} 
-            className="w-full h-[500px] rounded-lg overflow-hidden border border-border"
-            style={{ minHeight: '500px' }}
-          />
+          {/* Filter by pickups */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground flex items-center gap-1">
+                <Filter className="h-3 w-3" /> Min Pickups
+              </span>
+              <span className="font-medium">{minPickups}+</span>
+            </div>
+            <Slider
+              value={[minPickups]}
+              onValueChange={([val]) => setMinPickups(val)}
+              max={maxPickups}
+              step={1}
+              className="w-full"
+            />
+          </div>
 
-          {/* Legend */}
-          <div className="flex items-center justify-center gap-6 mt-4 text-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-gradient-to-r from-blue-500 to-blue-300" />
-              <span className="text-muted-foreground">Low Activity</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-gradient-to-r from-amber-500 to-amber-300" />
-              <span className="text-muted-foreground">Moderate</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-gradient-to-r from-red-500 to-red-300" />
-              <span className="text-muted-foreground">High Activity</span>
-            </div>
+          {/* Location List */}
+          <div className="flex-1 overflow-y-auto space-y-1 min-h-0">
+            {filteredLocations.slice(0, 50).map(loc => (
+              <button
+                key={loc.id}
+                onClick={() => flyToLocation(loc)}
+                className={`w-full text-left p-2 rounded-md transition-colors ${
+                  selectedLocation === loc.id 
+                    ? 'bg-primary/10 border border-primary/30' 
+                    : 'hover:bg-muted/50'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-sm truncate">{loc.clientName}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {[loc.city, loc.zip].filter(Boolean).join(', ') || 'No address'}
+                    </p>
+                  </div>
+                  <Badge 
+                    variant="secondary" 
+                    className="shrink-0 text-xs"
+                    style={{ backgroundColor: `${getMarkerColor(loc.pickupCount)}20`, color: getMarkerColor(loc.pickupCount) }}
+                  >
+                    {loc.pickupCount}
+                  </Badge>
+                </div>
+              </button>
+            ))}
+            {filteredLocations.length > 50 && (
+              <p className="text-xs text-center text-muted-foreground py-2">
+                +{filteredLocations.length - 50} more locations
+              </p>
+            )}
+            {filteredLocations.length === 0 && (
+              <p className="text-sm text-center text-muted-foreground py-8">
+                No locations match your filters
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Opportunity Zones Panel */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            Activity Zone Analysis
-          </CardTitle>
-          <CardDescription>
-            Geographic clustering of pickup activity by area.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid md:grid-cols-2 gap-4">
-            {/* Hot Zones */}
-            <div>
-              <h4 className="font-medium mb-2 flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-red-500" />
-                Strong Markets
-              </h4>
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {activityZones.filter(z => z.status === 'hot' || z.status === 'warm').slice(0, 5).map(zone => (
-                  <div key={zone.gridKey} className="flex items-center justify-between p-2 bg-muted/30 rounded">
-                    <div>
-                      <span className="font-medium text-sm">{zone.label}</span>
-                    </div>
-                    <Badge variant="secondary">{zone.pickupCount} pickups</Badge>
-                  </div>
-                ))}
-                {activityZones.filter(z => z.status === 'hot' || z.status === 'warm').length === 0 && (
-                  <p className="text-sm text-muted-foreground">No high activity areas yet</p>
-                )}
+      {/* Main Map Area */}
+      <div className="lg:col-span-3 space-y-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="h-5 w-5" />
+                  Michigan Service Coverage
+                </CardTitle>
+                <CardDescription>
+                  Click markers to view client details. Marker size and color indicate activity level.
+                </CardDescription>
+              </div>
+              <Button variant="outline" size="sm" onClick={fitAllLocations}>
+                <Maximize2 className="h-4 w-4 mr-1" />
+                Fit All
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {/* Stats */}
+            <div className="grid grid-cols-4 gap-3 mb-4">
+              <div className="text-center p-3 bg-muted/30 rounded-lg">
+                <p className="text-xl font-bold">{stats.total}</p>
+                <p className="text-xs text-muted-foreground">Locations</p>
+              </div>
+              <div className="text-center p-3 bg-muted/30 rounded-lg">
+                <p className="text-xl font-bold">{stats.totalPickups}</p>
+                <p className="text-xs text-muted-foreground">Total Pickups</p>
+              </div>
+              <div className="text-center p-3 bg-red-500/10 rounded-lg">
+                <p className="text-xl font-bold text-red-500">{stats.hotZones}</p>
+                <p className="text-xs text-muted-foreground">High Activity Cities</p>
+              </div>
+              <div className="text-center p-3 bg-blue-500/10 rounded-lg">
+                <p className="text-xl font-bold text-blue-500">{stats.coldZones}</p>
+                <p className="text-xs text-muted-foreground">Growth Opportunity</p>
               </div>
             </div>
 
-            {/* Opportunity Zones */}
-            <div>
-              <h4 className="font-medium mb-2 flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-emerald-500" />
-                Growth Opportunities
-              </h4>
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {activityZones.filter(z => z.status === 'cold' || z.status === 'opportunity').slice(0, 5).map(zone => (
-                  <div key={zone.gridKey} className="flex items-center justify-between p-2 bg-muted/30 rounded">
-                    <div>
-                      <span className="font-medium text-sm">{zone.label}</span>
-                    </div>
-                    <Badge variant="outline">{zone.pickupCount} pickups</Badge>
-                  </div>
-                ))}
-                {activityZones.filter(z => z.status === 'cold' || z.status === 'opportunity').length === 0 && (
-                  <p className="text-sm text-muted-foreground">All areas are well covered!</p>
-                )}
+            {/* Map */}
+            <div 
+              ref={mapContainer} 
+              className="w-full h-[450px] rounded-lg overflow-hidden border border-border"
+              style={{ minHeight: '450px' }}
+            />
+
+            {/* Legend */}
+            <div className="flex items-center justify-center gap-6 mt-4 text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded-full bg-slate-400 border-2 border-white shadow" />
+                <span className="text-muted-foreground">No Pickups</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded-full bg-blue-500 border-2 border-white shadow" />
+                <span className="text-muted-foreground">1-4 Pickups</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full bg-amber-500 border-2 border-white shadow" />
+                <span className="text-muted-foreground">5-9 Pickups</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-full bg-red-500 border-2 border-white shadow" />
+                <span className="text-muted-foreground">10+ Pickups</span>
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        {/* Activity Zones Panel */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Activity by City
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-2 gap-4">
+              {/* Strong Markets */}
+              <div>
+                <h4 className="font-medium mb-2 flex items-center gap-2 text-sm">
+                  <div className="w-3 h-3 rounded-full bg-red-500" />
+                  Strong Markets
+                </h4>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {activityZones.filter(z => z.status === 'hot' || z.status === 'warm').slice(0, 6).map(zone => (
+                    <div key={zone.city} className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                      <div className="min-w-0">
+                        <span className="font-medium text-sm block">{zone.city}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {zone.locationCount} client{zone.locationCount !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                      <Badge 
+                        variant="secondary"
+                        className="shrink-0"
+                        style={{ backgroundColor: zone.status === 'hot' ? '#fef2f2' : '#fffbeb', color: zone.status === 'hot' ? '#dc2626' : '#d97706' }}
+                      >
+                        {zone.pickupCount} pickups
+                      </Badge>
+                    </div>
+                  ))}
+                  {activityZones.filter(z => z.status === 'hot' || z.status === 'warm').length === 0 && (
+                    <p className="text-sm text-muted-foreground">No high activity areas yet</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Growth Opportunities */}
+              <div>
+                <h4 className="font-medium mb-2 flex items-center gap-2 text-sm">
+                  <div className="w-3 h-3 rounded-full bg-blue-500" />
+                  Growth Opportunities
+                </h4>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {activityZones.filter(z => z.status === 'cold' || z.status === 'opportunity').slice(0, 6).map(zone => (
+                    <div key={zone.city} className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                      <div className="min-w-0">
+                        <span className="font-medium text-sm block">{zone.city}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {zone.locationCount} client{zone.locationCount !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                      <Badge variant="outline" className="shrink-0">
+                        {zone.pickupCount} pickup{zone.pickupCount !== 1 ? 's' : ''}
+                      </Badge>
+                    </div>
+                  ))}
+                  {activityZones.filter(z => z.status === 'cold' || z.status === 'opportunity').length === 0 && (
+                    <p className="text-sm text-muted-foreground">All areas are well covered!</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
