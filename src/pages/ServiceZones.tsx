@@ -217,35 +217,32 @@ export default function ServiceZones() {
         </SlideUp>
       )}
 
-      {/* Main Content Grid - Map with sidebar widgets */}
+      {/* Map - Full Width */}
+      <SlideUp delay={0.1}>
+        <MichiganHeatMap />
+      </SlideUp>
+
+      {/* Widget Row - 3 Column Layout */}
       <div className="grid lg:grid-cols-12 gap-4">
-        {/* Left Sidebar - Data Quality & At Risk */}
-        <div className="lg:col-span-2 space-y-4">
+        <div className="lg:col-span-3">
           <SlideUp delay={0.15}>
             <DataQualityWidget />
           </SlideUp>
+        </div>
+        <div className="lg:col-span-3">
           <SlideUp delay={0.2}>
             <AtRiskClientsPanel />
           </SlideUp>
         </div>
-        
-        {/* Map - Takes most of the width */}
-        <div className="lg:col-span-7">
-          <SlideUp delay={0.1}>
-            <MichiganHeatMap />
-          </SlideUp>
-        </div>
-        
-        {/* Right Sidebar - Zone Performance */}
-        <div className="lg:col-span-3">
-          <SlideUp delay={0.2}>
+        <div className="lg:col-span-6">
+          <SlideUp delay={0.25}>
             <ZonePerformanceTable />
           </SlideUp>
         </div>
       </div>
 
-      {/* Growth Opportunities - Full width below */}
-      <SlideUp delay={0.25}>
+      {/* Growth Opportunities - Full width */}
+      <SlideUp delay={0.3}>
         <GrowthOpportunitiesPanel />
       </SlideUp>
 
