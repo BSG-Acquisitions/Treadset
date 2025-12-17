@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import 'mapbox-gl/dist/mapbox-gl.css';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, MapPin, Target, TrendingUp } from 'lucide-react';
@@ -32,12 +31,20 @@ export function MichiganHeatMap() {
   const [mapboxToken, setMapboxToken] = useState<string | null>(null);
   const [stats, setStats] = useState({ total: 0, hotZones: 0, coldZones: 0 });
   const [mapboxgl, setMapboxgl] = useState<any>(null);
+  const [mapError, setMapError] = useState<string | null>(null);
 
-  // Dynamically load mapbox-gl
+  // Dynamically load mapbox-gl and its CSS
   useEffect(() => {
-    import('mapbox-gl').then((module) => {
-      setMapboxgl(module.default || module);
-    });
+    import('mapbox-gl')
+      .then((module) => {
+        // Dynamically import CSS
+        import('mapbox-gl/dist/mapbox-gl.css');
+        setMapboxgl(module.default || module);
+      })
+      .catch((err) => {
+        console.error('Failed to load mapbox-gl:', err);
+        setMapError('Failed to load map library');
+      });
   }, []);
 
   // Fetch Mapbox token
@@ -322,6 +329,17 @@ export function MichiganHeatMap() {
         <CardContent className="py-12 text-center">
           <Loader2 className="h-8 w-8 mx-auto animate-spin text-muted-foreground" />
           <p className="mt-2 text-muted-foreground">Loading coverage data...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (mapError) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center">
+          <MapPin className="h-8 w-8 mx-auto text-destructive" />
+          <p className="mt-2 text-muted-foreground">{mapError}</p>
         </CardContent>
       </Card>
     );
