@@ -19,6 +19,8 @@ interface LocationData {
   lat: number;
   lng: number;
   pickupCount: number;
+  dropoffCount: number;
+  totalActivity: number;
   revenue: number;
   zip: string | null;
   city: string | null;
@@ -73,7 +75,7 @@ export function MichiganHeatMap() {
     locations.forEach(loc => {
       const city = loc.city || 'Unknown';
       const existing = cityMap.get(city) || { count: 0, locations: 0, revenue: 0, atRisk: 0, clients: new Set() };
-      existing.count += loc.pickupCount;
+      existing.count += loc.totalActivity; // Use total activity (pickups + dropoffs)
       existing.locations += 1;
       existing.revenue += loc.revenue;
       if (loc.isAtRisk) existing.atRisk += 1;
@@ -108,26 +110,29 @@ export function MichiganHeatMap() {
     total: locations.length,
     hotZones: activityZones.filter(z => z.status === 'hot' || z.status === 'warm').length,
     coldZones: activityZones.filter(z => z.status === 'cold' || z.status === 'opportunity').length,
+    totalActivity: locations.reduce((sum, l) => sum + l.totalActivity, 0),
     totalPickups: locations.reduce((sum, l) => sum + l.pickupCount, 0),
+    totalDropoffs: locations.reduce((sum, l) => sum + l.dropoffCount, 0),
     totalRevenue: locations.reduce((sum, l) => sum + l.revenue, 0),
     atRiskCount: locations.filter(l => l.isAtRisk).length,
   }), [locations, activityZones]);
 
-  // Filtered locations based on search, min pickups, and at-risk filter
+  // Filtered locations based on search, min activity, and at-risk filter
   const filteredLocations = useMemo(() => {
     return locations.filter(loc => {
       const matchesSearch = !searchQuery || 
         loc.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         loc.city?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         loc.zip?.includes(searchQuery);
-      const matchesMinPickups = loc.pickupCount >= minPickups;
+      const matchesMinActivity = loc.totalActivity >= minPickups;
       const matchesAtRisk = !showAtRiskOnly || loc.isAtRisk;
-      return matchesSearch && matchesMinPickups && matchesAtRisk;
+      return matchesSearch && matchesMinActivity && matchesAtRisk;
     });
   }, [locations, searchQuery, minPickups, showAtRiskOnly]);
 
+
   // Max pickups for slider
-  const maxPickups = useMemo(() => Math.max(...locations.map(l => l.pickupCount), 1), [locations]);
+  const maxPickups = useMemo(() => Math.max(...locations.map(l => l.totalActivity), 1), [locations]);
 
   // Dynamically load mapbox-gl
   useEffect(() => {
@@ -197,6 +202,12 @@ export function MichiganHeatMap() {
         .eq('organization_id', organizationId)
         .eq('status', 'completed');
 
+      // Fetch dropoffs with revenue data (includes drop-off activity)
+      const { data: dropoffsData } = await supabase
+        .from('dropoffs')
+        .select('client_id, computed_revenue')
+        .eq('organization_id', organizationId);
+
       // Fetch at-risk clients
       const { data: riskData } = await supabase
         .from('client_risk_scores')
@@ -204,13 +215,24 @@ export function MichiganHeatMap() {
         .eq('organization_id', organizationId);
 
       // Build pickup counts and revenue by location
-      const locationStats = new Map<string, { count: number; revenue: number }>();
+      const locationStats = new Map<string, { pickups: number; revenue: number }>();
       for (const p of pickupsData || []) {
         if (p.location_id) {
-          const existing = locationStats.get(p.location_id) || { count: 0, revenue: 0 };
-          existing.count += 1;
+          const existing = locationStats.get(p.location_id) || { pickups: 0, revenue: 0 };
+          existing.pickups += 1;
           existing.revenue += p.computed_revenue || 0;
           locationStats.set(p.location_id, existing);
+        }
+      }
+
+      // Build dropoff counts and revenue by client
+      const clientDropoffs = new Map<string, { count: number; revenue: number }>();
+      for (const d of dropoffsData || []) {
+        if (d.client_id) {
+          const existing = clientDropoffs.get(d.client_id) || { count: 0, revenue: 0 };
+          existing.count += 1;
+          existing.revenue += d.computed_revenue || 0;
+          clientDropoffs.set(d.client_id, existing);
         }
       }
 
@@ -223,10 +245,11 @@ export function MichiganHeatMap() {
       const combinedLocations: LocationData[] = [];
       for (const loc of locationsData || []) {
         if (loc.latitude && loc.longitude) {
-          const stats = locationStats.get(loc.id) || { count: 0, revenue: 0 };
+          const stats = locationStats.get(loc.id) || { pickups: 0, revenue: 0 };
           const clientData = loc.clients as { id?: string; company_name?: string; physical_city?: string; physical_zip?: string; phone?: string; last_pickup_at?: string } | null;
           const clientId = clientData?.id || loc.client_id;
           const risk = clientId ? clientRisk.get(clientId) : null;
+          const dropoffs = clientId ? clientDropoffs.get(clientId) || { count: 0, revenue: 0 } : { count: 0, revenue: 0 };
           
           const lastPickup = clientData?.last_pickup_at ? new Date(clientData.last_pickup_at) : null;
           const daysSince = lastPickup 
@@ -238,8 +261,10 @@ export function MichiganHeatMap() {
             clientId: clientId || '',
             lat: loc.latitude,
             lng: loc.longitude,
-            pickupCount: stats.count,
-            revenue: stats.revenue,
+            pickupCount: stats.pickups,
+            dropoffCount: dropoffs.count,
+            totalActivity: stats.pickups + dropoffs.count,
+            revenue: stats.revenue + dropoffs.revenue,
             zip: clientData?.physical_zip || null,
             city: clientData?.physical_city || null,
             clientName: clientData?.company_name || loc.name || 'Unknown Location',
@@ -288,11 +313,11 @@ export function MichiganHeatMap() {
       if (loc.revenue > 0) return '#f59e0b'; // Amber - low
       return '#94a3b8'; // Gray - no revenue
     }
-    // Activity view (default)
-    if (loc.pickupCount >= 10) return '#ef4444'; // Red - high activity
-    if (loc.pickupCount >= 5) return '#f59e0b'; // Orange - moderate
-    if (loc.pickupCount >= 1) return '#3b82f6'; // Blue - low activity
-    return '#94a3b8'; // Gray - no pickups
+    // Activity view (default) - uses total activity
+    if (loc.totalActivity >= 10) return '#ef4444'; // Red - high activity
+    if (loc.totalActivity >= 5) return '#f59e0b'; // Orange - moderate
+    if (loc.totalActivity >= 1) return '#3b82f6'; // Blue - low activity
+    return '#94a3b8'; // Gray - no activity
   };
 
   // Hover tooltip ref
@@ -302,7 +327,7 @@ export function MichiganHeatMap() {
   const createMarkerElement = (loc: LocationData, isSelected: boolean = false): HTMLDivElement => {
     const el = document.createElement('div');
     el.className = 'marker-container';
-    const baseSize = loc.pickupCount >= 10 ? 32 : loc.pickupCount >= 5 ? 28 : 24;
+    const baseSize = loc.totalActivity >= 10 ? 32 : loc.totalActivity >= 5 ? 28 : 24;
     const size = isSelected ? 40 : baseSize;
     const color = getMarkerColor(loc);
     
@@ -328,7 +353,7 @@ export function MichiganHeatMap() {
         position: relative;
         ${isSelected ? 'transform: scale(1.2);' : ''}
       ">
-        ${viewMode === 'revenue' ? '$' : loc.pickupCount}
+        ${viewMode === 'revenue' ? '$' : loc.totalActivity}
       </div>
       ${loc.isAtRisk ? `<div style="position: absolute; top: -4px; right: -4px; width: 12px; height: 12px; background: ${loc.riskLevel === 'high' ? '#dc2626' : '#f59e0b'}; border-radius: 50%; border: 2px solid white;"></div>` : ''}
     `;
@@ -366,7 +391,7 @@ export function MichiganHeatMap() {
         <div style="padding: 8px 12px; background: white; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
           <p style="margin: 0; font-weight: 600; font-size: 13px; color: #1a1a1a;">${loc.clientName}</p>
           <p style="margin: 2px 0 0; font-size: 11px; color: #666;">
-            ${loc.city || 'Unknown'} • ${loc.pickupCount} pickup${loc.pickupCount !== 1 ? 's' : ''}
+            ${loc.city || 'Unknown'} • ${loc.pickupCount} pickup${loc.pickupCount !== 1 ? 's' : ''}${loc.dropoffCount > 0 ? `, ${loc.dropoffCount} drop-off${loc.dropoffCount !== 1 ? 's' : ''}` : ''}
           </p>
         </div>
       `)

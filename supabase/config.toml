@@ -188,3 +188,6 @@ verify_jwt = false
 
 [functions.backfill-client-geography]
 verify_jwt = false
+
+[functions.auto-fix-geocoding]
+verify_jwt = false
