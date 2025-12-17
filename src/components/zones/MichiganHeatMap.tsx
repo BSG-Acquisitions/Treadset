@@ -43,9 +43,18 @@ export function MichiganHeatMap() {
   // Fetch Mapbox token
   useEffect(() => {
     async function fetchToken() {
-      const { data } = await supabase.functions.invoke('get-mapbox-token');
-      if (data?.token) {
-        setMapboxToken(data.token);
+      try {
+        const { data, error } = await supabase.functions.invoke('get-mapbox-token');
+        console.log('Mapbox token response:', { data, error });
+        if (error) {
+          console.error('Error fetching Mapbox token:', error);
+          return;
+        }
+        if (data?.token) {
+          setMapboxToken(data.token);
+        }
+      } catch (err) {
+        console.error('Exception fetching Mapbox token:', err);
       }
     }
     fetchToken();
