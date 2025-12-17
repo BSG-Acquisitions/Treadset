@@ -185,3 +185,6 @@ verify_jwt = false
 
 [functions.get-mapbox-token]
 verify_jwt = false
+
+[functions.backfill-client-geography]
+verify_jwt = false
