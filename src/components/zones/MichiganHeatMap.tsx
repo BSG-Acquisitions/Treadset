@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, MapPin, Target, TrendingUp } from 'lucide-react';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -24,6 +25,9 @@ interface ActivityZone {
 export function MichiganHeatMap() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<any>(null);
+  const markers = useRef<any[]>([]);
+  const hasShownMapErrorToast = useRef(false);
+
   const { user } = useAuth();
   const organizationId = user?.currentOrganization?.id;
   const [loading, setLoading] = useState(true);
