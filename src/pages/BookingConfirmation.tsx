@@ -232,7 +232,7 @@ export default function BookingConfirmation() {
             <CardContent className="pt-6">
               <div className="text-center text-sm text-muted-foreground">
                 <p>Questions about your pickup?</p>
-                <p>Contact us at <span className="font-medium">support@treadset.com</span> or <span className="font-medium">(555) 123-4567</span></p>
+                <p>Contact us at <a href="mailto:bsgtires@gmail.com" className="font-medium text-primary hover:underline">bsgtires@gmail.com</a> or <a href="tel:+13137310817" className="font-medium text-primary hover:underline">313-731-0817</a></p>
               </div>
             </CardContent>
           </Card>

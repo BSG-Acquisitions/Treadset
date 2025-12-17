@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileText, Download, Calendar, Package, LogOut, Eye, ArrowLeft } from "lucide-react";
+import { FileText, Download, Calendar, Package, LogOut, Eye, ArrowLeft, Printer, CalendarPlus } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 export default function ClientPortal() {
   const { user, signOut, hasRole } = useAuth();
@@ -94,7 +94,7 @@ export default function ClientPortal() {
     enabled: !!clientInfo?.id,
   });
 
-  const handleDownloadManifest = async (pdfPath: string | null, manifestNumber: string) => {
+  const handleViewManifest = async (pdfPath: string | null, manifestNumber: string, action: 'view' | 'download' | 'print') => {
     if (!pdfPath) {
       toast.error('No PDF available for this manifest');
       return;
@@ -106,10 +106,21 @@ export default function ClientPortal() {
         .createSignedUrl(pdfPath, 3600);
 
       if (error) throw error;
-      window.open(data.signedUrl, '_blank');
+      
+      if (action === 'print') {
+        // Open in new window and trigger print
+        const printWindow = window.open(data.signedUrl, '_blank');
+        if (printWindow) {
+          printWindow.onload = () => {
+            printWindow.print();
+          };
+        }
+      } else {
+        window.open(data.signedUrl, '_blank');
+      }
     } catch (error) {
-      console.error('Error downloading manifest:', error);
-      toast.error('Failed to download manifest');
+      console.error('Error accessing manifest:', error);
+      toast.error('Failed to access manifest');
     }
   };
 
@@ -128,6 +139,12 @@ export default function ClientPortal() {
 
   const formatStatus = (status: string) => {
     return status.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  // Check if manifest has both initial and final PDFs (different paths)
+  const hasBothVersions = (manifest: any) => {
+    return manifest.pdf_path && manifest.acroform_pdf_path && 
+           manifest.pdf_path !== manifest.acroform_pdf_path;
   };
 
   // Admin landing - show client selector
@@ -259,12 +276,17 @@ export default function ClientPortal() {
               Welcome, {clientInfo.contact_name || clientInfo.company_name}
             </CardTitle>
             <CardDescription>
-              View and download your pickup manifests below. Need to schedule a pickup?{' '}
-              <a href="/public-book" className="text-primary hover:underline">
-                Request a pickup here
-              </a>
+              View and download your pickup manifests below.
             </CardDescription>
           </CardHeader>
+          <CardContent>
+            <Button asChild>
+              <Link to={`/public-book?client=${clientInfo.id}`}>
+                <CalendarPlus className="w-4 h-4 mr-2" />
+                Schedule a Pickup
+              </Link>
+            </Button>
+          </CardContent>
         </Card>
 
         {/* Manifests List */}
@@ -275,7 +297,7 @@ export default function ClientPortal() {
               Your Manifests
             </CardTitle>
             <CardDescription>
-              Download copies of your pickup manifests for your records
+              Download or print copies of your pickup manifests for your records
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -292,46 +314,116 @@ export default function ClientPortal() {
                 <p className="text-sm mt-2">Your pickup manifests will appear here after service</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {manifests.map((manifest) => {
                   const totalPTE = (manifest.pte_on_rim || 0) + (manifest.pte_off_rim || 0) +
                     ((manifest.otr_count || 0) * 15) + ((manifest.tractor_count || 0) * 5);
-                  const pdfPath = manifest.acroform_pdf_path || manifest.pdf_path;
+                  const hasMultiplePDFs = hasBothVersions(manifest);
+                  const isCompleted = manifest.status === 'COMPLETED';
                   
                   return (
                     <div
                       key={manifest.id}
-                      className="flex items-center justify-between p-4 rounded-lg border border-border bg-card/50 hover:bg-card transition-colors"
+                      className="p-4 rounded-lg border border-border bg-card/50 hover:bg-card transition-colors"
                     >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-3">
-                          <span className="font-medium">{manifest.manifest_number}</span>
-                          <Badge className={getStatusColor(manifest.status)}>
-                            {formatStatus(manifest.status)}
-                          </Badge>
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="space-y-2 flex-1">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <span className="font-medium text-lg">{manifest.manifest_number}</span>
+                            <Badge className={getStatusColor(manifest.status)}>
+                              {formatStatus(manifest.status)}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="w-3.5 h-3.5" />
+                              {format(new Date(manifest.signed_at || manifest.created_at), 'MMM d, yyyy')}
+                            </span>
+                            <span>{totalPTE} PTE</span>
+                          </div>
+                          {manifest.locations && (
+                            <p className="text-sm text-muted-foreground">
+                              {(manifest.locations as any).name || (manifest.locations as any).address}
+                            </p>
+                          )}
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-3.5 h-3.5" />
-                            {format(new Date(manifest.signed_at || manifest.created_at), 'MMM d, yyyy')}
-                          </span>
-                          <span>{totalPTE} PTE</span>
+                        
+                        {/* PDF Actions */}
+                        <div className="flex flex-col gap-2">
+                          {/* Show both PDFs if available and different */}
+                          {hasMultiplePDFs ? (
+                            <>
+                              <div className="text-xs text-muted-foreground mb-1">Initial (2-signature):</div>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleViewManifest(manifest.pdf_path, manifest.manifest_number, 'view')}
+                                >
+                                  <Download className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleViewManifest(manifest.pdf_path, manifest.manifest_number, 'print')}
+                                >
+                                  <Printer className="w-4 h-4" />
+                                </Button>
+                              </div>
+                              <div className="text-xs text-muted-foreground mt-2 mb-1">Final (3-signature):</div>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  onClick={() => handleViewManifest(manifest.acroform_pdf_path, manifest.manifest_number, 'view')}
+                                >
+                                  <Download className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  onClick={() => handleViewManifest(manifest.acroform_pdf_path, manifest.manifest_number, 'print')}
+                                >
+                                  <Printer className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="text-xs text-muted-foreground mb-1">
+                                {isCompleted ? 'Final Manifest:' : 'Manifest:'}
+                              </div>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleViewManifest(
+                                    manifest.acroform_pdf_path || manifest.pdf_path, 
+                                    manifest.manifest_number, 
+                                    'view'
+                                  )}
+                                  disabled={!manifest.acroform_pdf_path && !manifest.pdf_path}
+                                >
+                                  <Download className="w-4 h-4 mr-1" />
+                                  View
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleViewManifest(
+                                    manifest.acroform_pdf_path || manifest.pdf_path, 
+                                    manifest.manifest_number, 
+                                    'print'
+                                  )}
+                                  disabled={!manifest.acroform_pdf_path && !manifest.pdf_path}
+                                >
+                                  <Printer className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </>
+                          )}
                         </div>
-                        {manifest.locations && (
-                          <p className="text-xs text-muted-foreground">
-                            {(manifest.locations as any).name || (manifest.locations as any).address}
-                          </p>
-                        )}
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDownloadManifest(pdfPath, manifest.manifest_number)}
-                        disabled={!pdfPath}
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        Download
-                      </Button>
                     </div>
                   );
                 })}

@@ -13,7 +13,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CalendarDays, Phone, Mail, MapPin, Truck, Clock, Building2, CheckCircle2, Info, Star, AlertTriangle } from "lucide-react";
+import { CalendarDays, Phone, Mail, MapPin, Truck, Clock, Building2, CheckCircle2, Info, Star, AlertTriangle, ArrowLeft } from "lucide-react";
+import { Link } from "react-router-dom";
 import { PlacesAutocomplete } from "@/components/PlacesAutocomplete";
 import { BrandHeader } from "@/components/BrandHeader";
 import { format, addDays, getDay } from "date-fns";
@@ -301,6 +302,15 @@ export default function PublicBook() {
           <div className="text-center mb-8">
             {returningClientName ? (
               <>
+                <div className="flex items-center justify-center gap-4 mb-4">
+                  <Link 
+                    to="/client-portal" 
+                    className="text-sm text-primary hover:underline flex items-center gap-1"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to My Manifests
+                  </Link>
+                </div>
                 <h1 className="text-3xl font-bold mb-2">Welcome Back, {returningClientName}!</h1>
                 <p className="text-muted-foreground text-lg">
                   Ready to schedule your next tire pickup? We've pre-filled your details.
