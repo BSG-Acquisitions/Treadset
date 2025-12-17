@@ -149,7 +149,87 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const bookingData: BookingRequest = await req.json();
+    const body = await req.json();
+    
+    // Handle different actions
+    if (body.action === 'check-client') {
+      // Secure client lookup for pre-fill - returns ONLY safe public data
+      console.log('[PUBLIC_BOOKING] Client lookup request for:', body.clientId);
+      
+      if (!body.clientId) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Client ID required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const { data: client, error: clientError } = await supabase
+        .from('clients')
+        .select('id, company_name, contact_name, email, phone, physical_address, physical_city, physical_state, physical_zip')
+        .eq('id', body.clientId)
+        .single();
+
+      if (clientError || !client) {
+        console.log('[PUBLIC_BOOKING] Client not found:', body.clientId);
+        return new Response(
+          JSON.stringify({ success: false, error: 'Client not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Return ONLY safe pre-fill data - no financial/business sensitive info
+      const safeClientData = {
+        name: client.contact_name || '',
+        company: client.company_name || '',
+        email: client.email || '',
+        phone: client.phone || '',
+        address: client.physical_address 
+          ? `${client.physical_address}${client.physical_city ? ', ' + client.physical_city : ''}${client.physical_state ? ', ' + client.physical_state : ''}${client.physical_zip ? ' ' + client.physical_zip : ''}`
+          : '',
+      };
+
+      console.log('[PUBLIC_BOOKING] Returning safe client data for pre-fill');
+      return new Response(
+        JSON.stringify({ success: true, client: safeClientData }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Handle zone check action
+    if (body.action === 'check-zone') {
+      console.log('[PUBLIC_BOOKING] Zone check request for ZIP:', body.zipCode);
+      
+      // Get the default BSG organization
+      const { data: organization } = await supabase
+        .from('organizations')
+        .select('id')
+        .eq('slug', 'bsg')
+        .single();
+
+      if (organization && body.zipCode) {
+        const { data: zones } = await supabase
+          .from('service_zones')
+          .select('id, zone_name, primary_service_days, zip_codes')
+          .eq('organization_id', organization.id)
+          .eq('is_active', true)
+          .contains('zip_codes', [body.zipCode]);
+
+        if (zones && zones.length > 0) {
+          return new Response(
+            JSON.stringify({ success: true, zone: zones[0] }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, zone: null }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Default: process booking request
+    const bookingData: BookingRequest = body;
     console.log('[PUBLIC_BOOKING] Processing booking request:', bookingData);
 
     // Get the default BSG organization
