@@ -1156,6 +1156,7 @@ export type Database = {
           state: string | null
           tags: string[] | null
           updated_at: string
+          user_id: string | null
           zip: string | null
         }
         Insert: {
@@ -1187,6 +1188,7 @@ export type Database = {
           state?: string | null
           tags?: string[] | null
           updated_at?: string
+          user_id?: string | null
           zip?: string | null
         }
         Update: {
@@ -1218,6 +1220,7 @@ export type Database = {
           state?: string | null
           tags?: string[] | null
           updated_at?: string
+          user_id?: string | null
           zip?: string | null
         }
         Relationships: [
@@ -1233,6 +1236,13 @@ export type Database = {
             columns: ["pricing_tier_id"]
             isOneToOne: false
             referencedRelation: "pricing_tiers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clients_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
