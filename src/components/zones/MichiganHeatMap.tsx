@@ -280,6 +280,9 @@ export function MichiganHeatMap() {
     return '#94a3b8'; // Gray - no pickups
   };
 
+  // Hover tooltip ref
+  const hoverPopupRef = useRef<any>(null);
+
   // Create marker HTML element
   const createMarkerElement = (loc: LocationData, isSelected: boolean = false): HTMLDivElement => {
     const el = document.createElement('div');
@@ -327,6 +330,41 @@ export function MichiganHeatMap() {
     return el;
   };
 
+  // Create hover tooltip for marker
+  const showHoverTooltip = (loc: LocationData) => {
+    if (!map.current || !mapboxgl) return;
+    
+    // Remove existing hover tooltip
+    if (hoverPopupRef.current) {
+      hoverPopupRef.current.remove();
+      hoverPopupRef.current = null;
+    }
+    
+    hoverPopupRef.current = new mapboxgl.Popup({
+      closeButton: false,
+      closeOnClick: false,
+      offset: [0, -15],
+      className: 'hover-tooltip'
+    })
+      .setLngLat([loc.lng, loc.lat])
+      .setHTML(`
+        <div style="padding: 8px 12px; background: white; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+          <p style="margin: 0; font-weight: 600; font-size: 13px; color: #1a1a1a;">${loc.clientName}</p>
+          <p style="margin: 2px 0 0; font-size: 11px; color: #666;">
+            ${loc.city || 'Unknown'} • ${loc.pickupCount} pickup${loc.pickupCount !== 1 ? 's' : ''}
+          </p>
+        </div>
+      `)
+      .addTo(map.current);
+  };
+
+  const hideHoverTooltip = () => {
+    if (hoverPopupRef.current) {
+      hoverPopupRef.current.remove();
+      hoverPopupRef.current = null;
+    }
+  };
+
   // Cleanup map on unmount
   useEffect(() => {
     return () => {
@@ -368,7 +406,7 @@ export function MichiganHeatMap() {
       map.current = new mapboxgl.Map({
         accessToken: mapboxToken,
         container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/light-v11',
+        style: 'mapbox://styles/mapbox/streets-v12', // Colorful streets style
         center: initialCenter,
         zoom: initialZoom,
         pitch: 0,
@@ -403,8 +441,17 @@ export function MichiganHeatMap() {
         .setLngLat([loc.lng, loc.lat])
         .addTo(map.current!);
 
+      // Hover handler for tooltip
+      el.addEventListener('mouseenter', () => {
+        showHoverTooltip(loc);
+      });
+      el.addEventListener('mouseleave', () => {
+        hideHoverTooltip();
+      });
+
       // Click handler for popup
       el.addEventListener('click', () => {
+        hideHoverTooltip(); // Hide hover tooltip when clicking
         setSelectedLocation(loc.id);
         
         // Close existing popup

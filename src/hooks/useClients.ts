@@ -134,6 +134,13 @@ export const useUpdateClient = () => {
 
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: ClientUpdate }) => {
+      // Check if address-related fields changed
+      const addressFieldsChanged = 
+        updates.physical_address !== undefined ||
+        updates.physical_city !== undefined ||
+        updates.physical_state !== undefined ||
+        updates.physical_zip !== undefined;
+
       const { data, error } = await supabase
         .from('clients')
         .update(updates)
@@ -142,12 +149,41 @@ export const useUpdateClient = () => {
         .single();
 
       if (error) throw error;
+
+      // Auto-geocode location if address changed
+      if (addressFieldsChanged && data) {
+        try {
+          // Find the client's primary location and trigger geocoding
+          const { data: locations } = await supabase
+            .from('locations')
+            .select('id')
+            .eq('client_id', id)
+            .limit(1);
+
+          if (locations && locations.length > 0) {
+            console.log('Auto-geocoding location after client address update:', locations[0].id);
+            await supabase.functions.invoke('geocode-locations', {
+              body: { locationId: locations[0].id, forceUpdate: true }
+            });
+            
+            // Also backfill client geography
+            await supabase.functions.invoke('backfill-client-geography', {
+              body: { clientId: id }
+            });
+          }
+        } catch (err) {
+          console.warn('Auto-geocode after client update failed:', err);
+        }
+      }
+
       return data;
     },
     onSuccess: (updated) => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       queryClient.invalidateQueries({ queryKey: ['clients-table'] });
       queryClient.invalidateQueries({ queryKey: ['client', updated.id] });
+      queryClient.invalidateQueries({ queryKey: ['locations'] });
+      queryClient.invalidateQueries({ queryKey: ['all-locations'] });
       toast({
         title: "Success",
         description: "Client updated successfully",
