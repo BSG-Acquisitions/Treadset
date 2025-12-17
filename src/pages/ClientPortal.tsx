@@ -5,27 +5,63 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FileText, Download, Calendar, Package, LogOut } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { FileText, Download, Calendar, Package, LogOut, Eye, ArrowLeft } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function ClientPortal() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, hasRole } = useAuth();
+  const navigate = useNavigate();
+  const isAdmin = hasRole('admin') || hasRole('ops_manager');
+  const [previewClientId, setPreviewClientId] = useState<string | null>(null);
 
-  // Fetch client info for this user
-  const { data: clientInfo, isLoading: clientLoading } = useQuery({
-    queryKey: ['client-portal-info', user?.id],
+  // Fetch all clients for admin preview mode
+  const { data: allClients } = useQuery({
+    queryKey: ['all-clients-for-preview'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('clients')
-        .select('id, company_name, contact_name, email, phone')
-        .eq('user_id', user?.id)
-        .single();
+        .select('id, company_name, contact_name')
+        .eq('is_active', true)
+        .order('company_name');
       
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id,
+    enabled: isAdmin,
+  });
+
+  // Fetch client info - for regular clients use their linked account, for admin preview use selected client
+  const { data: clientInfo, isLoading: clientLoading } = useQuery({
+    queryKey: ['client-portal-info', isAdmin ? previewClientId : user?.id, isAdmin],
+    queryFn: async () => {
+      if (isAdmin && previewClientId) {
+        // Admin preview mode - fetch selected client
+        const { data, error } = await supabase
+          .from('clients')
+          .select('id, company_name, contact_name, email, phone')
+          .eq('id', previewClientId)
+          .single();
+        
+        if (error) throw error;
+        return data;
+      } else if (!isAdmin) {
+        // Regular client mode - fetch by user_id
+        const { data, error } = await supabase
+          .from('clients')
+          .select('id, company_name, contact_name, email, phone')
+          .eq('user_id', user?.id)
+          .single();
+        
+        if (error) throw error;
+        return data;
+      }
+      return null;
+    },
+    enabled: isAdmin ? !!previewClientId : !!user?.id,
   });
 
   // Fetch manifests for this client
@@ -94,6 +130,59 @@ export default function ClientPortal() {
     return status.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
   };
 
+  // Admin landing - show client selector
+  if (isAdmin && !previewClientId) {
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="bg-card border-b border-border sticky top-0 z-10">
+          <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-bold text-foreground">Client Portal Preview</h1>
+              <p className="text-sm text-muted-foreground">Admin Mode - Select a client to preview their portal</p>
+            </div>
+            <Button onClick={() => navigate('/')} variant="ghost" size="sm">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Dashboard
+            </Button>
+          </div>
+        </header>
+
+        <main className="max-w-4xl mx-auto px-6 py-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Eye className="w-5 h-5 text-primary" />
+                Select a Client to Preview
+              </CardTitle>
+              <CardDescription>
+                Choose any client to see exactly what their portal experience looks like
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Select onValueChange={setPreviewClientId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a client..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {allClients?.map((client) => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {client.company_name} {client.contact_name ? `(${client.contact_name})` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <p className="text-sm text-muted-foreground">
+                This preview shows exactly what your clients will see when they log into their portal.
+                You can verify the layout, download manifests, and ensure the experience is user-friendly.
+              </p>
+            </CardContent>
+          </Card>
+        </main>
+      </div>
+    );
+  }
+
   if (clientLoading) {
     return (
       <div className="min-h-screen bg-background p-6">
@@ -133,14 +222,33 @@ export default function ClientPortal() {
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-foreground">{clientInfo.company_name}</h1>
-            <p className="text-sm text-muted-foreground">Client Portal</p>
+            <p className="text-sm text-muted-foreground">
+              {isAdmin ? 'Admin Preview Mode' : 'Client Portal'}
+            </p>
           </div>
-          <Button onClick={() => signOut()} variant="ghost" size="sm">
-            <LogOut className="w-4 h-4 mr-2" />
-            Sign Out
-          </Button>
+          {isAdmin ? (
+            <Button onClick={() => setPreviewClientId(null)} variant="ghost" size="sm">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Change Client
+            </Button>
+          ) : (
+            <Button onClick={() => signOut()} variant="ghost" size="sm">
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </Button>
+          )}
         </div>
       </header>
+
+      {/* Admin Preview Banner */}
+      {isAdmin && (
+        <div className="bg-primary/10 border-b border-primary/20 px-6 py-2">
+          <div className="max-w-4xl mx-auto flex items-center gap-2 text-sm text-primary">
+            <Eye className="w-4 h-4" />
+            <span>You are viewing this portal as <strong>{clientInfo.company_name}</strong> would see it</span>
+          </div>
+        </div>
+      )}
 
       <main className="max-w-4xl mx-auto px-6 py-8 space-y-6">
         {/* Welcome Card */}
