@@ -233,6 +233,8 @@ export function MichiganHeatMap() {
     if (map.current) return;
 
     console.log('Initializing Mapbox map with', locations.length, 'locations');
+    let layerTimeout: ReturnType<typeof setTimeout> | null = null;
+    let layersAdded = false;
 
     try {
       // Some Mapbox builds expect a global token, others support the per-map option.
@@ -261,7 +263,7 @@ export function MichiganHeatMap() {
       map.current = new mapboxgl.Map({
         accessToken: mapboxToken,
         container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/light-v11', // Changed to light-v11 for better reliability
+        style: 'mapbox://styles/mapbox/light-v11',
         center: initialCenter,
         zoom: initialZoom,
         pitch: 0,
@@ -277,15 +279,17 @@ export function MichiganHeatMap() {
 
     // Function to add heatmap layers
     const addHeatmapLayers = () => {
-      if (!map.current) return;
+      if (!map.current || layersAdded) return;
       
       // Check if source already exists
       if (map.current.getSource('pickups')) {
         console.log('Heatmap source already exists, skipping');
+        layersAdded = true;
         return;
       }
 
       console.log('Adding heatmap source with', locations.length, 'features');
+      layersAdded = true;
 
       // Prepare GeoJSON data for heatmap
       const geojsonData = {
@@ -424,22 +428,78 @@ export function MichiganHeatMap() {
         if (map.current) map.current.getCanvas().style.cursor = '';
       });
 
-      // Force resize to ensure proper rendering
-      map.current.resize();
-      console.log('Map resize triggered');
+      // Force resize and repaint
+      setTimeout(() => {
+        if (map.current) {
+          map.current.resize();
+          map.current.triggerRepaint();
+          console.log('Map resize and repaint triggered');
+        }
+      }, 100);
     };
 
-    // Check if style is already loaded, otherwise wait for load event
-    if (map.current.isStyleLoaded()) {
-      console.log('Style already loaded, adding layers immediately');
-      addHeatmapLayers();
-    } else {
-      console.log('Waiting for style to load...');
-      map.current.on('load', () => {
-        console.log('Style load event fired');
-        addHeatmapLayers();
+    // Add DEBUG MARKERS - visible immediately without waiting for layers
+    const addDebugMarkers = () => {
+      console.log('Adding', locations.length, 'debug markers');
+      locations.forEach((loc, i) => {
+        const marker = new mapboxgl.Marker({ color: '#ef4444' })
+          .setLngLat([loc.lng, loc.lat])
+          .setPopup(new mapboxgl.Popup().setHTML(`
+            <div style="padding: 4px;">
+              <strong>Location ${i + 1}</strong><br/>
+              ${loc.city || 'N/A'}<br/>
+              Pickups: ${loc.pickupCount}
+            </div>
+          `))
+          .addTo(map.current!);
       });
-    }
+      console.log('Debug markers added');
+    };
+
+    // Use multiple strategies to ensure layers are added
+
+    // Strategy 1: 'idle' event - fires when map is fully rendered
+    map.current.once('idle', () => {
+      console.log('Map idle event fired');
+      if (!layersAdded) {
+        addHeatmapLayers();
+      }
+    });
+
+    // Strategy 2: 'load' event - traditional approach
+    map.current.on('load', () => {
+      console.log('Map load event fired');
+      if (!layersAdded) {
+        addHeatmapLayers();
+      }
+      // Add debug markers after load
+      addDebugMarkers();
+    });
+
+    // Strategy 3: 'style.load' event - fires when style is ready
+    map.current.on('style.load', () => {
+      console.log('Style.load event fired');
+      if (!layersAdded) {
+        addHeatmapLayers();
+      }
+    });
+
+    // Strategy 4: Timeout fallback - force add after 3 seconds
+    layerTimeout = setTimeout(() => {
+      console.log('Timeout fallback triggered');
+      if (!layersAdded && map.current) {
+        console.log('Forcing layer addition via timeout');
+        addHeatmapLayers();
+        addDebugMarkers();
+      }
+    }, 3000);
+
+    // Cleanup timeout on unmount
+    return () => {
+      if (layerTimeout) {
+        clearTimeout(layerTimeout);
+      }
+    };
   }, [mapboxToken, locations, mapboxgl, loading]);
 
   if (loading) {
