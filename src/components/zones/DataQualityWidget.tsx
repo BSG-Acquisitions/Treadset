@@ -48,10 +48,10 @@ export function DataQualityWidget() {
 
       if (!orgRole) return null;
 
-      // Get client stats
+      // Get client stats - check BOTH city/zip AND physical_city/physical_zip
       const { data: clients } = await supabase
         .from('clients')
-        .select('id, physical_city, physical_zip')
+        .select('id, city, zip, physical_city, physical_zip')
         .eq('organization_id', orgRole.organization_id)
         .eq('is_active', true);
 
@@ -65,12 +65,16 @@ export function DataQualityWidget() {
       const clientsWithLocations = new Set(locations?.map(l => l.client_id) || []);
 
       const totalClients = clients?.length || 0;
-      const clientsWithCity = clients?.filter(c => c.physical_city).length || 0;
-      const clientsWithZip = clients?.filter(c => c.physical_zip).length || 0;
+      // Check EITHER physical_city OR city field
+      const clientsWithCity = clients?.filter(c => c.physical_city || c.city).length || 0;
+      const clientsWithZip = clients?.filter(c => c.physical_zip || c.zip).length || 0;
       const locationsTotal = locations?.length || 0;
       const locationsWithCoords = locations?.filter(l => l.latitude && l.longitude).length || 0;
       const locationsMissingCoords = locations?.filter(l => l.address && (!l.latitude || !l.longitude)).length || 0;
-      const clientsNoLocation = totalClients - clientsWithLocations.size;
+      // Only count as "no location" if they have NO address data anywhere (no location AND no city/zip on client)
+      const clientsNoLocation = clients?.filter(c => 
+        !clientsWithLocations.has(c.id) && !c.physical_city && !c.city && !c.physical_zip && !c.zip
+      ).length || 0;
 
       return {
         totalClients,
