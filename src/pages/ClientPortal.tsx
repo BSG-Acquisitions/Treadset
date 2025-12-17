@@ -175,43 +175,54 @@ export default function ClientPortal() {
     }
   };
 
-  // Print PDF - open window synchronously then load content
+  // Print PDF without opening a new tab (avoids popup blockers)
   const handlePrint = async (pdfPath: string | null) => {
     if (!pdfPath) {
       toast.error('No PDF available for this manifest');
       return;
     }
 
-    // Open window synchronously (user gesture)
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      toast.error('Please allow popups to print manifests');
-      return;
-    }
-
-    // Show loading state
-    printWindow.document.write('<html><head><title>Loading...</title></head><body style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;"><p>Loading manifest...</p></body></html>');
-
     try {
       const signedUrl = await getSignedUrl(pdfPath);
       if (!signedUrl) {
-        printWindow.close();
         toast.error('Failed to access manifest');
         return;
       }
 
-      // Navigate to the PDF
-      printWindow.location.href = signedUrl;
-      
-      // Trigger print after load
-      printWindow.onload = () => {
+      const response = await fetch(signedUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch PDF (HTTP ${response.status})`);
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      iframe.src = url;
+
+      document.body.appendChild(iframe);
+
+      iframe.onload = () => {
         setTimeout(() => {
-          printWindow.print();
-        }, 500);
+          try {
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+          } finally {
+            // Cleanup after the print dialog opens
+            setTimeout(() => {
+              iframe.remove();
+              window.URL.revokeObjectURL(url);
+            }, 1000);
+          }
+        }, 250);
       };
     } catch (error) {
       console.error('Error printing manifest:', error);
-      printWindow.close();
       toast.error('Failed to print manifest');
     }
   };
