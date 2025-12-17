@@ -14,8 +14,6 @@ import { MichiganHeatMap } from '@/components/zones/MichiganHeatMap';
 import { ZonePerformanceTable } from '@/components/zones/ZonePerformanceTable';
 import { GrowthOpportunitiesPanel } from '@/components/zones/GrowthOpportunitiesPanel';
 import { DataQualityWidget } from '@/components/zones/DataQualityWidget';
-import { DashboardGrid, LayoutItem } from '@/components/ui/dashboard-grid';
-import { DraggableWidget } from '@/components/ui/draggable-widget';
 import { toast } from 'sonner';
 
 const DAYS_OF_WEEK = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -218,30 +216,23 @@ export default function ServiceZones() {
         </SlideUp>
       )}
 
-      {/* Draggable Dashboard Grid */}
-      <DashboardGrid
-        storageKey="service-zones"
-        defaultLayout={[
-          { i: 'map', x: 0, y: 0, w: 12, h: 6, minH: 4, minW: 6 },
-          { i: 'dataQuality', x: 0, y: 6, w: 3, h: 4, minH: 3, minW: 2 },
-          { i: 'zonePerformance', x: 3, y: 6, w: 5, h: 4, minH: 3, minW: 3 },
-          { i: 'growthOpportunities', x: 8, y: 6, w: 4, h: 4, minH: 3, minW: 2 },
-        ]}
-        rowHeight={80}
-      >
-        <DraggableWidget key="map" title="Michigan Heat Map">
-          <MichiganHeatMap />
-        </DraggableWidget>
-        <DraggableWidget key="dataQuality" title="Data Quality">
+      {/* Map Section */}
+      <div className="grid grid-cols-1 gap-4">
+        <MichiganHeatMap />
+      </div>
+
+      {/* Widgets Row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4">
+        <div className="lg:col-span-3">
           <DataQualityWidget />
-        </DraggableWidget>
-        <DraggableWidget key="zonePerformance" title="Zone Performance">
+        </div>
+        <div className="lg:col-span-5">
           <ZonePerformanceTable />
-        </DraggableWidget>
-        <DraggableWidget key="growthOpportunities" title="Growth Opportunities">
+        </div>
+        <div className="lg:col-span-4">
           <GrowthOpportunitiesPanel />
-        </DraggableWidget>
-      </DashboardGrid>
+        </div>
+      </div>
 
       {/* Getting Started Guide - show when no zones and not auto-analyzing */}
       {!isLoading && zones.length === 0 && !autoAnalyzing && suggestedZones.length === 0 && (
