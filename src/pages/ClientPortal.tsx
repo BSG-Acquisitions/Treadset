@@ -348,10 +348,10 @@ export default function ClientPortal() {
           <CardContent className="text-muted-foreground">
             <p>Contact BSG Tire Recycling:</p>
             <p className="mt-2">
-              Phone: <a href="tel:+12483338700" className="text-primary hover:underline">(248) 333-8700</a>
+              Phone: <a href="tel:+13137310817" className="text-primary hover:underline">313-731-0817</a>
             </p>
             <p>
-              Email: <a href="mailto:info@bsgtires.com" className="text-primary hover:underline">info@bsgtires.com</a>
+              Email: <a href="mailto:bsgtires@gmail.com" className="text-primary hover:underline">bsgtires@gmail.com</a>
             </p>
           </CardContent>
         </Card>
