@@ -174,14 +174,14 @@ Deno.serve(async (req) => {
       // Batch process all clients
       console.log('🔄 Starting batch backfill of client geography...');
 
-      // Get all clients that need updating
+      // Get all clients that need updating - include city/zip fields to use as fallback
       let query = supabase
         .from('clients')
-        .select('id, company_name, physical_city, physical_zip')
+        .select('id, company_name, city, zip, state, physical_city, physical_zip, physical_state')
         .eq('is_active', true);
 
       if (!forceUpdate) {
-        // Only get clients missing city OR zip
+        // Only get clients missing physical_city OR physical_zip
         query = query.or('physical_city.is.null,physical_zip.is.null');
       }
 
@@ -210,7 +210,33 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Get the client's location with coordinates
+        // FIRST: Check if client already has city/zip in the legacy fields - copy them over
+        if ((client.city || client.zip) && (!client.physical_city || !client.physical_zip)) {
+          const updates: Record<string, any> = { updated_at: new Date().toISOString() };
+          if (client.city && !client.physical_city) updates.physical_city = client.city;
+          if (client.zip && !client.physical_zip) updates.physical_zip = client.zip;
+          if (client.state && !client.physical_state) updates.physical_state = client.state;
+
+          const { error: updateError } = await supabase
+            .from('clients')
+            .update(updates)
+            .eq('id', client.id);
+
+          if (!updateError) {
+            console.log(`✅ Copied legacy city/zip for ${client.company_name}: ${client.city}, ${client.zip}`);
+            results.updated++;
+            results.details.push({
+              clientId: client.id,
+              companyName: client.company_name,
+              city: client.city,
+              zip: client.zip,
+              status: 'copied_from_legacy'
+            });
+            continue;
+          }
+        }
+
+        // SECOND: Try to get location with coordinates for reverse geocoding
         const { data: location, error: locError } = await supabase
           .from('locations')
           .select('id, latitude, longitude')
