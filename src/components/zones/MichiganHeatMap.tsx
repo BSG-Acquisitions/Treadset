@@ -35,16 +35,38 @@ export function MichiganHeatMap() {
 
   // Dynamically load mapbox-gl and its CSS
   useEffect(() => {
-    import('mapbox-gl')
-      .then((module) => {
-        // Dynamically import CSS
-        import('mapbox-gl/dist/mapbox-gl.css');
-        setMapboxgl(module.default || module);
-      })
-      .catch((err) => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const module: any = await import('mapbox-gl');
+        await import('mapbox-gl/dist/mapbox-gl.css');
+
+        const candidateDefault = module?.default;
+        const candidate =
+          candidateDefault && typeof candidateDefault.Map === 'function'
+            ? candidateDefault
+            : module;
+
+        if (typeof candidate?.Map !== 'function') {
+          console.error('Mapbox GL module shape unexpected:', {
+            moduleKeys: Object.keys(module || {}),
+            defaultKeys: candidateDefault ? Object.keys(candidateDefault) : null,
+          });
+          if (!cancelled) setMapError('Failed to initialize map library');
+          return;
+        }
+
+        if (!cancelled) setMapboxgl(candidate);
+      } catch (err) {
         console.error('Failed to load mapbox-gl:', err);
-        setMapError('Failed to load map library');
-      });
+        if (!cancelled) setMapError('Failed to load map library');
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Fetch Mapbox token
@@ -168,16 +190,31 @@ export function MichiganHeatMap() {
     if (!mapContainer.current || !mapboxToken || !mapboxgl || locations.length === 0) return;
     if (map.current) return;
 
-    map.current = new mapboxgl.Map({
-      accessToken: mapboxToken,
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/dark-v11',
-      center: [-84.5, 44.0], // Center of Michigan
-      zoom: 5.5,
-      pitch: 0,
-    });
+    try {
+      // Some Mapbox builds expect a global token, others support the per-map option.
+      try {
+        if (mapboxgl && typeof mapboxgl === 'object') {
+          (mapboxgl as any).accessToken = mapboxToken;
+        }
+      } catch {
+        // ignore (module namespace objects can be read-only)
+      }
 
-    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+      map.current = new mapboxgl.Map({
+        accessToken: mapboxToken,
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/dark-v11',
+        center: [-84.5, 44.0], // Center of Michigan
+        zoom: 5.5,
+        pitch: 0,
+      });
+
+      map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+    } catch (err) {
+      console.error('Failed to initialize Mapbox map:', err);
+      setMapError('Something went wrong loading the map');
+      return;
+    }
 
     map.current.on('load', () => {
       if (!map.current) return;
