@@ -33,7 +33,14 @@ const DETROIT_BOUNDS = {
 };
 
 const DETROIT_METRO_COUNTIES = ['Wayne', 'Oakland', 'Macomb'];
+// St. Clair County (includes Cottrellville) is NOT a valid service area - reject these results
+const EXCLUDED_COUNTIES = ['St. Clair', 'St Clair', 'Saint Clair'];
 const MAX_DISTANCE_FROM_DEPOT_KM = 160; // ~100 miles
+
+// Known bad coordinates that have been incorrectly assigned in the past
+const KNOWN_BAD_COORDINATES = [
+  { lat: 42.71278770, lng: -82.58916040, reason: 'Cottrellville - outside service area' }
+];
 
 function toRadians(deg: number) {
   return (deg * Math.PI) / 180;
@@ -76,6 +83,19 @@ function extractCounty(feature: MapboxGeocodeFeature): string | null {
     return countyContext.text.replace(' County', '');
   }
   return null;
+}
+
+function isExcludedCounty(county: string | null): boolean {
+  if (!county) return false;
+  return EXCLUDED_COUNTIES.some(excluded => 
+    county.toLowerCase().includes(excluded.toLowerCase())
+  );
+}
+
+function isKnownBadCoordinate(lat: number, lng: number): boolean {
+  return KNOWN_BAD_COORDINATES.some(bad => 
+    Math.abs(bad.lat - lat) < 0.0001 && Math.abs(bad.lng - lng) < 0.0001
+  );
 }
 
 function enhanceAddress(address: string, clientCity?: string, clientState?: string): string {
@@ -161,6 +181,19 @@ async function geocodeAddress(
         // Check if within Detroit metro bounds
         const inDetroitBounds = isWithinDetroitMetro(lat, lng);
         if (!inDetroitBounds) continue;
+        
+        // CRITICAL: Reject results from excluded counties (e.g., St. Clair/Cottrellville)
+        const county = extractCounty(feature);
+        if (isExcludedCounty(county)) {
+          console.log(`⚠️ Rejected result in excluded county: ${county}`);
+          continue;
+        }
+        
+        // CRITICAL: Reject known bad coordinates
+        if (isKnownBadCoordinate(lat, lng)) {
+          console.log(`⚠️ Rejected known bad coordinate: (${lat}, ${lng})`);
+          continue;
+        }
         
         // Calculate score based on relevance and precision
         let score = relevance * 100;
