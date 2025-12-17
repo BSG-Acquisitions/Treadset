@@ -144,6 +144,7 @@ Deno.serve(async (req) => {
     }
 
     // Find clients with addresses but no location records
+    // Skip drop-off-only clients (they don't need geocoding for route planning)
     const { data: clientsWithoutLocations, error: clientsError } = await supabase
       .from('clients')
       .select('id, company_name, mailing_address, city, state, zip, organization_id')
@@ -159,9 +160,23 @@ Deno.serve(async (req) => {
 
       const clientsWithLocations = new Set((existingLocations || []).map(l => l.client_id));
 
+      // Get pickup counts per client to identify drop-off-only clients
+      const { data: pickupCounts } = await supabase
+        .from('pickups')
+        .select('client_id')
+        .eq('status', 'completed');
+
+      const clientsWithPickups = new Set((pickupCounts || []).map(p => p.client_id));
+
       for (const client of clientsWithoutLocations || []) {
         if (clientsWithLocations.has(client.id)) continue;
         if (!client.mailing_address) continue;
+
+        // Skip drop-off-only clients - they don't need geocoding
+        if (!clientsWithPickups.has(client.id)) {
+          console.log(`⏭️ Skipping ${client.company_name} - drop-off only client (no pickup history)`);
+          continue;
+        }
 
         // Create location record
         const fullAddress = [

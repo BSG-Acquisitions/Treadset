@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { TrendingUp, TrendingDown, Minus, AlertTriangle, Calendar, Users, Loader2, Database } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, AlertTriangle, Calendar, Users, Loader2, Database, Store, MapPin } from 'lucide-react';
 import { useServiceZones } from '@/hooks/useServiceZones';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,6 +22,7 @@ interface ZonePerformance {
   atRiskCount: number;
   trend: 'up' | 'down' | 'flat';
   trendPercent: number;
+  isSpecialCategory?: 'walk-in' | 'address-needed';
 }
 
 export function ZonePerformanceTable() {
@@ -51,7 +52,20 @@ export function ZonePerformanceTable() {
       const withZip = clients?.filter(c => c.physical_zip).length || 0;
       const dataQuality = { total, withCity, withZip };
 
-      // Get completed pickups with revenue
+      // Get ALL pickups per client (to determine pickup vs drop-off only clients)
+      const { data: allPickupCounts } = await supabase
+        .from('pickups')
+        .select('client_id')
+        .eq('organization_id', organizationId)
+        .eq('status', 'completed');
+
+      // Build client pickup count map
+      const clientPickupCountMap = new Map<string, number>();
+      (allPickupCounts || []).forEach(p => {
+        clientPickupCountMap.set(p.client_id, (clientPickupCountMap.get(p.client_id) || 0) + 1);
+      });
+
+      // Get completed pickups with revenue (last 30 days)
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       const sixtyDaysAgo = new Date();
@@ -79,20 +93,34 @@ export function ZonePerformanceTable() {
         .eq('organization_id', organizationId)
         .in('risk_level', ['high', 'medium']);
 
-      // Group by city instead of zone for city-based performance
+      // Group by city with smart categorization for missing city data
       const cityStats = new Map<string, { 
         clients: string[], 
         recentPickups: number, 
         recentRevenue: number,
         previousPickups: number,
         previousRevenue: number,
-        atRisk: number 
+        atRisk: number,
+        isSpecialCategory?: 'walk-in' | 'address-needed'
       }>();
 
-      // Build client -> city mapping (normalize with trim to prevent duplicates)
+      // Build client -> city mapping with smart categorization
       const clientCityMap = new Map<string, string>();
       (clients || []).forEach(c => {
-        const city = (c.physical_city || 'Unknown Location').trim();
+        let city = (c.physical_city || '').trim();
+        
+        // Smart categorization for clients without city data
+        if (!city) {
+          const totalPickups = clientPickupCountMap.get(c.id) || 0;
+          if (totalPickups === 0) {
+            // Drop-off only client - categorize as walk-in
+            city = 'Walk-in / Drop-off Only';
+          } else {
+            // Has pickups but no city - needs address data
+            city = 'Address Needed';
+          }
+        }
+        
         clientCityMap.set(c.id, city);
         
         const existing = cityStats.get(city) || { 
@@ -101,7 +129,9 @@ export function ZonePerformanceTable() {
           recentRevenue: 0,
           previousPickups: 0,
           previousRevenue: 0,
-          atRisk: 0 
+          atRisk: 0,
+          isSpecialCategory: city === 'Walk-in / Drop-off Only' ? 'walk-in' : 
+                            city === 'Address Needed' ? 'address-needed' : undefined
         };
         existing.clients.push(c.id);
         cityStats.set(city, existing);
@@ -143,7 +173,7 @@ export function ZonePerformanceTable() {
 
       // Convert to performance array
       const performance: ZonePerformance[] = Array.from(cityStats.entries())
-        .filter(([city]) => city !== 'Unknown Location' || cityStats.get(city)!.clients.length > 0)
+        .filter(([_, stats]) => stats.clients.length > 0)
         .map(([city, stats]) => {
           const trendPercent = stats.previousRevenue > 0 
             ? ((stats.recentRevenue - stats.previousRevenue) / stats.previousRevenue) * 100 
@@ -160,10 +190,18 @@ export function ZonePerformanceTable() {
             atRiskCount: stats.atRisk,
             trend,
             trendPercent: Math.abs(Math.round(trendPercent)),
+            isSpecialCategory: stats.isSpecialCategory,
           };
         })
         .filter(z => z.clientCount > 0 || z.pickupCount > 0)
-        .sort((a, b) => b.revenue - a.revenue);
+        // Sort: regular cities by revenue, then special categories at bottom
+        .sort((a, b) => {
+          if (a.isSpecialCategory && !b.isSpecialCategory) return 1;
+          if (!a.isSpecialCategory && b.isSpecialCategory) return -1;
+          if (a.isSpecialCategory === 'address-needed' && b.isSpecialCategory === 'walk-in') return -1;
+          if (a.isSpecialCategory === 'walk-in' && b.isSpecialCategory === 'address-needed') return 1;
+          return b.revenue - a.revenue;
+        });
 
       return { performance, dataQuality };
     },
@@ -260,9 +298,24 @@ export function ZonePerformanceTable() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {performance.slice(0, 10).map((zone) => (
-                <TableRow key={zone.id}>
-                  <TableCell className="font-medium">{zone.name}</TableCell>
+              {performance.slice(0, 12).map((zone) => (
+                <TableRow 
+                  key={zone.id}
+                  className={zone.isSpecialCategory === 'walk-in' ? 'opacity-60' : zone.isSpecialCategory === 'address-needed' ? 'bg-warning/5' : ''}
+                >
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      {zone.isSpecialCategory === 'walk-in' && (
+                        <Store className="h-4 w-4 text-muted-foreground" />
+                      )}
+                      {zone.isSpecialCategory === 'address-needed' && (
+                        <MapPin className="h-4 w-4 text-warning" />
+                      )}
+                      <span className={zone.isSpecialCategory === 'walk-in' ? 'text-muted-foreground italic' : ''}>
+                        {zone.name}
+                      </span>
+                    </div>
+                  </TableCell>
                   <TableCell className="text-center">
                     <div className="flex items-center justify-center gap-1">
                       <Users className="h-3 w-3 text-muted-foreground" />
@@ -287,14 +340,28 @@ export function ZonePerformanceTable() {
                     <TrendIcon trend={zone.trend} percent={zone.trendPercent} />
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleScheduleRoute(zone.name)}
-                    >
-                      <Calendar className="h-3 w-3 mr-1" />
-                      Schedule
-                    </Button>
+                    {zone.isSpecialCategory === 'walk-in' ? (
+                      <span className="text-xs text-muted-foreground">N/A</span>
+                    ) : zone.isSpecialCategory === 'address-needed' ? (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={handleBackfill}
+                        disabled={isBackfilling}
+                      >
+                        <Database className="h-3 w-3 mr-1" />
+                        Fix
+                      </Button>
+                    ) : (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleScheduleRoute(zone.name)}
+                      >
+                        <Calendar className="h-3 w-3 mr-1" />
+                        Schedule
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
