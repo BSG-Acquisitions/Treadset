@@ -21,7 +21,8 @@ import { format, addDays, getDay } from "date-fns";
 
 const MIN_TIRE_THRESHOLD = 50; // Minimum 50 PTE required
 
-const publicBookingSchema = z.object({
+// Full schema for new visitors - all contact fields required
+const newVisitorSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Please enter a valid email address"),
   phone: z.string().min(10, "Please enter a valid phone number"),
@@ -35,7 +36,22 @@ const publicBookingSchema = z.object({
   notes: z.string().optional(),
 });
 
-type PublicBookingData = z.infer<typeof publicBookingSchema>;
+// Relaxed schema for returning clients - only tire info and date required
+const returningClientSchema = z.object({
+  name: z.string().optional(),
+  email: z.string().optional(),
+  phone: z.string().optional(),
+  company: z.string().optional(),
+  address: z.string().optional(),
+  pteCount: z.number().min(0, "Count must be 0 or greater"),
+  otrCount: z.number().min(0, "Count must be 0 or greater"),
+  tractorCount: z.number().min(0, "Count must be 0 or greater"),
+  preferredDate: z.string().min(1, "Please select a preferred date"),
+  preferredWindow: z.enum(['AM', 'PM', 'Any']),
+  notes: z.string().optional(),
+});
+
+type PublicBookingData = z.infer<typeof newVisitorSchema>;
 
 interface ServiceZone {
   id: string;
@@ -48,6 +64,15 @@ interface SuggestedDate {
   date: string;
   dayName: string;
   isRecommended: boolean;
+}
+
+interface ClientData {
+  name: string;
+  company: string;
+  email: string;
+  phone: string;
+  address: string;
+  isReturningClient?: boolean;
 }
 
 const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -65,12 +90,14 @@ export default function PublicBook() {
   const [isBelowMinimum, setIsBelowMinimum] = useState(true);
   const [isLoadingClient, setIsLoadingClient] = useState(false);
   const [returningClientName, setReturningClientName] = useState<string | null>(null);
+  const [clientData, setClientData] = useState<ClientData | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
 
+  // Use conditional schema based on whether this is a returning client
   const form = useForm<PublicBookingData>({
-    resolver: zodResolver(publicBookingSchema),
+    resolver: zodResolver(returningClientName ? returningClientSchema : newVisitorSchema),
     defaultValues: {
       name: "",
       email: "",
@@ -108,8 +135,9 @@ export default function PublicBook() {
           return;
         }
 
-        const client = data.client;
+        const client = data.client as ClientData;
         setReturningClientName(client.company || client.name);
+        setClientData(client);
         
         // Pre-fill form with client data
         if (client.name) form.setValue('name', client.name);
@@ -249,21 +277,24 @@ export default function PublicBook() {
     setIsSubmitting(true);
 
     try {
+      // For returning clients, use stored clientData as fallback for empty fields
+      const submissionData = {
+        name: data.name || clientData?.name || '',
+        email: data.email || clientData?.email || '',
+        phone: data.phone || clientData?.phone || '',
+        company: data.company || clientData?.company || '',
+        address: data.address || clientData?.address || '',
+        pteCount: data.pteCount,
+        otrCount: data.otrCount,
+        tractorCount: data.tractorCount,
+        preferredDate: data.preferredDate,
+        preferredWindow: data.preferredWindow,
+        notes: data.notes,
+        source: returningClientName ? 'client_portal' : 'direct',
+      };
+
       const { data: result, error } = await supabase.functions.invoke('public-booking', {
-        body: {
-          name: data.name,
-          email: data.email,
-          phone: data.phone,
-          company: data.company,
-          address: data.address,
-          pteCount: data.pteCount,
-          otrCount: data.otrCount,
-          tractorCount: data.tractorCount,
-          preferredDate: data.preferredDate,
-          preferredWindow: data.preferredWindow,
-          notes: data.notes,
-          source: 'direct',
-        }
+        body: submissionData
       });
 
       if (error) throw error;
