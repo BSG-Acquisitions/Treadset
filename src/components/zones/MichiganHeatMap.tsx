@@ -183,7 +183,8 @@ export function MichiganHeatMap() {
 
   // Initialize map
   useEffect(() => {
-    if (!mapContainer.current || !mapboxToken || !mapboxgl || locations.length === 0) return;
+    // Wait for loading to complete so mapContainer div is in DOM
+    if (loading || !mapContainer.current || !mapboxToken || !mapboxgl || locations.length === 0) return;
     if (map.current) return;
 
     try {
@@ -353,7 +354,7 @@ export function MichiganHeatMap() {
       map.current?.remove();
       map.current = null;
     };
-  }, [mapboxToken, locations, mapboxgl]);
+  }, [mapboxToken, locations, mapboxgl, loading]);
 
   if (loading) {
     return (
