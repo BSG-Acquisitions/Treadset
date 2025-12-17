@@ -328,7 +328,7 @@ export default function PublicBook() {
             <AlertTriangle className="h-4 w-4 text-amber-600" />
             <AlertDescription className="text-amber-800">
               <strong>Minimum {MIN_TIRE_THRESHOLD} tires required</strong> — We require a minimum of {MIN_TIRE_THRESHOLD} PTE 
-              (Passenger Tire Equivalents) for scheduled pickups. OTR tires count as 15 PTE each, and tractor tires count as 5 PTE each.
+              (Passenger Tire Equivalents) for scheduled pickups.
             </AlertDescription>
           </Alert>
 
@@ -349,114 +349,118 @@ export default function PublicBook() {
           </Card>
 
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
-            {/* Contact Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Building2 className="h-5 w-5" />
-                  Contact Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Full Name *</Label>
-                    <Input
-                      id="name"
-                      {...form.register("name")}
-                      placeholder="John Smith"
-                    />
-                    {form.formState.errors.name && (
-                      <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="company">Company Name *</Label>
-                    <Input
-                      id="company"
-                      {...form.register("company")}
-                      placeholder="ABC Auto Shop"
-                    />
-                    {form.formState.errors.company && (
-                      <p className="text-sm text-destructive">{form.formState.errors.company.message}</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email Address *</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            {/* Contact Information - only show for new visitors */}
+            {!returningClientName && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Building2 className="h-5 w-5" />
+                    Contact Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Full Name *</Label>
                       <Input
-                        id="email"
-                        type="email"
-                        {...form.register("email")}
-                        placeholder="john@company.com"
-                        className="pl-10"
+                        id="name"
+                        {...form.register("name")}
+                        placeholder="John Smith"
                       />
+                      {form.formState.errors.name && (
+                        <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
+                      )}
                     </div>
-                    {form.formState.errors.email && (
-                      <p className="text-sm text-destructive">{form.formState.errors.email.message}</p>
-                    )}
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number *</Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <div className="space-y-2">
+                      <Label htmlFor="company">Company Name *</Label>
                       <Input
-                        id="phone"
-                        type="tel"
-                        {...form.register("phone")}
-                        placeholder="(555) 123-4567"
-                        className="pl-10"
+                        id="company"
+                        {...form.register("company")}
+                        placeholder="ABC Auto Shop"
                       />
+                      {form.formState.errors.company && (
+                        <p className="text-sm text-destructive">{form.formState.errors.company.message}</p>
+                      )}
                     </div>
-                    {form.formState.errors.phone && (
-                      <p className="text-sm text-destructive">{form.formState.errors.phone.message}</p>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email Address *</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="email"
+                          type="email"
+                          {...form.register("email")}
+                          placeholder="john@company.com"
+                          className="pl-10"
+                        />
+                      </div>
+                      {form.formState.errors.email && (
+                        <p className="text-sm text-destructive">{form.formState.errors.email.message}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone Number *</Label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="phone"
+                          type="tel"
+                          {...form.register("phone")}
+                          placeholder="313-731-0817"
+                          className="pl-10"
+                        />
+                      </div>
+                      {form.formState.errors.phone && (
+                        <p className="text-sm text-destructive">{form.formState.errors.phone.message}</p>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Pickup Location - only show for new visitors */}
+            {!returningClientName && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MapPin className="h-5 w-5" />
+                    Pickup Location
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Pickup Address *</Label>
+                    <PlacesAutocomplete
+                      value={form.watch("address")}
+                      onChange={(address: string) => form.setValue("address", address)}
+                      placeholder="Enter your business address..."
+                    />
+                    {form.formState.errors.address && (
+                      <p className="text-sm text-destructive">{form.formState.errors.address.message}</p>
                     )}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
 
-            {/* Pickup Location */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5" />
-                  Pickup Location
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="address">Pickup Address *</Label>
-                  <PlacesAutocomplete
-                    value={form.watch("address")}
-                    onChange={(address: string) => form.setValue("address", address)}
-                    placeholder="Enter your business address..."
-                  />
-                  {form.formState.errors.address && (
-                    <p className="text-sm text-destructive">{form.formState.errors.address.message}</p>
+                  {/* Zone Match Indicator */}
+                  {matchedZone && (
+                    <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                      <div>
+                        <p className="text-sm font-medium text-green-700">We service your area!</p>
+                        <p className="text-xs text-muted-foreground">
+                          Our trucks are typically in your zone on {(matchedZone.primary_service_days || []).map(d => 
+                            d.charAt(0).toUpperCase() + d.slice(1)
+                          ).join(', ')}
+                        </p>
+                      </div>
+                    </div>
                   )}
-                </div>
-
-                {/* Zone Match Indicator */}
-                {matchedZone && (
-                  <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
-                    <CheckCircle2 className="h-5 w-5 text-green-600" />
-                    <div>
-                      <p className="text-sm font-medium text-green-700">We service your area!</p>
-                      <p className="text-xs text-muted-foreground">
-                        Our trucks are typically in your zone on {(matchedZone.primary_service_days || []).map(d => 
-                          d.charAt(0).toUpperCase() + d.slice(1)
-                        ).join(', ')}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Tire Information */}
             <Card>
@@ -665,7 +669,7 @@ export default function PublicBook() {
 
           {/* Footer */}
           <div className="text-center mt-8 text-sm text-muted-foreground">
-            <p>Questions? Contact us at <a href="tel:+15551234567" className="text-brand-primary hover:underline">(555) 123-4567</a></p>
+            <p>Questions? Contact us at <a href="tel:+13137310817" className="text-brand-primary hover:underline">313-731-0817</a></p>
           </div>
         </div>
       </div>
