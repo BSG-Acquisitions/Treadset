@@ -439,9 +439,9 @@ const App = () => (
                 </ProtectedRoute>
               } />
               
-              {/* Client Portal - For external clients to view their manifests */}
+              {/* Client Portal - For external clients to view their manifests, admins can preview */}
               <Route path="/client-portal" element={
-                <ProtectedRoute roles={['client']}>
+                <ProtectedRoute roles={['admin', 'ops_manager', 'client']}>
                   <ClientPortal />
                 </ProtectedRoute>
               } />

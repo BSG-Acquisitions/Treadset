@@ -235,7 +235,7 @@ export default function PublicBookingConfirmation() {
               <Link to="/public-book">Submit Another Request</Link>
             </Button>
             <Button variant="outline" asChild className="flex-1">
-              <a href="mailto:support@bsglogistics.com">Contact Support</a>
+              <a href="mailto:bsgtires@gmail.com">Contact Support</a>
             </Button>
           </div>
 
@@ -244,7 +244,7 @@ export default function PublicBookingConfirmation() {
             <CardContent className="pt-6">
               <div className="text-center text-sm text-muted-foreground">
                 <p className="mb-2">Have questions about your request?</p>
-                <p>Contact us at <span className="font-medium">support@bsglogistics.com</span> or <span className="font-medium">(555) 123-4567</span></p>
+                <p>Contact us at <a href="mailto:bsgtires@gmail.com" className="font-medium text-primary hover:underline">bsgtires@gmail.com</a> or <a href="tel:+13137310817" className="font-medium text-primary hover:underline">313-731-0817</a></p>
                 <p className="text-xs mt-2">Reference: {confirmationData.bookingRequestId.slice(0, 8).toUpperCase()}</p>
               </div>
             </CardContent>
