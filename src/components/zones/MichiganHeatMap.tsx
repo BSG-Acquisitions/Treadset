@@ -197,11 +197,23 @@ export function MichiganHeatMap() {
     fetchLocationData();
   }, [organizationId]);
 
+  // Cleanup map on unmount only
+  useEffect(() => {
+    return () => {
+      if (map.current) {
+        map.current.remove();
+        map.current = null;
+      }
+    };
+  }, []);
+
   // Initialize map
   useEffect(() => {
     // Wait for loading to complete so mapContainer div is in DOM
     if (loading || !mapContainer.current || !mapboxToken || !mapboxgl || locations.length === 0) return;
     if (map.current) return;
+
+    console.log('Initializing Mapbox map with', locations.length, 'locations');
 
     try {
       // Some Mapbox builds expect a global token, others support the per-map option.
@@ -224,26 +236,37 @@ export function MichiganHeatMap() {
         const avgLng = lngs.reduce((a, b) => a + b, 0) / lngs.length;
         initialCenter = [avgLng, avgLat];
         initialZoom = 9; // Closer zoom for concentrated data
+        console.log('Map center calculated:', initialCenter, 'zoom:', initialZoom);
       }
 
       map.current = new mapboxgl.Map({
         accessToken: mapboxToken,
         container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/navigation-night-v1',
+        style: 'mapbox://styles/mapbox/light-v11', // Changed to light-v11 for better reliability
         center: initialCenter,
         zoom: initialZoom,
         pitch: 0,
       });
 
       map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+      console.log('Map created successfully');
     } catch (err) {
       console.error('Failed to initialize Mapbox map:', err);
       setMapError('Something went wrong loading the map');
       return;
     }
 
-    map.current.on('load', () => {
+    // Function to add heatmap layers
+    const addHeatmapLayers = () => {
       if (!map.current) return;
+      
+      // Check if source already exists
+      if (map.current.getSource('pickups')) {
+        console.log('Heatmap source already exists, skipping');
+        return;
+      }
+
+      console.log('Adding heatmap source with', locations.length, 'features');
 
       // Prepare GeoJSON data for heatmap
       const geojsonData = {
@@ -267,6 +290,7 @@ export function MichiganHeatMap() {
         type: 'geojson',
         data: geojsonData,
       });
+      console.log('Source added, adding heatmap layer');
 
       // Add heatmap layer
       map.current.addLayer({
@@ -325,6 +349,7 @@ export function MichiganHeatMap() {
           ],
         },
       });
+      console.log('Heatmap layer added');
 
       // Add circle layer for high zoom
       map.current.addLayer({
@@ -354,12 +379,13 @@ export function MichiganHeatMap() {
           'circle-opacity': 0.8,
         },
       });
+      console.log('Circle layer added');
 
       // Add popup on click
-      map.current.on('click', 'pickups-points', (e) => {
+      map.current.on('click', 'pickups-points', (e: any) => {
         if (!e.features || e.features.length === 0) return;
         const props = e.features[0].properties;
-        const coords = (e.features[0].geometry as any).coordinates.slice();
+        const coords = e.features[0].geometry.coordinates.slice();
 
         new mapboxgl.Popup()
           .setLngLat(coords)
@@ -380,12 +406,23 @@ export function MichiganHeatMap() {
       map.current.on('mouseleave', 'pickups-points', () => {
         if (map.current) map.current.getCanvas().style.cursor = '';
       });
-    });
 
-    return () => {
-      map.current?.remove();
-      map.current = null;
+      // Force resize to ensure proper rendering
+      map.current.resize();
+      console.log('Map resize triggered');
     };
+
+    // Check if style is already loaded, otherwise wait for load event
+    if (map.current.isStyleLoaded()) {
+      console.log('Style already loaded, adding layers immediately');
+      addHeatmapLayers();
+    } else {
+      console.log('Waiting for style to load...');
+      map.current.on('load', () => {
+        console.log('Style load event fired');
+        addHeatmapLayers();
+      });
+    }
   }, [mapboxToken, locations, mapboxgl, loading]);
 
   if (loading) {
