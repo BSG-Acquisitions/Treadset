@@ -88,21 +88,22 @@ export const useCreateDropoffWithManifest = () => {
       if (manifestError) throw manifestError;
 
       // 5. Build overrides for PDF generation with signatures
+      // Use correct domain field names that match templateConfig.ts mappings
       const overrides: Record<string, any> = {};
       
-      // Generator signature → customer fields on PDF
+      // Generator signature → generator fields on PDF (maps to Generator_Signature, Generator_Print_Name)
       if ((dropoff as any).generator_sig_path) {
-        overrides.customer_signature = (dropoff as any).generator_sig_path;
-        overrides.customer_print_name = (dropoff as any).generator_signed_by || '';
+        overrides.generator_signature = (dropoff as any).generator_sig_path;
+        overrides.generator_print_name = (dropoff as any).generator_signed_by || '';
       }
       
-      // Hauler signature → driver fields on PDF
+      // Hauler signature → hauler fields on PDF (maps to Hauler_Signature, Hauler_Print_Name)
       if (dropoff.hauler_sig_path) {
-        overrides.driver_signature = dropoff.hauler_sig_path;
-        overrides.driver_print_name = dropoff.hauler_signed_by || '';
+        overrides.hauler_signature = dropoff.hauler_sig_path;
+        overrides.hauler_print_name = dropoff.hauler_signed_by || '';
       }
       
-      // Receiver signature
+      // Receiver signature → receiver fields on PDF
       if (dropoff.receiver_sig_path) {
         overrides.receiver_signature = dropoff.receiver_sig_path;
         overrides.receiver_print_name = dropoff.receiver_signed_by || '';

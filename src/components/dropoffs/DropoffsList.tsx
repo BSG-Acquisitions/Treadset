@@ -20,7 +20,8 @@ import {
   Trash,
   Pen,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  RefreshCw
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -53,6 +54,7 @@ import { useNavigate } from "react-router-dom";
 import { calculateTotalPTE } from "@/lib/michigan-conversions";
 import { cn } from "@/lib/utils";
 import { useGenerateDropoffManifest } from "@/hooks/useGenerateDropoffManifest";
+import { useRegenerateDropoffManifest } from "@/hooks/useRegenerateDropoffManifest";
 import { useDeleteDropoff } from "@/hooks/useDropoffs";
 
 type Dropoff = Database["public"]["Tables"]["dropoffs"]["Row"] & {
@@ -87,6 +89,7 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
   const [deleteDropoffId, setDeleteDropoffId] = useState<string | null>(null);
   const navigate = useNavigate();
   const generateManifest = useGenerateDropoffManifest();
+  const regenerateManifest = useRegenerateDropoffManifest();
   const deleteDropoff = useDeleteDropoff();
   
   const handleDelete = () => {
@@ -375,14 +378,35 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
               )}
               
               {dropoff.manifest_id && (
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={() => navigate(`/manifests/${dropoff.manifest_id}`)}
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  View Manifest
-                </Button>
+                <>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => navigate(`/manifests/${dropoff.manifest_id}`)}
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    View Manifest
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="secondary"
+                    onClick={() => regenerateManifest.mutate(dropoff.id)}
+                    disabled={regenerateManifest.isPending}
+                    title="Regenerate manifest PDF with latest signature data"
+                  >
+                    {regenerateManifest.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Regenerating...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Regenerate PDF
+                      </>
+                    )}
+                  </Button>
+                </>
               )}
               
               <div className="ml-auto">
@@ -407,10 +431,19 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
                       </DropdownMenuItem>
                     )}
                     {dropoff.manifest_id && (
-                      <DropdownMenuItem onClick={() => navigate(`/manifests/${dropoff.manifest_id}`)}>
-                        <FileText className="h-4 w-4 mr-2" />
-                        View Manifest
-                      </DropdownMenuItem>
+                      <>
+                        <DropdownMenuItem onClick={() => navigate(`/manifests/${dropoff.manifest_id}`)}>
+                          <FileText className="h-4 w-4 mr-2" />
+                          View Manifest
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => regenerateManifest.mutate(dropoff.id)}
+                          disabled={regenerateManifest.isPending}
+                        >
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                          Regenerate PDF
+                        </DropdownMenuItem>
+                      </>
                     )}
                     <DropdownMenuItem>
                       <Receipt className="h-4 w-4 mr-2" />
