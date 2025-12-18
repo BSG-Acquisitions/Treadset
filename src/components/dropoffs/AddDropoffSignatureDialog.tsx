@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useReceivers } from "@/hooks/useReceivers";
 import { useGenerateDropoffManifest } from "@/hooks/useGenerateDropoffManifest";
-import { Loader2, Pen, Eraser, Truck, Building2 } from "lucide-react";
+import { Loader2, Pen, Eraser, Factory, Truck, Building2 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type Dropoff = Database["public"]["Tables"]["dropoffs"]["Row"];
@@ -24,13 +24,23 @@ interface AddDropoffSignatureDialogProps {
 }
 
 export const AddDropoffSignatureDialog = ({ open, onOpenChange, dropoff }: AddDropoffSignatureDialogProps) => {
-  const [activeTab, setActiveTab] = useState<string>("hauler");
+  // Determine which tab should be active based on missing signatures
+  const getDefaultTab = () => {
+    if (!(dropoff as any).generator_sig_path) return "generator";
+    if (!dropoff.hauler_sig_path) return "hauler";
+    if (!dropoff.receiver_sig_path) return "receiver";
+    return "generator";
+  };
+
+  const [activeTab, setActiveTab] = useState<string>(getDefaultTab());
+  const [generatorPrintName, setGeneratorPrintName] = useState("");
   const [haulerPrintName, setHaulerPrintName] = useState("");
   const [receiverPrintName, setReceiverPrintName] = useState("");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
   const [selectedReceiverId, setSelectedReceiverId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  const generatorSigRef = useRef<SignatureCanvas | null>(null);
   const haulerSigRef = useRef<SignatureCanvas | null>(null);
   const receiverSigRef = useRef<SignatureCanvas | null>(null);
   
@@ -40,6 +50,7 @@ export const AddDropoffSignatureDialog = ({ open, onOpenChange, dropoff }: AddDr
   const { data: receivers } = useReceivers();
   const generateManifest = useGenerateDropoffManifest();
 
+  const needsGeneratorSig = !(dropoff as any).generator_sig_path;
   const needsHaulerSig = !dropoff.hauler_sig_path;
   const needsReceiverSig = !dropoff.receiver_sig_path;
 
@@ -82,6 +93,24 @@ export const AddDropoffSignatureDialog = ({ open, onOpenChange, dropoff }: AddDr
     try {
       const timestamp = new Date().toISOString();
       const updateData: Record<string, any> = { updated_at: timestamp };
+
+      // Handle generator signature
+      if (activeTab === 'generator' && generatorSigRef.current && !generatorSigRef.current.isEmpty() && generatorPrintName) {
+        const sigDataUrl = generatorSigRef.current.toDataURL();
+        const blob = dataURLtoBlob(sigDataUrl);
+        const fileName = `generator_signature_${Date.now()}.png`;
+        const uploadPath = `${dropoff.organization_id}/signatures/${fileName}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('manifests')
+          .upload(uploadPath, blob, { contentType: 'image/png', upsert: false });
+        
+        if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
+        
+        updateData.generator_sig_path = uploadPath;
+        updateData.generator_signed_by = generatorPrintName;
+        updateData.generator_signed_at = timestamp;
+      }
 
       // Handle hauler signature
       if (activeTab === 'hauler' && haulerSigRef.current && !haulerSigRef.current.isEmpty() && haulerPrintName) {
@@ -134,10 +163,12 @@ export const AddDropoffSignatureDialog = ({ open, onOpenChange, dropoff }: AddDr
 
       queryClient.invalidateQueries({ queryKey: ['dropoffs'] });
       queryClient.invalidateQueries({ queryKey: ['todays-dropoffs'] });
+      queryClient.invalidateQueries({ queryKey: ['manifests'] });
       
+      const sigType = activeTab === 'generator' ? 'Generator' : activeTab === 'hauler' ? 'Hauler' : 'Receiver';
       toast({
         title: "Signature Added",
-        description: `${activeTab === 'hauler' ? 'Hauler' : 'Receiver'} signature has been added successfully.`
+        description: `${sigType} signature has been added successfully.`
       });
       
       onOpenChange(false);
@@ -153,8 +184,10 @@ export const AddDropoffSignatureDialog = ({ open, onOpenChange, dropoff }: AddDr
     }
   };
 
-  const clearSignature = (type: 'hauler' | 'receiver') => {
-    if (type === 'hauler') {
+  const clearSignature = (type: 'generator' | 'hauler' | 'receiver') => {
+    if (type === 'generator') {
+      generatorSigRef.current?.clear();
+    } else if (type === 'hauler') {
       haulerSigRef.current?.clear();
     } else {
       receiverSigRef.current?.clear();
@@ -172,22 +205,62 @@ export const AddDropoffSignatureDialog = ({ open, onOpenChange, dropoff }: AddDr
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="generator" disabled={!needsGeneratorSig}>
+              <Factory className="h-4 w-4 mr-1" />
+              Gen {!needsGeneratorSig && '✓'}
+            </TabsTrigger>
             <TabsTrigger value="hauler" disabled={!needsHaulerSig}>
-              <Truck className="h-4 w-4 mr-2" />
+              <Truck className="h-4 w-4 mr-1" />
               Hauler {!needsHaulerSig && '✓'}
             </TabsTrigger>
             <TabsTrigger value="receiver" disabled={!needsReceiverSig}>
-              <Building2 className="h-4 w-4 mr-2" />
-              Receiver {!needsReceiverSig && '✓'}
+              <Building2 className="h-4 w-4 mr-1" />
+              Recv {!needsReceiverSig && '✓'}
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="hauler" className="space-y-4 mt-4">
+          <TabsContent value="generator" className="space-y-4 mt-4">
+            <p className="text-sm text-muted-foreground">
+              Generator is the source of the tires (tire shop, auto dealer, etc.)
+            </p>
             <div className="space-y-2">
               <Label>Print Name *</Label>
               <Input
-                placeholder="Enter hauler/generator name"
+                placeholder="Enter generator name"
+                value={generatorPrintName}
+                onChange={(e) => setGeneratorPrintName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Signature *</Label>
+                <Button variant="ghost" size="sm" onClick={() => clearSignature('generator')}>
+                  <Eraser className="h-4 w-4 mr-1" />
+                  Clear
+                </Button>
+              </div>
+              <div className="border-2 border-dashed border-border rounded-lg bg-background p-1">
+                <SignatureCanvas
+                  ref={(ref) => { generatorSigRef.current = ref; }}
+                  canvasProps={{
+                    className: "w-full h-32 rounded",
+                    style: { width: '100%', height: '128px' }
+                  }}
+                  backgroundColor="white"
+                />
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="hauler" className="space-y-4 mt-4">
+            <p className="text-sm text-muted-foreground">
+              Hauler is the person/company transporting the tires
+            </p>
+            <div className="space-y-2">
+              <Label>Print Name *</Label>
+              <Input
+                placeholder="Enter hauler name"
                 value={haulerPrintName}
                 onChange={(e) => setHaulerPrintName(e.target.value)}
               />
@@ -214,6 +287,9 @@ export const AddDropoffSignatureDialog = ({ open, onOpenChange, dropoff }: AddDr
           </TabsContent>
 
           <TabsContent value="receiver" className="space-y-4 mt-4">
+            <p className="text-sm text-muted-foreground">
+              Receiver is the BSG staff member accepting the tires
+            </p>
             {printNameOptions.length > 0 && (
               <div className="space-y-2">
                 <Label>Select Employee (Optional)</Label>
@@ -232,10 +308,10 @@ export const AddDropoffSignatureDialog = ({ open, onOpenChange, dropoff }: AddDr
               </div>
             )}
             <div className="space-y-2">
-              <Label>Receiver Selection *</Label>
+              <Label>Receiver Selection (Optional)</Label>
               <Select value={selectedReceiverId} onValueChange={setSelectedReceiverId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a receiver..." />
+                  <SelectValue placeholder="Select a receiver facility..." />
                 </SelectTrigger>
                 <SelectContent>
                   {receivers?.map((r) => (

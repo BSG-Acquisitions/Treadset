@@ -7,7 +7,11 @@ import type { Database } from "@/integrations/supabase/types";
 type DropoffInsert = Database["public"]["Tables"]["dropoffs"]["Insert"];
 
 interface CreateDropoffWithManifestParams {
-  dropoff: DropoffInsert;
+  dropoff: DropoffInsert & {
+    generator_sig_path?: string | null;
+    generator_signed_by?: string | null;
+    generator_signed_at?: string | null;
+  };
   vehicleId?: string;
   receiverId?: string;
 }
@@ -34,12 +38,17 @@ export const useCreateDropoffWithManifest = () => {
 
       if (manifestNumberError) throw manifestNumberError;
 
-      // 3. Determine manifest status based on signatures
+      // 3. Determine manifest status based on signatures (all 3 required for COMPLETED)
+      const hasGeneratorSig = !!(dropoff as any).generator_sig_path;
       const hasHaulerSig = !!dropoff.hauler_sig_path;
       const hasReceiverSig = !!dropoff.receiver_sig_path;
-      const manifestStatus = hasHaulerSig && hasReceiverSig ? 'COMPLETED' : 'AWAITING_RECEIVER_SIGNATURE';
+      const manifestStatus = hasGeneratorSig && hasHaulerSig && hasReceiverSig ? 'COMPLETED' : 'AWAITING_RECEIVER_SIGNATURE';
 
       // 4. Create a manifest record for this dropoff
+      // Correct mapping for 3-signature workflow:
+      // - Generator → customer_sig (the tire source signs as customer)
+      // - Hauler → driver_sig (the transporter signs as driver)
+      // - Receiver → receiver_sig (BSG staff signs as receiver)
       const { data: manifestData, error: manifestError } = await supabase
         .from('manifests')
         .insert({
@@ -60,16 +69,24 @@ export const useCreateDropoffWithManifest = () => {
           commercial_22_5_on: 0,
           total: dropoff.computed_revenue || 0,
           status: manifestStatus,
-          // Map signatures from dropoff
+          // Generator signature → customer fields
+          customer_sig_path: (dropoff as any).generator_sig_path || null,
+          customer_signed_at: (dropoff as any).generator_signed_at || null,
+          customer_signed_by: (dropoff as any).generator_signed_by || null,
+          // Also set generator-specific fields if they exist on manifest table
+          generator_signed_at: (dropoff as any).generator_signed_at || null,
+          // Hauler signature → driver fields
           driver_sig_path: dropoff.hauler_sig_path || null,
           driver_signed_at: dropoff.hauler_signed_at || null,
           driver_signed_by: dropoff.hauler_signed_by || null,
-          customer_sig_path: dropoff.hauler_sig_path || null, // For dropoffs, hauler is also the customer
-          customer_signed_at: dropoff.hauler_signed_at || null,
-          customer_signed_by: dropoff.hauler_signed_by || null,
+          // Also set hauler-specific fields if they exist
+          hauler_signed_at: dropoff.hauler_signed_at || null,
+          // Receiver signature → receiver fields
           receiver_sig_path: dropoff.receiver_sig_path || null,
           receiver_signed_at: dropoff.receiver_signed_at || null,
           receiver_signed_by: dropoff.receiver_signed_by || null,
+          // Set signed_at for backwards compatibility (use generator as primary)
+          signed_at: (dropoff as any).generator_signed_at || dropoff.hauler_signed_at || null,
         })
         .select()
         .single();
@@ -79,13 +96,19 @@ export const useCreateDropoffWithManifest = () => {
       // 5. Build overrides for PDF generation with signatures
       const overrides: Record<string, any> = {};
       
+      // Generator signature → customer fields on PDF
+      if ((dropoff as any).generator_sig_path) {
+        overrides.customer_signature = (dropoff as any).generator_sig_path;
+        overrides.customer_print_name = (dropoff as any).generator_signed_by || '';
+      }
+      
+      // Hauler signature → driver fields on PDF
       if (dropoff.hauler_sig_path) {
         overrides.driver_signature = dropoff.hauler_sig_path;
         overrides.driver_print_name = dropoff.hauler_signed_by || '';
-        overrides.customer_signature = dropoff.hauler_sig_path;
-        overrides.customer_print_name = dropoff.hauler_signed_by || '';
       }
       
+      // Receiver signature
       if (dropoff.receiver_sig_path) {
         overrides.receiver_signature = dropoff.receiver_sig_path;
         overrides.receiver_print_name = dropoff.receiver_signed_by || '';
@@ -127,7 +150,7 @@ export const useCreateDropoffWithManifest = () => {
 
       if (updateError) throw updateError;
 
-      // Note: Email will be sent after receiver signature is added (or immediately if complete)
+      // Note: Email will be sent after all signatures are added (or immediately if complete)
 
       return { dropoff: dropoffData, manifest: manifestData, pdfPath: pdfResult.pdfPath };
     },

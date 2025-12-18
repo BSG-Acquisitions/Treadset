@@ -1464,6 +1464,9 @@ export type Database = {
           created_at: string
           dropoff_date: string
           dropoff_time: string | null
+          generator_sig_path: string | null
+          generator_signed_at: string | null
+          generator_signed_by: string | null
           hauler_id: string | null
           hauler_sig_path: string | null
           hauler_signed_at: string | null
@@ -1497,6 +1500,9 @@ export type Database = {
           created_at?: string
           dropoff_date?: string
           dropoff_time?: string | null
+          generator_sig_path?: string | null
+          generator_signed_at?: string | null
+          generator_signed_by?: string | null
           hauler_id?: string | null
           hauler_sig_path?: string | null
           hauler_signed_at?: string | null
@@ -1530,6 +1536,9 @@ export type Database = {
           created_at?: string
           dropoff_date?: string
           dropoff_time?: string | null
+          generator_sig_path?: string | null
+          generator_signed_at?: string | null
+          generator_signed_by?: string | null
           hauler_id?: string | null
           hauler_sig_path?: string | null
           hauler_signed_at?: string | null
