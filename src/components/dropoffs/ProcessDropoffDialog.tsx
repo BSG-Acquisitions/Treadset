@@ -6,13 +6,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { useClients } from "@/hooks/useClients";
 import { useCreateDropoffWithManifest } from "@/hooks/useCreateDropoffWithManifest";
 import { useHaulers } from "@/hooks/useHaulers";
 import { useReceivers } from "@/hooks/useReceivers";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useAuth } from "@/contexts/AuthContext";
-import { FileText, DollarSign, Factory, Truck, Building2, Plus, ChevronLeft, ChevronRight, Pen, CheckCircle2, Eraser, Loader2 } from "lucide-react";
+import { FileText, DollarSign, Factory, Truck, Building2, Plus, ChevronLeft, ChevronRight, Pen, CheckCircle2, Eraser, Loader2, AlertTriangle } from "lucide-react";
 import { CreateHaulerDialog } from "./CreateHaulerDialog";
 import { CreateClientDialog } from "@/components/CreateClientDialog";
 import { calculateTotalPTE } from "@/lib/michigan-conversions";
@@ -28,9 +29,9 @@ interface ProcessDropoffDialogProps {
   selectedCustomerId?: string | null;
 }
 
-type WizardStep = 'info' | 'hauler-sig' | 'receiver-sig' | 'confirmation';
+type WizardStep = 'info' | 'generator-sig' | 'hauler-sig' | 'receiver-sig' | 'confirmation';
 
-const STEPS: WizardStep[] = ['info', 'hauler-sig', 'receiver-sig', 'confirmation'];
+const STEPS: WizardStep[] = ['info', 'generator-sig', 'hauler-sig', 'receiver-sig', 'confirmation'];
 
 export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }: ProcessDropoffDialogProps) => {
   const { user } = useAuth();
@@ -52,13 +53,25 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
   const [selectedHauler, setSelectedHauler] = useState<any>(null);
   const [selectedReceiverId, setSelectedReceiverId] = useState("");
   
-  // Signature state
+  // Optional signature toggles
+  const [hasGeneratorSig, setHasGeneratorSig] = useState(true);
+  const [hasHaulerSig, setHasHaulerSig] = useState(false);
+  const [hasReceiverSig, setHasReceiverSig] = useState(true);
+  
+  // Generator signature state
+  const [generatorPrintName, setGeneratorPrintName] = useState("");
+  const [generatorSigDataUrl, setGeneratorSigDataUrl] = useState<string | null>(null);
+  
+  // Hauler signature state
   const [haulerPrintName, setHaulerPrintName] = useState("");
   const [haulerSigDataUrl, setHaulerSigDataUrl] = useState<string | null>(null);
+  
+  // Receiver signature state
   const [receiverPrintName, setReceiverPrintName] = useState("");
   const [receiverSigDataUrl, setReceiverSigDataUrl] = useState<string | null>(null);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
   
+  const generatorSigRef = useRef<SignatureCanvas | null>(null);
   const haulerSigRef = useRef<SignatureCanvas | null>(null);
   const receiverSigRef = useRef<SignatureCanvas | null>(null);
 
@@ -143,11 +156,17 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
     setSelectedGenerator(null);
     setSelectedHauler(null);
     setSelectedReceiverId("");
+    setHasGeneratorSig(true);
+    setHasHaulerSig(false);
+    setHasReceiverSig(true);
+    setGeneratorPrintName("");
+    setGeneratorSigDataUrl(null);
     setHaulerPrintName("");
     setHaulerSigDataUrl(null);
     setReceiverPrintName("");
     setReceiverSigDataUrl(null);
     setSelectedEmployeeId("");
+    generatorSigRef.current?.clear();
     haulerSigRef.current?.clear();
     receiverSigRef.current?.clear();
   };
@@ -176,9 +195,6 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
     
     try {
       if (!customerId) throw new Error("Please select a customer");
-      if (!haulerSigDataUrl || !haulerPrintName) throw new Error("Hauler signature is required");
-      if (!receiverSigDataUrl || !receiverPrintName) throw new Error("Receiver signature is required");
-      if (!selectedReceiverId) throw new Error("Please select a receiver");
 
       const orgId = user?.currentOrganization?.id || "";
       const timestamp = new Date().toISOString();
@@ -186,23 +202,42 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
       const localDate = format(now, 'yyyy-MM-dd');
       const localTime = format(now, 'HH:mm:ss');
 
-      // Upload hauler signature
-      const haulerBlob = dataURLtoBlob(haulerSigDataUrl);
-      const haulerFileName = `hauler_signature_${Date.now()}.png`;
-      const haulerUploadPath = `${orgId}/signatures/${haulerFileName}`;
-      const { error: haulerUploadError } = await supabase.storage
-        .from('manifests')
-        .upload(haulerUploadPath, haulerBlob, { contentType: 'image/png', upsert: false });
-      if (haulerUploadError) throw new Error(`Hauler signature upload failed: ${haulerUploadError.message}`);
+      let generatorUploadPath: string | null = null;
+      let haulerUploadPath: string | null = null;
+      let receiverUploadPath: string | null = null;
 
-      // Upload receiver signature
-      const receiverBlob = dataURLtoBlob(receiverSigDataUrl);
-      const receiverFileName = `receiver_signature_${Date.now()}.png`;
-      const receiverUploadPath = `${orgId}/signatures/${receiverFileName}`;
-      const { error: receiverUploadError } = await supabase.storage
-        .from('manifests')
-        .upload(receiverUploadPath, receiverBlob, { contentType: 'image/png', upsert: false });
-      if (receiverUploadError) throw new Error(`Receiver signature upload failed: ${receiverUploadError.message}`);
+      // Upload generator signature if captured
+      if (hasGeneratorSig && generatorSigDataUrl && generatorPrintName) {
+        const blob = dataURLtoBlob(generatorSigDataUrl);
+        const fileName = `generator_signature_${Date.now()}.png`;
+        generatorUploadPath = `${orgId}/signatures/${fileName}`;
+        const { error } = await supabase.storage
+          .from('manifests')
+          .upload(generatorUploadPath, blob, { contentType: 'image/png', upsert: false });
+        if (error) throw new Error(`Generator signature upload failed: ${error.message}`);
+      }
+
+      // Upload hauler signature if captured
+      if (hasHaulerSig && haulerSigDataUrl && haulerPrintName) {
+        const blob = dataURLtoBlob(haulerSigDataUrl);
+        const fileName = `hauler_signature_${Date.now()}.png`;
+        haulerUploadPath = `${orgId}/signatures/${fileName}`;
+        const { error } = await supabase.storage
+          .from('manifests')
+          .upload(haulerUploadPath, blob, { contentType: 'image/png', upsert: false });
+        if (error) throw new Error(`Hauler signature upload failed: ${error.message}`);
+      }
+
+      // Upload receiver signature if captured
+      if (hasReceiverSig && receiverSigDataUrl && receiverPrintName) {
+        const blob = dataURLtoBlob(receiverSigDataUrl);
+        const fileName = `receiver_signature_${Date.now()}.png`;
+        receiverUploadPath = `${orgId}/signatures/${fileName}`;
+        const { error } = await supabase.storage
+          .from('manifests')
+          .upload(receiverUploadPath, blob, { contentType: 'image/png', upsert: false });
+        if (error) throw new Error(`Receiver signature upload failed: ${error.message}`);
+      }
 
       await createDropoffWithManifest.mutateAsync({
         dropoff: {
@@ -224,15 +259,21 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
           notes: notes || null,
           status: 'completed',
           processed_by: user?.id || null,
+          // Generator signature
+          generator_sig_path: generatorUploadPath,
+          generator_signed_by: hasGeneratorSig ? generatorPrintName : null,
+          generator_signed_at: hasGeneratorSig && generatorSigDataUrl ? timestamp : null,
+          // Hauler signature
           hauler_sig_path: haulerUploadPath,
-          hauler_signed_by: haulerPrintName,
-          hauler_signed_at: timestamp,
+          hauler_signed_by: hasHaulerSig ? haulerPrintName : null,
+          hauler_signed_at: hasHaulerSig && haulerSigDataUrl ? timestamp : null,
+          // Receiver signature
           receiver_sig_path: receiverUploadPath,
-          receiver_signed_by: receiverPrintName,
-          receiver_signed_at: timestamp,
+          receiver_signed_by: hasReceiverSig ? receiverPrintName : null,
+          receiver_signed_at: hasReceiverSig && receiverSigDataUrl ? timestamp : null,
         },
         vehicleId: undefined,
-        receiverId: selectedReceiverId,
+        receiverId: selectedReceiverId || undefined,
       });
 
       handleClose();
@@ -243,14 +284,29 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
     }
   };
 
+  // Check if all required signatures are captured
+  const missingSignatures = [];
+  if (hasGeneratorSig && (!generatorSigDataUrl || !generatorPrintName)) missingSignatures.push('Generator');
+  if (hasHaulerSig && (!haulerSigDataUrl || !haulerPrintName)) missingSignatures.push('Hauler');
+  if (hasReceiverSig && (!receiverSigDataUrl || !receiverPrintName)) missingSignatures.push('Receiver');
+  
+  const anySignaturesCaptured = 
+    (hasGeneratorSig && generatorSigDataUrl && generatorPrintName) ||
+    (hasHaulerSig && haulerSigDataUrl && haulerPrintName) ||
+    (hasReceiverSig && receiverSigDataUrl && receiverPrintName);
+
   const canProceedFromInfo = customerId && (pteCount || otrCount || tractorCount) && manualRevenue && Number(manualRevenue) > 0;
-  const canProceedFromHaulerSig = haulerSigDataUrl && haulerPrintName;
-  const canProceedFromReceiverSig = receiverSigDataUrl && receiverPrintName && selectedReceiverId;
+  const canProceedFromGeneratorSig = !hasGeneratorSig || (generatorSigDataUrl && generatorPrintName);
+  const canProceedFromHaulerSig = !hasHaulerSig || (haulerSigDataUrl && haulerPrintName);
+  const canProceedFromReceiverSig = !hasReceiverSig || (receiverSigDataUrl && receiverPrintName);
 
   const goNext = () => {
     const idx = STEPS.indexOf(currentStep);
     if (idx < STEPS.length - 1) {
       // Capture signature data before moving
+      if (currentStep === 'generator-sig' && generatorSigRef.current && !generatorSigRef.current.isEmpty()) {
+        setGeneratorSigDataUrl(generatorSigRef.current.toDataURL());
+      }
       if (currentStep === 'hauler-sig' && haulerSigRef.current && !haulerSigRef.current.isEmpty()) {
         setHaulerSigDataUrl(haulerSigRef.current.toDataURL());
       }
@@ -270,6 +326,16 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
 
   const stepIndex = STEPS.indexOf(currentStep);
 
+  const getStepLabel = (step: WizardStep) => {
+    switch (step) {
+      case 'info': return 'Information';
+      case 'generator-sig': return 'Generator Sig';
+      case 'hauler-sig': return 'Hauler Sig';
+      case 'receiver-sig': return 'Receiver Sig';
+      case 'confirmation': return 'Review';
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl sm:max-w-2xl w-full max-h-[95vh]">
@@ -281,8 +347,9 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
           <DialogDescription>
             Step {stepIndex + 1} of {STEPS.length}: {
               currentStep === 'info' ? 'Drop-off Information' :
-              currentStep === 'hauler-sig' ? 'Hauler/Generator Signature' :
-              currentStep === 'receiver-sig' ? 'Receiver Signature' :
+              currentStep === 'generator-sig' ? 'Generator Signature (Optional)' :
+              currentStep === 'hauler-sig' ? 'Hauler Signature (Optional)' :
+              currentStep === 'receiver-sig' ? 'Receiver Signature (Optional)' :
               'Review & Submit'
             }
           </DialogDescription>
@@ -293,14 +360,14 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
           {STEPS.map((step, idx) => (
             <div key={step} className="flex items-center">
               <div className={cn(
-                "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors",
+                "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-colors",
                 idx <= stepIndex ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
               )}>
                 {idx < stepIndex ? <CheckCircle2 className="h-4 w-4" /> : idx + 1}
               </div>
               {idx < STEPS.length - 1 && (
                 <div className={cn(
-                  "w-12 h-1 mx-1",
+                  "w-8 h-1 mx-0.5",
                   idx < stepIndex ? "bg-primary" : "bg-muted"
                 )} />
               )}
@@ -450,133 +517,251 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
             </div>
           )}
 
-          {/* Step 2: Hauler Signature */}
+          {/* Step 2: Generator Signature */}
+          {currentStep === 'generator-sig' && (
+            <Card className="border-primary/20">
+              <CardContent className="pt-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Factory className="h-5 w-5 text-primary" />
+                    <span className="font-medium text-lg">Generator Signature</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="has-generator-sig" className="text-sm">Capture now?</Label>
+                    <Switch
+                      id="has-generator-sig"
+                      checked={hasGeneratorSig}
+                      onCheckedChange={setHasGeneratorSig}
+                    />
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  The generator is the source of the tires (e.g., tire shop, auto dealer)
+                </p>
+                
+                {hasGeneratorSig ? (
+                  <>
+                    <div className="space-y-2">
+                      <Label>Print Name *</Label>
+                      <Input
+                        placeholder="Enter generator name"
+                        value={generatorPrintName}
+                        onChange={(e) => setGeneratorPrintName(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label>Signature *</Label>
+                        <Button variant="ghost" size="sm" onClick={() => { generatorSigRef.current?.clear(); setGeneratorSigDataUrl(null); }}>
+                          <Eraser className="h-4 w-4 mr-1" />
+                          Clear
+                        </Button>
+                      </div>
+                      <div className="border-2 border-dashed border-border rounded-lg bg-background p-1">
+                        <SignatureCanvas
+                          ref={(ref) => { generatorSigRef.current = ref; }}
+                          canvasProps={{
+                            className: "w-full h-40 rounded",
+                            style: { width: '100%', height: '160px' }
+                          }}
+                          backgroundColor="white"
+                          onEnd={() => {
+                            if (generatorSigRef.current && !generatorSigRef.current.isEmpty()) {
+                              setGeneratorSigDataUrl(generatorSigRef.current.toDataURL());
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {generatorSigDataUrl && generatorPrintName && (
+                      <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 rounded-lg p-2">
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span>Signature captured for {generatorPrintName}</span>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="bg-muted/50 p-4 rounded-lg border border-dashed">
+                    <p className="text-sm text-muted-foreground">
+                      Generator signature will be skipped. You can add it later from the drop-offs list.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Step 3: Hauler Signature */}
           {currentStep === 'hauler-sig' && (
             <Card className="border-primary/20">
               <CardContent className="pt-6 space-y-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Pen className="h-5 w-5 text-primary" />
-                  <span className="font-medium text-lg">Hauler/Generator Signature</span>
-                </div>
-                <p className="text-sm text-muted-foreground">The person dropping off the tires must sign below</p>
-                
-                <div className="space-y-2">
-                  <Label>Print Name *</Label>
-                  <Input
-                    placeholder="Enter hauler/generator name"
-                    value={haulerPrintName}
-                    onChange={(e) => setHaulerPrintName(e.target.value)}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>Signature *</Label>
-                    <Button variant="ghost" size="sm" onClick={() => { haulerSigRef.current?.clear(); setHaulerSigDataUrl(null); }}>
-                      <Eraser className="h-4 w-4 mr-1" />
-                      Clear
-                    </Button>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Truck className="h-5 w-5 text-primary" />
+                    <span className="font-medium text-lg">Hauler Signature</span>
                   </div>
-                  <div className="border-2 border-dashed border-border rounded-lg bg-background p-1">
-                    <SignatureCanvas
-                      ref={(ref) => { haulerSigRef.current = ref; }}
-                      canvasProps={{
-                        className: "w-full h-40 rounded",
-                        style: { width: '100%', height: '160px' }
-                      }}
-                      backgroundColor="white"
-                      onEnd={() => {
-                        if (haulerSigRef.current && !haulerSigRef.current.isEmpty()) {
-                          setHaulerSigDataUrl(haulerSigRef.current.toDataURL());
-                        }
-                      }}
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="has-hauler-sig" className="text-sm">Capture now?</Label>
+                    <Switch
+                      id="has-hauler-sig"
+                      checked={hasHaulerSig}
+                      onCheckedChange={setHasHaulerSig}
                     />
                   </div>
                 </div>
+                <p className="text-sm text-muted-foreground">
+                  The hauler is the person/company transporting the tires
+                </p>
+                
+                {hasHaulerSig ? (
+                  <>
+                    <div className="space-y-2">
+                      <Label>Print Name *</Label>
+                      <Input
+                        placeholder="Enter hauler name"
+                        value={haulerPrintName}
+                        onChange={(e) => setHaulerPrintName(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label>Signature *</Label>
+                        <Button variant="ghost" size="sm" onClick={() => { haulerSigRef.current?.clear(); setHaulerSigDataUrl(null); }}>
+                          <Eraser className="h-4 w-4 mr-1" />
+                          Clear
+                        </Button>
+                      </div>
+                      <div className="border-2 border-dashed border-border rounded-lg bg-background p-1">
+                        <SignatureCanvas
+                          ref={(ref) => { haulerSigRef.current = ref; }}
+                          canvasProps={{
+                            className: "w-full h-40 rounded",
+                            style: { width: '100%', height: '160px' }
+                          }}
+                          backgroundColor="white"
+                          onEnd={() => {
+                            if (haulerSigRef.current && !haulerSigRef.current.isEmpty()) {
+                              setHaulerSigDataUrl(haulerSigRef.current.toDataURL());
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
 
-                {haulerSigDataUrl && haulerPrintName && (
-                  <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 rounded-lg p-2">
-                    <CheckCircle2 className="h-4 w-4" />
-                    <span>Signature captured for {haulerPrintName}</span>
+                    {haulerSigDataUrl && haulerPrintName && (
+                      <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 rounded-lg p-2">
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span>Signature captured for {haulerPrintName}</span>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="bg-muted/50 p-4 rounded-lg border border-dashed">
+                    <p className="text-sm text-muted-foreground">
+                      Hauler signature will be skipped. You can add it later from the drop-offs list.
+                    </p>
                   </div>
                 )}
               </CardContent>
             </Card>
           )}
 
-          {/* Step 3: Receiver Signature */}
+          {/* Step 4: Receiver Signature */}
           {currentStep === 'receiver-sig' && (
             <Card className="border-primary/20">
               <CardContent className="pt-6 space-y-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Pen className="h-5 w-5 text-primary" />
-                  <span className="font-medium text-lg">Receiver Signature (BSG Staff)</span>
-                </div>
-                <p className="text-sm text-muted-foreground">BSG staff member receiving the tires must sign below</p>
-
-                {printNameOptions.length > 0 && (
-                  <div className="space-y-2">
-                    <Label>Select Employee (Optional)</Label>
-                    <Select value={selectedEmployeeId} onValueChange={handleEmployeeSelect}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose employee with saved signature..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {printNameOptions.map((opt) => (
-                          <SelectItem key={opt.id} value={opt.id}>
-                            {opt.name} {opt.signatureDataUrl && '(saved)'}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-5 w-5 text-primary" />
+                    <span className="font-medium text-lg">Receiver Signature (BSG Staff)</span>
                   </div>
-                )}
-                
-                <div className="space-y-2">
-                  <Label>Print Name *</Label>
-                  <Input
-                    placeholder="Enter receiver staff name"
-                    value={receiverPrintName}
-                    onChange={(e) => { setReceiverPrintName(e.target.value); setSelectedEmployeeId(""); }}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>Signature *</Label>
-                    <Button variant="ghost" size="sm" onClick={() => { receiverSigRef.current?.clear(); setReceiverSigDataUrl(null); }}>
-                      <Eraser className="h-4 w-4 mr-1" />
-                      Clear
-                    </Button>
-                  </div>
-                  <div className="border-2 border-dashed border-border rounded-lg bg-background p-1">
-                    <SignatureCanvas
-                      ref={(ref) => { receiverSigRef.current = ref; }}
-                      canvasProps={{
-                        className: "w-full h-40 rounded",
-                        style: { width: '100%', height: '160px' }
-                      }}
-                      backgroundColor="white"
-                      onEnd={() => {
-                        if (receiverSigRef.current && !receiverSigRef.current.isEmpty()) {
-                          setReceiverSigDataUrl(receiverSigRef.current.toDataURL());
-                        }
-                      }}
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="has-receiver-sig" className="text-sm">Capture now?</Label>
+                    <Switch
+                      id="has-receiver-sig"
+                      checked={hasReceiverSig}
+                      onCheckedChange={setHasReceiverSig}
                     />
                   </div>
                 </div>
+                <p className="text-sm text-muted-foreground">BSG staff member receiving the tires</p>
 
-                {receiverSigDataUrl && receiverPrintName && (
-                  <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 rounded-lg p-2">
-                    <CheckCircle2 className="h-4 w-4" />
-                    <span>Signature captured for {receiverPrintName}</span>
+                {hasReceiverSig ? (
+                  <>
+                    {printNameOptions.length > 0 && (
+                      <div className="space-y-2">
+                        <Label>Select Employee (Optional)</Label>
+                        <Select value={selectedEmployeeId} onValueChange={handleEmployeeSelect}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choose employee with saved signature..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {printNameOptions.map((opt) => (
+                              <SelectItem key={opt.id} value={opt.id}>
+                                {opt.name} {opt.signatureDataUrl && '(saved)'}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    
+                    <div className="space-y-2">
+                      <Label>Print Name *</Label>
+                      <Input
+                        placeholder="Enter receiver staff name"
+                        value={receiverPrintName}
+                        onChange={(e) => { setReceiverPrintName(e.target.value); setSelectedEmployeeId(""); }}
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label>Signature *</Label>
+                        <Button variant="ghost" size="sm" onClick={() => { receiverSigRef.current?.clear(); setReceiverSigDataUrl(null); }}>
+                          <Eraser className="h-4 w-4 mr-1" />
+                          Clear
+                        </Button>
+                      </div>
+                      <div className="border-2 border-dashed border-border rounded-lg bg-background p-1">
+                        <SignatureCanvas
+                          ref={(ref) => { receiverSigRef.current = ref; }}
+                          canvasProps={{
+                            className: "w-full h-40 rounded",
+                            style: { width: '100%', height: '160px' }
+                          }}
+                          backgroundColor="white"
+                          onEnd={() => {
+                            if (receiverSigRef.current && !receiverSigRef.current.isEmpty()) {
+                              setReceiverSigDataUrl(receiverSigRef.current.toDataURL());
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {receiverSigDataUrl && receiverPrintName && (
+                      <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 rounded-lg p-2">
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span>Signature captured for {receiverPrintName}</span>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="bg-muted/50 p-4 rounded-lg border border-dashed">
+                    <p className="text-sm text-muted-foreground">
+                      Receiver signature will be skipped. You can add it later from the Receiver Signatures page.
+                    </p>
                   </div>
                 )}
               </CardContent>
             </Card>
           )}
 
-          {/* Step 4: Confirmation */}
+          {/* Step 5: Confirmation */}
           {currentStep === 'confirmation' && (
             <div className="space-y-4">
               <Card>
@@ -615,18 +800,55 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
                     <p className="text-sm text-muted-foreground mt-1">Total: {computedPTE} PTE</p>
                   </div>
 
-                  <div className="border-t pt-3 grid grid-cols-2 gap-4">
-                    <div>
-                      <span className="text-muted-foreground text-sm">Hauler Signed:</span>
-                      <p className="font-medium">{haulerPrintName} ✓</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground text-sm">Receiver Signed:</span>
-                      <p className="font-medium">{receiverPrintName} ✓</p>
+                  <div className="border-t pt-3">
+                    <span className="text-muted-foreground text-sm">Signatures:</span>
+                    <div className="grid grid-cols-3 gap-4 mt-2">
+                      <div className="flex items-center gap-2">
+                        <Factory className="h-4 w-4" />
+                        <span className="text-sm">Generator:</span>
+                        {hasGeneratorSig && generatorSigDataUrl ? (
+                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <AlertTriangle className="h-4 w-4 text-amber-500" />
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Truck className="h-4 w-4" />
+                        <span className="text-sm">Hauler:</span>
+                        {hasHaulerSig && haulerSigDataUrl ? (
+                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <AlertTriangle className="h-4 w-4 text-amber-500" />
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4" />
+                        <span className="text-sm">Receiver:</span>
+                        {hasReceiverSig && receiverSigDataUrl ? (
+                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <AlertTriangle className="h-4 w-4 text-amber-500" />
+                        )}
+                      </div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
+
+              {missingSignatures.length > 0 && (
+                <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                    <div className="space-y-1">
+                      <p className="font-medium text-sm text-amber-800">Missing Signatures</p>
+                      <p className="text-sm text-amber-700">
+                        The following signatures are missing: {missingSignatures.join(', ')}.
+                        You can add them later from the drop-offs list or Receiver Signatures page.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="bg-muted p-4 rounded-lg border border-border">
                 <div className="flex items-start gap-3">
@@ -634,7 +856,8 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
                   <div className="space-y-1">
                     <p className="font-medium text-sm">Ready to Submit</p>
                     <p className="text-sm text-muted-foreground">
-                      A manifest will be generated with all signatures and emailed to the client.
+                      A manifest will be generated with captured signatures. 
+                      {anySignaturesCaptured ? " Email will be sent after all signatures are complete." : ""}
                     </p>
                   </div>
                 </div>
@@ -661,6 +884,7 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
                 onClick={goNext}
                 disabled={
                   (currentStep === 'info' && !canProceedFromInfo) ||
+                  (currentStep === 'generator-sig' && !canProceedFromGeneratorSig) ||
                   (currentStep === 'hauler-sig' && !canProceedFromHaulerSig) ||
                   (currentStep === 'receiver-sig' && !canProceedFromReceiverSig)
                 }

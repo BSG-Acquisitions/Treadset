@@ -264,19 +264,34 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
                 <Badge variant={getPaymentStatusColor(dropoff.payment_status || 'pending')}>
                   {dropoff.payment_status}
                 </Badge>
-                {/* Signature Status Badge */}
-                {dropoff.hauler_sig_path && dropoff.receiver_sig_path ? (
-                  <Badge variant="default" className="bg-green-600">
-                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                    Signed
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="text-amber-600 border-amber-400">
-                    <AlertTriangle className="h-3 w-3 mr-1" />
-                    {!dropoff.hauler_sig_path && !dropoff.receiver_sig_path ? 'No Signatures' : 
-                     !dropoff.hauler_sig_path ? 'Hauler Sig Missing' : 'Receiver Sig Missing'}
-                  </Badge>
-                )}
+                {/* 3-Signature Status Badges */}
+                {(() => {
+                  const hasGenerator = !!(dropoff as any).generator_sig_path;
+                  const hasHauler = !!dropoff.hauler_sig_path;
+                  const hasReceiver = !!dropoff.receiver_sig_path;
+                  const sigCount = [hasGenerator, hasHauler, hasReceiver].filter(Boolean).length;
+                  
+                  if (sigCount === 3) {
+                    return (
+                      <Badge variant="default" className="bg-green-600">
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        All Signed
+                      </Badge>
+                    );
+                  }
+                  
+                  const missing = [];
+                  if (!hasGenerator) missing.push('Gen');
+                  if (!hasHauler) missing.push('Hauler');
+                  if (!hasReceiver) missing.push('Recv');
+                  
+                  return (
+                    <Badge variant="outline" className="text-amber-600 border-amber-400">
+                      <AlertTriangle className="h-3 w-3 mr-1" />
+                      {sigCount}/3 ({missing.join(', ')} missing)
+                    </Badge>
+                  );
+                })()}
               </div>
             </div>
 
@@ -325,8 +340,8 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
 
             {/* Actions */}
             <div className="flex gap-2 pt-2">
-              {/* Complete Signatures Button */}
-              {(!dropoff.hauler_sig_path || !dropoff.receiver_sig_path) && (
+              {/* Complete Signatures Button - show if any signature is missing */}
+              {(!(dropoff as any).generator_sig_path || !dropoff.hauler_sig_path || !dropoff.receiver_sig_path) && (
                 <Button 
                   size="sm" 
                   variant="outline"
