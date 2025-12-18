@@ -69,23 +69,17 @@ export const useCreateDropoffWithManifest = () => {
           commercial_22_5_on: 0,
           total: dropoff.computed_revenue || 0,
           status: manifestStatus,
-          // Generator signature → customer fields
+          // Generator signature → customer_sig_path
           customer_sig_path: (dropoff as any).generator_sig_path || null,
-          customer_signed_at: (dropoff as any).generator_signed_at || null,
-          customer_signed_by: (dropoff as any).generator_signed_by || null,
-          // Also set generator-specific fields if they exist on manifest table
           generator_signed_at: (dropoff as any).generator_signed_at || null,
-          // Hauler signature → driver fields
+          // Hauler signature → driver_sig_path
           driver_sig_path: dropoff.hauler_sig_path || null,
-          driver_signed_at: dropoff.hauler_signed_at || null,
-          driver_signed_by: dropoff.hauler_signed_by || null,
-          // Also set hauler-specific fields if they exist
           hauler_signed_at: dropoff.hauler_signed_at || null,
-          // Receiver signature → receiver fields
+          // Receiver signature
           receiver_sig_path: dropoff.receiver_sig_path || null,
           receiver_signed_at: dropoff.receiver_signed_at || null,
           receiver_signed_by: dropoff.receiver_signed_by || null,
-          // Set signed_at for backwards compatibility (use generator as primary)
+          // Backwards compatibility timestamp
           signed_at: (dropoff as any).generator_signed_at || dropoff.hauler_signed_at || null,
         })
         .select()
