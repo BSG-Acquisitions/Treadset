@@ -194,3 +194,6 @@ verify_jwt = false
 
 [functions.cleanup-duplicate-notifications]
 verify_jwt = false
+
+[functions.send-test-outreach-email]
+verify_jwt = false
