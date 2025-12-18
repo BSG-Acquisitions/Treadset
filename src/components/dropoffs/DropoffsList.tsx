@@ -17,7 +17,10 @@ import {
   Loader2,
   ChevronRight,
   TrendingUp,
-  Trash
+  Trash,
+  Pen,
+  CheckCircle2,
+  AlertTriangle
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -43,6 +46,7 @@ import {
 import { format, isWithinInterval, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, isToday, isYesterday, startOfDay } from "date-fns";
 import type { Database } from "@/integrations/supabase/types";
 import { EditDropoffDialog } from "./EditDropoffDialog";
+import { AddDropoffSignatureDialog } from "./AddDropoffSignatureDialog";
 import { HaulerReliabilityBadge } from "@/components/HaulerReliabilityBadge";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -79,6 +83,7 @@ interface DropopffsListProps {
 
 export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListProps) => {
   const [editDropoff, setEditDropoff] = useState<Dropoff | null>(null);
+  const [signatureDropoff, setSignatureDropoff] = useState<Dropoff | null>(null);
   const [deleteDropoffId, setDeleteDropoffId] = useState<string | null>(null);
   const navigate = useNavigate();
   const generateManifest = useGenerateDropoffManifest();
@@ -255,10 +260,23 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
                 </div>
               </div>
               
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <Badge variant={getPaymentStatusColor(dropoff.payment_status || 'pending')}>
                   {dropoff.payment_status}
                 </Badge>
+                {/* Signature Status Badge */}
+                {dropoff.hauler_sig_path && dropoff.receiver_sig_path ? (
+                  <Badge variant="default" className="bg-green-600">
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    Signed
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-amber-600 border-amber-400">
+                    <AlertTriangle className="h-3 w-3 mr-1" />
+                    {!dropoff.hauler_sig_path && !dropoff.receiver_sig_path ? 'No Signatures' : 
+                     !dropoff.hauler_sig_path ? 'Hauler Sig Missing' : 'Receiver Sig Missing'}
+                  </Badge>
+                )}
               </div>
             </div>
 
@@ -307,6 +325,19 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
 
             {/* Actions */}
             <div className="flex gap-2 pt-2">
+              {/* Complete Signatures Button */}
+              {(!dropoff.hauler_sig_path || !dropoff.receiver_sig_path) && (
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => setSignatureDropoff(dropoff)}
+                  className="text-amber-600 border-amber-400 hover:bg-amber-50"
+                >
+                  <Pen className="h-4 w-4 mr-2" />
+                  Add Signature
+                </Button>
+              )}
+              
               {!dropoff.manifest_id && (
                 <Button 
                   size="sm" 
@@ -501,6 +532,14 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
         onOpenChange={(open) => !open && setEditDropoff(null)}
         dropoff={editDropoff}
       />
+
+      {signatureDropoff && (
+        <AddDropoffSignatureDialog
+          open={!!signatureDropoff}
+          onOpenChange={(open) => !open && setSignatureDropoff(null)}
+          dropoff={signatureDropoff}
+        />
+      )}
 
       <AlertDialog open={!!deleteDropoffId} onOpenChange={(open) => !open && setDeleteDropoffId(null)}>
         <AlertDialogContent>

@@ -9,6 +9,7 @@ type DropoffInsert = Database["public"]["Tables"]["dropoffs"]["Insert"];
 interface CreateDropoffWithManifestParams {
   dropoff: DropoffInsert;
   vehicleId?: string;
+  receiverId?: string;
 }
 
 export const useCreateDropoffWithManifest = () => {
@@ -17,7 +18,7 @@ export const useCreateDropoffWithManifest = () => {
   const manifestIntegration = useManifestIntegration();
 
   return useMutation({
-    mutationFn: async ({ dropoff, vehicleId }: CreateDropoffWithManifestParams) => {
+    mutationFn: async ({ dropoff, vehicleId, receiverId }: CreateDropoffWithManifestParams) => {
       // 1. Create the dropoff record
       const { data: dropoffData, error: dropoffError } = await supabase
         .from('dropoffs')
@@ -33,7 +34,12 @@ export const useCreateDropoffWithManifest = () => {
 
       if (manifestNumberError) throw manifestNumberError;
 
-      // 3. Create a manifest record for this dropoff
+      // 3. Determine manifest status based on signatures
+      const hasHaulerSig = !!dropoff.hauler_sig_path;
+      const hasReceiverSig = !!dropoff.receiver_sig_path;
+      const manifestStatus = hasHaulerSig && hasReceiverSig ? 'COMPLETED' : 'AWAITING_RECEIVER_SIGNATURE';
+
+      // 4. Create a manifest record for this dropoff
       const { data: manifestData, error: manifestError } = await supabase
         .from('manifests')
         .insert({
@@ -53,19 +59,64 @@ export const useCreateDropoffWithManifest = () => {
           commercial_22_5_off: 0,
           commercial_22_5_on: 0,
           total: dropoff.computed_revenue || 0,
-          status: 'AWAITING_RECEIVER_SIGNATURE',
+          status: manifestStatus,
+          // Map signatures from dropoff
+          driver_sig_path: dropoff.hauler_sig_path || null,
+          driver_signed_at: dropoff.hauler_signed_at || null,
+          driver_signed_by: dropoff.hauler_signed_by || null,
+          customer_sig_path: dropoff.hauler_sig_path || null, // For dropoffs, hauler is also the customer
+          customer_signed_at: dropoff.hauler_signed_at || null,
+          customer_signed_by: dropoff.hauler_signed_by || null,
+          receiver_sig_path: dropoff.receiver_sig_path || null,
+          receiver_signed_at: dropoff.receiver_signed_at || null,
+          receiver_signed_by: dropoff.receiver_signed_by || null,
         })
         .select()
         .single();
 
       if (manifestError) throw manifestError;
 
-      // 4. Generate the manifest PDF
+      // 5. Build overrides for PDF generation with signatures
+      const overrides: Record<string, any> = {};
+      
+      if (dropoff.hauler_sig_path) {
+        overrides.driver_signature = dropoff.hauler_sig_path;
+        overrides.driver_print_name = dropoff.hauler_signed_by || '';
+        overrides.customer_signature = dropoff.hauler_sig_path;
+        overrides.customer_print_name = dropoff.hauler_signed_by || '';
+      }
+      
+      if (dropoff.receiver_sig_path) {
+        overrides.receiver_signature = dropoff.receiver_sig_path;
+        overrides.receiver_print_name = dropoff.receiver_signed_by || '';
+      }
+
+      // Get receiver data if provided
+      if (receiverId) {
+        const { data: receiverData } = await supabase
+          .from('receivers')
+          .select('*')
+          .eq('id', receiverId)
+          .single();
+        
+        if (receiverData) {
+          overrides.receiver_name = receiverData.receiver_name || '';
+          overrides.receiver_physical_address = receiverData.receiver_mailing_address || '';
+          overrides.receiver_city = receiverData.receiver_city || '';
+          overrides.receiver_state = receiverData.receiver_state || '';
+          overrides.receiver_zip = receiverData.receiver_zip || '';
+          overrides.receiver_phone = receiverData.receiver_phone || '';
+          overrides.receiver_mi_reg = receiverData.collection_site_reg || '';
+        }
+      }
+
+      // 6. Generate the manifest PDF
       const pdfResult = await manifestIntegration.mutateAsync({
         manifestId: manifestData.id,
+        overrides: Object.keys(overrides).length > 0 ? overrides : undefined,
       });
 
-      // 5. Update dropoff with manifest_id and manifest_pdf_path
+      // 7. Update dropoff with manifest_id and manifest_pdf_path
       const { error: updateError } = await supabase
         .from('dropoffs')
         .update({
@@ -76,7 +127,7 @@ export const useCreateDropoffWithManifest = () => {
 
       if (updateError) throw updateError;
 
-      // Note: Email will be sent after receiver signature is added
+      // Note: Email will be sent after receiver signature is added (or immediately if complete)
 
       return { dropoff: dropoffData, manifest: manifestData, pdfPath: pdfResult.pdfPath };
     },
