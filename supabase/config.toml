@@ -197,3 +197,6 @@ verify_jwt = false
 
 [functions.send-test-outreach-email]
 verify_jwt = false
+
+[functions.resend-corrected-outreach]
+verify_jwt = false

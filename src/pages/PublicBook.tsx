@@ -127,7 +127,7 @@ export default function PublicBook() {
       setIsLoadingClient(true);
       try {
         const { data, error } = await supabase.functions.invoke('public-booking', {
-          body: { action: 'check-client', clientId }
+          body: { action: 'check-client', clientId, fromEmail: true }
         });
 
         if (error || !data?.success || !data?.client) {
@@ -277,6 +277,9 @@ export default function PublicBook() {
     setIsSubmitting(true);
 
     try {
+      // Get clientId from URL if returning client
+      const clientId = searchParams.get('client');
+      
       // For returning clients, use stored clientData as fallback for empty fields
       const submissionData = {
         name: data.name || clientData?.name || '',
@@ -291,6 +294,8 @@ export default function PublicBook() {
         preferredWindow: data.preferredWindow,
         notes: data.notes,
         source: returningClientName ? 'client_portal' : 'direct',
+        clientId: clientId || undefined, // Include clientId for conversion tracking
+        fromEmailBooking: !!clientId, // Flag to track email conversions
       };
 
       const { data: result, error } = await supabase.functions.invoke('public-booking', {
