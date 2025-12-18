@@ -166,7 +166,7 @@ Deno.serve(async (req) => {
       // Get client with their primary location for address fallback
       const { data: client, error: clientError } = await supabase
         .from('clients')
-        .select('id, company_name, contact_name, email, phone, physical_address, physical_city, physical_state, physical_zip, mailing_address, city, state, zip')
+        .select('id, company_name, contact_name, email, phone, physical_address, physical_city, physical_state, physical_zip, mailing_address, city, state, zip, organization_id')
         .eq('id', body.clientId)
         .single();
 
@@ -176,6 +176,53 @@ Deno.serve(async (req) => {
           JSON.stringify({ success: false, error: 'Client not found' }),
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
+      }
+
+      // TRACK EMAIL CLICK - increment emails_clicked in client_email_preferences
+      // This happens when a client clicks the email link and lands on /public-book?client={id}
+      if (body.fromEmail) {
+        console.log('[PUBLIC_BOOKING] Tracking email click for client:', body.clientId);
+        const { error: clickError } = await supabase.rpc('increment_email_clicks', {
+          p_client_id: body.clientId,
+          p_organization_id: client.organization_id
+        });
+        
+        if (clickError) {
+          // Fallback: direct update if RPC doesn't exist
+          console.log('[PUBLIC_BOOKING] RPC failed, trying direct update:', clickError.message);
+          await supabase
+            .from('client_email_preferences')
+            .update({ 
+              emails_clicked: supabase.rpc('coalesce', { val: 'emails_clicked', default_val: 0 }) 
+            })
+            .eq('client_id', body.clientId)
+            .eq('organization_id', client.organization_id);
+          
+          // Alternative: upsert approach
+          const { data: existingPref } = await supabase
+            .from('client_email_preferences')
+            .select('emails_clicked')
+            .eq('client_id', body.clientId)
+            .eq('organization_id', client.organization_id)
+            .single();
+          
+          if (existingPref) {
+            await supabase
+              .from('client_email_preferences')
+              .update({ emails_clicked: (existingPref.emails_clicked || 0) + 1 })
+              .eq('client_id', body.clientId)
+              .eq('organization_id', client.organization_id);
+          } else {
+            await supabase
+              .from('client_email_preferences')
+              .insert({
+                client_id: body.clientId,
+                organization_id: client.organization_id,
+                emails_clicked: 1
+              });
+          }
+        }
+        console.log('[PUBLIC_BOOKING] Email click tracked successfully');
       }
 
       // Also check for location address as fallback
@@ -412,8 +459,39 @@ Deno.serve(async (req) => {
         zone_matched: !!matchedZone,
         auto_approved: shouldAutoApprove,
         existing_client: !!existingClient,
+        from_email_booking: bookingData.fromEmailBooking || false,
       }
     });
+
+    // TRACK EMAIL BOOKING CONVERSION - increment bookings_from_email if this came from an email link
+    if (bookingData.fromEmailBooking && (bookingData.clientId || existingClient?.id)) {
+      const trackingClientId = bookingData.clientId || existingClient?.id;
+      console.log('[PUBLIC_BOOKING] Tracking email booking conversion for client:', trackingClientId);
+      
+      const { data: existingPref } = await supabase
+        .from('client_email_preferences')
+        .select('bookings_from_email')
+        .eq('client_id', trackingClientId)
+        .eq('organization_id', organizationId)
+        .single();
+      
+      if (existingPref) {
+        await supabase
+          .from('client_email_preferences')
+          .update({ bookings_from_email: (existingPref.bookings_from_email || 0) + 1 })
+          .eq('client_id', trackingClientId)
+          .eq('organization_id', organizationId);
+      } else {
+        await supabase
+          .from('client_email_preferences')
+          .insert({
+            client_id: trackingClientId,
+            organization_id: organizationId,
+            bookings_from_email: 1
+          });
+      }
+      console.log('[PUBLIC_BOOKING] Email booking conversion tracked successfully');
+    }
 
     // If auto-approved, create the pickup and client if needed
     if (shouldAutoApprove) {
