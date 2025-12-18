@@ -45,7 +45,7 @@ serve(async (req: Request) => {
     const companyName = "Test Company";
     const daysSinceLastPickup = 21;
     const frequency = "biweekly";
-    const bookingUrl = `https://wvjehbozyxhmgdljwsiz.lovable.app/public-book`;
+    const bookingUrl = `https://treadset.lovable.app/public-book`;
 
     // Generate suggested dates (next 3 typical pickup days)
     const suggestedDates: string[] = [];
