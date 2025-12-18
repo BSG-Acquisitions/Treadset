@@ -294,11 +294,11 @@ export const EditManifestSignaturesDialog = ({ open, onOpenChange, dropoff }: Ed
             {(!hasExistingGenerator || !keepExistingGenerator) && (
               <DropoffSignatureStep
                 title=""
-                description="Draw the generator signature below"
+                description="Draw or type the generator signature below"
                 signatureDataUrl={generatorSigDataUrl}
-                printName=""
+                printName={generatorPrintName}
                 onSignatureChange={setGeneratorSigDataUrl}
-                onPrintNameChange={() => {}}
+                onPrintNameChange={setGeneratorPrintName}
                 showEmployeeSelect={false}
                 hidePrintName
               />
@@ -346,11 +346,11 @@ export const EditManifestSignaturesDialog = ({ open, onOpenChange, dropoff }: Ed
             {(!hasExistingHauler || !keepExistingHauler) && (
               <DropoffSignatureStep
                 title=""
-                description="Draw the hauler signature below"
+                description="Draw or type the hauler signature below"
                 signatureDataUrl={haulerSigDataUrl}
-                printName=""
+                printName={haulerPrintName}
                 onSignatureChange={setHaulerSigDataUrl}
-                onPrintNameChange={() => {}}
+                onPrintNameChange={setHaulerPrintName}
                 showEmployeeSelect={false}
                 hidePrintName
               />
@@ -398,11 +398,11 @@ export const EditManifestSignaturesDialog = ({ open, onOpenChange, dropoff }: Ed
             {(!hasExistingReceiver || !keepExistingReceiver) && (
               <DropoffSignatureStep
                 title=""
-                description="Draw the receiver signature below"
+                description="Draw or type the receiver signature below"
                 signatureDataUrl={receiverSigDataUrl}
-                printName=""
+                printName={receiverPrintName}
                 onSignatureChange={setReceiverSigDataUrl}
-                onPrintNameChange={() => {}}
+                onPrintNameChange={setReceiverPrintName}
                 showEmployeeSelect={true}
                 hidePrintName
               />
