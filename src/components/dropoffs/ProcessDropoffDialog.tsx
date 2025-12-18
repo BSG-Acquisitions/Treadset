@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,16 +11,15 @@ import { useClients } from "@/hooks/useClients";
 import { useCreateDropoffWithManifest } from "@/hooks/useCreateDropoffWithManifest";
 import { useHaulers } from "@/hooks/useHaulers";
 import { useReceivers } from "@/hooks/useReceivers";
-import { useEmployees } from "@/hooks/useEmployees";
 import { useAuth } from "@/contexts/AuthContext";
-import { FileText, DollarSign, Factory, Truck, Building2, Plus, ChevronLeft, ChevronRight, Pen, CheckCircle2, Eraser, Loader2, AlertTriangle } from "lucide-react";
+import { FileText, DollarSign, Factory, Truck, Building2, Plus, ChevronLeft, ChevronRight, CheckCircle2, Loader2, AlertTriangle } from "lucide-react";
 import { CreateHaulerDialog } from "./CreateHaulerDialog";
 import { CreateClientDialog } from "@/components/CreateClientDialog";
+import { DropoffSignatureStep } from "./DropoffSignatureStep";
 import { calculateTotalPTE } from "@/lib/michigan-conversions";
 import { format } from "date-fns";
 import { SearchableDropdown } from "@/components/SearchableDropdown";
 import { supabase } from "@/integrations/supabase/client";
-import SignatureCanvas from "react-signature-canvas";
 import { cn } from "@/lib/utils";
 
 interface ProcessDropoffDialogProps {
@@ -69,30 +68,14 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
   // Receiver signature state
   const [receiverPrintName, setReceiverPrintName] = useState("");
   const [receiverSigDataUrl, setReceiverSigDataUrl] = useState<string | null>(null);
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
-  
-  const generatorSigRef = useRef<SignatureCanvas | null>(null);
-  const haulerSigRef = useRef<SignatureCanvas | null>(null);
-  const receiverSigRef = useRef<SignatureCanvas | null>(null);
 
   const { data: clientsData } = useClients();
   const customers = Array.isArray(clientsData) ? clientsData : (clientsData?.data || []);
   const { data: haulers = [] } = useHaulers();
   const { data: receivers } = useReceivers();
-  const { data: employees } = useEmployees();
   const createDropoffWithManifest = useCreateDropoffWithManifest();
 
   const selectedCustomer = selectedGenerator || customers.find(c => c.id === customerId);
-  const selectedReceiverData = receivers?.find(r => r.id === selectedReceiverId);
-
-  const printNameOptions = employees
-    ?.filter(emp => emp.isActive)
-    ?.map(emp => ({
-      id: emp.id,
-      name: `${emp.firstName} ${emp.lastName}`.trim(),
-      signatureDataUrl: emp.signatureDataUrl
-    }))
-    ?.filter(opt => opt.name.length > 0) || [];
 
   // Search functions
   const searchClients = async (search: string) => {
@@ -130,19 +113,6 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
     }
   }, [selectedCustomerId]);
 
-  const handleEmployeeSelect = (employeeId: string) => {
-    setSelectedEmployeeId(employeeId);
-    const employee = employees?.find(emp => emp.id === employeeId);
-    if (employee) {
-      const fullName = `${employee.firstName} ${employee.lastName}`.trim();
-      setReceiverPrintName(fullName);
-      if (employee.signatureDataUrl && receiverSigRef.current) {
-        receiverSigRef.current.fromDataURL(employee.signatureDataUrl);
-        setReceiverSigDataUrl(employee.signatureDataUrl);
-      }
-    }
-  };
-
   const resetForm = () => {
     setCurrentStep('info');
     setCustomerId("");
@@ -165,10 +135,6 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
     setHaulerSigDataUrl(null);
     setReceiverPrintName("");
     setReceiverSigDataUrl(null);
-    setSelectedEmployeeId("");
-    generatorSigRef.current?.clear();
-    haulerSigRef.current?.clear();
-    receiverSigRef.current?.clear();
   };
 
   const handleClose = () => {
@@ -303,16 +269,7 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
   const goNext = () => {
     const idx = STEPS.indexOf(currentStep);
     if (idx < STEPS.length - 1) {
-      // Capture signature data before moving
-      if (currentStep === 'generator-sig' && generatorSigRef.current && !generatorSigRef.current.isEmpty()) {
-        setGeneratorSigDataUrl(generatorSigRef.current.toDataURL());
-      }
-      if (currentStep === 'hauler-sig' && haulerSigRef.current && !haulerSigRef.current.isEmpty()) {
-        setHaulerSigDataUrl(haulerSigRef.current.toDataURL());
-      }
-      if (currentStep === 'receiver-sig' && receiverSigRef.current && !receiverSigRef.current.isEmpty()) {
-        setReceiverSigDataUrl(receiverSigRef.current.toDataURL());
-      }
+      // Signature data is already captured via callbacks from DropoffSignatureStep
       setCurrentStep(STEPS[idx + 1]);
     }
   };
@@ -519,246 +476,116 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
 
           {/* Step 2: Generator Signature */}
           {currentStep === 'generator-sig' && (
-            <Card className="border-primary/20">
-              <CardContent className="pt-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Factory className="h-5 w-5 text-primary" />
-                    <span className="font-medium text-lg">Generator Signature</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="has-generator-sig" className="text-sm">Capture now?</Label>
-                    <Switch
-                      id="has-generator-sig"
-                      checked={hasGeneratorSig}
-                      onCheckedChange={setHasGeneratorSig}
-                    />
-                  </div>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Factory className="h-5 w-5 text-primary" />
+                  <span className="font-medium text-lg">Generator Signature</span>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  The generator is the source of the tires (e.g., tire shop, auto dealer)
-                </p>
-                
-                {hasGeneratorSig ? (
-                  <>
-                    <div className="space-y-2">
-                      <Label>Print Name *</Label>
-                      <Input
-                        placeholder="Enter generator name"
-                        value={generatorPrintName}
-                        onChange={(e) => setGeneratorPrintName(e.target.value)}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label>Signature *</Label>
-                        <Button variant="ghost" size="sm" onClick={() => { generatorSigRef.current?.clear(); setGeneratorSigDataUrl(null); }}>
-                          <Eraser className="h-4 w-4 mr-1" />
-                          Clear
-                        </Button>
-                      </div>
-                      <div className="border-2 border-dashed border-border rounded-lg bg-background p-1">
-                        <SignatureCanvas
-                          ref={(ref) => { generatorSigRef.current = ref; }}
-                          canvasProps={{
-                            className: "w-full h-40 rounded",
-                            style: { width: '100%', height: '160px' }
-                          }}
-                          backgroundColor="white"
-                          onEnd={() => {
-                            if (generatorSigRef.current && !generatorSigRef.current.isEmpty()) {
-                              setGeneratorSigDataUrl(generatorSigRef.current.toDataURL());
-                            }
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    {generatorSigDataUrl && generatorPrintName && (
-                      <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 rounded-lg p-2">
-                        <CheckCircle2 className="h-4 w-4" />
-                        <span>Signature captured for {generatorPrintName}</span>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="bg-muted/50 p-4 rounded-lg border border-dashed">
-                    <p className="text-sm text-muted-foreground">
-                      Generator signature will be skipped. You can add it later from the drop-offs list.
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="has-generator-sig" className="text-sm">Capture now?</Label>
+                  <Switch
+                    id="has-generator-sig"
+                    checked={hasGeneratorSig}
+                    onCheckedChange={setHasGeneratorSig}
+                  />
+                </div>
+              </div>
+              
+              {hasGeneratorSig ? (
+                <DropoffSignatureStep
+                  title="Generator Signature"
+                  description="The generator is the source of the tires (e.g., tire shop, auto dealer)"
+                  signatureDataUrl={generatorSigDataUrl}
+                  printName={generatorPrintName}
+                  onSignatureChange={setGeneratorSigDataUrl}
+                  onPrintNameChange={setGeneratorPrintName}
+                  showEmployeeSelect={false}
+                />
+              ) : (
+                <div className="bg-muted/50 p-4 rounded-lg border border-dashed">
+                  <p className="text-sm text-muted-foreground">
+                    Generator signature will be skipped. You can add it later from the drop-offs list.
+                  </p>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Step 3: Hauler Signature */}
           {currentStep === 'hauler-sig' && (
-            <Card className="border-primary/20">
-              <CardContent className="pt-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Truck className="h-5 w-5 text-primary" />
-                    <span className="font-medium text-lg">Hauler Signature</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="has-hauler-sig" className="text-sm">Capture now?</Label>
-                    <Switch
-                      id="has-hauler-sig"
-                      checked={hasHaulerSig}
-                      onCheckedChange={setHasHaulerSig}
-                    />
-                  </div>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Truck className="h-5 w-5 text-primary" />
+                  <span className="font-medium text-lg">Hauler Signature</span>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  The hauler is the person/company transporting the tires
-                </p>
-                
-                {hasHaulerSig ? (
-                  <>
-                    <div className="space-y-2">
-                      <Label>Print Name *</Label>
-                      <Input
-                        placeholder="Enter hauler name"
-                        value={haulerPrintName}
-                        onChange={(e) => setHaulerPrintName(e.target.value)}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label>Signature *</Label>
-                        <Button variant="ghost" size="sm" onClick={() => { haulerSigRef.current?.clear(); setHaulerSigDataUrl(null); }}>
-                          <Eraser className="h-4 w-4 mr-1" />
-                          Clear
-                        </Button>
-                      </div>
-                      <div className="border-2 border-dashed border-border rounded-lg bg-background p-1">
-                        <SignatureCanvas
-                          ref={(ref) => { haulerSigRef.current = ref; }}
-                          canvasProps={{
-                            className: "w-full h-40 rounded",
-                            style: { width: '100%', height: '160px' }
-                          }}
-                          backgroundColor="white"
-                          onEnd={() => {
-                            if (haulerSigRef.current && !haulerSigRef.current.isEmpty()) {
-                              setHaulerSigDataUrl(haulerSigRef.current.toDataURL());
-                            }
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    {haulerSigDataUrl && haulerPrintName && (
-                      <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 rounded-lg p-2">
-                        <CheckCircle2 className="h-4 w-4" />
-                        <span>Signature captured for {haulerPrintName}</span>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="bg-muted/50 p-4 rounded-lg border border-dashed">
-                    <p className="text-sm text-muted-foreground">
-                      Hauler signature will be skipped. You can add it later from the drop-offs list.
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="has-hauler-sig" className="text-sm">Capture now?</Label>
+                  <Switch
+                    id="has-hauler-sig"
+                    checked={hasHaulerSig}
+                    onCheckedChange={setHasHaulerSig}
+                  />
+                </div>
+              </div>
+              
+              {hasHaulerSig ? (
+                <DropoffSignatureStep
+                  title="Hauler Signature"
+                  description="The hauler is the person/company transporting the tires"
+                  signatureDataUrl={haulerSigDataUrl}
+                  printName={haulerPrintName}
+                  onSignatureChange={setHaulerSigDataUrl}
+                  onPrintNameChange={setHaulerPrintName}
+                  showEmployeeSelect={false}
+                />
+              ) : (
+                <div className="bg-muted/50 p-4 rounded-lg border border-dashed">
+                  <p className="text-sm text-muted-foreground">
+                    Hauler signature will be skipped. You can add it later from the drop-offs list.
+                  </p>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Step 4: Receiver Signature */}
           {currentStep === 'receiver-sig' && (
-            <Card className="border-primary/20">
-              <CardContent className="pt-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Building2 className="h-5 w-5 text-primary" />
-                    <span className="font-medium text-lg">Receiver Signature (BSG Staff)</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="has-receiver-sig" className="text-sm">Capture now?</Label>
-                    <Switch
-                      id="has-receiver-sig"
-                      checked={hasReceiverSig}
-                      onCheckedChange={setHasReceiverSig}
-                    />
-                  </div>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-primary" />
+                  <span className="font-medium text-lg">Receiver Signature (BSG Staff)</span>
                 </div>
-                <p className="text-sm text-muted-foreground">BSG staff member receiving the tires</p>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="has-receiver-sig" className="text-sm">Capture now?</Label>
+                  <Switch
+                    id="has-receiver-sig"
+                    checked={hasReceiverSig}
+                    onCheckedChange={setHasReceiverSig}
+                  />
+                </div>
+              </div>
 
-                {hasReceiverSig ? (
-                  <>
-                    {printNameOptions.length > 0 && (
-                      <div className="space-y-2">
-                        <Label>Select Employee (Optional)</Label>
-                        <Select value={selectedEmployeeId} onValueChange={handleEmployeeSelect}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Choose employee with saved signature..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {printNameOptions.map((opt) => (
-                              <SelectItem key={opt.id} value={opt.id}>
-                                {opt.name} {opt.signatureDataUrl && '(saved)'}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                    
-                    <div className="space-y-2">
-                      <Label>Print Name *</Label>
-                      <Input
-                        placeholder="Enter receiver staff name"
-                        value={receiverPrintName}
-                        onChange={(e) => { setReceiverPrintName(e.target.value); setSelectedEmployeeId(""); }}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label>Signature *</Label>
-                        <Button variant="ghost" size="sm" onClick={() => { receiverSigRef.current?.clear(); setReceiverSigDataUrl(null); }}>
-                          <Eraser className="h-4 w-4 mr-1" />
-                          Clear
-                        </Button>
-                      </div>
-                      <div className="border-2 border-dashed border-border rounded-lg bg-background p-1">
-                        <SignatureCanvas
-                          ref={(ref) => { receiverSigRef.current = ref; }}
-                          canvasProps={{
-                            className: "w-full h-40 rounded",
-                            style: { width: '100%', height: '160px' }
-                          }}
-                          backgroundColor="white"
-                          onEnd={() => {
-                            if (receiverSigRef.current && !receiverSigRef.current.isEmpty()) {
-                              setReceiverSigDataUrl(receiverSigRef.current.toDataURL());
-                            }
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    {receiverSigDataUrl && receiverPrintName && (
-                      <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 rounded-lg p-2">
-                        <CheckCircle2 className="h-4 w-4" />
-                        <span>Signature captured for {receiverPrintName}</span>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="bg-muted/50 p-4 rounded-lg border border-dashed">
-                    <p className="text-sm text-muted-foreground">
-                      Receiver signature will be skipped. You can add it later from the Receiver Signatures page.
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+              {hasReceiverSig ? (
+                <DropoffSignatureStep
+                  title="Receiver Signature"
+                  description="BSG staff member receiving the tires"
+                  signatureDataUrl={receiverSigDataUrl}
+                  printName={receiverPrintName}
+                  onSignatureChange={setReceiverSigDataUrl}
+                  onPrintNameChange={setReceiverPrintName}
+                  showEmployeeSelect={true}
+                />
+              ) : (
+                <div className="bg-muted/50 p-4 rounded-lg border border-dashed">
+                  <p className="text-sm text-muted-foreground">
+                    Receiver signature will be skipped. You can add it later from the Receiver Signatures page.
+                  </p>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Step 5: Confirmation */}
@@ -782,7 +609,7 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
                     </div>
                     <div>
                       <span className="text-muted-foreground">Receiver:</span>
-                      <p className="font-medium">{selectedReceiverData?.receiver_name || 'Not selected'}</p>
+                      <p className="font-medium">{receivers?.find(r => r.id === selectedReceiverId)?.receiver_name || 'Not selected'}</p>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Amount:</span>
