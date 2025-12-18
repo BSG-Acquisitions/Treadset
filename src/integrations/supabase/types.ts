@@ -1465,6 +1465,9 @@ export type Database = {
           dropoff_date: string
           dropoff_time: string | null
           hauler_id: string | null
+          hauler_sig_path: string | null
+          hauler_signed_at: string | null
+          hauler_signed_by: string | null
           id: string
           manifest_id: string | null
           manifest_pdf_path: string | null
@@ -1476,6 +1479,9 @@ export type Database = {
           pricing_tier_id: string | null
           processed_by: string | null
           pte_count: number | null
+          receiver_sig_path: string | null
+          receiver_signed_at: string | null
+          receiver_signed_by: string | null
           requires_manifest: boolean | null
           status: string | null
           surcharges_applied_json: Json | null
@@ -1492,6 +1498,9 @@ export type Database = {
           dropoff_date?: string
           dropoff_time?: string | null
           hauler_id?: string | null
+          hauler_sig_path?: string | null
+          hauler_signed_at?: string | null
+          hauler_signed_by?: string | null
           id?: string
           manifest_id?: string | null
           manifest_pdf_path?: string | null
@@ -1503,6 +1512,9 @@ export type Database = {
           pricing_tier_id?: string | null
           processed_by?: string | null
           pte_count?: number | null
+          receiver_sig_path?: string | null
+          receiver_signed_at?: string | null
+          receiver_signed_by?: string | null
           requires_manifest?: boolean | null
           status?: string | null
           surcharges_applied_json?: Json | null
@@ -1519,6 +1531,9 @@ export type Database = {
           dropoff_date?: string
           dropoff_time?: string | null
           hauler_id?: string | null
+          hauler_sig_path?: string | null
+          hauler_signed_at?: string | null
+          hauler_signed_by?: string | null
           id?: string
           manifest_id?: string | null
           manifest_pdf_path?: string | null
@@ -1530,6 +1545,9 @@ export type Database = {
           pricing_tier_id?: string | null
           processed_by?: string | null
           pte_count?: number | null
+          receiver_sig_path?: string | null
+          receiver_signed_at?: string | null
+          receiver_signed_by?: string | null
           requires_manifest?: boolean | null
           status?: string | null
           surcharges_applied_json?: Json | null
