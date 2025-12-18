@@ -109,8 +109,8 @@ const handler = async (req: Request): Promise<Response> => {
             <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
               <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                 
-                <!-- Header with gradient -->
-                <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; padding: 40px 30px; text-align: center;">
+                <!-- Header with BSG green gradient -->
+                <div style="background: linear-gradient(135deg, #1A4314 0%, #2d5a1e 100%); color: white; padding: 40px 30px; text-align: center;">
                   <img src="https://treadset.lovable.app/bsg-logo.png" alt="BSG Tire Recycling" style="max-width: 120px; height: auto; margin-bottom: 20px;">
                   <h1 style="margin: 0 0 10px 0; font-size: 28px; font-weight: 700;">Welcome to Your Client Portal</h1>
                   <p style="margin: 0; opacity: 0.9; font-size: 16px;">${client.company_name}</p>
@@ -123,8 +123,8 @@ const handler = async (req: Request): Promise<Response> => {
                   <p style="font-size: 16px;">We're excited to introduce you to the <strong>BSG Tire Recycling Client Portal</strong> - a new way to access all your tire pickup records and manage your account online.</p>
                   
                   <!-- Features -->
-                  <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 25px 0;">
-                    <h3 style="margin: 0 0 15px 0; color: #1e40af; font-size: 16px;">What You Can Do:</h3>
+                  <div style="background: #f0f7f0; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #1A4314;">
+                    <h3 style="margin: 0 0 15px 0; color: #1A4314; font-size: 16px;">What You Can Do:</h3>
                     <ul style="margin: 0; padding-left: 20px; color: #475569;">
                       <li style="margin-bottom: 10px;"><strong>View All Your Manifests</strong> - Access your complete pickup history</li>
                       <li style="margin-bottom: 10px;"><strong>Download PDFs</strong> - Get copies of any manifest for your records</li>
@@ -135,14 +135,14 @@ const handler = async (req: Request): Promise<Response> => {
 
                   <!-- CTA Button -->
                   <div style="text-align: center; margin: 30px 0;">
-                    <a href="${inviteUrl}" style="display: inline-block; background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(30, 64, 175, 0.3);">
+                    <a href="${inviteUrl}" style="display: inline-block; background: linear-gradient(135deg, #1A4314 0%, #2d5a1e 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(26, 67, 20, 0.3);">
                       Access Your Portal
                     </a>
                   </div>
 
                   <!-- Note about any email -->
-                  <div style="background: #fef3c7; border: 1px solid #f59e0b; padding: 15px; border-radius: 8px; margin: 25px 0;">
-                    <p style="margin: 0; font-size: 14px; color: #92400e;">
+                  <div style="background: #f0f7f0; border: 1px solid #1A4314; padding: 15px; border-radius: 8px; margin: 25px 0;">
+                    <p style="margin: 0; font-size: 14px; color: #1A4314;">
                       <strong>💡 Tip:</strong> You can sign up with any email address you prefer - it doesn't have to be the one we have on file. Share this invite with whoever manages your account!
                     </p>
                   </div>
@@ -154,8 +154,8 @@ const handler = async (req: Request): Promise<Response> => {
                 <div style="background: #f8fafc; padding: 20px 30px; border-top: 1px solid #e2e8f0; text-align: center;">
                   <p style="margin: 0 0 10px 0; font-size: 14px; color: #64748b;">Questions? Contact us at:</p>
                   <p style="margin: 0; font-size: 14px;">
-                    <a href="tel:5173945566" style="color: #1e40af; text-decoration: none;">(517) 394-5566</a> • 
-                    <a href="mailto:info@bsgtires.com" style="color: #1e40af; text-decoration: none;">info@bsgtires.com</a>
+                    <a href="tel:5173945566" style="color: #1A4314; text-decoration: none;">(517) 394-5566</a> • 
+                    <a href="mailto:info@bsgtires.com" style="color: #1A4314; text-decoration: none;">info@bsgtires.com</a>
                   </p>
                 </div>
               </div>
@@ -164,7 +164,7 @@ const handler = async (req: Request): Promise<Response> => {
               <div style="text-align: center; margin-top: 20px;">
                 <p style="font-size: 12px; color: #94a3b8;">
                   BSG Tire Recycling • 1234 Recycling Way, Lansing, MI<br>
-                  <a href="${inviteUrl}" style="color: #64748b; word-break: break-all;">${inviteUrl}</a>
+                  <a href="${inviteUrl}" style="color: #1A4314; word-break: break-all;">${inviteUrl}</a>
                 </p>
               </div>
             </body>
