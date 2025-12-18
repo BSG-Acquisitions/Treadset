@@ -191,3 +191,6 @@ verify_jwt = false
 
 [functions.auto-fix-geocoding]
 verify_jwt = false
+
+[functions.cleanup-duplicate-notifications]
+verify_jwt = false
