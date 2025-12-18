@@ -31,7 +31,7 @@ export const DropoffSignatureStep = ({
   const sigCanvasRef = useRef<SignatureCanvas | null>(null);
   const cursiveCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
-  const [signatureMode, setSignatureMode] = useState<"draw" | "typed">("draw");
+  const [signatureMode, setSignatureMode] = useState<"draw" | "typed">("typed");
   const [fontLoaded, setFontLoaded] = useState(false);
   const { data: employees } = useEmployees();
 
