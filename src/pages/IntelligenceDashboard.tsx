@@ -5,8 +5,7 @@ import { OperationalMetricsCard } from '@/components/intelligence/OperationalMet
 import { AIInsightsCard } from '@/components/intelligence/AIInsightsCard';
 import { BookingRequestsWidget } from '@/components/intelligence/BookingRequestsWidget';
 import { EmailOutreachWidget } from '@/components/intelligence/EmailOutreachWidget';
-import { BookingFunnelWidget } from '@/components/intelligence/BookingFunnelWidget';
-import { Brain, TrendingUp, Zap, CalendarPlus, Filter } from 'lucide-react';
+import { Brain, TrendingUp, Zap, CalendarPlus } from 'lucide-react';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { SlideUp } from '@/components/motion/SlideUp';
 import { useEffect } from 'react';
@@ -68,17 +67,6 @@ const IntelligenceDashboard = () => {
             <BookingRequestsWidget />
             <EmailOutreachWidget />
           </div>
-        </div>
-      </SlideUp>
-
-      {/* Booking Funnel Analytics */}
-      <SlideUp delay={0.35}>
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Filter className="h-5 w-5 text-brand-accent" />
-            <h2 className="text-xl font-semibold text-foreground">Conversion Analytics</h2>
-          </div>
-          <BookingFunnelWidget />
         </div>
       </SlideUp>
 
