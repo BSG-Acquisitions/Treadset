@@ -54,10 +54,10 @@ Deno.serve(async (req) => {
 
       if (!incompleteManifests || incompleteManifests.length === 0) continue;
 
-      // Get admin users for this org - need auth_user_id for FK constraint
+      // Get admin users for this org - use internal user_id for notifications FK
       const { data: adminUsers, error: usersError } = await supabase
         .from('user_organization_roles')
-        .select('user_id, users!inner(auth_user_id)')
+        .select('user_id')
         .eq('organization_id', org.id)
         .in('role', ['admin', 'ops_manager', 'dispatcher', 'receptionist']);
 
@@ -104,17 +104,17 @@ Deno.serve(async (req) => {
         const priority = daysSinceCreation >= 7 ? 'high' : daysSinceCreation >= 3 ? 'medium' : 'low';
 
         for (const user of adminUsers) {
-          // Use auth_user_id from the joined users table for FK constraint
-          const authUserId = (user as any).users?.auth_user_id;
-          if (!authUserId) {
-            console.warn(`[MANIFEST_REMINDERS] No auth_user_id for user role, skipping`);
+          // Use internal user_id for notifications FK constraint
+          const userId = user.user_id;
+          if (!userId) {
+            console.warn(`[MANIFEST_REMINDERS] No user_id for user role, skipping`);
             continue;
           }
 
           const { error: insertError } = await supabase
             .from('notifications')
             .insert({
-              user_id: authUserId,
+              user_id: userId,
               organization_id: org.id,
               title: `Incomplete Manifest: ${manifest.manifest_number || clientName}`,
               message: `Manifest for ${clientName} is ${issues.join(', ')}. Created ${daysSinceCreation} days ago.`,

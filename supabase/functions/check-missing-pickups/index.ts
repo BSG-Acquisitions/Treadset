@@ -81,8 +81,9 @@ Deno.serve(async (req) => {
         continue;
       }
       
-      const authUserIds = adminUsers
-        .map(u => (u as any).users?.auth_user_id)
+      // Use internal user_id (not auth_user_id) for notifications.user_id FK
+      const userIds = adminUsers
+        .map(u => u.user_id)
         .filter(Boolean);
 
       const notificationsToCreate: any[] = [];
@@ -202,23 +203,23 @@ Deno.serve(async (req) => {
         const notificationTitle = `${client.company_name} may need scheduling`;
 
         // Create notification for EACH admin user - with per-user deduplication
-        for (const authUserId of authUserIds) {
+        for (const userId of userIds) {
           const { data: existingNotifs } = await supabase
             .from('notifications')
             .select('id')
-            .eq('user_id', authUserId)
+            .eq('user_id', userId)
             .eq('organization_id', orgId)
             .eq('type', 'missing_pickup')
             .ilike('title', `%${client.company_name}%`)
             .gte('created_at', threeDaysAgo.toISOString());
 
           if (existingNotifs && existingNotifs.length > 0) {
-            console.log(`[MISSING_PICKUPS] Skipping duplicate for user ${authUserId}, client ${client.company_name}`);
+            console.log(`[MISSING_PICKUPS] Skipping duplicate for user ${userId}, client ${client.company_name}`);
             continue;
           }
 
           notificationsToCreate.push({
-            user_id: authUserId,
+            user_id: userId,
             organization_id: orgId,
             type: 'missing_pickup',
             title: notificationTitle,
@@ -310,11 +311,11 @@ Deno.serve(async (req) => {
 
         const notificationTitle = `${client.company_name} hasn't been serviced in ${daysSinceLastPickup} days`;
 
-        for (const authUserId of authUserIds) {
+        for (const userId of userIds) {
           const { data: existingNotifs } = await supabase
             .from('notifications')
             .select('id')
-            .eq('user_id', authUserId)
+            .eq('user_id', userId)
             .eq('organization_id', orgId)
             .eq('type', 'missing_pickup')
             .ilike('title', `%${client.company_name}%`)
@@ -325,7 +326,7 @@ Deno.serve(async (req) => {
           }
 
           notificationsToCreate.push({
-            user_id: authUserId,
+            user_id: userId,
             organization_id: orgId,
             type: 'missing_pickup',
             title: notificationTitle,
