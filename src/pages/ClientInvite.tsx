@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Loader2, CheckCircle2, AlertCircle, Building2, FileText, Download, Calendar } from 'lucide-react';
+import bsgLogo from '@/assets/bsg-logo.jpeg';
 
 interface InviteData {
   id: string;
@@ -206,9 +207,9 @@ export default function ClientInvite() {
         {/* Logo and Header */}
         <div className="text-center mb-8">
           <img 
-            src="/bsg-logo.png" 
+            src={bsgLogo} 
             alt="BSG Tire Recycling" 
-            className="h-16 mx-auto mb-4"
+            className="h-20 mx-auto mb-4 rounded-lg"
           />
           <h1 className="text-2xl font-bold text-foreground">Welcome to Your Client Portal</h1>
           <p className="text-muted-foreground mt-2">
