@@ -758,6 +758,81 @@ export type Database = {
           },
         ]
       }
+      client_invites: {
+        Row: {
+          client_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          organization_id: string
+          sent_to_email: string | null
+          token: string
+          updated_at: string
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          organization_id: string
+          sent_to_email?: string | null
+          token?: string
+          updated_at?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          organization_id?: string
+          sent_to_email?: string | null
+          token?: string
+          updated_at?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_invites_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_invites_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_monthly_entity_rollup"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "client_invites_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_revenue_summary"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "client_invites_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_invites_used_by_fkey"
+            columns: ["used_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_pickup_patterns: {
         Row: {
           average_days_between_pickups: number | null
@@ -4922,6 +4997,10 @@ export type Database = {
         Returns: number
       }
       check_performance_thresholds: { Args: never; Returns: undefined }
+      claim_client_invite_token: {
+        Args: { claiming_user_id: string; invite_token: string }
+        Returns: boolean
+      }
       claim_invite_token: {
         Args: { claiming_user_id: string; invite_token: string }
         Returns: boolean
@@ -5036,6 +5115,20 @@ export type Database = {
           user_role: Database["public"]["Enums"]["app_role"]
         }
         Returns: boolean
+      }
+      validate_client_invite_token: {
+        Args: { invite_token: string }
+        Returns: {
+          client_id: string
+          company_name: string
+          error_message: string
+          id: string
+          is_valid: boolean
+          organization_id: string
+          organization_logo: string
+          organization_name: string
+          sent_to_email: string
+        }[]
       }
       validate_invite_token: {
         Args: { invite_token: string }

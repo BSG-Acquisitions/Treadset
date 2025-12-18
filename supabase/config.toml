@@ -200,3 +200,6 @@ verify_jwt = false
 
 [functions.resend-corrected-outreach]
 verify_jwt = false
+
+[functions.send-portal-invitation]
+verify_jwt = false
