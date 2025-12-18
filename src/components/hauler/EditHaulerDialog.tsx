@@ -41,7 +41,7 @@ export function EditHaulerDialog({ open, onOpenChange, hauler }: EditHaulerDialo
     zip: hauler.zip || hauler.hauler_zip || "",
     phone: hauler.phone || hauler.hauler_phone || "",
     email: hauler.email || "",
-    michigan_registration: hauler.hauler_mi_reg || "",
+    hauler_mi_reg: hauler.hauler_mi_reg || "",
   };
 
   return (
