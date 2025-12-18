@@ -1896,6 +1896,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           is_approved: boolean | null
+          is_licensed_hauler: boolean | null
           license_document_path: string | null
           license_number: string | null
           mailing_address: string | null
@@ -1922,6 +1923,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_approved?: boolean | null
+          is_licensed_hauler?: boolean | null
           license_document_path?: string | null
           license_number?: string | null
           mailing_address?: string | null
@@ -1948,6 +1950,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_approved?: boolean | null
+          is_licensed_hauler?: boolean | null
           license_document_path?: string | null
           license_number?: string | null
           mailing_address?: string | null
