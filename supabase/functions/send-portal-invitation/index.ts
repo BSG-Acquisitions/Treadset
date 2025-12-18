@@ -111,7 +111,7 @@ const handler = async (req: Request): Promise<Response> => {
                 
                 <!-- Header with BSG green gradient -->
                 <div style="background: linear-gradient(135deg, #1A4314 0%, #2d5a1e 100%); color: white; padding: 40px 30px; text-align: center;">
-                  <img src="https://treadset.lovable.app/bsg-logo.png" alt="BSG Tire Recycling" style="max-width: 120px; height: auto; margin-bottom: 20px;">
+                  <h2 style="margin: 0 0 20px 0; font-size: 24px; font-weight: 700; letter-spacing: 0.5px;">BSG Tire Recycling</h2>
                   <h1 style="margin: 0 0 10px 0; font-size: 28px; font-weight: 700;">Welcome to Your Client Portal</h1>
                   <p style="margin: 0; opacity: 0.9; font-size: 16px;">${client.company_name}</p>
                 </div>
@@ -154,8 +154,8 @@ const handler = async (req: Request): Promise<Response> => {
                 <div style="background: #f8fafc; padding: 20px 30px; border-top: 1px solid #e2e8f0; text-align: center;">
                   <p style="margin: 0 0 10px 0; font-size: 14px; color: #64748b;">Questions? Contact us at:</p>
                   <p style="margin: 0; font-size: 14px;">
-                    <a href="tel:5173945566" style="color: #1A4314; text-decoration: none;">(517) 394-5566</a> • 
-                    <a href="mailto:info@bsgtires.com" style="color: #1A4314; text-decoration: none;">info@bsgtires.com</a>
+                    <a href="tel:3137310817" style="color: #1A4314; text-decoration: none;">(313) 731-0817</a> • 
+                    <a href="mailto:bsgtires@gmail.com" style="color: #1A4314; text-decoration: none;">bsgtires@gmail.com</a>
                   </p>
                 </div>
               </div>
@@ -163,7 +163,7 @@ const handler = async (req: Request): Promise<Response> => {
               <!-- Unsubscribe footer -->
               <div style="text-align: center; margin-top: 20px;">
                 <p style="font-size: 12px; color: #94a3b8;">
-                  BSG Tire Recycling • 1234 Recycling Way, Lansing, MI<br>
+                  BSG Tire Recycling • 2971 Bellevue, Detroit, Michigan<br>
                   <a href="${inviteUrl}" style="color: #1A4314; word-break: break-all;">${inviteUrl}</a>
                 </p>
               </div>
