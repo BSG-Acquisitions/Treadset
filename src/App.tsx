@@ -70,6 +70,7 @@ import TrailerReports from "./pages/TrailerReports";
 import BookingRequests from "./pages/BookingRequests";
 import ServiceZones from "./pages/ServiceZones";
 import ClientPortal from "./pages/ClientPortal";
+import PortalUnsubscribe from "./pages/PortalUnsubscribe";
 import { FEATURE_FLAGS } from "./lib/featureFlags";
 
 const queryClient = new QueryClient();
@@ -88,6 +89,7 @@ const App = () => (
               <Route path="/public-booking-confirmation" element={<PublicBookingConfirmation />} />
               <Route path="/invite/:token" element={<Invite />} />
               <Route path="/client-invite/:token" element={<ClientInvite />} />
+              <Route path="/portal-unsubscribe" element={<PortalUnsubscribe />} />
               
               {/* Auth Routes */}
               <Route path="/auth" element={<Auth />} />

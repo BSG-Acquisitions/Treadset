@@ -1226,6 +1226,7 @@ export type Database = {
           physical_city: string | null
           physical_state: string | null
           physical_zip: string | null
+          portal_invite_opted_out: boolean | null
           pricing_tier_id: string | null
           sla_weeks: number | null
           state: string | null
@@ -1258,6 +1259,7 @@ export type Database = {
           physical_city?: string | null
           physical_state?: string | null
           physical_zip?: string | null
+          portal_invite_opted_out?: boolean | null
           pricing_tier_id?: string | null
           sla_weeks?: number | null
           state?: string | null
@@ -1290,6 +1292,7 @@ export type Database = {
           physical_city?: string | null
           physical_state?: string | null
           physical_zip?: string | null
+          portal_invite_opted_out?: boolean | null
           pricing_tier_id?: string | null
           sla_weeks?: number | null
           state?: string | null
