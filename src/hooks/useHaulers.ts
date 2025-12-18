@@ -13,6 +13,7 @@ export interface Hauler {
   hauler_phone?: string;
   hauler_mi_reg?: string;
   is_active: boolean;
+  is_licensed_hauler?: boolean;
   created_at: string;
   // New fields for future use
   user_id?: string;
@@ -47,6 +48,7 @@ export const useHaulers = () => {
         .from("haulers")
         .select("*")
         .eq("is_active", true)
+        .eq("is_licensed_hauler", true)
         .order("hauler_name");
 
       if (error) throw error;

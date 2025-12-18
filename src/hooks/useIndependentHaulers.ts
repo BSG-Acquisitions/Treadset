@@ -36,7 +36,7 @@ export interface CreateHaulerData {
   zip?: string;
 }
 
-// Get all haulers for a facility
+// Get all licensed haulers for a facility (Independent Haulers page)
 export const useIndependentHaulers = () => {
   return useQuery({
     queryKey: ["independent-haulers"],
@@ -55,6 +55,7 @@ export const useIndependentHaulers = () => {
           )
         `)
         .eq("is_active", true)
+        .eq("is_licensed_hauler", true)
         .order("company_name");
 
       if (error) throw error;
