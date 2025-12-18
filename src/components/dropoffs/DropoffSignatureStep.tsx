@@ -17,6 +17,7 @@ interface DropoffSignatureStepProps {
   onSignatureChange: (dataUrl: string | null) => void;
   onPrintNameChange: (name: string) => void;
   showEmployeeSelect?: boolean;
+  hidePrintName?: boolean;
 }
 
 export const DropoffSignatureStep = ({
@@ -27,6 +28,7 @@ export const DropoffSignatureStep = ({
   onSignatureChange,
   onPrintNameChange,
   showEmployeeSelect = false,
+  hidePrintName = false,
 }: DropoffSignatureStepProps) => {
   const sigCanvasRef = useRef<SignatureCanvas | null>(null);
   const cursiveCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -200,21 +202,23 @@ export const DropoffSignatureStep = ({
           </div>
         )}
 
-        <div className="space-y-2">
-          <Label htmlFor="printName">Print Name *</Label>
-          <Input
-            id="printName"
-            placeholder="Enter signer's name"
-            value={printName}
-            onChange={(e) => {
-              onPrintNameChange(e.target.value);
-              if (showEmployeeSelect) {
-                setSelectedEmployeeId(""); // Clear employee selection if custom name entered
-              }
-            }}
-            className="bg-background"
-          />
-        </div>
+        {!hidePrintName && (
+          <div className="space-y-2">
+            <Label htmlFor="printName">Print Name *</Label>
+            <Input
+              id="printName"
+              placeholder="Enter signer's name"
+              value={printName}
+              onChange={(e) => {
+                onPrintNameChange(e.target.value);
+                if (showEmployeeSelect) {
+                  setSelectedEmployeeId(""); // Clear employee selection if custom name entered
+                }
+              }}
+              className="bg-background"
+            />
+          </div>
+        )}
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">

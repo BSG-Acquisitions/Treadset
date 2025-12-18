@@ -8,9 +8,6 @@ import {
   DollarSign,
   FileText,
   Package,
-  User,
-  Building2,
-  CreditCard,
   MoreHorizontal,
   Edit,
   Receipt,
@@ -21,7 +18,7 @@ import {
   Pen,
   CheckCircle2,
   AlertTriangle,
-  RefreshCw
+  CreditCard
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -48,13 +45,13 @@ import { format, isWithinInterval, startOfWeek, endOfWeek, startOfMonth, endOfMo
 import type { Database } from "@/integrations/supabase/types";
 import { EditDropoffDialog } from "./EditDropoffDialog";
 import { AddDropoffSignatureDialog } from "./AddDropoffSignatureDialog";
+import { EditManifestSignaturesDialog } from "./EditManifestSignaturesDialog";
 import { HaulerReliabilityBadge } from "@/components/HaulerReliabilityBadge";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { calculateTotalPTE } from "@/lib/michigan-conversions";
 import { cn } from "@/lib/utils";
 import { useGenerateDropoffManifest } from "@/hooks/useGenerateDropoffManifest";
-import { useRegenerateDropoffManifest } from "@/hooks/useRegenerateDropoffManifest";
 import { useDeleteDropoff } from "@/hooks/useDropoffs";
 
 type Dropoff = Database["public"]["Tables"]["dropoffs"]["Row"] & {
@@ -86,10 +83,10 @@ interface DropopffsListProps {
 export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListProps) => {
   const [editDropoff, setEditDropoff] = useState<Dropoff | null>(null);
   const [signatureDropoff, setSignatureDropoff] = useState<Dropoff | null>(null);
+  const [editManifestDropoff, setEditManifestDropoff] = useState<Dropoff | null>(null);
   const [deleteDropoffId, setDeleteDropoffId] = useState<string | null>(null);
   const navigate = useNavigate();
   const generateManifest = useGenerateDropoffManifest();
-  const regenerateManifest = useRegenerateDropoffManifest();
   const deleteDropoff = useDeleteDropoff();
   
   const handleDelete = () => {
@@ -390,21 +387,11 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
                   <Button 
                     size="sm" 
                     variant="secondary"
-                    onClick={() => regenerateManifest.mutate(dropoff.id)}
-                    disabled={regenerateManifest.isPending}
-                    title="Regenerate manifest PDF with latest signature data"
+                    onClick={() => setEditManifestDropoff(dropoff)}
+                    title="Edit signatures and regenerate manifest PDF"
                   >
-                    {regenerateManifest.isPending ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Regenerating...
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw className="h-4 w-4 mr-2" />
-                        Regenerate PDF
-                      </>
-                    )}
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Manifest
                   </Button>
                 </>
               )}
@@ -436,12 +423,9 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
                           <FileText className="h-4 w-4 mr-2" />
                           View Manifest
                         </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => regenerateManifest.mutate(dropoff.id)}
-                          disabled={regenerateManifest.isPending}
-                        >
-                          <RefreshCw className="h-4 w-4 mr-2" />
-                          Regenerate PDF
+                        <DropdownMenuItem onClick={() => setEditManifestDropoff(dropoff)}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit Manifest
                         </DropdownMenuItem>
                       </>
                     )}
@@ -586,6 +570,14 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
           open={!!signatureDropoff}
           onOpenChange={(open) => !open && setSignatureDropoff(null)}
           dropoff={signatureDropoff}
+        />
+      )}
+
+      {editManifestDropoff && (
+        <EditManifestSignaturesDialog
+          open={!!editManifestDropoff}
+          onOpenChange={(open) => !open && setEditManifestDropoff(null)}
+          dropoff={editManifestDropoff}
         />
       )}
 
