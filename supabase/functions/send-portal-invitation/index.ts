@@ -15,6 +15,22 @@ interface PortalInviteRequest {
   test_email?: string; // Send to this email instead (for testing)
 }
 
+// Generate security token for unsubscribe links
+async function generateSecurityToken(clientId: string, email: string): Promise<string> {
+  const data = `${clientId}-${email}-portal-invite-salt`;
+  const encoder = new TextEncoder();
+  const dataBuffer = encoder.encode(data);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", dataBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.slice(0, 8).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+// Generate unsubscribe URL
+async function generateUnsubscribeUrl(supabaseUrl: string, clientId: string, email: string): Promise<string> {
+  const token = await generateSecurityToken(clientId, email);
+  return `${supabaseUrl}/functions/v1/portal-invite-unsubscribe?client=${clientId}&token=${token}`;
+}
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -164,7 +180,9 @@ const handler = async (req: Request): Promise<Response> => {
               <div style="text-align: center; margin-top: 20px;">
                 <p style="font-size: 12px; color: #94a3b8;">
                   BSG Tire Recycling • 2971 Bellevue, Detroit, Michigan<br>
-                  <a href="${inviteUrl}" style="color: #1A4314; word-break: break-all;">${inviteUrl}</a>
+                  <a href="${await generateUnsubscribeUrl(supabaseUrl, client.id, client.email || '')}" style="color: #94a3b8; text-decoration: underline;">
+                    Unsubscribe from portal invitations
+                  </a>
                 </p>
               </div>
             </body>

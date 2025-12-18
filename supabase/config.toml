@@ -203,3 +203,9 @@ verify_jwt = false
 
 [functions.send-portal-invitation]
 verify_jwt = false
+
+[functions.send-portal-invitation-drip]
+verify_jwt = false
+
+[functions.portal-invite-unsubscribe]
+verify_jwt = false
