@@ -420,7 +420,7 @@ async function sendOutreachEmail(
     // Generate suggested dates based on service pattern
     const suggestedDates = generateSuggestedDates(typicalDay);
     // Use public booking URL so clients don't need to login
-    const bookingUrl = `${Deno.env.get('SITE_URL') || 'https://treadset.com'}/public-book?client=${client.id}`;
+    const bookingUrl = `https://wvjehbozyxhmgdljwsiz.lovable.app/public-book?client=${client.id}`;
     
     const contactName = client.contact_name || 'there';
     
