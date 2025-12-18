@@ -1,18 +1,13 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import SignatureCanvas from "react-signature-canvas";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { useEmployees } from "@/hooks/useEmployees";
-import { useReceivers } from "@/hooks/useReceivers";
 import { useGenerateDropoffManifest } from "@/hooks/useGenerateDropoffManifest";
-import { Loader2, Pen, Eraser, Factory, Truck, Building2 } from "lucide-react";
+import { Loader2, Pen, Factory, Truck, Building2 } from "lucide-react";
+import { DropoffSignatureStep } from "./DropoffSignatureStep";
 import type { Database } from "@/integrations/supabase/types";
 
 type Dropoff = Database["public"]["Tables"]["dropoffs"]["Row"];
@@ -36,44 +31,18 @@ export const AddDropoffSignatureDialog = ({ open, onOpenChange, dropoff }: AddDr
   const [generatorPrintName, setGeneratorPrintName] = useState("");
   const [haulerPrintName, setHaulerPrintName] = useState("");
   const [receiverPrintName, setReceiverPrintName] = useState("");
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
-  const [selectedReceiverId, setSelectedReceiverId] = useState("");
+  const [generatorSigDataUrl, setGeneratorSigDataUrl] = useState<string | null>(null);
+  const [haulerSigDataUrl, setHaulerSigDataUrl] = useState<string | null>(null);
+  const [receiverSigDataUrl, setReceiverSigDataUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const generatorSigRef = useRef<SignatureCanvas | null>(null);
-  const haulerSigRef = useRef<SignatureCanvas | null>(null);
-  const receiverSigRef = useRef<SignatureCanvas | null>(null);
   
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { data: employees } = useEmployees();
-  const { data: receivers } = useReceivers();
   const generateManifest = useGenerateDropoffManifest();
 
   const needsGeneratorSig = !(dropoff as any).generator_sig_path;
   const needsHaulerSig = !dropoff.hauler_sig_path;
   const needsReceiverSig = !dropoff.receiver_sig_path;
-
-  const printNameOptions = employees
-    ?.filter(emp => emp.isActive)
-    ?.map(emp => ({
-      id: emp.id,
-      name: `${emp.firstName} ${emp.lastName}`.trim(),
-      signatureDataUrl: emp.signatureDataUrl
-    }))
-    ?.filter(opt => opt.name.length > 0) || [];
-
-  const handleEmployeeSelect = (employeeId: string) => {
-    setSelectedEmployeeId(employeeId);
-    const employee = employees?.find(emp => emp.id === employeeId);
-    if (employee) {
-      const fullName = `${employee.firstName} ${employee.lastName}`.trim();
-      setReceiverPrintName(fullName);
-      if (employee.signatureDataUrl && receiverSigRef.current) {
-        receiverSigRef.current.fromDataURL(employee.signatureDataUrl);
-      }
-    }
-  };
 
   const dataURLtoBlob = (dataURL: string) => {
     const parts = dataURL.split(',');
@@ -95,9 +64,8 @@ export const AddDropoffSignatureDialog = ({ open, onOpenChange, dropoff }: AddDr
       const updateData: Record<string, any> = { updated_at: timestamp };
 
       // Handle generator signature
-      if (activeTab === 'generator' && generatorSigRef.current && !generatorSigRef.current.isEmpty() && generatorPrintName) {
-        const sigDataUrl = generatorSigRef.current.toDataURL();
-        const blob = dataURLtoBlob(sigDataUrl);
+      if (activeTab === 'generator' && generatorSigDataUrl && generatorPrintName) {
+        const blob = dataURLtoBlob(generatorSigDataUrl);
         const fileName = `generator_signature_${Date.now()}.png`;
         const uploadPath = `${dropoff.organization_id}/signatures/${fileName}`;
         
@@ -113,9 +81,8 @@ export const AddDropoffSignatureDialog = ({ open, onOpenChange, dropoff }: AddDr
       }
 
       // Handle hauler signature
-      if (activeTab === 'hauler' && haulerSigRef.current && !haulerSigRef.current.isEmpty() && haulerPrintName) {
-        const sigDataUrl = haulerSigRef.current.toDataURL();
-        const blob = dataURLtoBlob(sigDataUrl);
+      if (activeTab === 'hauler' && haulerSigDataUrl && haulerPrintName) {
+        const blob = dataURLtoBlob(haulerSigDataUrl);
         const fileName = `hauler_signature_${Date.now()}.png`;
         const uploadPath = `${dropoff.organization_id}/signatures/${fileName}`;
         
@@ -131,9 +98,8 @@ export const AddDropoffSignatureDialog = ({ open, onOpenChange, dropoff }: AddDr
       }
 
       // Handle receiver signature
-      if (activeTab === 'receiver' && receiverSigRef.current && !receiverSigRef.current.isEmpty() && receiverPrintName) {
-        const sigDataUrl = receiverSigRef.current.toDataURL();
-        const blob = dataURLtoBlob(sigDataUrl);
+      if (activeTab === 'receiver' && receiverSigDataUrl && receiverPrintName) {
+        const blob = dataURLtoBlob(receiverSigDataUrl);
         const fileName = `receiver_signature_${Date.now()}.png`;
         const uploadPath = `${dropoff.organization_id}/signatures/${fileName}`;
         
@@ -184,16 +150,6 @@ export const AddDropoffSignatureDialog = ({ open, onOpenChange, dropoff }: AddDr
     }
   };
 
-  const clearSignature = (type: 'generator' | 'hauler' | 'receiver') => {
-    if (type === 'generator') {
-      generatorSigRef.current?.clear();
-    } else if (type === 'hauler') {
-      haulerSigRef.current?.clear();
-    } else {
-      receiverSigRef.current?.clear();
-    }
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
@@ -220,138 +176,40 @@ export const AddDropoffSignatureDialog = ({ open, onOpenChange, dropoff }: AddDr
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="generator" className="space-y-4 mt-4">
-            <p className="text-sm text-muted-foreground">
-              Generator is the source of the tires (tire shop, auto dealer, etc.)
-            </p>
-            <div className="space-y-2">
-              <Label>Print Name *</Label>
-              <Input
-                placeholder="Enter generator name"
-                value={generatorPrintName}
-                onChange={(e) => setGeneratorPrintName(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Signature *</Label>
-                <Button variant="ghost" size="sm" onClick={() => clearSignature('generator')}>
-                  <Eraser className="h-4 w-4 mr-1" />
-                  Clear
-                </Button>
-              </div>
-              <div className="border-2 border-dashed border-border rounded-lg bg-background p-1">
-                <SignatureCanvas
-                  ref={(ref) => { generatorSigRef.current = ref; }}
-                  canvasProps={{
-                    className: "w-full h-32 rounded",
-                    style: { width: '100%', height: '128px' }
-                  }}
-                  backgroundColor="white"
-                />
-              </div>
-            </div>
+          <TabsContent value="generator" className="mt-4">
+            <DropoffSignatureStep
+              title="Generator Signature"
+              description="Generator is the source of the tires (tire shop, auto dealer, etc.)"
+              signatureDataUrl={generatorSigDataUrl}
+              printName={generatorPrintName}
+              onSignatureChange={setGeneratorSigDataUrl}
+              onPrintNameChange={setGeneratorPrintName}
+              showEmployeeSelect={false}
+            />
           </TabsContent>
 
-          <TabsContent value="hauler" className="space-y-4 mt-4">
-            <p className="text-sm text-muted-foreground">
-              Hauler is the person/company transporting the tires
-            </p>
-            <div className="space-y-2">
-              <Label>Print Name *</Label>
-              <Input
-                placeholder="Enter hauler name"
-                value={haulerPrintName}
-                onChange={(e) => setHaulerPrintName(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Signature *</Label>
-                <Button variant="ghost" size="sm" onClick={() => clearSignature('hauler')}>
-                  <Eraser className="h-4 w-4 mr-1" />
-                  Clear
-                </Button>
-              </div>
-              <div className="border-2 border-dashed border-border rounded-lg bg-background p-1">
-                <SignatureCanvas
-                  ref={(ref) => { haulerSigRef.current = ref; }}
-                  canvasProps={{
-                    className: "w-full h-32 rounded",
-                    style: { width: '100%', height: '128px' }
-                  }}
-                  backgroundColor="white"
-                />
-              </div>
-            </div>
+          <TabsContent value="hauler" className="mt-4">
+            <DropoffSignatureStep
+              title="Hauler Signature"
+              description="Hauler is the person/company transporting the tires"
+              signatureDataUrl={haulerSigDataUrl}
+              printName={haulerPrintName}
+              onSignatureChange={setHaulerSigDataUrl}
+              onPrintNameChange={setHaulerPrintName}
+              showEmployeeSelect={false}
+            />
           </TabsContent>
 
-          <TabsContent value="receiver" className="space-y-4 mt-4">
-            <p className="text-sm text-muted-foreground">
-              Receiver is the BSG staff member accepting the tires
-            </p>
-            {printNameOptions.length > 0 && (
-              <div className="space-y-2">
-                <Label>Select Employee (Optional)</Label>
-                <Select value={selectedEmployeeId} onValueChange={handleEmployeeSelect}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose employee with saved signature..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {printNameOptions.map((opt) => (
-                      <SelectItem key={opt.id} value={opt.id}>
-                        {opt.name} {opt.signatureDataUrl && '(saved)'}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label>Receiver Selection (Optional)</Label>
-              <Select value={selectedReceiverId} onValueChange={setSelectedReceiverId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a receiver facility..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {receivers?.map((r) => (
-                    <SelectItem key={r.id} value={r.id}>
-                      {r.receiver_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Print Name *</Label>
-              <Input
-                placeholder="Enter receiver staff name"
-                value={receiverPrintName}
-                onChange={(e) => {
-                  setReceiverPrintName(e.target.value);
-                  setSelectedEmployeeId("");
-                }}
-              />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Signature *</Label>
-                <Button variant="ghost" size="sm" onClick={() => clearSignature('receiver')}>
-                  <Eraser className="h-4 w-4 mr-1" />
-                  Clear
-                </Button>
-              </div>
-              <div className="border-2 border-dashed border-border rounded-lg bg-background p-1">
-                <SignatureCanvas
-                  ref={(ref) => { receiverSigRef.current = ref; }}
-                  canvasProps={{
-                    className: "w-full h-32 rounded",
-                    style: { width: '100%', height: '128px' }
-                  }}
-                  backgroundColor="white"
-                />
-              </div>
-            </div>
+          <TabsContent value="receiver" className="mt-4">
+            <DropoffSignatureStep
+              title="Receiver Signature"
+              description="BSG staff member receiving the tires"
+              signatureDataUrl={receiverSigDataUrl}
+              printName={receiverPrintName}
+              onSignatureChange={setReceiverSigDataUrl}
+              onPrintNameChange={setReceiverPrintName}
+              showEmployeeSelect={true}
+            />
           </TabsContent>
         </Tabs>
 
