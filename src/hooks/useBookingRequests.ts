@@ -161,3 +161,27 @@ export function useProcessBookingRequest() {
     },
   });
 }
+
+export function useDeleteBookingRequest() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (bookingRequestId: string) => {
+      const { error } = await supabase
+        .from('booking_requests')
+        .delete()
+        .eq('id', bookingRequestId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['booking-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-booking-count'] });
+      toast.success('Booking request deleted');
+    },
+    onError: (error: Error) => {
+      console.error('Error deleting booking request:', error);
+      toast.error(`Failed to delete: ${error.message}`);
+    },
+  });
+}
