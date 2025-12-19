@@ -116,16 +116,22 @@ Deno.serve(async (req) => {
 
       // Find or create location
       let locationId: string | null = null;
+      
+      // Extract street address for matching (first part before comma)
+      const streetAddress = booking.pickup_address?.split(',')[0]?.trim();
+      console.log(`Looking for location with street address: ${streetAddress}`);
+      
       const { data: existingLocation } = await supabase
         .from('locations')
         .select('id')
         .eq('client_id', clientId)
         .eq('organization_id', booking.organization_id)
-        .ilike('address', booking.pickup_address)
+        .ilike('address', `${streetAddress}%`)
         .single();
 
       if (existingLocation) {
         locationId = existingLocation.id;
+        console.log(`Found existing location: ${locationId}`);
       } else {
         const { data: newLocation, error: locationError } = await supabase
           .from('locations')
@@ -134,8 +140,8 @@ Deno.serve(async (req) => {
             client_id: clientId,
             name: booking.company_name || 'Primary Location',
             address: booking.pickup_address,
-            lat: booking.pickup_lat,
-            lng: booking.pickup_lng,
+            latitude: booking.pickup_lat,
+            longitude: booking.pickup_lng,
           })
           .select('id')
           .single();
@@ -144,6 +150,7 @@ Deno.serve(async (req) => {
           console.error('Error creating location:', locationError);
         } else {
           locationId = newLocation.id;
+          console.log(`Created new location: ${locationId}`);
         }
       }
 
