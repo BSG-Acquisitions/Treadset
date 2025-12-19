@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react';
-import { useBookingRequests, useProcessBookingRequest, BookingRequest } from '@/hooks/useBookingRequests';
+import { useBookingRequests, useProcessBookingRequest, useDeleteBookingRequest, BookingRequest } from '@/hooks/useBookingRequests';
 import { useVehicles } from '@/hooks/useVehicles';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format, parseISO } from 'date-fns';
-import { Calendar, MapPin, Clock, User, Building2, Check, X, CalendarClock, Truck, AlertTriangle } from 'lucide-react';
+import { Calendar, MapPin, Clock, User, Building2, Check, X, CalendarClock, Truck, AlertTriangle, Trash2 } from 'lucide-react';
 import { SlideUp } from '@/components/motion/SlideUp';
 
 export default function BookingRequests() {
@@ -19,9 +19,11 @@ export default function BookingRequests() {
   const { data: bookingRequests = [], isLoading } = useBookingRequests(activeTab === 'all' ? undefined : activeTab);
   const { data: vehicles = [] } = useVehicles();
   const processBooking = useProcessBookingRequest();
+  const deleteBooking = useDeleteBookingRequest();
 
   const [selectedBooking, setSelectedBooking] = useState<BookingRequest | null>(null);
   const [actionType, setActionType] = useState<'approve' | 'modify' | 'decline' | null>(null);
+  const [bookingToDelete, setBookingToDelete] = useState<BookingRequest | null>(null);
   const [formData, setFormData] = useState({
     scheduledDate: '',
     scheduledTimeWindow: '',
@@ -251,6 +253,15 @@ export default function BookingRequests() {
                             <X className="h-4 w-4 mr-2" />
                             Decline
                           </Button>
+                          <Button 
+                            variant="ghost"
+                            size="icon"
+                            className="ml-auto text-muted-foreground hover:text-destructive"
+                            onClick={() => setBookingToDelete(booking)}
+                            title="Delete without notification"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       )}
 
@@ -384,6 +395,40 @@ export default function BookingRequests() {
               {processBooking.isPending ? 'Processing...' : 
                 actionType === 'approve' ? 'Approve & Schedule' :
                 actionType === 'modify' ? 'Send Suggestion' : 'Decline'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!bookingToDelete} onOpenChange={() => setBookingToDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Booking Request</DialogTitle>
+            <DialogDescription>
+              This will permanently delete the booking request without sending any notification to the customer.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to delete the booking request from <strong>{bookingToDelete?.company_name || bookingToDelete?.contact_name}</strong>?
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBookingToDelete(null)}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive"
+              disabled={deleteBooking.isPending}
+              onClick={async () => {
+                if (bookingToDelete) {
+                  await deleteBooking.mutateAsync(bookingToDelete.id);
+                  setBookingToDelete(null);
+                }
+              }}
+            >
+              {deleteBooking.isPending ? 'Deleting...' : 'Delete'}
             </Button>
           </DialogFooter>
         </DialogContent>
