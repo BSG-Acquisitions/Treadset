@@ -146,16 +146,38 @@ export const useCreateClient = () => {
         }
       }
 
-      return data;
+      // Auto-send portal invite if client has email
+      let portalInviteSent = false;
+      if (data && client.email && client.email.trim()) {
+        try {
+          console.log('Auto-sending portal invite to new client:', data.company_name);
+          const { error: inviteError } = await supabase.functions.invoke('send-portal-invitation', {
+            body: { client_ids: [data.id] }
+          });
+          if (!inviteError) {
+            portalInviteSent = true;
+            console.log('Portal invite sent successfully to:', client.email);
+          } else {
+            console.warn('Portal invite failed:', inviteError);
+          }
+        } catch (err) {
+          console.warn('Auto portal invite failed (non-critical):', err);
+        }
+      }
+
+      return { ...data, portalInviteSent };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       queryClient.invalidateQueries({ queryKey: ['locations'] });
       queryClient.invalidateQueries({ queryKey: ['all-locations'] });
       queryClient.invalidateQueries({ queryKey: ['map-data-completeness'] });
+      queryClient.invalidateQueries({ queryKey: ['client-invites'] });
       toast({
         title: "Success",
-        description: "Client created successfully",
+        description: result.portalInviteSent 
+          ? `Client created and portal invite sent to ${result.email}`
+          : "Client created successfully",
       });
     },
     onError: (error) => {
