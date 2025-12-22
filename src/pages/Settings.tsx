@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { User, Bell, Shield, Palette, Database, Key, Loader2, Save, X, FileText, PenTool, Users, CalendarClock } from "lucide-react";
+import { User, Bell, Shield, Palette, Database, Key, Loader2, Save, X, FileText, PenTool, Users, CalendarClock, Mail } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { Link } from "react-router-dom";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { SlideUp } from "@/components/motion/SlideUp";
 import { useUserPreferences, useUpdateUserPreferences, useUpdateUserProfile } from "@/hooks/useUserPreferences";
@@ -298,6 +299,16 @@ if (preferencesLoading) {
                 >
                   <CalendarClock className="h-4 w-4 mr-2" />
                   Self-Scheduling
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start"
+                  asChild
+                >
+                  <Link to="/settings/portal-invites">
+                    <Mail className="h-4 w-4 mr-2" />
+                    Portal Invites
+                  </Link>
                 </Button>
               </CardContent>
             </Card>

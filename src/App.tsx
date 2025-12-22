@@ -71,6 +71,7 @@ import BookingRequests from "./pages/BookingRequests";
 import ServiceZones from "./pages/ServiceZones";
 import ClientPortal from "./pages/ClientPortal";
 import PortalUnsubscribe from "./pages/PortalUnsubscribe";
+import PortalInvites from "./pages/PortalInvites";
 import { FEATURE_FLAGS } from "./lib/featureFlags";
 
 const queryClient = new QueryClient();
@@ -162,6 +163,13 @@ const App = () => (
                 <ProtectedRoute roles={['admin', 'ops_manager']}>
                   <AppLayout>
                     <Settings />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/settings/portal-invites" element={
+                <ProtectedRoute roles={['admin', 'ops_manager', 'sales']}>
+                  <AppLayout>
+                    <PortalInvites />
                   </AppLayout>
                 </ProtectedRoute>
               } />
