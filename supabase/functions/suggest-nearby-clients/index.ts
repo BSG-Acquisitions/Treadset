@@ -8,13 +8,13 @@ const corsHeaders = {
 interface ClientWithLocation {
   id: string;
   company_name: string;
-  location_id: string;
   last_pickup_at: string | null;
-  location: {
+  locations: Array<{
+    id: string;
     latitude: number | null;
     longitude: number | null;
     address: string;
-  };
+  }>;
 }
 
 Deno.serve(async (req) => {
@@ -37,10 +37,19 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get the scheduled client's basic info first
+    // Get the scheduled client with their primary location
     const { data: scheduledClient, error: clientError } = await supabase
       .from('clients')
-      .select('id, company_name, location_id, last_pickup_at, physical_address, physical_city, physical_state, physical_zip')
+      .select(`
+        id, 
+        company_name, 
+        last_pickup_at, 
+        physical_address, 
+        physical_city, 
+        physical_state, 
+        physical_zip,
+        locations(id, latitude, longitude, address)
+      `)
       .eq('id', scheduledClientId)
       .single();
 
@@ -52,26 +61,20 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get the location data if location_id exists
+    // Get location coordinates from locations table or fallback
     let scheduledLat: number | null = null;
     let scheduledLng: number | null = null;
     let scheduledAddress = '';
 
-    if (scheduledClient.location_id) {
-      const { data: locationData } = await supabase
-        .from('locations')
-        .select('latitude, longitude, address')
-        .eq('id', scheduledClient.location_id)
-        .single();
-      
-      if (locationData) {
-        scheduledLat = locationData.latitude;
-        scheduledLng = locationData.longitude;
-        scheduledAddress = locationData.address;
-      }
+    // Check if client has locations with coordinates
+    const primaryLocation = scheduledClient.locations?.[0];
+    if (primaryLocation?.latitude && primaryLocation?.longitude) {
+      scheduledLat = primaryLocation.latitude;
+      scheduledLng = primaryLocation.longitude;
+      scheduledAddress = primaryLocation.address;
     }
 
-    // If no location data from locations table, try to get from client's physical address
+    // If no location data, build address from physical fields and return message
     if (!scheduledLat || !scheduledLng) {
       const address = scheduledClient.physical_address;
       const city = scheduledClient.physical_city;
@@ -82,8 +85,6 @@ Deno.serve(async (req) => {
         scheduledAddress = `${address}, ${city}, ${state} ${zip || ''}`.trim();
       }
       
-      // Try to find coordinates for the client's address
-      // For now, return early if no coordinates available
       return new Response(
         JSON.stringify({ 
           suggestions: [], 
@@ -94,21 +95,18 @@ Deno.serve(async (req) => {
       );
     }
 
-
     // Get all other active clients in the organization with locations
     const { data: allClients, error: allClientsError } = await supabase
       .from('clients')
       .select(`
         id,
         company_name,
-        location_id,
         last_pickup_at,
-        location:locations(latitude, longitude, address)
+        locations(id, latitude, longitude, address)
       `)
       .eq('organization_id', organizationId)
       .eq('is_active', true)
-      .neq('id', scheduledClientId)
-      .not('location_id', 'is', null);
+      .neq('id', scheduledClientId);
 
     if (allClientsError) {
       throw allClientsError;
@@ -116,15 +114,20 @@ Deno.serve(async (req) => {
 
     // Calculate distances and filter nearby clients (within 5 miles)
     const nearbyClients = (allClients as ClientWithLocation[])
-      .filter(client => client.location?.latitude && client.location?.longitude)
+      .filter(client => client.locations?.[0]?.latitude && client.locations?.[0]?.longitude)
       .map(client => {
+        const location = client.locations[0];
         const distance = calculateDistance(
-          scheduledLat,
-          scheduledLng,
-          client.location.latitude!,
-          client.location.longitude!
+          scheduledLat!,
+          scheduledLng!,
+          location.latitude!,
+          location.longitude!
         );
-        return { ...client, distance };
+        return { 
+          ...client, 
+          distance,
+          location: location // Flatten for easier access
+        };
       })
       .filter(client => client.distance <= 5)
       .sort((a, b) => a.distance - b.distance)
@@ -207,10 +210,10 @@ Which 3-5 clients should we prioritize calling to schedule in the same area? Pro
       // Fall back to simple distance-based suggestions
       const fallbackSuggestions = nearbyClients.slice(0, 5).map(client => ({
         client_id: client.id,
-          company_name: client.company_name,
-          distance: client.distance,
-          last_pickup_at: client.last_pickup_at,
-          address: client.location?.address || 'Address not available',
+        company_name: client.company_name,
+        distance: client.distance,
+        last_pickup_at: client.last_pickup_at,
+        address: client.location?.address || 'Address not available',
         priority: 'medium' as const,
         reasoning: `Located ${client.distance.toFixed(1)} miles from scheduled client`
       }));
