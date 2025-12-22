@@ -17,7 +17,12 @@ export function useSendOutreachEmail() {
       });
 
       if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      if (data?.error) {
+        // Include clientName in the error for better messaging
+        const err = new Error(data.error);
+        (err as any).clientName = data.clientName;
+        throw err;
+      }
 
       return data;
     },
@@ -29,10 +34,15 @@ export function useSendOutreachEmail() {
       queryClient.invalidateQueries({ queryKey: ['client-workflows'] });
       queryClient.invalidateQueries({ queryKey: ['active-followups'] });
     },
-    onError: (error: Error) => {
+    onError: (error: Error & { clientName?: string }) => {
+      const clientName = error.clientName || 'this client';
+      const message = error.message === 'Client has no email address'
+        ? `${clientName} doesn't have an email address on file`
+        : error.message;
+      
       toast({
-        title: "Failed to send email",
-        description: error.message,
+        title: "Could not send email",
+        description: message,
         variant: "destructive",
       });
     },
