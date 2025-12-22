@@ -230,40 +230,42 @@ export default function BookingRequests() {
                         </p>
                       )}
 
-                      {booking.status === 'pending' && (
-                        <div className="flex gap-2 mt-4 pt-4 border-t">
-                          <Button 
-                            onClick={() => openActionDialog(booking, 'approve')}
-                            className="bg-green-600 hover:bg-green-700"
-                          >
-                            <Check className="h-4 w-4 mr-2" />
-                            Approve
-                          </Button>
-                          <Button 
-                            variant="outline"
-                            onClick={() => openActionDialog(booking, 'modify')}
-                          >
-                            <CalendarClock className="h-4 w-4 mr-2" />
-                            Suggest Date
-                          </Button>
-                          <Button 
-                            variant="destructive"
-                            onClick={() => openActionDialog(booking, 'decline')}
-                          >
-                            <X className="h-4 w-4 mr-2" />
-                            Decline
-                          </Button>
-                          <Button 
-                            variant="ghost"
-                            size="icon"
-                            className="ml-auto text-muted-foreground hover:text-destructive"
-                            onClick={() => setBookingToDelete(booking)}
-                            title="Delete without notification"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
+                      <div className="flex gap-2 mt-4 pt-4 border-t">
+                        {booking.status === 'pending' && (
+                          <>
+                            <Button 
+                              onClick={() => openActionDialog(booking, 'approve')}
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              <Check className="h-4 w-4 mr-2" />
+                              Approve
+                            </Button>
+                            <Button 
+                              variant="outline"
+                              onClick={() => openActionDialog(booking, 'modify')}
+                            >
+                              <CalendarClock className="h-4 w-4 mr-2" />
+                              Suggest Date
+                            </Button>
+                            <Button 
+                              variant="destructive"
+                              onClick={() => openActionDialog(booking, 'decline')}
+                            >
+                              <X className="h-4 w-4 mr-2" />
+                              Decline
+                            </Button>
+                          </>
+                        )}
+                        <Button 
+                          variant="ghost"
+                          size="icon"
+                          className="ml-auto text-muted-foreground hover:text-destructive"
+                          onClick={() => setBookingToDelete(booking)}
+                          title="Delete without notification"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
 
                       {booking.admin_notes && (
                         <p className="mt-4 text-sm italic text-muted-foreground">
