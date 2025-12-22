@@ -164,20 +164,44 @@ export function useProcessBookingRequest() {
 
 export function useDeleteBookingRequest() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const organizationId = user?.currentOrganization?.id;
 
   return useMutation({
     mutationFn: async (bookingRequestId: string) => {
-      const { error } = await supabase
+      if (!organizationId) {
+        throw new Error('No organization selected');
+      }
+
+      const { data, error } = await supabase
         .from('booking_requests')
         .delete()
-        .eq('id', bookingRequestId);
+        .eq('id', bookingRequestId)
+        .eq('organization_id', organizationId)
+        .select('id');
 
       if (error) throw error;
+
+      if (!data || data.length === 0) {
+        // RLS-denied deletes can return 204 with no error; treat that as a failure
+        throw new Error('Delete failed (not permitted or already deleted)');
+      }
+
+      return data[0];
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ 
+    onSuccess: (_deleted, bookingRequestId) => {
+      // Optimistically remove from any cached booking-requests lists
+      queryClient.setQueriesData(
+        { queryKey: ['booking-requests'] },
+        (old: BookingRequest[] | undefined) => {
+          if (!old) return old;
+          return old.filter((r) => r.id !== bookingRequestId);
+        }
+      );
+
+      queryClient.invalidateQueries({
         queryKey: ['booking-requests'],
-        refetchType: 'all'
+        refetchType: 'all',
       });
       queryClient.invalidateQueries({ queryKey: ['pending-booking-count'] });
       toast.success('Booking request deleted');
@@ -188,3 +212,4 @@ export function useDeleteBookingRequest() {
     },
   });
 }
+
