@@ -1,14 +1,16 @@
 import { useActiveFollowups, useUpdateWorkflow } from "@/hooks/useClientWorkflows";
+import { useSendOutreachEmail } from "@/hooks/useSendOutreachEmail";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar, Building, Clock, Truck } from "lucide-react";
+import { Calendar, Building, Clock, Truck, Mail } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 export function FollowupWorkflows() {
   const { data: followups, isLoading } = useActiveFollowups();
   const updateWorkflow = useUpdateWorkflow();
+  const sendOutreachEmail = useSendOutreachEmail();
 
   const handleCompleteFollowup = async (workflowId: string, intervalDays: number = 30) => {
     const nextDate = new Date();
@@ -39,15 +41,19 @@ export function FollowupWorkflows() {
     return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
   };
 
-  const handleSnoozeFollowup = async (workflowId: string, days: number) => {
+  const handleSendEmail = async (workflowId: string, clientId: string, organizationId: string, intervalDays: number = 30) => {
+    await sendOutreachEmail.mutateAsync({ clientId, organizationId });
+    
+    // Mark followup as complete after sending email
     const nextDate = new Date();
-    nextDate.setDate(nextDate.getDate() + days);
+    nextDate.setDate(nextDate.getDate() + intervalDays);
     
     await updateWorkflow.mutateAsync({
       id: workflowId,
       updates: {
+        last_contact_date: new Date().toISOString().split('T')[0],
         next_contact_date: nextDate.toISOString().split('T')[0],
-        notes: `Snoozed for ${days} days on ${new Date().toLocaleDateString()}`,
+        notes: 'Scheduling email sent',
         updated_at: new Date().toISOString()
       }
     });
@@ -124,11 +130,12 @@ export function FollowupWorkflows() {
                 <Button 
                   size="sm" 
                   variant="outline"
-                  onClick={() => handleSnoozeFollowup(workflow.id, 7)}
-                  disabled={updateWorkflow.isPending}
+                  onClick={() => handleSendEmail(workflow.id, workflow.client_id, workflow.organization_id, intervalDays)}
+                  disabled={sendOutreachEmail.isPending || updateWorkflow.isPending}
                   className="shrink-0"
                 >
-                  Snooze 7d
+                  <Mail className="h-4 w-4 mr-1" />
+                  Send Email
                 </Button>
               </div>
             );
