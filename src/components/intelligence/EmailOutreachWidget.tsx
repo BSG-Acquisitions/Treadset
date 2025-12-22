@@ -11,6 +11,7 @@ interface EmailStats {
   clickRate: number;
   bookingsConverted: number;
   clientsReached: number;
+  weeklyRemindersSent: number;
 }
 
 export function EmailOutreachWidget() {
@@ -20,7 +21,7 @@ export function EmailOutreachWidget() {
   const { data: stats, isLoading } = useQuery<EmailStats>({
     queryKey: ['email-outreach-stats', organizationId],
     queryFn: async () => {
-      if (!organizationId) return { sentThisMonth: 0, clickRate: 0, bookingsConverted: 0, clientsReached: 0 };
+      if (!organizationId) return { sentThisMonth: 0, clickRate: 0, bookingsConverted: 0, clientsReached: 0, weeklyRemindersSent: 0 };
 
       const monthStart = new Date();
       monthStart.setDate(1);
@@ -29,17 +30,21 @@ export function EmailOutreachWidget() {
       // Get email preferences with outreach data
       const { data: prefs, error } = await supabase
         .from('client_email_preferences')
-        .select('outreach_count, emails_clicked, bookings_from_email, last_outreach_sent_at')
+        .select('outreach_count, emails_clicked, bookings_from_email, last_outreach_sent_at, last_weekly_reminder_at, reminder_count')
         .eq('organization_id', organizationId);
 
       if (error) {
         console.error('Error fetching email stats:', error);
-        return { sentThisMonth: 0, clickRate: 0, bookingsConverted: 0, clientsReached: 0 };
+        return { sentThisMonth: 0, clickRate: 0, bookingsConverted: 0, clientsReached: 0, weeklyRemindersSent: 0 };
       }
 
       // Calculate stats
       const sentThisMonth = prefs?.filter(p => 
         p.last_outreach_sent_at && new Date(p.last_outreach_sent_at) >= monthStart
+      ).length || 0;
+
+      const weeklyRemindersSent = prefs?.filter(p =>
+        p.last_weekly_reminder_at && new Date(p.last_weekly_reminder_at) >= monthStart
       ).length || 0;
 
       const totalSent = prefs?.reduce((sum, p) => sum + (p.outreach_count || 0), 0) || 0;
@@ -54,6 +59,7 @@ export function EmailOutreachWidget() {
         clickRate,
         bookingsConverted,
         clientsReached,
+        weeklyRemindersSent,
       };
     },
     enabled: !!organizationId,
@@ -89,9 +95,16 @@ export function EmailOutreachWidget() {
           <div className="p-3 rounded-lg bg-blue-500/10">
             <div className="flex items-center gap-2 mb-1">
               <Send className="h-4 w-4 text-blue-600" />
-              <span className="text-xs text-muted-foreground">Emails Sent</span>
+              <span className="text-xs text-muted-foreground">Pattern Emails</span>
             </div>
             <p className="text-2xl font-bold text-blue-700">{stats?.sentThisMonth || 0}</p>
+          </div>
+          <div className="p-3 rounded-lg bg-orange-500/10">
+            <div className="flex items-center gap-2 mb-1">
+              <CalendarCheck className="h-4 w-4 text-orange-600" />
+              <span className="text-xs text-muted-foreground">Weekly Reminders</span>
+            </div>
+            <p className="text-2xl font-bold text-orange-700">{stats?.weeklyRemindersSent || 0}</p>
           </div>
           <div className="p-3 rounded-lg bg-purple-500/10">
             <div className="flex items-center gap-2 mb-1">
@@ -102,22 +115,15 @@ export function EmailOutreachWidget() {
           </div>
           <div className="p-3 rounded-lg bg-green-500/10">
             <div className="flex items-center gap-2 mb-1">
-              <CalendarCheck className="h-4 w-4 text-green-600" />
+              <Mail className="h-4 w-4 text-green-600" />
               <span className="text-xs text-muted-foreground">Bookings</span>
             </div>
             <p className="text-2xl font-bold text-green-700">{stats?.bookingsConverted || 0}</p>
           </div>
-          <div className="p-3 rounded-lg bg-muted">
-            <div className="flex items-center gap-2 mb-1">
-              <Mail className="h-4 w-4 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">Clients Reached</span>
-            </div>
-            <p className="text-2xl font-bold">{stats?.clientsReached || 0}</p>
-          </div>
         </div>
 
         <p className="text-xs text-muted-foreground text-center">
-          Automated emails are sent to overdue clients every 14 days
+          Weekly reminders every Monday • Pattern emails for overdue clients
         </p>
       </CardContent>
     </Card>

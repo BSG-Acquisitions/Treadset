@@ -209,3 +209,6 @@ verify_jwt = false
 
 [functions.portal-invite-unsubscribe]
 verify_jwt = false
+
+[functions.send-weekly-pickup-reminders]
+verify_jwt = false

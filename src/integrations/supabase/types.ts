@@ -543,12 +543,14 @@ export type Database = {
           id: string
           last_outreach_sent_at: string | null
           last_reminder_sent_at: string | null
+          last_weekly_reminder_at: string | null
           organization_id: string
           outreach_count: number | null
           reminder_count: number | null
           unsubscribe_reason: string | null
           unsubscribed_at: string | null
           updated_at: string
+          weekly_reminder_enabled: boolean | null
         }
         Insert: {
           bookings_from_email?: number | null
@@ -562,12 +564,14 @@ export type Database = {
           id?: string
           last_outreach_sent_at?: string | null
           last_reminder_sent_at?: string | null
+          last_weekly_reminder_at?: string | null
           organization_id: string
           outreach_count?: number | null
           reminder_count?: number | null
           unsubscribe_reason?: string | null
           unsubscribed_at?: string | null
           updated_at?: string
+          weekly_reminder_enabled?: boolean | null
         }
         Update: {
           bookings_from_email?: number | null
@@ -581,12 +585,14 @@ export type Database = {
           id?: string
           last_outreach_sent_at?: string | null
           last_reminder_sent_at?: string | null
+          last_weekly_reminder_at?: string | null
           organization_id?: string
           outreach_count?: number | null
           reminder_count?: number | null
           unsubscribe_reason?: string | null
           unsubscribed_at?: string | null
           updated_at?: string
+          weekly_reminder_enabled?: boolean | null
         }
         Relationships: [
           {
