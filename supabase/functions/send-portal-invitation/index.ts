@@ -112,7 +112,7 @@ const handler = async (req: Request): Promise<Response> => {
 
         // Send the email
         const emailResponse = await resend.emails.send({
-          from: "BSG Tire Recycling <onboarding@resend.dev>",
+          from: "BSG Tire Recycling <noreply@bsgtires.com>",
           to: [recipientEmail],
           subject: `Welcome to Your BSG Tire Recycling Client Portal`,
           html: `

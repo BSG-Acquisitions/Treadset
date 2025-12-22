@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DollarSign, FileText, CreditCard, MapPin, Plus, Receipt, Clock, CheckCircle2, XCircle, Edit2, Building2, Search, Pencil } from "lucide-react";
 import { AddLocationDialog } from "@/components/AddLocationDialog";
+import { SendPortalInviteButton } from "@/components/client/SendPortalInviteButton";
 import { Input } from "@/components/ui/input";
 import { startOfWeek, startOfMonth, startOfQuarter, startOfYear, isWithinInterval, format, parseISO } from "date-fns";
 import { formatDateLocal, parseLocalDate } from "@/lib/formatters";
@@ -419,7 +420,12 @@ export default function ClientDetail() {
                 <span className="font-semibold">Last service:</span> {lastServiceDate ? formatDateLocal(lastServiceDate) : 'Never'}
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 items-center">
+              <SendPortalInviteButton 
+                clientId={client.id}
+                clientEmail={client.email}
+                companyName={client.company_name}
+              />
               <EditClientDialog
                 client={client}
                 trigger={
