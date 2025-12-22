@@ -42,21 +42,25 @@ export function FollowupWorkflows() {
   };
 
   const handleSendEmail = async (workflowId: string, clientId: string, organizationId: string, intervalDays: number = 30) => {
-    await sendOutreachEmail.mutateAsync({ clientId, organizationId });
-    
-    // Mark followup as complete after sending email
-    const nextDate = new Date();
-    nextDate.setDate(nextDate.getDate() + intervalDays);
-    
-    await updateWorkflow.mutateAsync({
-      id: workflowId,
-      updates: {
-        last_contact_date: new Date().toISOString().split('T')[0],
-        next_contact_date: nextDate.toISOString().split('T')[0],
-        notes: 'Scheduling email sent',
-        updated_at: new Date().toISOString()
-      }
-    });
+    try {
+      await sendOutreachEmail.mutateAsync({ clientId, organizationId });
+      
+      // Mark followup as complete after sending email
+      const nextDate = new Date();
+      nextDate.setDate(nextDate.getDate() + intervalDays);
+      
+      await updateWorkflow.mutateAsync({
+        id: workflowId,
+        updates: {
+          last_contact_date: new Date().toISOString().split('T')[0],
+          next_contact_date: nextDate.toISOString().split('T')[0],
+          notes: 'Scheduling email sent',
+          updated_at: new Date().toISOString()
+        }
+      });
+    } catch {
+      // Error already handled by mutation's onError
+    }
   };
 
   if (isLoading) {
