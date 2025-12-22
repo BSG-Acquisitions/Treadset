@@ -28,15 +28,17 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient(
+    // Use service role for database operations
+    const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      { auth: { persistSession: false } }
     );
 
     // Get authenticated user
     const authHeader = req.headers.get("Authorization")!;
     const token = authHeader.replace("Bearer ", "");
-    const { data } = await supabaseClient.auth.getUser(token);
+    const { data } = await supabaseAdmin.auth.getUser(token);
     const user = data.user;
     if (!user?.email) throw new Error("User not authenticated");
 
@@ -44,6 +46,17 @@ serve(async (req) => {
     
     if (!body.line_items || body.line_items.length === 0) {
       throw new Error("No line items provided");
+    }
+
+    // Get organization_id from pickup if available
+    let organizationId: string | null = null;
+    if (body.pickup_id) {
+      const { data: pickup } = await supabaseAdmin
+        .from('pickups')
+        .select('organization_id')
+        .eq('id', body.pickup_id)
+        .maybeSingle();
+      organizationId = pickup?.organization_id || null;
     }
 
     // Initialize Stripe
@@ -91,9 +104,10 @@ serve(async (req) => {
     });
 
     // Record payment intent in database
-    const { error: insertError } = await supabaseClient
+    const { error: insertError } = await supabaseAdmin
       .from('stripe_payments')
       .insert({
+        organization_id: organizationId,
         stripe_session_id: session.id,
         amount: session.amount_total || 0,
         currency: session.currency || 'usd',
