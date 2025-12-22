@@ -40,39 +40,57 @@ Deno.serve(async (req) => {
       .from('clients')
       .select('id, company_name, email, contact_name, last_pickup_at')
       .eq('id', clientId)
-      .single();
+      .maybeSingle();
 
-    if (clientError || !client) {
+    if (clientError) {
+      console.error('[OUTREACH] Error fetching client:', clientError);
       return new Response(
-        JSON.stringify({ error: 'Client not found' }),
+        JSON.stringify({ success: false, error: 'Failed to load client' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!client) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Client not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    // Missing email is a common/expected case; return 200 to avoid surfacing as an edge runtime error.
     if (!client.email) {
+      console.log(`[OUTREACH] Client has no email address: ${client.company_name} (${client.id})`);
       return new Response(
-        JSON.stringify({ error: 'Client has no email address', clientName: client.company_name }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, error: 'Client has no email address', clientName: client.company_name }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     // Get organization info
-    const { data: org } = await supabase
+    const { data: org, error: orgError } = await supabase
       .from('organizations')
       .select('name, logo_url')
       .eq('id', organizationId)
-      .single();
+      .maybeSingle();
+
+    if (orgError) {
+      console.warn('[OUTREACH] Error fetching org:', orgError);
+    }
 
     const orgName = org?.name || 'TreadSet';
 
     // Get pickup pattern for suggested dates
-    const { data: pattern } = await supabase
+    const { data: pattern, error: patternError } = await supabase
       .from('client_pickup_patterns')
       .select('frequency, typical_day_of_week')
       .eq('client_id', clientId)
       .order('confidence_score', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
+
+    if (patternError) {
+      console.warn('[OUTREACH] Error fetching pickup pattern:', patternError);
+    }
 
     // Calculate days since last pickup
     const daysSinceLastPickup = client.last_pickup_at 
