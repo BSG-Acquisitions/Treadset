@@ -89,15 +89,19 @@ Deno.serve(async (req) => {
       const notificationsToCreate: any[] = [];
 
       // ============ PASS 1: PATTERN-BASED CLIENTS ============
+      // Only include clients who have pickups (not dropoff-only clients)
       const { data: patterns, error: patternsError } = await supabase
         .from('client_pickup_patterns')
         .select(`
           *,
-          client:clients(id, company_name, email, contact_name, is_active)
+          client:clients!inner(id, company_name, email, contact_name, is_active)
         `)
         .eq('organization_id', orgId)
         .gte('confidence_score', 60)
         .neq('frequency', 'irregular');
+      
+      // Filter to only pickup clients (clients who have at least 1 pickup OR no dropoffs)
+      // This excludes dropoff-only clients who should not receive pickup scheduling emails
 
       if (patternsError) {
         console.error(`[MISSING_PICKUPS] Error getting patterns for org ${orgId}:`, patternsError);
@@ -106,6 +110,23 @@ Deno.serve(async (req) => {
       for (const pattern of patterns || []) {
         const client = pattern.client;
         if (!client || !client.is_active) continue;
+        
+        // Check if this is a dropoff-only client (skip them)
+        const { count: pickupCount } = await supabase
+          .from('pickups')
+          .select('id', { count: 'exact', head: true })
+          .eq('client_id', client.id);
+        
+        const { count: dropoffCount } = await supabase
+          .from('dropoffs')
+          .select('id', { count: 'exact', head: true })
+          .eq('client_id', client.id);
+        
+        // Skip if this is a dropoff-only client (has dropoffs but no pickups)
+        if ((dropoffCount || 0) > 0 && (pickupCount || 0) === 0) {
+          console.log(`[MISSING_PICKUPS] Skipping dropoff-only client: ${client.company_name}`);
+          continue;
+        }
         
         // Track this client as processed
         processedClientIds.add(client.id);
@@ -256,6 +277,23 @@ Deno.serve(async (req) => {
       for (const client of inactiveClients || []) {
         // Skip if already processed by pattern-based system
         if (processedClientIds.has(client.id)) {
+          continue;
+        }
+
+        // Check if this is a dropoff-only client (skip them)
+        const { count: pickupCount } = await supabase
+          .from('pickups')
+          .select('id', { count: 'exact', head: true })
+          .eq('client_id', client.id);
+        
+        const { count: dropoffCount } = await supabase
+          .from('dropoffs')
+          .select('id', { count: 'exact', head: true })
+          .eq('client_id', client.id);
+        
+        // Skip if this is a dropoff-only client (has dropoffs but no pickups)
+        if ((dropoffCount || 0) > 0 && (pickupCount || 0) === 0) {
+          console.log(`[MISSING_PICKUPS] Skipping dropoff-only inactive client: ${client.company_name}`);
           continue;
         }
 
