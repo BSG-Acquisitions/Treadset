@@ -58,8 +58,10 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const dryRun = body.dryRun ?? true; // Default to dry run for safety
     const targetDate = body.targetDate ?? '2025-12-18'; // Date when broken emails were sent
+    const excludeClientIds: string[] = body.excludeClientIds ?? []; // Clients to skip (e.g., already handled by phone)
     
     console.log(`[RESEND_OUTREACH] Starting ${dryRun ? 'DRY RUN' : 'LIVE'} resend for emails sent on ${targetDate}`);
+    console.log(`[RESEND_OUTREACH] Excluding ${excludeClientIds.length} client(s): ${excludeClientIds.join(', ')}`);
 
     // Get organization info
     const { data: org } = await supabase
@@ -129,6 +131,44 @@ Deno.serve(async (req) => {
           status: 'skipped',
           reason: 'No email address'
         });
+        continue;
+      }
+
+      // Skip excluded clients (e.g., already handled by phone)
+      if (excludeClientIds.includes(client.id)) {
+        results.skipped++;
+        results.details.push({
+          clientId: client.id,
+          email: client.email,
+          company: client.company_name,
+          status: 'skipped',
+          reason: 'Excluded by request'
+        });
+        console.log(`[RESEND_OUTREACH] Skipping excluded client: ${client.company_name}`);
+        continue;
+      }
+
+      // Check if this is a dropoff-only client (skip them - they shouldn't have received pickup emails)
+      const { count: pickupCount } = await supabase
+        .from('pickups')
+        .select('id', { count: 'exact', head: true })
+        .eq('client_id', client.id);
+      
+      const { count: dropoffCount } = await supabase
+        .from('dropoffs')
+        .select('id', { count: 'exact', head: true })
+        .eq('client_id', client.id);
+      
+      if ((dropoffCount || 0) > 0 && (pickupCount || 0) === 0) {
+        results.skipped++;
+        results.details.push({
+          clientId: client.id,
+          email: client.email,
+          company: client.company_name,
+          status: 'skipped',
+          reason: 'Dropoff-only client'
+        });
+        console.log(`[RESEND_OUTREACH] Skipping dropoff-only client: ${client.company_name}`);
         continue;
       }
 
