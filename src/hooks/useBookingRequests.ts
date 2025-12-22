@@ -175,7 +175,10 @@ export function useDeleteBookingRequest() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['booking-requests'] });
+      queryClient.invalidateQueries({ 
+        queryKey: ['booking-requests'],
+        refetchType: 'all'
+      });
       queryClient.invalidateQueries({ queryKey: ['pending-booking-count'] });
       toast.success('Booking request deleted');
     },
