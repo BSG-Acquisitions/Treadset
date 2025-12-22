@@ -120,7 +120,7 @@ export const PickupPatternsCard = ({ clientId }: PickupPatternsCardProps) => {
                   {group.clients.slice(0, 10).map((pattern: any) => (
                     <div key={pattern.id} className="flex items-center justify-between text-sm py-1">
                       <span className="truncate max-w-[180px]">
-                        {pattern.clients?.company_name || 'Unknown'}
+                        {pattern.client?.company_name || 'Unknown'}
                       </span>
                       {pattern.typical_day_of_week !== null && (
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
