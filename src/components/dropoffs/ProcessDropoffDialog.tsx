@@ -12,7 +12,7 @@ import { useCreateDropoffWithManifest } from "@/hooks/useCreateDropoffWithManife
 import { useHaulers } from "@/hooks/useHaulers";
 import { useReceivers } from "@/hooks/useReceivers";
 import { useAuth } from "@/contexts/AuthContext";
-import { FileText, DollarSign, Factory, Truck, Building2, Plus, ChevronLeft, ChevronRight, CheckCircle2, Loader2, AlertTriangle } from "lucide-react";
+import { FileText, DollarSign, Factory, Truck, Building2, Plus, ChevronLeft, ChevronRight, CheckCircle2, Loader2, AlertTriangle, User } from "lucide-react";
 import { CreateHaulerDialog } from "./CreateHaulerDialog";
 import { CreateClientDialog } from "@/components/CreateClientDialog";
 import { DropoffSignatureStep } from "./DropoffSignatureStep";
@@ -51,6 +51,11 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
   const [selectedGenerator, setSelectedGenerator] = useState<any>(null);
   const [selectedHauler, setSelectedHauler] = useState<any>(null);
   const [selectedReceiverId, setSelectedReceiverId] = useState("");
+  
+  // Walk-in mode state
+  const [isWalkIn, setIsWalkIn] = useState(false);
+  const [walkInCustomerName, setWalkInCustomerName] = useState("");
+  const [walkInEmail, setWalkInEmail] = useState("");
   
   // Optional signature toggles
   const [hasGeneratorSig, setHasGeneratorSig] = useState(true);
@@ -126,6 +131,9 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
     setSelectedGenerator(null);
     setSelectedHauler(null);
     setSelectedReceiverId("");
+    setIsWalkIn(false);
+    setWalkInCustomerName("");
+    setWalkInEmail("");
     setHasGeneratorSig(true);
     setHasHaulerSig(false);
     setHasReceiverSig(true);
@@ -160,20 +168,44 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
     setIsSubmitting(true);
     
     try {
-      if (!customerId) throw new Error("Please select a customer");
-
       const orgId = user?.currentOrganization?.id || "";
+      
+      // For walk-in mode, find or use the walk-in client
+      let finalClientId = customerId;
+      if (isWalkIn) {
+        const { data: walkInClient } = await supabase
+          .from('clients')
+          .select('id')
+          .eq('organization_id', orgId)
+          .ilike('notes', '%[SYSTEM-WALKIN]%')
+          .single();
+        
+        if (!walkInClient) throw new Error("Walk-in client not found. Please contact support.");
+        finalClientId = walkInClient.id;
+      }
+      
+      if (!finalClientId) throw new Error("Please select a customer");
+
       const timestamp = new Date().toISOString();
       const now = new Date();
       const localDate = format(now, 'yyyy-MM-dd');
       const localTime = format(now, 'HH:mm:ss');
+      
+      // Build notes with walk-in customer info if applicable
+      let finalNotes = notes || "";
+      if (isWalkIn && (walkInCustomerName || walkInEmail)) {
+        const walkInInfo = [`Walk-in Customer`];
+        if (walkInCustomerName) walkInInfo.push(`Name: ${walkInCustomerName}`);
+        if (walkInEmail) walkInInfo.push(`Email: ${walkInEmail}`);
+        finalNotes = walkInInfo.join(' | ') + (finalNotes ? `\n${finalNotes}` : '');
+      }
 
       let generatorUploadPath: string | null = null;
       let haulerUploadPath: string | null = null;
       let receiverUploadPath: string | null = null;
 
-      // Upload generator signature if captured
-      if (hasGeneratorSig && generatorSigDataUrl && generatorPrintName) {
+      // Upload generator signature if captured (skip for walk-ins)
+      if (!isWalkIn && hasGeneratorSig && generatorSigDataUrl && generatorPrintName) {
         const blob = dataURLtoBlob(generatorSigDataUrl);
         const fileName = `generator_signature_${Date.now()}.png`;
         generatorUploadPath = `${orgId}/signatures/${fileName}`;
@@ -183,8 +215,8 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
         if (error) throw new Error(`Generator signature upload failed: ${error.message}`);
       }
 
-      // Upload hauler signature if captured
-      if (hasHaulerSig && haulerSigDataUrl && haulerPrintName) {
+      // Upload hauler signature if captured (skip for walk-ins)
+      if (!isWalkIn && hasHaulerSig && haulerSigDataUrl && haulerPrintName) {
         const blob = dataURLtoBlob(haulerSigDataUrl);
         const fileName = `hauler_signature_${Date.now()}.png`;
         haulerUploadPath = `${orgId}/signatures/${fileName}`;
@@ -194,8 +226,8 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
         if (error) throw new Error(`Hauler signature upload failed: ${error.message}`);
       }
 
-      // Upload receiver signature if captured
-      if (hasReceiverSig && receiverSigDataUrl && receiverPrintName) {
+      // Upload receiver signature if captured (skip for walk-ins)
+      if (!isWalkIn && hasReceiverSig && receiverSigDataUrl && receiverPrintName) {
         const blob = dataURLtoBlob(receiverSigDataUrl);
         const fileName = `receiver_signature_${Date.now()}.png`;
         receiverUploadPath = `${orgId}/signatures/${fileName}`;
@@ -208,7 +240,7 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
       await createDropoffWithManifest.mutateAsync({
         dropoff: {
           organization_id: orgId,
-          client_id: customerId,
+          client_id: finalClientId,
           hauler_id: haulerId || null,
           dropoff_date: localDate,
           dropoff_time: localTime,
@@ -221,25 +253,25 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
           computed_revenue: Number(manualRevenue) || 0,
           payment_method: paymentMethod,
           payment_status: paymentMethod === 'invoice' ? 'pending' : 'paid',
-          requires_manifest: true,
-          notes: notes || null,
+          requires_manifest: !isWalkIn, // Walk-ins don't need manifest
+          notes: finalNotes || null,
           status: 'completed',
           processed_by: user?.id || null,
           // Generator signature
           generator_sig_path: generatorUploadPath,
-          generator_signed_by: hasGeneratorSig ? generatorPrintName : null,
-          generator_signed_at: hasGeneratorSig && generatorSigDataUrl ? timestamp : null,
+          generator_signed_by: !isWalkIn && hasGeneratorSig ? generatorPrintName : null,
+          generator_signed_at: !isWalkIn && hasGeneratorSig && generatorSigDataUrl ? timestamp : null,
           // Hauler signature
           hauler_sig_path: haulerUploadPath,
-          hauler_signed_by: hasHaulerSig ? haulerPrintName : null,
-          hauler_signed_at: hasHaulerSig && haulerSigDataUrl ? timestamp : null,
+          hauler_signed_by: !isWalkIn && hasHaulerSig ? haulerPrintName : null,
+          hauler_signed_at: !isWalkIn && hasHaulerSig && haulerSigDataUrl ? timestamp : null,
           // Receiver signature
           receiver_sig_path: receiverUploadPath,
-          receiver_signed_by: hasReceiverSig ? receiverPrintName : null,
-          receiver_signed_at: hasReceiverSig && receiverSigDataUrl ? timestamp : null,
+          receiver_signed_by: !isWalkIn && hasReceiverSig ? receiverPrintName : null,
+          receiver_signed_at: !isWalkIn && hasReceiverSig && receiverSigDataUrl ? timestamp : null,
         },
         vehicleId: undefined,
-        receiverId: selectedReceiverId || undefined,
+        receiverId: isWalkIn ? undefined : (selectedReceiverId || undefined),
       });
 
       handleClose();
@@ -261,23 +293,42 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
     (hasHaulerSig && haulerSigDataUrl && haulerPrintName) ||
     (hasReceiverSig && receiverSigDataUrl && receiverPrintName);
 
-  const canProceedFromInfo = customerId && (pteCount || otrCount || tractorCount) && manualRevenue && Number(manualRevenue) > 0;
+  // For walk-in mode: no customerId required, just tire counts + revenue
+  const canProceedFromInfo = isWalkIn 
+    ? ((pteCount || otrCount || tractorCount) && manualRevenue && Number(manualRevenue) > 0)
+    : (customerId && (pteCount || otrCount || tractorCount) && manualRevenue && Number(manualRevenue) > 0);
   const canProceedFromGeneratorSig = !hasGeneratorSig || (generatorSigDataUrl && generatorPrintName);
   const canProceedFromHaulerSig = !hasHaulerSig || (haulerSigDataUrl && haulerPrintName);
   const canProceedFromReceiverSig = !hasReceiverSig || (receiverSigDataUrl && receiverPrintName);
 
+  // For walk-in mode, skip signature steps entirely (Info -> Confirmation)
+  const getNextStep = (current: WizardStep): WizardStep => {
+    if (isWalkIn && current === 'info') {
+      return 'confirmation';
+    }
+    const idx = STEPS.indexOf(current);
+    return STEPS[idx + 1] || current;
+  };
+  
+  const getPrevStep = (current: WizardStep): WizardStep => {
+    if (isWalkIn && current === 'confirmation') {
+      return 'info';
+    }
+    const idx = STEPS.indexOf(current);
+    return STEPS[idx - 1] || current;
+  };
+
   const goNext = () => {
-    const idx = STEPS.indexOf(currentStep);
-    if (idx < STEPS.length - 1) {
-      // Signature data is already captured via callbacks from DropoffSignatureStep
-      setCurrentStep(STEPS[idx + 1]);
+    const nextStep = getNextStep(currentStep);
+    if (nextStep !== currentStep) {
+      setCurrentStep(nextStep);
     }
   };
 
   const goBack = () => {
-    const idx = STEPS.indexOf(currentStep);
-    if (idx > 0) {
-      setCurrentStep(STEPS[idx - 1]);
+    const prevStep = getPrevStep(currentStep);
+    if (prevStep !== currentStep) {
+      setCurrentStep(prevStep);
     }
   };
 
@@ -336,35 +387,99 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
           {/* Step 1: Drop-off Information */}
           {currentStep === 'info' && (
             <div className="space-y-6">
-              <Card>
-                <CardContent className="pt-6 space-y-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <FileText className="h-4 w-4 text-primary" />
-                    <span className="font-medium">Manifest Parties</span>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Label className="flex items-center gap-2">
-                        <Factory className="h-4 w-4" />
-                        Generator (Tire Source)
-                      </Label>
-                      <Button type="button" variant="ghost" size="sm" onClick={() => setShowCreateClient(true)} className="h-8">
-                        <Plus className="h-4 w-4 mr-1" />
-                        Add Client
-                      </Button>
+              {/* Walk-in Toggle */}
+              <Card className={cn(isWalkIn && "border-primary bg-primary/5")}>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <User className="h-5 w-5 text-primary" />
+                      <div>
+                        <Label htmlFor="walk-in-toggle" className="font-medium cursor-pointer">Quick Walk-in Drop-off</Label>
+                        <p className="text-sm text-muted-foreground">For one-off customers without full client info</p>
+                      </div>
                     </div>
-                    <SearchableDropdown
-                      placeholder="Select generator..."
-                      searchFunction={searchClients}
-                      onSelect={(client) => {
-                        setSelectedGenerator(client);
-                        setCustomerId(client?.id || "");
+                    <Switch
+                      id="walk-in-toggle"
+                      checked={isWalkIn}
+                      onCheckedChange={(checked) => {
+                        setIsWalkIn(checked);
+                        if (checked) {
+                          // Clear generator selection and disable signatures
+                          setSelectedGenerator(null);
+                          setCustomerId("");
+                          setHasGeneratorSig(false);
+                          setHasHaulerSig(false);
+                          setHasReceiverSig(false);
+                        } else {
+                          // Re-enable default signatures
+                          setHasGeneratorSig(true);
+                          setHasReceiverSig(true);
+                        }
                       }}
-                      displayField="company_name"
-                      selected={selectedGenerator}
                     />
                   </div>
+                  
+                  {/* Walk-in Customer Fields */}
+                  {isWalkIn && (
+                    <div className="mt-4 pt-4 border-t border-border space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="walk-in-name">Customer Name (Optional)</Label>
+                          <Input 
+                            id="walk-in-name" 
+                            placeholder="e.g., John Doe" 
+                            value={walkInCustomerName}
+                            onChange={(e) => setWalkInCustomerName(e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="walk-in-email">Customer Email (Optional)</Label>
+                          <Input 
+                            id="walk-in-email" 
+                            type="email"
+                            placeholder="e.g., john@example.com" 
+                            value={walkInEmail}
+                            onChange={(e) => setWalkInEmail(e.target.value)}
+                          />
+                          <p className="text-xs text-muted-foreground">For sending documentation if needed</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Generator/Hauler/Receiver Selection - Only show if NOT walk-in */}
+              {!isWalkIn && (
+                <Card>
+                  <CardContent className="pt-6 space-y-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <FileText className="h-4 w-4 text-primary" />
+                      <span className="font-medium">Manifest Parties</span>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label className="flex items-center gap-2">
+                          <Factory className="h-4 w-4" />
+                          Generator (Tire Source)
+                        </Label>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => setShowCreateClient(true)} className="h-8">
+                          <Plus className="h-4 w-4 mr-1" />
+                          Add Client
+                        </Button>
+                      </div>
+                      <SearchableDropdown
+                        placeholder="Select generator..."
+                        searchFunction={searchClients}
+                        onSelect={(client) => {
+                          setSelectedGenerator(client);
+                          setCustomerId(client?.id || "");
+                        }}
+                        displayField="company_name"
+                        selected={selectedGenerator}
+                      />
+                    </div>
 
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
@@ -409,6 +524,7 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
                   </div>
                 </CardContent>
               </Card>
+              )}
 
               <div className="space-y-4">
                 <Label className="text-base font-medium">Tire Counts by Type</Label>
@@ -598,24 +714,55 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
                     Review Drop-off Details
                   </h3>
                   
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Generator:</span>
-                      <p className="font-medium">{selectedCustomer?.company_name || 'Not selected'}</p>
+                  {isWalkIn ? (
+                    <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <User className="h-4 w-4 text-primary" />
+                        <span className="font-medium text-primary">Walk-in Customer</span>
+                      </div>
+                      {walkInCustomerName && (
+                        <p className="text-sm">Name: <span className="font-medium">{walkInCustomerName}</span></p>
+                      )}
+                      {walkInEmail && (
+                        <p className="text-sm">Email: <span className="font-medium">{walkInEmail}</span></p>
+                      )}
+                      {!walkInCustomerName && !walkInEmail && (
+                        <p className="text-sm text-muted-foreground">No contact info provided</p>
+                      )}
                     </div>
-                    <div>
-                      <span className="text-muted-foreground">Hauler:</span>
-                      <p className="font-medium">{selectedHauler?.hauler_name || 'N/A'}</p>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Generator:</span>
+                        <p className="font-medium">{selectedCustomer?.company_name || 'Not selected'}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Hauler:</span>
+                        <p className="font-medium">{selectedHauler?.hauler_name || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Receiver:</span>
+                        <p className="font-medium">{receivers?.find(r => r.id === selectedReceiverId)?.receiver_name || 'Not selected'}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Amount:</span>
+                        <p className="font-medium text-lg">${Number(manualRevenue || 0).toFixed(2)}</p>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-muted-foreground">Receiver:</span>
-                      <p className="font-medium">{receivers?.find(r => r.id === selectedReceiverId)?.receiver_name || 'Not selected'}</p>
+                  )}
+                  
+                  {isWalkIn && (
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Amount:</span>
+                        <p className="font-medium text-lg">${Number(manualRevenue || 0).toFixed(2)}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Payment:</span>
+                        <p className="font-medium capitalize">{paymentMethod}</p>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-muted-foreground">Amount:</span>
-                      <p className="font-medium text-lg">${Number(manualRevenue || 0).toFixed(2)}</p>
-                    </div>
-                  </div>
+                  )}
                   
                   <div className="border-t pt-3">
                     <span className="text-muted-foreground text-sm">Tire Counts:</span>
@@ -627,42 +774,53 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
                     <p className="text-sm text-muted-foreground mt-1">Total: {computedPTE} PTE</p>
                   </div>
 
-                  <div className="border-t pt-3">
-                    <span className="text-muted-foreground text-sm">Signatures:</span>
-                    <div className="grid grid-cols-3 gap-4 mt-2">
-                      <div className="flex items-center gap-2">
-                        <Factory className="h-4 w-4" />
-                        <span className="text-sm">Generator:</span>
-                        {hasGeneratorSig && generatorSigDataUrl ? (
-                          <CheckCircle2 className="h-4 w-4 text-green-600" />
-                        ) : (
-                          <AlertTriangle className="h-4 w-4 text-amber-500" />
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Truck className="h-4 w-4" />
-                        <span className="text-sm">Hauler:</span>
-                        {hasHaulerSig && haulerSigDataUrl ? (
-                          <CheckCircle2 className="h-4 w-4 text-green-600" />
-                        ) : (
-                          <AlertTriangle className="h-4 w-4 text-amber-500" />
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4" />
-                        <span className="text-sm">Receiver:</span>
-                        {hasReceiverSig && receiverSigDataUrl ? (
-                          <CheckCircle2 className="h-4 w-4 text-green-600" />
-                        ) : (
-                          <AlertTriangle className="h-4 w-4 text-amber-500" />
-                        )}
+                  {!isWalkIn && (
+                    <div className="border-t pt-3">
+                      <span className="text-muted-foreground text-sm">Signatures:</span>
+                      <div className="grid grid-cols-3 gap-4 mt-2">
+                        <div className="flex items-center gap-2">
+                          <Factory className="h-4 w-4" />
+                          <span className="text-sm">Generator:</span>
+                          {hasGeneratorSig && generatorSigDataUrl ? (
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <AlertTriangle className="h-4 w-4 text-amber-500" />
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Truck className="h-4 w-4" />
+                          <span className="text-sm">Hauler:</span>
+                          {hasHaulerSig && haulerSigDataUrl ? (
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <AlertTriangle className="h-4 w-4 text-amber-500" />
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Building2 className="h-4 w-4" />
+                          <span className="text-sm">Receiver:</span>
+                          {hasReceiverSig && receiverSigDataUrl ? (
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <AlertTriangle className="h-4 w-4 text-amber-500" />
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
+                  
+                  {isWalkIn && (
+                    <div className="border-t pt-3">
+                      <p className="text-sm text-muted-foreground flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-primary" />
+                        Signatures skipped for walk-in drop-off
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
-              {missingSignatures.length > 0 && (
+              {!isWalkIn && missingSignatures.length > 0 && (
                 <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg">
                   <div className="flex items-start gap-3">
                     <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
@@ -683,8 +841,10 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
                   <div className="space-y-1">
                     <p className="font-medium text-sm">Ready to Submit</p>
                     <p className="text-sm text-muted-foreground">
-                      A manifest will be generated with captured signatures. 
-                      {anySignaturesCaptured ? " Email will be sent after all signatures are complete." : ""}
+                      {isWalkIn 
+                        ? "This walk-in drop-off will be recorded for tracking purposes."
+                        : `A manifest will be generated with captured signatures.${anySignaturesCaptured ? " Email will be sent after all signatures are complete." : ""}`
+                      }
                     </p>
                   </div>
                 </div>
