@@ -1133,6 +1133,167 @@ export type Database = {
           },
         ]
       }
+      client_user_invites: {
+        Row: {
+          client_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          invited_by: string
+          invited_email: string
+          organization_id: string
+          role: Database["public"]["Enums"]["client_user_role"]
+          token: string
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          invited_by: string
+          invited_email: string
+          organization_id: string
+          role?: Database["public"]["Enums"]["client_user_role"]
+          token?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          invited_email?: string
+          organization_id?: string
+          role?: Database["public"]["Enums"]["client_user_role"]
+          token?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_user_invites_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_user_invites_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_monthly_entity_rollup"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "client_user_invites_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_revenue_summary"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "client_user_invites_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_user_invites_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_user_invites_used_by_fkey"
+            columns: ["used_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_users: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          invited_by: string | null
+          organization_id: string
+          role: Database["public"]["Enums"]["client_user_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          invited_by?: string | null
+          organization_id: string
+          role?: Database["public"]["Enums"]["client_user_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          invited_by?: string | null
+          organization_id?: string
+          role?: Database["public"]["Enums"]["client_user_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_users_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_users_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_monthly_entity_rollup"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "client_users_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_revenue_summary"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "client_users_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_users_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_users_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_workflows: {
         Row: {
           client_id: string
@@ -5006,8 +5167,25 @@ export type Database = {
         Returns: number
       }
       check_performance_thresholds: { Args: never; Returns: undefined }
-      claim_client_invite_token: {
-        Args: { claiming_user_id: string; invite_token: string }
+      claim_client_invite_token:
+        | {
+            Args: { claiming_user_id: string; invite_token: string }
+            Returns: boolean
+          }
+        | {
+            Args: {
+              claiming_email?: string
+              claiming_user_id: string
+              invite_token: string
+            }
+            Returns: boolean
+          }
+      claim_client_team_invite_token: {
+        Args: {
+          claiming_email: string
+          claiming_user_id: string
+          invite_token: string
+        }
         Returns: boolean
       }
       claim_invite_token: {
@@ -5028,6 +5206,10 @@ export type Database = {
       generate_trailer_manifest_number: {
         Args: { org_id: string }
         Returns: string
+      }
+      get_client_user_role: {
+        Args: { p_client_id: string; p_user_id: string }
+        Returns: Database["public"]["Enums"]["client_user_role"]
       }
       get_current_user_organization: {
         Args: { org_slug?: string }
@@ -5139,6 +5321,21 @@ export type Database = {
           sent_to_email: string
         }[]
       }
+      validate_client_team_invite_token: {
+        Args: { invite_token: string }
+        Returns: {
+          client_id: string
+          company_name: string
+          error_message: string
+          id: string
+          invited_email: string
+          is_valid: boolean
+          organization_id: string
+          organization_logo: string
+          organization_name: string
+          role: Database["public"]["Enums"]["client_user_role"]
+        }[]
+      }
       validate_invite_token: {
         Args: { invite_token: string }
         Returns: {
@@ -5163,6 +5360,7 @@ export type Database = {
         | "client"
         | "hauler"
         | "receptionist"
+      client_user_role: "primary" | "billing" | "viewer"
       direction: "inbound" | "outbound" | "internal"
       end_use:
         | "reuse"
@@ -5384,6 +5582,7 @@ export const Constants = {
         "hauler",
         "receptionist",
       ],
+      client_user_role: ["primary", "billing", "viewer"],
       direction: ["inbound", "outbound", "internal"],
       end_use: [
         "reuse",
