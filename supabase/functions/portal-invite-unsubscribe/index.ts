@@ -33,7 +33,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Verify the client exists
     const { data: client, error: clientError } = await supabase
       .from("clients")
-      .select("id, company_name, email, portal_invite_opted_out")
+      .select("id, company_name, email, portal_invite_opted_out, organization_id")
       .eq("id", clientId)
       .single();
 
@@ -55,7 +55,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     const shouldOptOut = action !== "resubscribe";
 
-    // Update the opt-out status
+    // Update the opt-out status on clients table
     const { error: updateError } = await supabase
       .from("clients")
       .update({ 
@@ -73,7 +73,50 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`Client ${client.company_name} (${clientId}) ${shouldOptOut ? 'unsubscribed from' : 'resubscribed to'} portal invitations`);
+    // Also update client_email_preferences to fully opt out of ALL emails
+    if (shouldOptOut) {
+      const { error: prefsError } = await supabase
+        .from("client_email_preferences")
+        .upsert({
+          client_id: clientId,
+          organization_id: client.organization_id || clientId, // Fallback for safety
+          can_receive_outreach: false,
+          can_receive_reminders: false,
+          can_receive_confirmations: false,
+          unsubscribed_at: new Date().toISOString(),
+          unsubscribe_reason: 'Clicked unsubscribe link in email',
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'client_id' });
+
+      if (prefsError) {
+        console.error("Failed to update email preferences:", prefsError);
+        // Don't fail the request - the main opt-out was successful
+      } else {
+        console.log(`Updated email preferences for client ${clientId} - all emails disabled`);
+      }
+    } else {
+      // Resubscribing - enable all email preferences
+      const { error: prefsError } = await supabase
+        .from("client_email_preferences")
+        .upsert({
+          client_id: clientId,
+          organization_id: client.organization_id || clientId,
+          can_receive_outreach: true,
+          can_receive_reminders: true,
+          can_receive_confirmations: true,
+          unsubscribed_at: null,
+          unsubscribe_reason: null,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'client_id' });
+
+      if (prefsError) {
+        console.error("Failed to update email preferences:", prefsError);
+      } else {
+        console.log(`Updated email preferences for client ${clientId} - emails re-enabled`);
+      }
+    }
+
+    console.log(`Client ${client.company_name} (${clientId}) ${shouldOptOut ? 'unsubscribed from' : 'resubscribed to'} ALL email communications`);
 
     if (shouldOptOut) {
       // Generate resubscribe link

@@ -46,7 +46,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Parameters: dry_run=${dryRun}, limit=${limit}`);
 
-    // Get all active clients with email addresses
+    // Get all active clients with email addresses who haven't opted out
     let clientsQuery = supabase
       .from("clients")
       .select(`
@@ -55,10 +55,12 @@ const handler = async (req: Request): Promise<Response> => {
         email, 
         contact_name, 
         organization_id,
-        is_active
+        is_active,
+        portal_invite_opted_out
       `)
       .eq("is_active", true)
       .not("email", "is", null)
+      .or("portal_invite_opted_out.is.null,portal_invite_opted_out.eq.false")
       .limit(limit);
 
     if (body.organization_id) {
@@ -90,7 +92,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Get email preferences for these clients
     const { data: emailPrefs, error: prefsError } = await supabase
       .from("client_email_preferences")
-      .select("client_id, can_receive_reminders, last_outreach_sent_at, last_weekly_reminder_at")
+      .select("client_id, can_receive_reminders, last_outreach_sent_at, last_weekly_reminder_at, unsubscribed_at")
       .in("client_id", clientIds);
 
     if (prefsError) {
@@ -146,13 +148,24 @@ const handler = async (req: Request): Promise<Response> => {
         continue;
       }
 
-      // Skip if opted out of reminders
-      if (prefs?.can_receive_reminders === false) {
+      // Skip if opted out of reminders OR fully unsubscribed
+      if (prefs?.can_receive_reminders === false || prefs?.unsubscribed_at) {
         results.push({
           client_id: client.id,
           company_name: client.company_name,
           status: 'skipped_opted_out',
-          message: 'Opted out of reminders'
+          message: prefs?.unsubscribed_at ? 'Fully unsubscribed' : 'Opted out of reminders'
+        });
+        continue;
+      }
+
+      // Skip if client has portal_invite_opted_out flag set (double check)
+      if (client.portal_invite_opted_out === true) {
+        results.push({
+          client_id: client.id,
+          company_name: client.company_name,
+          status: 'skipped_opted_out',
+          message: 'Client opted out of all communications'
         });
         continue;
       }
@@ -276,9 +289,9 @@ const handler = async (req: Request): Promise<Response> => {
   }
 };
 
-// Generate security token for unsubscribe links
+// Generate security token for unsubscribe links - MUST use same salt as portal-invite-unsubscribe
 async function generateSecurityToken(clientId: string, email: string): Promise<string> {
-  const data = `${clientId}-${email}-weekly-reminder-salt`;
+  const data = `${clientId}-${email}-portal-invite-salt`;
   const encoder = new TextEncoder();
   const dataBuffer = encoder.encode(data);
   const hashBuffer = await crypto.subtle.digest("SHA-256", dataBuffer);

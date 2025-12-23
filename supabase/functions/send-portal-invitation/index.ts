@@ -59,15 +59,42 @@ const handler = async (req: Request): Promise<Response> => {
 
     for (const clientId of idsToProcess) {
       try {
-        // Get client details
+        // Get client details including opt-out status
         const { data: client, error: clientError } = await supabase
           .from("clients")
-          .select("id, company_name, email, contact_name, organization_id")
+          .select("id, company_name, email, contact_name, organization_id, is_active, portal_invite_opted_out")
           .eq("id", clientId)
           .single();
 
         if (clientError || !client) {
           results.push({ client_id: clientId, success: false, error: "Client not found" });
+          continue;
+        }
+
+        // Skip inactive clients
+        if (client.is_active === false) {
+          console.log(`[PORTAL-INVITE] Skipping inactive client: ${client.company_name}`);
+          results.push({ client_id: clientId, success: false, error: "Client is inactive" });
+          continue;
+        }
+
+        // Skip clients who have opted out
+        if (client.portal_invite_opted_out === true) {
+          console.log(`[PORTAL-INVITE] Skipping opted-out client: ${client.company_name}`);
+          results.push({ client_id: clientId, success: false, error: "Client has opted out of communications" });
+          continue;
+        }
+
+        // Check email preferences for full unsubscribe
+        const { data: emailPrefs } = await supabase
+          .from("client_email_preferences")
+          .select("unsubscribed_at")
+          .eq("client_id", clientId)
+          .maybeSingle();
+
+        if (emailPrefs?.unsubscribed_at) {
+          console.log(`[PORTAL-INVITE] Skipping unsubscribed client: ${client.company_name}`);
+          results.push({ client_id: clientId, success: false, error: "Client has unsubscribed from all emails" });
           continue;
         }
 
