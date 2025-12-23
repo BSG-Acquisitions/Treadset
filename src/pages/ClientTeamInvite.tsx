@@ -6,27 +6,28 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Loader2, CheckCircle2, AlertCircle, Building2, FileText, Download, Calendar } from 'lucide-react';
+import { Loader2, AlertCircle, Building2, FileText, Download, Calendar, CheckCircle2 } from 'lucide-react';
 import bsgLogo from '@/assets/bsg-logo.jpeg';
 
-interface InviteData {
+interface TeamInviteData {
   id: string;
   client_id: string;
   organization_id: string;
   organization_name: string;
   organization_logo: string;
   company_name: string;
-  sent_to_email: string;
+  invited_email: string;
+  role: string;
   is_valid: boolean;
   error_message: string | null;
 }
 
-export default function ClientInvite() {
+export default function ClientTeamInvite() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   
   const [loading, setLoading] = useState(true);
-  const [inviteData, setInviteData] = useState<InviteData | null>(null);
+  const [inviteData, setInviteData] = useState<TeamInviteData | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -45,7 +46,7 @@ export default function ClientInvite() {
       }
 
       try {
-        const { data, error } = await supabase.rpc('validate_client_invite_token', {
+        const { data, error } = await supabase.rpc('validate_client_team_invite_token', {
           invite_token: token
         });
 
@@ -57,10 +58,10 @@ export default function ClientInvite() {
         }
 
         if (data && data.length > 0) {
-          const invite = data[0] as InviteData;
+          const invite = data[0] as TeamInviteData;
           setInviteData(invite);
-          if (invite.sent_to_email) {
-            setEmail(invite.sent_to_email);
+          if (invite.invited_email) {
+            setEmail(invite.invited_email);
           }
         } else {
           setError('Invalid invitation link');
@@ -90,8 +91,8 @@ export default function ClientInvite() {
     }
 
     // Validate email matches the invite (email-locked)
-    if (inviteData?.sent_to_email && email.toLowerCase() !== inviteData.sent_to_email.toLowerCase()) {
-      toast.error(`This invitation was sent to ${inviteData.sent_to_email}. You must sign up with that email address.`);
+    if (inviteData?.invited_email && email.toLowerCase() !== inviteData.invited_email.toLowerCase()) {
+      toast.error(`This invitation was sent to ${inviteData.invited_email}. You must sign up with that email address.`);
       return;
     }
 
@@ -140,23 +141,23 @@ export default function ClientInvite() {
 
       if (userError || !userData) {
         console.error('Failed to get user record:', userError);
-        // Still proceed - the claim function will handle it
+        toast.error('Failed to complete signup. Please contact support.');
+        setIsSubmitting(false);
+        return;
       }
 
-      // Claim the invite token with email validation
-      if (userData) {
-        const { data: claimResult, error: claimError } = await supabase.rpc('claim_client_invite_token', {
-          invite_token: token,
-          claiming_user_id: userData.id,
-          claiming_email: email
-        });
+      // Claim the team invite token with email validation
+      const { data: claimResult, error: claimError } = await supabase.rpc('claim_client_team_invite_token', {
+        invite_token: token,
+        claiming_user_id: userData.id,
+        claiming_email: email
+      });
 
-        if (claimError) {
-          console.error('Failed to claim invite:', claimError);
-          toast.error('Failed to link your account. Please contact support.');
-          setIsSubmitting(false);
-          return;
-        }
+      if (claimError) {
+        console.error('Failed to claim invite:', claimError);
+        toast.error('Failed to link your account. Please contact support.');
+        setIsSubmitting(false);
+        return;
       }
 
       toast.success('Account created successfully! Redirecting to your portal...');
@@ -171,6 +172,15 @@ export default function ClientInvite() {
       toast.error(err.message || 'Failed to create account');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case 'primary': return 'Primary Contact';
+      case 'billing': return 'Billing Contact';
+      case 'viewer': return 'Viewer';
+      default: return role;
     }
   };
 
@@ -221,17 +231,17 @@ export default function ClientInvite() {
             alt="BSG Tire Recycling" 
             className="h-20 mx-auto mb-4 rounded-lg"
           />
-          <h1 className="text-2xl font-bold text-foreground">Welcome to Your Client Portal</h1>
+          <h1 className="text-2xl font-bold text-foreground">Join Your Team's Portal</h1>
           <p className="text-muted-foreground mt-2">
             <Building2 className="inline h-4 w-4 mr-1" />
             {inviteData.company_name}
           </p>
         </div>
 
-        {/* Features Preview */}
+        {/* Invite Info */}
         <Card className="mb-6 bg-primary/5 border-primary/20">
           <CardContent className="pt-6">
-            <h3 className="font-semibold mb-3 text-sm">Your portal gives you access to:</h3>
+            <h3 className="font-semibold mb-3 text-sm">You've been invited as: <span className="text-primary">{getRoleLabel(inviteData.role)}</span></h3>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <FileText className="h-4 w-4 text-primary" />
@@ -258,7 +268,7 @@ export default function ClientInvite() {
           <CardHeader>
             <CardTitle>Create Your Account</CardTitle>
             <CardDescription>
-              This invitation is for <span className="font-medium text-foreground">{inviteData.sent_to_email}</span>
+              This invitation is for <span className="font-medium text-foreground">{inviteData.invited_email}</span>
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -296,7 +306,7 @@ export default function ClientInvite() {
                   className="bg-muted cursor-not-allowed"
                 />
                 <p className="text-xs text-muted-foreground">
-                  You must sign up with this email address. Need to use a different email? Ask your contact at {inviteData.organization_name} to send a new invitation.
+                  You must sign up with this email address.
                 </p>
               </div>
               
