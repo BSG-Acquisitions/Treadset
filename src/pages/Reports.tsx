@@ -134,12 +134,85 @@ const Reports = () => {
       </div>
 
       {/* Detailed Reports */}
-      <Tabs defaultValue="monthly" className="space-y-4">
+      <Tabs defaultValue="weekly" className="space-y-4">
         <TabsList>
+          <TabsTrigger value="weekly">Weekly</TabsTrigger>
           <TabsTrigger value="monthly">Monthly</TabsTrigger>
           <TabsTrigger value="quarterly">Quarterly</TabsTrigger>
           <TabsTrigger value="tire-types">By Tire Type</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="weekly">
+          <Card>
+            <CardHeader>
+              <CardTitle>Weekly Breakdown</CardTitle>
+              <CardDescription>Tire recycling data by week for {selectedYear} with source verification</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {reports?.weekly && reports.weekly.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {reports.weekly.map((week) => (
+                    <Card key={week.weekStart} className="p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <h4 className="font-semibold">Week {week.weekNumber}</h4>
+                          <p className="text-xs text-muted-foreground">
+                            {format(new Date(week.weekStart + 'T00:00:00'), 'MMM d')} - {format(new Date(week.weekEnd + 'T00:00:00'), 'MMM d')}
+                          </p>
+                        </div>
+                        <div className="flex gap-1">
+                          {week.manifests > 0 && (
+                            <Badge variant="outline" className="text-xs">{week.manifests} manifest{week.manifests !== 1 ? 's' : ''}</Badge>
+                          )}
+                          {week.dropoffRecords > 0 && (
+                            <Badge variant="secondary" className="text-xs">{week.dropoffRecords} dropoff{week.dropoffRecords !== 1 ? 's' : ''}</Badge>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Totals */}
+                      <div className="space-y-1 text-sm border-b border-border pb-2 mb-2">
+                        <div className="flex justify-between">
+                          <span className="font-medium">Total Tires:</span>
+                          <span className="font-bold">{formatNumber(week.totalTires)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="font-medium">Total PTE:</span>
+                          <span className="font-bold">{formatNumber(week.totalPTE)}</span>
+                        </div>
+                        {week.totalWeight > 0 && (
+                          <div className="flex justify-between">
+                            <span className="font-medium">Weight:</span>
+                            <span className="font-bold">{formatNumber(week.totalWeight)} tons</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Source Breakdown */}
+                      <div className="space-y-2 text-xs text-muted-foreground">
+                        <p className="font-medium text-foreground">Source Breakdown:</p>
+                        {week.fromManifests.count > 0 && (
+                          <div className="flex justify-between bg-muted/50 px-2 py-1 rounded">
+                            <span>From Manifests ({week.fromManifests.count}):</span>
+                            <span>{formatNumber(week.fromManifests.ptes)} PTE</span>
+                          </div>
+                        )}
+                        {week.fromDropoffs.count > 0 && (
+                          <div className="flex justify-between bg-muted/50 px-2 py-1 rounded">
+                            <span>From Drop-offs ({week.fromDropoffs.count}):</span>
+                            <span>{formatNumber(week.fromDropoffs.ptes)} PTE</span>
+                          </div>
+                        )}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-center py-8">No weekly data available for {selectedYear}</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="monthly">
           <Card>
