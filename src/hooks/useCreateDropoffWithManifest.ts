@@ -32,6 +32,11 @@ export const useCreateDropoffWithManifest = () => {
 
       if (dropoffError) throw dropoffError;
 
+      // If no manifest is required (e.g., walk-in drop-offs), skip manifest creation
+      if (dropoff.requires_manifest === false) {
+        return { dropoff: dropoffData, manifest: null, pdfPath: null };
+      }
+
       // 2. Generate a manifest number
       const { data: manifestNumber, error: manifestNumberError } = await supabase
         .rpc('generate_manifest_number', { org_id: dropoff.organization_id });
