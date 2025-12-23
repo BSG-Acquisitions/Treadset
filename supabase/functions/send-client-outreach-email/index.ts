@@ -35,10 +35,10 @@ Deno.serve(async (req) => {
     }
     const resend = new Resend(resendApiKey);
 
-    // Get client info
+    // Get client info including opt-out status
     const { data: client, error: clientError } = await supabase
       .from('clients')
-      .select('id, company_name, email, contact_name, last_pickup_at')
+      .select('id, company_name, email, contact_name, last_pickup_at, portal_invite_opted_out, is_active')
       .eq('id', clientId)
       .maybeSingle();
 
@@ -54,6 +54,40 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ success: false, error: 'Client not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check if client is inactive
+    if (client.is_active === false) {
+      console.log(`[OUTREACH] Skipping inactive client: ${client.company_name} (${client.id})`);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Client is inactive', clientName: client.company_name }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check if client has opted out at client level
+    if (client.portal_invite_opted_out === true) {
+      console.log(`[OUTREACH] Client opted out of communications: ${client.company_name} (${client.id})`);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Client has opted out of communications', clientName: client.company_name }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check email preferences for outreach opt-out
+    const { data: emailPrefs } = await supabase
+      .from('client_email_preferences')
+      .select('can_receive_outreach, unsubscribed_at')
+      .eq('client_id', clientId)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (emailPrefs?.can_receive_outreach === false || emailPrefs?.unsubscribed_at) {
+      console.log(`[OUTREACH] Client unsubscribed from outreach emails: ${client.company_name} (${client.id})`);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Client has unsubscribed from outreach emails', clientName: client.company_name }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
