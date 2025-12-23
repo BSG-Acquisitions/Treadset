@@ -156,10 +156,10 @@ const handler = async (req: Request): Promise<Response> => {
                     </a>
                   </div>
 
-                  <!-- Note about any email -->
-                  <div style="background: #f0f7f0; border: 1px solid #1A4314; padding: 15px; border-radius: 8px; margin: 25px 0;">
-                    <p style="margin: 0; font-size: 14px; color: #1A4314;">
-                      <strong>💡 Tip:</strong> You can sign up with any email address you prefer - it doesn't have to be the one we have on file. Share this invite with whoever manages your account!
+                  <!-- Important note about email -->
+                  <div style="background: #fff3cd; border: 1px solid #856404; padding: 15px; border-radius: 8px; margin: 25px 0;">
+                    <p style="margin: 0; font-size: 14px; color: #856404;">
+                      <strong>⚠️ Important:</strong> This invitation was sent to <strong>${recipientEmail}</strong>. You must sign up using this exact email address to claim access to your portal.
                     </p>
                   </div>
 

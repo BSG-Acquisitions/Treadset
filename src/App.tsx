@@ -36,6 +36,7 @@ import PublicBookingConfirmation from "./pages/PublicBookingConfirmation";
 import ManifestViewer from './pages/ManifestViewer';
 import Invite from './pages/Invite';
 import ClientInvite from './pages/ClientInvite';
+import ClientTeamInvite from './pages/ClientTeamInvite';
 import ReceiverSignatures from './pages/ReceiverSignatures';
 import ReceiverManagement from './pages/ReceiverManagement';
 import Reports from './pages/Reports';
@@ -90,6 +91,7 @@ const App = () => (
               <Route path="/public-booking-confirmation" element={<PublicBookingConfirmation />} />
               <Route path="/invite/:token" element={<Invite />} />
               <Route path="/client-invite/:token" element={<ClientInvite />} />
+              <Route path="/client-team-invite/:token" element={<ClientTeamInvite />} />
               <Route path="/portal-unsubscribe" element={<PortalUnsubscribe />} />
               
               {/* Auth Routes */}
