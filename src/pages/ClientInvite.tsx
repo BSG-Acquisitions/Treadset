@@ -92,7 +92,7 @@ export default function ClientInvite() {
     setIsSubmitting(true);
 
     try {
-      // Sign up the user
+      // Sign up the user with client metadata to prevent auto-org creation
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
@@ -101,6 +101,7 @@ export default function ClientInvite() {
           data: {
             first_name: firstName,
             last_name: lastName,
+            created_as_client: true,
           }
         }
       });
