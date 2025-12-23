@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { startOfWeek, endOfWeek, getISOWeek, format } from "date-fns";
 
 interface MonthlyReport {
   month: number;
@@ -17,6 +18,19 @@ interface QuarterlyReport {
   totalWeight: number;
 }
 
+interface WeeklyReport {
+  weekNumber: number;
+  weekStart: string;
+  weekEnd: string;
+  manifests: number;
+  dropoffRecords: number;
+  totalTires: number;
+  totalPTE: number;
+  totalWeight: number;
+  fromManifests: { ptes: number; tires: number; count: number };
+  fromDropoffs: { ptes: number; tires: number; count: number };
+}
+
 interface TireTypeReport {
   type: string;
   count: number;
@@ -31,8 +45,15 @@ interface RecyclingReportsData {
   };
   monthly: MonthlyReport[];
   quarterly: QuarterlyReport[];
+  weekly: WeeklyReport[];
   tireTypes: TireTypeReport[];
 }
+
+// Helper to get week key from a date
+const getWeekKey = (date: Date): string => {
+  const weekStart = startOfWeek(date, { weekStartsOn: 1 }); // Monday start
+  return format(weekStart, 'yyyy-MM-dd');
+};
 
 export const useRecyclingReports = (year: number = new Date().getFullYear()) => {
   return useQuery({
@@ -98,6 +119,9 @@ export const useRecyclingReports = (year: number = new Date().getFullYear()) => 
         totalWeight: 0
       }));
 
+      // Initialize weekly data map
+      const weeklyDataMap = new Map<string, WeeklyReport>();
+
       // Initialize tire type counters
       const tireTypeCounts = {
         'PTE Off Rim': 0,
@@ -115,14 +139,36 @@ export const useRecyclingReports = (year: number = new Date().getFullYear()) => 
       let totalPTE = 0;
       let totalWeight = 0;
 
+      // Helper to get or create weekly record
+      const getOrCreateWeek = (date: Date): WeeklyReport => {
+        const weekKey = getWeekKey(date);
+        if (!weeklyDataMap.has(weekKey)) {
+          const weekStart = startOfWeek(date, { weekStartsOn: 1 });
+          const weekEnd = endOfWeek(date, { weekStartsOn: 1 });
+          weeklyDataMap.set(weekKey, {
+            weekNumber: getISOWeek(date),
+            weekStart: format(weekStart, 'yyyy-MM-dd'),
+            weekEnd: format(weekEnd, 'yyyy-MM-dd'),
+            manifests: 0,
+            dropoffRecords: 0,
+            totalTires: 0,
+            totalPTE: 0,
+            totalWeight: 0,
+            fromManifests: { ptes: 0, tires: 0, count: 0 },
+            fromDropoffs: { ptes: 0, tires: 0, count: 0 }
+          });
+        }
+        return weeklyDataMap.get(weekKey)!;
+      };
+
       // Process manifests
       (manifests || []).forEach((manifest) => {
         const eventDateStr = (manifest as any).signed_at ?? (manifest as any).created_at;
-        if (!eventDateStr) return; // Skip if no date
+        if (!eventDateStr) return;
         const eventDate = new Date(eventDateStr as string);
-        if (isNaN(eventDate.getTime())) return; // Guard against invalid dates
-        const month = eventDate.getMonth(); // 0-based
-        const quarter = Math.floor(month / 3); // 0-based
+        if (isNaN(eventDate.getTime())) return;
+        const month = eventDate.getMonth();
+        const quarter = Math.floor(month / 3);
 
         // Calculate tire counts with Michigan PTE conversions
         const pteOffRim = manifest.pte_off_rim || 0;
@@ -152,6 +198,16 @@ export const useRecyclingReports = (year: number = new Date().getFullYear()) => 
         quarterlyData[quarter].totalTires += manifestTotalTires;
         quarterlyData[quarter].totalPTE += manifestPTE;
         quarterlyData[quarter].totalWeight += weight;
+
+        // Update weekly data
+        const weekData = getOrCreateWeek(eventDate);
+        weekData.manifests += 1;
+        weekData.totalTires += manifestTotalTires;
+        weekData.totalPTE += manifestPTE;
+        weekData.totalWeight += weight;
+        weekData.fromManifests.ptes += manifestPTE;
+        weekData.fromManifests.tires += manifestTotalTires;
+        weekData.fromManifests.count += 1;
 
         // Update tire type counts
         tireTypeCounts['PTE Off Rim'] += pteOffRim;
@@ -189,7 +245,16 @@ export const useRecyclingReports = (year: number = new Date().getFullYear()) => 
         quarterlyData[quarter].totalTires += dropoffTotalTires;
         quarterlyData[quarter].totalPTE += dropoffPTE;
 
-        tireTypeCounts['PTE Off Rim'] += pte; // Dropoffs don't distinguish on/off rim
+        // Update weekly data
+        const weekData = getOrCreateWeek(dropoffDate);
+        weekData.dropoffRecords += 1;
+        weekData.totalTires += dropoffTotalTires;
+        weekData.totalPTE += dropoffPTE;
+        weekData.fromDropoffs.ptes += dropoffPTE;
+        weekData.fromDropoffs.tires += dropoffTotalTires;
+        weekData.fromDropoffs.count += 1;
+
+        tireTypeCounts['PTE Off Rim'] += pte;
         tireTypeCounts['OTR'] += otr;
         tireTypeCounts['Tractor'] += tractor;
 
@@ -203,6 +268,10 @@ export const useRecyclingReports = (year: number = new Date().getFullYear()) => 
         .filter(item => item.count > 0)
         .sort((a, b) => b.count - a.count);
 
+      // Convert weekly map to sorted array (most recent first)
+      const weekly = Array.from(weeklyDataMap.values())
+        .sort((a, b) => b.weekStart.localeCompare(a.weekStart));
+
       return {
         summary: {
           totalManifests,
@@ -212,11 +281,12 @@ export const useRecyclingReports = (year: number = new Date().getFullYear()) => 
         },
         monthly: monthlyData,
         quarterly: quarterlyData,
+        weekly,
         tireTypes
       };
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    gcTime: 1000 * 60 * 30, // 30 minutes
-    refetchOnWindowFocus: true, // Refetch when window gains focus for live updates
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
+    refetchOnWindowFocus: true,
   });
 };
