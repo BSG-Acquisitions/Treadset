@@ -3,11 +3,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, TrendingUp, Scale, Recycle, ArrowLeft, Home } from "lucide-react";
+import { CalendarDays, TrendingUp, Scale, Recycle, Home, DollarSign } from "lucide-react";
 import { format } from "date-fns";
 import { useRecyclingReports } from "@/hooks/useRecyclingReports";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "react-router-dom";
+import { RevenueDashboard } from "@/components/reports/RevenueDashboard";
 
 const Reports = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -134,13 +135,21 @@ const Reports = () => {
       </div>
 
       {/* Detailed Reports */}
-      <Tabs defaultValue="weekly" className="space-y-4">
+      <Tabs defaultValue="revenue" className="space-y-4">
         <TabsList>
+          <TabsTrigger value="revenue" className="flex items-center gap-1.5">
+            <DollarSign className="h-4 w-4" />
+            Revenue
+          </TabsTrigger>
           <TabsTrigger value="weekly">Weekly</TabsTrigger>
           <TabsTrigger value="monthly">Monthly</TabsTrigger>
           <TabsTrigger value="quarterly">Quarterly</TabsTrigger>
           <TabsTrigger value="tire-types">By Tire Type</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="revenue">
+          <RevenueDashboard />
+        </TabsContent>
 
         <TabsContent value="weekly">
           <Card>
