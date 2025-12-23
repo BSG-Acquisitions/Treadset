@@ -37,6 +37,7 @@ export const useActiveFollowups = () => {
     queryKey: ['active-followups'],
     queryFn: async () => {
       const today = new Date().toISOString().split('T')[0];
+      const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
       // 1) Fetch workflows first (without join to avoid missing FK issues)
       const { data: workflows, error: wfError } = await supabase
@@ -65,16 +66,33 @@ export const useActiveFollowups = () => {
         .select('client_id, average_days_between_pickups, frequency')
         .in('client_id', clientIds);
 
+      // 4) Fetch upcoming scheduled pickups for these clients (next 7 days)
+      const { data: upcomingPickups } = await supabase
+        .from('pickups')
+        .select('client_id, pickup_date')
+        .in('client_id', clientIds)
+        .eq('status', 'scheduled')
+        .gte('pickup_date', today)
+        .lte('pickup_date', sevenDaysFromNow);
+
+      // Build sets/maps for quick lookup
       const clientMap = new Map(clients?.map(c => [c.id, c]) ?? []);
       const patternMap = new Map(patterns?.map(p => [p.client_id, p]) ?? []);
+      const scheduledClientIds = new Set(upcomingPickups?.map(p => p.client_id) ?? []);
       
-      // 4) Smart filter: use client's actual pickup interval to determine if followup is appropriate
+      // 5) Smart filter: exclude clients with upcoming scheduled pickups
+      // and use client's actual pickup interval to determine if followup is appropriate
       const enriched = workflows
         .map(w => ({
           ...w,
           clients: clientMap.get(w.client_id) || null,
         }))
         .filter(w => {
+          // CRITICAL: Skip if client already has a pickup scheduled
+          if (scheduledClientIds.has(w.client_id)) {
+            return false;
+          }
+          
           const client = clientMap.get(w.client_id);
           if (!client?.last_pickup_at) return true; // No pickup history, show followup
           

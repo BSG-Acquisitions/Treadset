@@ -45,6 +45,7 @@ serve(async (req) => {
         upcomingPickupsData,
         riskData,
         pickupCountsData,
+        recentlyCompletedData,
       ] = await Promise.all([
         // Client pickup patterns with client names
         supabase
@@ -66,7 +67,7 @@ serve(async (req) => {
         // Recent completed pickups (last 7 days)
         supabase
           .from('pickups')
-          .select('id, client_id, final_revenue, computed_revenue, clients(company_name)')
+          .select('id, client_id, final_revenue, computed_revenue, pickup_date, clients(company_name)')
           .eq('organization_id', org.id)
           .eq('status', 'completed')
           .gte('pickup_date', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]),
@@ -81,7 +82,7 @@ serve(async (req) => {
         // Upcoming scheduled pickups (next 7 days)
         supabase
           .from('pickups')
-          .select('id, pickup_date, clients(company_name)')
+          .select('id, pickup_date, client_id, clients(company_name)')
           .eq('organization_id', org.id)
           .eq('status', 'scheduled')
           .gte('pickup_date', new Date().toISOString().split('T')[0])
@@ -102,6 +103,14 @@ serve(async (req) => {
           .select('client_id')
           .eq('organization_id', org.id)
           .eq('status', 'completed'),
+        
+        // Recently completed pickups (last 3 days) - to exclude from needing attention
+        supabase
+          .from('pickups')
+          .select('client_id, pickup_date, clients(company_name)')
+          .eq('organization_id', org.id)
+          .eq('status', 'completed')
+          .gte('pickup_date', new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]),
       ]);
 
       // Build a map of clients with pickup history
@@ -110,6 +119,19 @@ serve(async (req) => {
         const count = clientPickupCounts.get(pickup.client_id) || 0;
         clientPickupCounts.set(pickup.client_id, count + 1);
       }
+
+      // Build sets of clients to EXCLUDE from "needs attention" lists
+      // 1) Clients with scheduled pickups in the next 7 days
+      const scheduledClientIds = new Set(
+        (upcomingPickupsData.data || []).map((p: any) => p.client_id)
+      );
+      
+      // 2) Clients picked up in the last 3 days (recently serviced)
+      const recentlyPickedUpClientIds = new Set(
+        (recentlyCompletedData.data || []).map((p: any) => p.client_id)
+      );
+      
+      console.log(`[AI Insights] Excluding ${scheduledClientIds.size} scheduled clients, ${recentlyPickedUpClientIds.size} recently picked up clients`);
 
       // Process patterns data - only for clients with pickup history
       const patterns = (patternsData.data || []).filter((p: any) => 
@@ -128,12 +150,20 @@ serve(async (req) => {
         sum + (d.computed_revenue || 0), 0);
 
       // Inactive clients - ONLY include clients with at least 2 pickups (real pickup clients)
+      // AND exclude clients who are already scheduled or were recently picked up
       const inactiveClients = (inactiveClientsData.data || []).filter((c: any) => 
-        clientPickupCounts.has(c.id) && (clientPickupCounts.get(c.id) || 0) >= 2
+        clientPickupCounts.has(c.id) && 
+        (clientPickupCounts.get(c.id) || 0) >= 2 &&
+        !scheduledClientIds.has(c.id) &&
+        !recentlyPickedUpClientIds.has(c.id)
       );
       
+      // High-risk clients - also exclude scheduled/recent
       const highRiskClients = (riskData.data || []).filter((r: any) =>
-        clientPickupCounts.has(r.client_id) && (clientPickupCounts.get(r.client_id) || 0) >= 2
+        clientPickupCounts.has(r.client_id) && 
+        (clientPickupCounts.get(r.client_id) || 0) >= 2 &&
+        !scheduledClientIds.has(r.client_id) &&
+        !recentlyPickedUpClientIds.has(r.client_id)
       );
       const upcomingPickups = upcomingPickupsData.data || [];
 
