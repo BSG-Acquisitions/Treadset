@@ -7,12 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FileText, Download, Calendar, Package, LogOut, Eye, ArrowLeft, Printer, CalendarPlus, X } from "lucide-react";
+import { FileText, Download, Calendar, Package, LogOut, Eye, ArrowLeft, Printer, CalendarPlus, X, Users } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { PdfInlineViewer } from "@/components/PdfInlineViewer";
+import { InviteTeamMemberDialog } from "@/components/client-portal/InviteTeamMemberDialog";
+import { useClientUserRole, useClientUsers } from "@/hooks/useClientUsers";
 
 export default function ClientPortal() {
   const { user, signOut, hasRole } = useAuth();
@@ -41,7 +43,7 @@ export default function ClientPortal() {
     enabled: isAdmin,
   });
 
-  // Fetch client info - for regular clients use their linked account, for admin preview use selected client
+  // Fetch client info - for regular clients use client_users junction table, for admin preview use selected client
   const { data: clientInfo, isLoading: clientLoading } = useQuery({
     queryKey: ['client-portal-info', isAdmin ? previewClientId : user?.id, isAdmin],
     queryFn: async () => {
@@ -55,21 +57,40 @@ export default function ClientPortal() {
         
         if (error) throw error;
         return data;
-      } else if (!isAdmin) {
-        // Regular client mode - fetch by user_id
-        const { data, error } = await supabase
-          .from('clients')
-          .select('id, company_name, contact_name, email, phone')
-          .eq('user_id', user?.id)
+      } else if (!isAdmin && user?.id) {
+        // Regular client mode - fetch by client_users junction table
+        const { data: clientUser, error: cuError } = await supabase
+          .from('client_users')
+          .select('client_id, role, clients:client_id(id, company_name, contact_name, email, phone)')
+          .eq('user_id', user.id)
+          .limit(1)
           .single();
         
-        if (error) throw error;
-        return data;
+        if (cuError) {
+          // Fallback to legacy clients.user_id lookup
+          const { data, error } = await supabase
+            .from('clients')
+            .select('id, company_name, contact_name, email, phone')
+            .eq('user_id', user.id)
+            .single();
+          
+          if (error) throw error;
+          return data;
+        }
+        
+        return clientUser?.clients as any;
       }
       return null;
     },
     enabled: isAdmin ? !!previewClientId : !!user?.id,
   });
+
+  // Get user's role for this client (for showing Invite Team Member button)
+  const { data: userRole } = useClientUserRole(clientInfo?.id);
+  const isPrimaryContact = userRole === 'primary';
+  
+  // Get team members for this client
+  const { data: teamMembers } = useClientUsers(clientInfo?.id);
 
   // Fetch manifests for this client
   const { data: manifests, isLoading: manifestsLoading } = useQuery({
@@ -382,15 +403,57 @@ export default function ClientPortal() {
               View and download your pickup manifests below.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex flex-wrap gap-3">
             <Button asChild>
               <Link to={`/public-book?client=${clientInfo.id}`}>
                 <CalendarPlus className="w-4 h-4 mr-2" />
                 Schedule a Pickup
               </Link>
             </Button>
+            
+            {/* Invite Team Member - only show for primary contacts */}
+            {(isPrimaryContact || isAdmin) && (
+              <InviteTeamMemberDialog 
+                clientId={clientInfo.id} 
+                companyName={clientInfo.company_name} 
+              />
+            )}
           </CardContent>
         </Card>
+
+        {/* Team Members Card - only show for primary contacts */}
+        {(isPrimaryContact || isAdmin) && teamMembers && teamMembers.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                Team Members
+              </CardTitle>
+              <CardDescription>
+                People with access to this portal
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {teamMembers.map((member) => (
+                  <div key={member.id} className="flex items-center justify-between p-2 rounded-lg border border-border bg-card/50">
+                    <div>
+                      <span className="font-medium">
+                        {member.user?.first_name} {member.user?.last_name}
+                      </span>
+                      <span className="text-muted-foreground ml-2 text-sm">
+                        ({member.user?.email})
+                      </span>
+                    </div>
+                    <Badge variant="secondary" className="capitalize">
+                      {member.role}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Manifests List */}
         <Card>

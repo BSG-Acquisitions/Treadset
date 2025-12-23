@@ -215,3 +215,6 @@ verify_jwt = false
 
 [functions.send-client-outreach-email]
 verify_jwt = false
+
+[functions.send-client-team-invite]
+verify_jwt = false
