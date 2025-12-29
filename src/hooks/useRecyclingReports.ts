@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { startOfWeek, endOfWeek, getISOWeek, format } from "date-fns";
+import { startOfWeek, endOfWeek, getISOWeek, getISOWeekYear, format } from "date-fns";
 
 interface MonthlyReport {
   month: number;
@@ -18,8 +18,9 @@ interface QuarterlyReport {
   totalWeight: number;
 }
 
-interface WeeklyReport {
+export interface WeeklyReport {
   weekNumber: number;
+  isoWeekYear: number;
   weekStart: string;
   weekEnd: string;
   manifests: number;
@@ -147,6 +148,7 @@ export const useRecyclingReports = (year: number = new Date().getFullYear()) => 
           const weekEnd = endOfWeek(date, { weekStartsOn: 1 });
           weeklyDataMap.set(weekKey, {
             weekNumber: getISOWeek(date),
+            isoWeekYear: getISOWeekYear(date),
             weekStart: format(weekStart, 'yyyy-MM-dd'),
             weekEnd: format(weekEnd, 'yyyy-MM-dd'),
             manifests: 0,
@@ -268,9 +270,9 @@ export const useRecyclingReports = (year: number = new Date().getFullYear()) => 
         .filter(item => item.count > 0)
         .sort((a, b) => b.count - a.count);
 
-      // Convert weekly map to sorted array (chronological order)
+      // Convert weekly map to sorted array (newest first)
       const weekly = Array.from(weeklyDataMap.values())
-        .sort((a, b) => a.weekStart.localeCompare(b.weekStart));
+        .sort((a, b) => b.weekStart.localeCompare(a.weekStart));
 
       return {
         summary: {
