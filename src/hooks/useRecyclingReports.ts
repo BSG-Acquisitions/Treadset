@@ -268,9 +268,9 @@ export const useRecyclingReports = (year: number = new Date().getFullYear()) => 
         .filter(item => item.count > 0)
         .sort((a, b) => b.count - a.count);
 
-      // Convert weekly map to sorted array (most recent first)
+      // Convert weekly map to sorted array (chronological order)
       const weekly = Array.from(weeklyDataMap.values())
-        .sort((a, b) => b.weekStart.localeCompare(a.weekStart));
+        .sort((a, b) => a.weekStart.localeCompare(b.weekStart));
 
       return {
         summary: {

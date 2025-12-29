@@ -134,24 +134,32 @@ const Reports = () => {
         </Card>
       </div>
 
-      {/* Detailed Reports */}
-      <Tabs defaultValue="revenue" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="revenue" className="flex items-center gap-1.5">
-            <DollarSign className="h-4 w-4" />
-            Revenue
-          </TabsTrigger>
-          <TabsTrigger value="weekly">Weekly</TabsTrigger>
-          <TabsTrigger value="monthly">Monthly</TabsTrigger>
-          <TabsTrigger value="quarterly">Quarterly</TabsTrigger>
-          <TabsTrigger value="tire-types">By Tire Type</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="revenue">
+      {/* Revenue Section - Separate from time-based reports */}
+      <Card>
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5 text-primary" />
+            <CardTitle>Revenue Overview</CardTitle>
+          </div>
+          <CardDescription>Financial performance and revenue breakdown</CardDescription>
+        </CardHeader>
+        <CardContent>
           <RevenueDashboard />
-        </TabsContent>
+        </CardContent>
+      </Card>
 
-        <TabsContent value="weekly">
+      {/* Recycling Data Reports */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold">Recycling Data Breakdown</h2>
+        <Tabs defaultValue="weekly" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="weekly">Weekly</TabsTrigger>
+            <TabsTrigger value="monthly">Monthly</TabsTrigger>
+            <TabsTrigger value="quarterly">Quarterly</TabsTrigger>
+            <TabsTrigger value="tire-types">By Tire Type</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="weekly">
           <Card>
             <CardHeader>
               <CardTitle>Weekly Breakdown</CardTitle>
@@ -326,7 +334,8 @@ const Reports = () => {
             </CardContent>
           </Card>
         </TabsContent>
-      </Tabs>
+        </Tabs>
+      </div>
     </div>
   );
 };
