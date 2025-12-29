@@ -118,16 +118,23 @@ export default function PublicBook() {
   const tractorCount = form.watch("tractorCount");
   const address = form.watch("address");
 
-  // Check for client pre-fill from URL parameter (from outreach emails)
+  // Check for client pre-fill from URL parameter (from outreach emails or portal invites)
   useEffect(() => {
     const clientId = searchParams.get('client');
-    if (!clientId) return;
+    const inviteId = searchParams.get('invite'); // From portal invite email tracking
+    
+    if (!clientId && !inviteId) return;
 
     const loadClientData = async () => {
       setIsLoadingClient(true);
       try {
         const { data, error } = await supabase.functions.invoke('public-booking', {
-          body: { action: 'check-client', clientId, fromEmail: true }
+          body: { 
+            action: 'check-client', 
+            clientId, 
+            inviteId,
+            fromEmail: true 
+          }
         });
 
         if (error || !data?.success || !data?.client) {
@@ -277,8 +284,9 @@ export default function PublicBook() {
     setIsSubmitting(true);
 
     try {
-      // Get clientId from URL if returning client
+      // Get clientId and inviteId from URL if returning client
       const clientId = searchParams.get('client');
+      const inviteId = searchParams.get('invite');
       
       // For returning clients, use stored clientData as fallback for empty fields
       const submissionData = {
@@ -295,7 +303,8 @@ export default function PublicBook() {
         notes: data.notes,
         source: returningClientName ? 'client_portal' : 'direct',
         clientId: clientId || undefined, // Include clientId for conversion tracking
-        fromEmailBooking: !!clientId, // Flag to track email conversions
+        inviteId: inviteId || undefined, // Track portal invite conversions
+        fromEmailBooking: !!(clientId || inviteId), // Flag to track email conversions
       };
 
       const { data: result, error } = await supabase.functions.invoke('public-booking', {

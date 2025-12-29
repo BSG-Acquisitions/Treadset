@@ -154,11 +154,34 @@ Deno.serve(async (req) => {
     // Handle different actions
     if (body.action === 'check-client') {
       // Secure client lookup for pre-fill - returns ONLY safe public data
-      console.log('[PUBLIC_BOOKING] Client lookup request for:', body.clientId);
+      // Supports either clientId directly or inviteId (from portal invite email tracking)
+      console.log('[PUBLIC_BOOKING] Client lookup request:', { clientId: body.clientId, inviteId: body.inviteId });
       
-      if (!body.clientId) {
+      let clientId = body.clientId;
+      
+      // If inviteId provided, look up the client from the invite
+      if (body.inviteId && !clientId) {
+        const { data: invite, error: inviteError } = await supabase
+          .from('client_invites')
+          .select('client_id')
+          .eq('id', body.inviteId)
+          .single();
+        
+        if (inviteError || !invite) {
+          console.log('[PUBLIC_BOOKING] Invite not found:', body.inviteId);
+          return new Response(
+            JSON.stringify({ success: false, error: 'Invite not found' }),
+            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        clientId = invite.client_id;
+        console.log('[PUBLIC_BOOKING] Resolved clientId from invite:', clientId);
+      }
+      
+      if (!clientId) {
         return new Response(
-          JSON.stringify({ success: false, error: 'Client ID required' }),
+          JSON.stringify({ success: false, error: 'Client ID or Invite ID required' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -167,11 +190,11 @@ Deno.serve(async (req) => {
       const { data: client, error: clientError } = await supabase
         .from('clients')
         .select('id, company_name, contact_name, email, phone, physical_address, physical_city, physical_state, physical_zip, mailing_address, city, state, zip, organization_id')
-        .eq('id', body.clientId)
+        .eq('id', clientId)
         .single();
 
       if (clientError || !client) {
-        console.log('[PUBLIC_BOOKING] Client not found:', body.clientId);
+        console.log('[PUBLIC_BOOKING] Client not found:', clientId);
         return new Response(
           JSON.stringify({ success: false, error: 'Client not found' }),
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -179,30 +202,23 @@ Deno.serve(async (req) => {
       }
 
       // TRACK EMAIL CLICK - increment emails_clicked in client_email_preferences
-      // This happens when a client clicks the email link and lands on /public-book?client={id}
+      // This happens when a client clicks the email link and lands on /public-book?client={id} or ?invite={id}
       if (body.fromEmail) {
-        console.log('[PUBLIC_BOOKING] Tracking email click for client:', body.clientId);
+        console.log('[PUBLIC_BOOKING] Tracking email click for client:', clientId);
         const { error: clickError } = await supabase.rpc('increment_email_clicks', {
-          p_client_id: body.clientId,
+          p_client_id: clientId,
           p_organization_id: client.organization_id
         });
         
         if (clickError) {
           // Fallback: direct update if RPC doesn't exist
           console.log('[PUBLIC_BOOKING] RPC failed, trying direct update:', clickError.message);
-          await supabase
-            .from('client_email_preferences')
-            .update({ 
-              emails_clicked: supabase.rpc('coalesce', { val: 'emails_clicked', default_val: 0 }) 
-            })
-            .eq('client_id', body.clientId)
-            .eq('organization_id', client.organization_id);
           
           // Alternative: upsert approach
           const { data: existingPref } = await supabase
             .from('client_email_preferences')
             .select('emails_clicked')
-            .eq('client_id', body.clientId)
+            .eq('client_id', clientId)
             .eq('organization_id', client.organization_id)
             .single();
           
@@ -210,13 +226,13 @@ Deno.serve(async (req) => {
             await supabase
               .from('client_email_preferences')
               .update({ emails_clicked: (existingPref.emails_clicked || 0) + 1 })
-              .eq('client_id', body.clientId)
+              .eq('client_id', clientId)
               .eq('organization_id', client.organization_id);
           } else {
             await supabase
               .from('client_email_preferences')
               .insert({
-                client_id: body.clientId,
+                client_id: clientId,
                 organization_id: client.organization_id,
                 emails_clicked: 1
               });
@@ -229,7 +245,7 @@ Deno.serve(async (req) => {
       const { data: location } = await supabase
         .from('locations')
         .select('address')
-        .eq('client_id', body.clientId)
+        .eq('client_id', clientId)
         .eq('is_active', true)
         .limit(1)
         .maybeSingle();
