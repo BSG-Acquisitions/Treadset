@@ -34,22 +34,7 @@ export const DropoffSignatureStep = ({
   const cursiveCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [signatureMode, setSignatureMode] = useState<"draw" | "typed">("typed");
-  const [fontLoaded, setFontLoaded] = useState(false);
   const { data: employees } = useEmployees();
-
-  // Check if font is loaded
-  useEffect(() => {
-    document.fonts.ready.then(() => {
-      const dancingScript = document.fonts.check('48px "Dancing Script"');
-      setFontLoaded(dancingScript);
-      if (!dancingScript) {
-        // Retry after a short delay if font isn't ready
-        setTimeout(() => {
-          setFontLoaded(document.fonts.check('48px "Dancing Script"'));
-        }, 500);
-      }
-    });
-  }, []);
 
   // Get print name options from active employees
   const printNameOptions = employees
@@ -91,13 +76,13 @@ export const DropoffSignatureStep = ({
 
   // Update signature when in typed mode and print name changes
   useEffect(() => {
-    if (signatureMode === 'typed' && printName.trim() && fontLoaded) {
+    if (signatureMode === 'typed' && printName.trim()) {
       const dataUrl = generateCursiveSignature(printName);
       if (dataUrl) {
         onSignatureChange(dataUrl);
       }
     }
-  }, [printName, signatureMode, fontLoaded, generateCursiveSignature, onSignatureChange]);
+  }, [printName, signatureMode, generateCursiveSignature, onSignatureChange]);
 
   // Load signature when employee is selected
   const handleEmployeeSelect = (employeeId: string) => {
@@ -153,7 +138,7 @@ export const DropoffSignatureStep = ({
         sigCanvasRef.current.clear();
       }
       // If switching to typed and we have a name, generate signature
-      if (value === 'typed' && printName.trim() && fontLoaded) {
+      if (value === 'typed' && printName.trim()) {
         setTimeout(() => {
           const dataUrl = generateCursiveSignature(printName);
           if (dataUrl) {
