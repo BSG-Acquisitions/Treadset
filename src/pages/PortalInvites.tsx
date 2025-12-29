@@ -5,13 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { 
   Mail, Users, UserCheck, UserX, Clock, Check, Send, Loader2, 
-  AlertCircle, RefreshCw, Eye, MousePointerClick 
+  AlertCircle, RefreshCw, Eye, MousePointerClick, Bell
 } from "lucide-react";
 import { 
   usePortalInvites, 
   usePortalInviteStats, 
   useSendPortalInvite, 
-  useSendBulkPortalInvites 
+  useSendBulkPortalInvites,
+  useSendInviteReminders
 } from "@/hooks/usePortalInvites";
 import { formatDistanceToNow, format } from "date-fns";
 import { FadeIn } from "@/components/motion/FadeIn";
@@ -33,6 +34,7 @@ export default function PortalInvites() {
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = usePortalInviteStats();
   const sendInvite = useSendPortalInvite();
   const sendBulkInvites = useSendBulkPortalInvites();
+  const sendReminders = useSendInviteReminders();
 
   useEffect(() => {
     document.title = "Portal Invites – TreadSet";
@@ -44,6 +46,10 @@ export default function PortalInvites() {
 
   const handleSendToAllUninvited = () => {
     sendBulkInvites.mutate();
+  };
+
+  const handleSendReminders = () => {
+    sendReminders.mutate(false);
   };
 
   const getInviteStatus = (invite: any) => {
@@ -235,6 +241,41 @@ export default function PortalInvites() {
                   </AlertDialogContent>
                 </AlertDialog>
 
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button 
+                      variant="secondary"
+                      disabled={sendReminders.isPending}
+                    >
+                      {sendReminders.isPending ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Bell className="h-4 w-4 mr-2" />
+                      )}
+                      Send Reminders
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Send Follow-up Reminders?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will send automated reminder emails to clients who:
+                        <ul className="list-disc ml-4 mt-2 space-y-1">
+                          <li>Received an invite 7+ days ago but haven't signed up (Day 7 reminder)</li>
+                          <li>Already got a Day 7 reminder but still haven't signed up (Day 14 reminder)</li>
+                        </ul>
+                        <p className="mt-2">Clients who opted out or are inactive will be skipped.</p>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleSendReminders}>
+                        Send Reminders
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+
                 <Button 
                   variant="outline" 
                   onClick={() => {
@@ -278,7 +319,7 @@ export default function PortalInvites() {
                       <TableHead>Client</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Sent</TableHead>
-                      <TableHead>Expires</TableHead>
+                      <TableHead>Reminders</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -299,7 +340,15 @@ export default function PortalInvites() {
                             {format(new Date(invite.created_at), "MMM d, yyyy")}
                           </TableCell>
                           <TableCell>
-                            {format(new Date(invite.expires_at), "MMM d, yyyy")}
+                            {invite.reminder_count === 0 && (
+                              <Badge variant="outline" className="text-muted-foreground">None</Badge>
+                            )}
+                            {invite.reminder_count === 1 && (
+                              <Badge variant="secondary">Day 7</Badge>
+                            )}
+                            {(invite.reminder_count || 0) >= 2 && (
+                              <Badge variant="default">Day 14</Badge>
+                            )}
                           </TableCell>
                           <TableCell>
                             <Badge variant={status.variant}>
