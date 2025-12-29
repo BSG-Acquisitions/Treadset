@@ -60,7 +60,8 @@ export const useEmployees = () => {
             organization_id
           )
         `)
-        .eq('user_organization_roles.organization_id', user.currentOrganization.id);
+        .eq('user_organization_roles.organization_id', user.currentOrganization.id)
+        .in('user_organization_roles.role', ['admin', 'ops_manager', 'dispatcher', 'driver', 'sales']);
 
       if (error) throw error;
 
