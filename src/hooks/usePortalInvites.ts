@@ -238,3 +238,60 @@ export function useSendBulkPortalInvites() {
     },
   });
 }
+
+interface ReminderResult {
+  success: boolean;
+  summary: string;
+  stats: {
+    total: number;
+    sent: number;
+    skipped: number;
+    errors: number;
+    day7_sent: number;
+    day14_sent: number;
+  };
+}
+
+export function useSendInviteReminders() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const orgId = user?.currentOrganization?.id;
+
+  return useMutation({
+    mutationFn: async (dryRun: boolean = false): Promise<ReminderResult> => {
+      const { data, error } = await supabase.functions.invoke("send-invite-reminders", {
+        body: { 
+          organization_id: orgId,
+          dry_run: dryRun 
+        },
+      });
+
+      if (error) throw error;
+      return data as ReminderResult;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["portal-invites"] });
+      queryClient.invalidateQueries({ queryKey: ["portal-invite-stats"] });
+      
+      if (data.stats.sent > 0) {
+        toast({
+          title: "Reminders sent",
+          description: data.summary,
+        });
+      } else {
+        toast({
+          title: "No reminders needed",
+          description: "No clients are due for a reminder right now",
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to send reminders",
+        description: error.message || "Please try again",
+        variant: "destructive",
+      });
+    },
+  });
+}

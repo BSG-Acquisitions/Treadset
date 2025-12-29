@@ -221,3 +221,6 @@ verify_jwt = false
 
 [functions.track-email-event]
 verify_jwt = false
+
+[functions.send-invite-reminders]
+verify_jwt = false
