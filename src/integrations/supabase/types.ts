@@ -766,11 +766,14 @@ export type Database = {
       }
       client_invites: {
         Row: {
+          clicked_at: string | null
           client_id: string
           created_at: string
           expires_at: string
           id: string
+          opened_at: string | null
           organization_id: string
+          reminder_count: number | null
           sent_to_email: string | null
           token: string
           updated_at: string
@@ -778,11 +781,14 @@ export type Database = {
           used_by: string | null
         }
         Insert: {
+          clicked_at?: string | null
           client_id: string
           created_at?: string
           expires_at?: string
           id?: string
+          opened_at?: string | null
           organization_id: string
+          reminder_count?: number | null
           sent_to_email?: string | null
           token?: string
           updated_at?: string
@@ -790,11 +796,14 @@ export type Database = {
           used_by?: string | null
         }
         Update: {
+          clicked_at?: string | null
           client_id?: string
           created_at?: string
           expires_at?: string
           id?: string
+          opened_at?: string | null
           organization_id?: string
+          reminder_count?: number | null
           sent_to_email?: string | null
           token?: string
           updated_at?: string
@@ -1866,6 +1875,68 @@ export type Database = {
             columns: ["processed_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_events: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          event_type: string
+          id: string
+          invite_id: string | null
+          ip_address: string | null
+          metadata: Json | null
+          user_agent: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          invite_id?: string | null
+          ip_address?: string | null
+          metadata?: Json | null
+          user_agent?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          invite_id?: string | null
+          ip_address?: string | null
+          metadata?: Json | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_monthly_entity_rollup"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "email_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_revenue_summary"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "email_events_invite_id_fkey"
+            columns: ["invite_id"]
+            isOneToOne: false
+            referencedRelation: "client_invites"
             referencedColumns: ["id"]
           },
         ]
