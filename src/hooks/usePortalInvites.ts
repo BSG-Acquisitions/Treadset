@@ -13,6 +13,9 @@ export interface PortalInvite {
   used_at: string | null;
   used_by: string | null;
   created_at: string;
+  opened_at: string | null;
+  clicked_at: string | null;
+  reminder_count: number | null;
   client?: {
     id: string;
     company_name: string;
@@ -26,6 +29,8 @@ export interface PortalInviteStats {
   notYetInvited: number;
   signedUp: number;
   optedOut: number;
+  opened: number;
+  clicked: number;
 }
 
 export function usePortalInvites() {
@@ -85,12 +90,26 @@ export function usePortalInviteStats() {
         .select("*", { count: "exact", head: true })
         .eq("portal_invite_opted_out", true);
 
+      // Get opened count (unique invites that were opened)
+      const { count: opened } = await supabase
+        .from("client_invites")
+        .select("*", { count: "exact", head: true })
+        .not("opened_at", "is", null);
+
+      // Get clicked count (unique invites that were clicked)
+      const { count: clicked } = await supabase
+        .from("client_invites")
+        .select("*", { count: "exact", head: true })
+        .not("clicked_at", "is", null);
+
       return {
         totalClientsWithEmail: totalWithEmail || 0,
         alreadyInvited,
         notYetInvited: (totalWithEmail || 0) - alreadyInvited,
         signedUp: signedUp || 0,
         optedOut: optedOut || 0,
+        opened: opened || 0,
+        clicked: clicked || 0,
       } as PortalInviteStats;
     },
     enabled: !!orgId,

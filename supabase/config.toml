@@ -218,3 +218,6 @@ verify_jwt = false
 
 [functions.send-client-team-invite]
 verify_jwt = false
+
+[functions.track-email-event]
+verify_jwt = false

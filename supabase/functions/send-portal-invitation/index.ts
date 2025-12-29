@@ -124,7 +124,7 @@ const handler = async (req: Request): Promise<Response> => {
             organization_id: org.id,
             sent_to_email: recipientEmail,
           })
-          .select("token")
+          .select("id, token")
           .single();
 
         if (inviteError) {
@@ -133,11 +133,22 @@ const handler = async (req: Request): Promise<Response> => {
           continue;
         }
 
-        // Build the invite URL
+        // Build tracking and invite URLs
         const appUrl = "https://treadset.lovable.app";
+        const trackingBaseUrl = `${supabaseUrl}/functions/v1/track-email-event`;
+        
+        // Open tracking pixel URL
+        const openTrackingUrl = `${trackingBaseUrl}?invite=${invite.id}&type=open`;
+        
+        // Click tracking URL (wraps the actual invite link)
         const inviteUrl = `${appUrl}/client-invite/${invite.token}`;
+        const trackedInviteUrl = `${trackingBaseUrl}?invite=${invite.id}&type=click&redirect=${encodeURIComponent(inviteUrl)}`;
+        
+        // Book page with client pre-fill
+        const bookUrl = `${appUrl}/book?client=${client.id}`;
+        const trackedBookUrl = `${trackingBaseUrl}?invite=${invite.id}&type=click&redirect=${encodeURIComponent(bookUrl)}`;
 
-        // Send the email
+        // Send the email with tracking
         const emailResponse = await resend.emails.send({
           from: "BSG Tire Recycling <noreply@bsgtires.com>",
           to: [recipientEmail],
@@ -150,6 +161,9 @@ const handler = async (req: Request): Promise<Response> => {
               <meta name="viewport" content="width=device-width, initial-scale=1.0">
             </head>
             <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+              <!-- Open tracking pixel (invisible) -->
+              <img src="${openTrackingUrl}" width="1" height="1" style="display:none !important;" alt="" />
+              
               <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                 
                 <!-- Header with BSG green gradient -->
@@ -176,10 +190,20 @@ const handler = async (req: Request): Promise<Response> => {
                     </ul>
                   </div>
 
-                  <!-- CTA Button -->
+                  <!-- Dual CTA Buttons -->
                   <div style="text-align: center; margin: 30px 0;">
-                    <a href="${inviteUrl}" style="display: inline-block; background: linear-gradient(135deg, #1A4314 0%, #2d5a1e 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(26, 67, 20, 0.3);">
-                      Access Your Portal
+                    <p style="font-size: 14px; color: #64748b; margin-bottom: 15px;">Choose how you'd like to get started:</p>
+                    
+                    <!-- Primary: Schedule a Pickup -->
+                    <a href="${trackedBookUrl}" style="display: inline-block; background: linear-gradient(135deg, #1A4314 0%, #2d5a1e 100%); color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(26, 67, 20, 0.3); margin-bottom: 12px;">
+                      📅 Schedule a Pickup
+                    </a>
+                    
+                    <div style="margin: 10px 0; color: #94a3b8; font-size: 14px;">or</div>
+                    
+                    <!-- Secondary: Access Portal -->
+                    <a href="${trackedInviteUrl}" style="display: inline-block; background: white; color: #1A4314; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; border: 2px solid #1A4314;">
+                      🔐 Set Up Your Portal Account
                     </a>
                   </div>
 

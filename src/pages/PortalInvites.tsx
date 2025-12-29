@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { 
   Mail, Users, UserCheck, UserX, Clock, Check, Send, Loader2, 
-  AlertCircle, RefreshCw 
+  AlertCircle, RefreshCw, Eye, MousePointerClick 
 } from "lucide-react";
 import { 
   usePortalInvites, 
@@ -53,6 +53,12 @@ export default function PortalInvites() {
     if (new Date(invite.expires_at) < new Date()) {
       return { label: "Expired", variant: "outline" as const, icon: Clock };
     }
+    if (invite.clicked_at) {
+      return { label: "Clicked", variant: "secondary" as const, icon: MousePointerClick };
+    }
+    if (invite.opened_at) {
+      return { label: "Opened", variant: "secondary" as const, icon: Eye };
+    }
     return { label: "Pending", variant: "secondary" as const, icon: Clock };
   };
 
@@ -70,7 +76,7 @@ export default function PortalInvites() {
 
         {/* Stats Cards */}
         <SlideUp delay={0.1}>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4 mb-8">
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
@@ -81,7 +87,7 @@ export default function PortalInvites() {
                     <p className="text-2xl font-bold">
                       {statsLoading ? "..." : stats?.totalClientsWithEmail || 0}
                     </p>
-                    <p className="text-sm text-muted-foreground">Clients with Email</p>
+                    <p className="text-sm text-muted-foreground">Clients</p>
                   </div>
                 </div>
               </CardContent>
@@ -97,7 +103,7 @@ export default function PortalInvites() {
                     <p className="text-2xl font-bold">
                       {statsLoading ? "..." : stats?.alreadyInvited || 0}
                     </p>
-                    <p className="text-sm text-muted-foreground">Invited</p>
+                    <p className="text-sm text-muted-foreground">Sent</p>
                   </div>
                 </div>
               </CardContent>
@@ -106,14 +112,30 @@ export default function PortalInvites() {
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-amber-500/10 rounded-lg">
-                    <Clock className="h-5 w-5 text-amber-500" />
+                  <div className="p-2 bg-purple-500/10 rounded-lg">
+                    <Eye className="h-5 w-5 text-purple-500" />
                   </div>
                   <div>
                     <p className="text-2xl font-bold">
-                      {statsLoading ? "..." : stats?.notYetInvited || 0}
+                      {statsLoading ? "..." : stats?.opened || 0}
                     </p>
-                    <p className="text-sm text-muted-foreground">Not Invited</p>
+                    <p className="text-sm text-muted-foreground">Opened</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-cyan-500/10 rounded-lg">
+                    <MousePointerClick className="h-5 w-5 text-cyan-500" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">
+                      {statsLoading ? "..." : stats?.clicked || 0}
+                    </p>
+                    <p className="text-sm text-muted-foreground">Clicked</p>
                   </div>
                 </div>
               </CardContent>
@@ -130,6 +152,22 @@ export default function PortalInvites() {
                       {statsLoading ? "..." : stats?.signedUp || 0}
                     </p>
                     <p className="text-sm text-muted-foreground">Signed Up</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-amber-500/10 rounded-lg">
+                    <Clock className="h-5 w-5 text-amber-500" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">
+                      {statsLoading ? "..." : stats?.notYetInvited || 0}
+                    </p>
+                    <p className="text-sm text-muted-foreground">Not Invited</p>
                   </div>
                 </div>
               </CardContent>
