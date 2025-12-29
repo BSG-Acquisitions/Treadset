@@ -1,18 +1,63 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CalendarDays, TrendingUp, Scale, Recycle, Home, DollarSign } from "lucide-react";
-import { format } from "date-fns";
-import { useRecyclingReports } from "@/hooks/useRecyclingReports";
+import { format, getMonth } from "date-fns";
+import { useRecyclingReports, WeeklyReport } from "@/hooks/useRecyclingReports";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "react-router-dom";
 import { RevenueDashboard } from "@/components/reports/RevenueDashboard";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+const MONTHS = [
+  { value: "all", label: "All Months" },
+  { value: "0", label: "January" },
+  { value: "1", label: "February" },
+  { value: "2", label: "March" },
+  { value: "3", label: "April" },
+  { value: "4", label: "May" },
+  { value: "5", label: "June" },
+  { value: "6", label: "July" },
+  { value: "7", label: "August" },
+  { value: "8", label: "September" },
+  { value: "9", label: "October" },
+  { value: "10", label: "November" },
+  { value: "11", label: "December" },
+];
 
 const Reports = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [monthFilter, setMonthFilter] = useState<string>("all");
+  const [hideEmptyWeeks, setHideEmptyWeeks] = useState(false);
   const { data: reports, isLoading, error } = useRecyclingReports(selectedYear);
+
+  // Filter weekly data based on user preferences
+  const filteredWeeklyData = useMemo(() => {
+    if (!reports?.weekly) return [];
+    
+    let filtered: WeeklyReport[] = reports.weekly;
+    
+    // Filter by month if selected
+    if (monthFilter !== "all") {
+      const targetMonth = parseInt(monthFilter);
+      filtered = filtered.filter((week) => {
+        // Check if week overlaps with target month
+        const weekStartMonth = getMonth(new Date(week.weekStart + 'T00:00:00'));
+        const weekEndMonth = getMonth(new Date(week.weekEnd + 'T00:00:00'));
+        return weekStartMonth === targetMonth || weekEndMonth === targetMonth;
+      });
+    }
+    
+    // Filter out empty weeks if toggled
+    if (hideEmptyWeeks) {
+      filtered = filtered.filter((week) => week.totalTires > 0 || week.manifests > 0 || week.dropoffRecords > 0);
+    }
+    
+    return filtered;
+  }, [reports?.weekly, monthFilter, hideEmptyWeeks]);
 
   if (isLoading) {
     return (
@@ -160,76 +205,113 @@ const Reports = () => {
           </TabsList>
 
           <TabsContent value="weekly">
-          <Card>
-            <CardHeader>
-              <CardTitle>Weekly Breakdown</CardTitle>
-              <CardDescription>Tire recycling data by week for {selectedYear} with source verification</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {reports?.weekly && reports.weekly.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {reports.weekly.map((week) => (
-                    <Card key={week.weekStart} className="p-4">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <h4 className="font-semibold">Week {week.weekNumber}</h4>
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(week.weekStart + 'T00:00:00'), 'MMM d')} - {format(new Date(week.weekEnd + 'T00:00:00'), 'MMM d')}
-                          </p>
-                        </div>
-                        <div className="flex gap-1">
-                          {week.manifests > 0 && (
-                            <Badge variant="outline" className="text-xs">{week.manifests} manifest{week.manifests !== 1 ? 's' : ''}</Badge>
-                          )}
-                          {week.dropoffRecords > 0 && (
-                            <Badge variant="secondary" className="text-xs">{week.dropoffRecords} dropoff{week.dropoffRecords !== 1 ? 's' : ''}</Badge>
-                          )}
-                        </div>
-                      </div>
-                      
-                      {/* Totals */}
-                      <div className="space-y-1 text-sm border-b border-border pb-2 mb-2">
-                        <div className="flex justify-between">
-                          <span className="font-medium">Total Tires:</span>
-                          <span className="font-bold">{formatNumber(week.totalTires)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="font-medium">Total PTE:</span>
-                          <span className="font-bold">{formatNumber(week.totalPTE)}</span>
-                        </div>
-                        {week.totalWeight > 0 && (
-                          <div className="flex justify-between">
-                            <span className="font-medium">Weight:</span>
-                            <span className="font-bold">{formatNumber(week.totalWeight)} tons</span>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* Source Breakdown */}
-                      <div className="space-y-2 text-xs text-muted-foreground">
-                        <p className="font-medium text-foreground">Source Breakdown:</p>
-                        {week.fromManifests.count > 0 && (
-                          <div className="flex justify-between bg-muted/50 px-2 py-1 rounded">
-                            <span>From Manifests ({week.fromManifests.count}):</span>
-                            <span>{formatNumber(week.fromManifests.ptes)} PTE</span>
-                          </div>
-                        )}
-                        {week.fromDropoffs.count > 0 && (
-                          <div className="flex justify-between bg-muted/50 px-2 py-1 rounded">
-                            <span>From Drop-offs ({week.fromDropoffs.count}):</span>
-                            <span>{formatNumber(week.fromDropoffs.ptes)} PTE</span>
-                          </div>
-                        )}
-                      </div>
-                    </Card>
-                  ))}
+            <Card>
+              <CardHeader>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <CardTitle>Weekly Breakdown</CardTitle>
+                    <CardDescription>ISO week data for {selectedYear} (Monday–Sunday, newest first)</CardDescription>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-4">
+                    <Select value={monthFilter} onValueChange={setMonthFilter}>
+                      <SelectTrigger className="w-[150px]">
+                        <SelectValue placeholder="Filter by month" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MONTHS.map((month) => (
+                          <SelectItem key={month.value} value={month.value}>
+                            {month.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="hideEmpty"
+                        checked={hideEmptyWeeks}
+                        onCheckedChange={(checked) => setHideEmptyWeeks(checked === true)}
+                      />
+                      <Label htmlFor="hideEmpty" className="text-sm cursor-pointer">
+                        Hide empty weeks
+                      </Label>
+                    </div>
+                  </div>
                 </div>
-              ) : (
-                <p className="text-muted-foreground text-center py-8">No weekly data available for {selectedYear}</p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+              </CardHeader>
+              <CardContent>
+                {filteredWeeklyData.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredWeeklyData.map((week) => {
+                      const showYear = week.isoWeekYear !== selectedYear;
+                      return (
+                        <Card key={week.weekStart} className="p-4">
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <h4 className="font-semibold">
+                                Week {week.weekNumber}{showYear ? `, ${week.isoWeekYear}` : ''}
+                              </h4>
+                              <p className="text-xs text-muted-foreground">
+                                {format(new Date(week.weekStart + 'T00:00:00'), 'MMM d')} – {format(new Date(week.weekEnd + 'T00:00:00'), 'MMM d, yyyy')}
+                              </p>
+                            </div>
+                            <div className="flex gap-1 flex-wrap justify-end">
+                              {week.manifests > 0 && (
+                                <Badge variant="outline" className="text-xs">{week.manifests} manifest{week.manifests !== 1 ? 's' : ''}</Badge>
+                              )}
+                              {week.dropoffRecords > 0 && (
+                                <Badge variant="secondary" className="text-xs">{week.dropoffRecords} dropoff{week.dropoffRecords !== 1 ? 's' : ''}</Badge>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Totals */}
+                          <div className="space-y-1 text-sm border-b border-border pb-2 mb-2">
+                            <div className="flex justify-between">
+                              <span className="font-medium">Total Tires:</span>
+                              <span className="font-bold">{formatNumber(week.totalTires)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="font-medium">Total PTE:</span>
+                              <span className="font-bold">{formatNumber(week.totalPTE)}</span>
+                            </div>
+                            {week.totalWeight > 0 && (
+                              <div className="flex justify-between">
+                                <span className="font-medium">Weight:</span>
+                                <span className="font-bold">{formatNumber(week.totalWeight)} tons</span>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Source Breakdown */}
+                          <div className="space-y-2 text-xs text-muted-foreground">
+                            <p className="font-medium text-foreground">Source Breakdown:</p>
+                            {week.fromManifests.count > 0 && (
+                              <div className="flex justify-between bg-muted/50 px-2 py-1 rounded">
+                                <span>From Manifests ({week.fromManifests.count}):</span>
+                                <span>{formatNumber(week.fromManifests.ptes)} PTE</span>
+                              </div>
+                            )}
+                            {week.fromDropoffs.count > 0 && (
+                              <div className="flex justify-between bg-muted/50 px-2 py-1 rounded">
+                                <span>From Drop-offs ({week.fromDropoffs.count}):</span>
+                                <span>{formatNumber(week.fromDropoffs.ptes)} PTE</span>
+                              </div>
+                            )}
+                          </div>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-center py-8">
+                    {reports?.weekly && reports.weekly.length > 0 
+                      ? "No weeks match your filters" 
+                      : `No weekly data available for ${selectedYear}`}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
         <TabsContent value="monthly">
           <Card>
