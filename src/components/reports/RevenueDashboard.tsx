@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { DollarSign, TrendingUp, TrendingDown, Clock, CheckCircle, AlertCircle, FileText, Truck } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, Clock, FileText, Truck } from "lucide-react";
 import { useRevenueDashboard, RevenuePeriod } from "@/hooks/useRevenueDashboard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
@@ -51,7 +51,7 @@ export function RevenueDashboard() {
             <Skeleton key={p} className="h-9 w-20" />
           ))}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} className="h-28" />
           ))}
@@ -97,7 +97,7 @@ export function RevenueDashboard() {
       </div>
 
       {/* Key Metrics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Total Revenue */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -107,30 +107,6 @@ export function RevenueDashboard() {
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(metrics.totalRevenue)}</div>
             <p className="text-xs text-muted-foreground">{periodLabels[period]}</p>
-          </CardContent>
-        </Card>
-
-        {/* Collected Revenue */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Collected</CardTitle>
-            <CheckCircle className="h-4 w-4 text-emerald-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-emerald-600">{formatCurrency(metrics.collectedRevenue)}</div>
-            <p className="text-xs text-muted-foreground">payments received</p>
-          </CardContent>
-        </Card>
-
-        {/* Outstanding Revenue */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Outstanding</CardTitle>
-            <AlertCircle className="h-4 w-4 text-amber-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-amber-600">{formatCurrency(metrics.outstandingRevenue)}</div>
-            <p className="text-xs text-muted-foreground">pending collection</p>
           </CardContent>
         </Card>
 
