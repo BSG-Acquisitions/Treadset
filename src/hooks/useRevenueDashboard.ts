@@ -6,8 +6,6 @@ export type RevenuePeriod = "week" | "month" | "quarter" | "ytd";
 
 interface RevenueMetrics {
   totalRevenue: number;
-  collectedRevenue: number;
-  outstandingRevenue: number;
   periodComparison: number;
   averagePerDay: number;
 }
@@ -89,7 +87,7 @@ export function useRevenueDashboard(period: RevenuePeriod) {
       // Fetch current period manifests (use 'total' column and 'signed_at' for date)
       const { data: currentManifests, error: cmError } = await supabase
         .from("manifests")
-        .select("total, payment_status, signed_at, created_at")
+        .select("total, signed_at, created_at")
         .in("status", ["COMPLETED", "AWAITING_RECEIVER_SIGNATURE"])
         .gte("signed_at", currentStartStr)
         .lte("signed_at", currentEndStr);
@@ -99,7 +97,7 @@ export function useRevenueDashboard(period: RevenuePeriod) {
       // Fetch current period dropoffs
       const { data: currentDropoffs, error: cdError } = await supabase
         .from("dropoffs")
-        .select("computed_revenue, payment_status, dropoff_date")
+        .select("computed_revenue, dropoff_date")
         .gte("dropoff_date", currentStartStr)
         .lte("dropoff_date", currentEndStr);
 
@@ -145,12 +143,6 @@ export function useRevenueDashboard(period: RevenuePeriod) {
       const manifestRevenue = (currentManifests || []).reduce((sum, m) => sum + (m.total || 0), 0);
       const dropoffRevenue = (currentDropoffs || []).reduce((sum, d) => sum + (d.computed_revenue || 0), 0);
       const totalRevenue = manifestRevenue + dropoffRevenue;
-
-      const collectedManifests = (currentManifests || []).filter(m => m.payment_status === "PAID").reduce((sum, m) => sum + (m.total || 0), 0);
-      const collectedDropoffs = (currentDropoffs || []).filter(d => d.payment_status === "PAID").reduce((sum, d) => sum + (d.computed_revenue || 0), 0);
-      const collectedRevenue = collectedManifests + collectedDropoffs;
-
-      const outstandingRevenue = totalRevenue - collectedRevenue;
 
       // Calculate previous period total
       const prevManifestRevenue = (previousManifests || []).reduce((sum, m) => sum + (m.total || 0), 0);
@@ -208,8 +200,6 @@ export function useRevenueDashboard(period: RevenuePeriod) {
       return {
         metrics: {
           totalRevenue,
-          collectedRevenue,
-          outstandingRevenue,
           periodComparison,
           averagePerDay,
         },
