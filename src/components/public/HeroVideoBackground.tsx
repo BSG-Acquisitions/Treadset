@@ -7,14 +7,39 @@ export function HeroVideoBackground() {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.playbackRate = 0.75; // Slow motion effect
+    const video = videoRef.current;
+    if (!video) return;
+
+    video.playbackRate = 0.75; // Slow motion effect
+
+    // Attempt to play and handle failures gracefully
+    const playVideo = async () => {
+      try {
+        await video.play();
+      } catch (err) {
+        console.log("Video autoplay failed:", err);
+        // Don't set error - video may still be visible as poster/frame
+      }
+    };
+
+    if (video.readyState >= 2) {
+      playVideo();
     }
   }, [videoLoaded]);
 
+  // Handle various video events for better compatibility
+  const handleCanPlay = () => {
+    setVideoLoaded(true);
+  };
+
+  const handleError = () => {
+    console.log("Video format not supported - showing fallback");
+    setVideoError(true);
+  };
+
   return (
     <div className="absolute inset-0 overflow-hidden">
-      {/* Video Layer */}
+      {/* Video Layer - only MOV since MP4 doesn't exist yet */}
       {!videoError && (
         <video
           ref={videoRef}
@@ -22,19 +47,18 @@ export function HeroVideoBackground() {
           muted
           loop
           playsInline
-          onLoadedData={() => setVideoLoaded(true)}
-          onError={() => setVideoError(true)}
+          preload="auto"
+          onCanPlay={handleCanPlay}
+          onLoadedData={handleCanPlay}
+          onError={handleError}
           className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
             videoLoaded ? "opacity-60" : "opacity-0"
           }`}
         >
+          {/* MOV for Safari/iOS, browsers that don't support will trigger error */}
           <source
             src="/videos/detroit-hero.mov"
             type="video/quicktime"
-          />
-          <source
-            src="/videos/detroit-hero.mp4"
-            type="video/mp4"
           />
         </video>
       )}
