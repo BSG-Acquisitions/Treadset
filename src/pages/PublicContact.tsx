@@ -6,8 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Phone, Mail, MapPin, Clock, Send, CheckCircle, Loader2 } from "lucide-react";
+import { Phone, Mail, MapPin, Clock, Send, CheckCircle, Loader2, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
+import { SectionHeader } from "@/components/public/SectionHeader";
 
 export default function PublicContact() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -30,18 +31,14 @@ export default function PublicContact() {
       {/* Hero Section */}
       <section className="py-16 lg:py-24 bg-gradient-to-b from-primary/5 to-background">
         <div className="container mx-auto px-4">
-          <motion.div 
-            className="max-w-3xl mx-auto text-center"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-6">
-              Contact Us
-            </h1>
-            <p className="text-xl text-muted-foreground">
-              Have questions? We're here to help. Reach out and we'll respond as soon as possible.
-            </p>
-          </motion.div>
+          <SectionHeader
+            eyebrow="Get In Touch"
+            title="Contact Us"
+            titleAccent="Contact"
+            subtitle="Have questions? We're here to help. Reach out and we'll respond as soon as possible."
+            size="large"
+            icon={MessageSquare}
+          />
         </div>
       </section>
 

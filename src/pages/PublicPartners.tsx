@@ -2,7 +2,8 @@ import { PublicLayout } from "@/components/public/PublicLayout";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Truck, Shield, DollarSign, Clock, CheckCircle, FileText, Award } from "lucide-react";
+import { Truck, Shield, DollarSign, Clock, CheckCircle, FileText, Award, Handshake, ClipboardList, Zap } from "lucide-react";
+import { SectionHeader } from "@/components/public/SectionHeader";
 
 export default function PublicPartners() {
   return (
@@ -11,22 +12,20 @@ export default function PublicPartners() {
       <section className="relative py-20 lg:py-32 bg-gradient-to-b from-primary/5 to-background overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent" />
         <div className="container mx-auto px-4 relative">
-          <motion.div 
-            className="max-w-3xl mx-auto text-center"
+          <SectionHeader
+            eyebrow="Transport Partner Program"
+            title="Partner With BSG"
+            titleAccent="BSG"
+            subtitle="Join Michigan's premier tire recycling network. Special pricing for registered transport partners."
+            size="large"
+            icon={Truck}
+          />
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            transition={{ delay: 0.4 }}
+            className="flex justify-center mt-8"
           >
-            <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-6">
-              <Truck className="w-4 h-4" />
-              Transport Partner Program
-            </div>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
-              Partner With BSG
-            </h1>
-            <p className="text-xl text-muted-foreground mb-8">
-              Join Michigan's premier tire recycling network. Special pricing for registered transport partners.
-            </p>
             <Button asChild size="lg" className="text-lg px-8">
               <Link to="/partner-apply">Apply for Partnership</Link>
             </Button>
@@ -37,17 +36,15 @@ export default function PublicPartners() {
       {/* Benefits Grid */}
       <section className="py-20">
         <div className="container mx-auto px-4">
-          <motion.div 
-            className="text-center mb-16"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="text-3xl lg:text-4xl font-bold mb-4">Why Partner With Us</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              We've built a reliable network for tire haulers who need consistent, professional service
-            </p>
-          </motion.div>
+          <div className="mb-16">
+            <SectionHeader
+              eyebrow="Benefits"
+              title="Why Partner With Us"
+              titleAccent="Partner"
+              subtitle="We've built a reliable network for tire haulers who need consistent, professional service"
+              icon={Handshake}
+            />
+          </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[
@@ -105,17 +102,14 @@ export default function PublicPartners() {
       <section className="py-20 bg-muted/30">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
-            <motion.div 
-              className="text-center mb-12"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-            >
-              <h2 className="text-3xl lg:text-4xl font-bold mb-4">Partnership Requirements</h2>
-              <p className="text-muted-foreground">
-                To become a BSG Transport Partner, you'll need the following
-              </p>
-            </motion.div>
+            <div className="mb-12">
+              <SectionHeader
+                eyebrow="Requirements"
+                title="Partnership Requirements"
+                subtitle="To become a BSG Transport Partner, you'll need the following"
+                icon={ClipboardList}
+              />
+            </div>
 
             <motion.div 
               className="bg-card rounded-3xl p-8 lg:p-12 border border-border/50"
@@ -148,15 +142,15 @@ export default function PublicPartners() {
       {/* How It Works */}
       <section className="py-20">
         <div className="container mx-auto px-4">
-          <motion.div 
-            className="text-center mb-16"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="text-3xl lg:text-4xl font-bold mb-4">How It Works</h2>
-            <p className="text-muted-foreground">Simple steps to become a partner</p>
-          </motion.div>
+          <div className="mb-16">
+            <SectionHeader
+              eyebrow="Simple Process"
+              title="How It Works"
+              titleAccent="Works"
+              subtitle="Simple steps to become a partner"
+              icon={Zap}
+            />
+          </div>
 
           <div className="max-w-4xl mx-auto">
             <div className="grid md:grid-cols-3 gap-8">
@@ -189,13 +183,14 @@ export default function PublicPartners() {
       <section className="py-20 bg-primary text-primary-foreground">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl lg:text-4xl font-bold mb-6">
-              Ready to Join Our Network?
-            </h2>
-            <p className="text-primary-foreground/80 text-lg mb-8">
-              Apply today and start benefiting from partner rates and priority service.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <SectionHeader
+              eyebrow="Join Our Network"
+              title="Ready to Join Our Network?"
+              titleAccent="Network"
+              subtitle="Apply today and start benefiting from partner rates and priority service."
+              light
+            />
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
               <Button asChild size="lg" variant="secondary">
                 <Link to="/partner-apply">Apply Now</Link>
               </Button>

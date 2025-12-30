@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { Building2, Home, Truck, ArrowRight } from "lucide-react";
+import { Building2, Home, Truck, ArrowRight, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SectionHeader } from "./SectionHeader";
 
 const audiences = [
   {
@@ -34,21 +35,14 @@ export function WhoWeServe() {
   return (
     <section className="py-16 lg:py-24">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          viewport={{ once: true }}
-          className="text-center mb-12"
-        >
-          <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
-            Who We Serve
-          </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            From commercial tire dealers to homeowners with a few old tires, 
-            we make tire recycling simple for everyone.
-          </p>
-        </motion.div>
+        <div className="mb-12">
+          <SectionHeader
+            eyebrow="Our Customers"
+            title="Who We Serve"
+            subtitle="From commercial tire dealers to homeowners with a few old tires, we make tire recycling simple for everyone."
+            icon={Users}
+          />
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {audiences.map((audience, index) => (

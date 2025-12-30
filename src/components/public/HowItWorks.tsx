@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
-import { CalendarCheck, Truck, ClipboardCheck, Phone, MapPin, Recycle } from "lucide-react";
+import { CalendarCheck, Truck, ClipboardCheck, Phone, MapPin, Recycle, Settings } from "lucide-react";
+import { SectionHeader } from "./SectionHeader";
 
 const pickupSteps = [
   {
@@ -74,21 +75,15 @@ export function HowItWorks() {
   return (
     <section className="py-16 lg:py-24 bg-muted/30">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          viewport={{ once: true }}
-          className="text-center mb-12"
-        >
-          <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
-            How It Works
-          </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Whether we come to you or you come to us, getting rid of old tires 
-            has never been easier.
-          </p>
-        </motion.div>
+        <div className="mb-12">
+          <SectionHeader
+            eyebrow="The Process"
+            title="How It Works"
+            titleAccent="Works"
+            subtitle="Whether we come to you or you come to us, getting rid of old tires has never been easier."
+            icon={Settings}
+          />
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16">
           {/* Pickup Service */}
