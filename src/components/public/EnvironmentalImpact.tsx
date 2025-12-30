@@ -74,13 +74,13 @@ export function EnvironmentalImpact() {
     },
     {
       icon: <Leaf className="h-6 w-6" />,
-      value: Math.round((stats?.landfill_diverted_lbs || 0) / 2000),
+      value: stats?.landfill_diverted_tons || 0,
       label: "Tons Diverted from Landfill",
       suffix: " tons",
     },
     {
       icon: <TreePine className="h-6 w-6" />,
-      value: Math.round((stats?.co2_saved_lbs || 0) / 2000),
+      value: stats?.co2_saved_tons || 0,
       label: "CO₂ Emissions Prevented",
       suffix: " tons",
     },
