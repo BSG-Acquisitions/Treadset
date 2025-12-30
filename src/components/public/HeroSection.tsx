@@ -43,11 +43,25 @@ export function HeroSection() {
 
       <div className="container relative mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="max-w-4xl mx-auto text-center">
+          {/* BSG Logo - Front and Center */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6 }}
+            className="mb-6"
+          >
+            <img 
+              src="/bsg-logo.png" 
+              alt="BSG Tire Recycling" 
+              className="h-24 sm:h-28 lg:h-32 w-auto mx-auto"
+            />
+          </motion.div>
+
           {/* Live Counter Badge */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
             className="mb-8"
           >
             <LiveTireCounter />
@@ -57,7 +71,7 @@ export function HeroSection() {
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
             className="text-4xl sm:text-5xl lg:text-7xl font-bold text-foreground mb-6 tracking-tight"
           >
             Old Tires{" "}
@@ -70,12 +84,12 @@ export function HeroSection() {
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
             className="text-lg sm:text-xl lg:text-2xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed"
           >
-            Michigan's trusted tire recycling experts. 
-            Serving businesses and individuals with reliable, 
-            environmentally responsible tire disposal.
+            Detroit's trusted tire recycling experts. 
+            Serving Southeast Michigan businesses and individuals 
+            with reliable, environmentally responsible tire disposal.
           </motion.p>
 
           {/* CTA Buttons */}
