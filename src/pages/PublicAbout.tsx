@@ -150,10 +150,10 @@ export default function PublicAbout() {
             viewport={{ once: true }}
           >
             <SectionHeader
-              eyebrow="Michigan Proud"
-              title="Proudly Serving Michigan"
-              titleAccent="Michigan"
-              subtitle="From Metro Detroit to Southeast Michigan, we provide comprehensive tire recycling services to businesses and individuals throughout the region. Our network of routes and transport partners ensures we can serve you efficiently, no matter where you're located."
+              eyebrow="Licensed in Michigan & Ohio"
+              title="Proudly Serving Michigan & Ohio"
+              titleAccent="Michigan & Ohio"
+              subtitle="From Metro Detroit across Southeast Michigan and into Ohio, we provide comprehensive tire recycling services to businesses and individuals throughout the region. Our network of routes and transport partners ensures we can serve you efficiently, no matter where you're located."
               icon={MapPin}
             />
             <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">

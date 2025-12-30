@@ -18,12 +18,39 @@ export default function PublicContact() {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Simulate form submission - in production, connect to edge function or email service
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    setIsSubmitted(true);
-    toast.success("Message sent! We'll get back to you soon.");
-    setIsSubmitting(false);
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      name: formData.get('name') as string,
+      email: formData.get('email') as string,
+      phone: formData.get('phone') as string || null,
+      subject: formData.get('subject') as string,
+      message: formData.get('message') as string,
+    };
+
+    try {
+      const response = await fetch(
+        'https://wvjehbozyxhmgdljwsiz.supabase.co/functions/v1/public-contact-form',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to send message');
+      }
+
+      setIsSubmitted(true);
+      toast.success("Message sent! We'll get back to you soon.");
+    } catch (error: any) {
+      console.error('Contact form error:', error);
+      toast.error(error.message || "Failed to send message. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

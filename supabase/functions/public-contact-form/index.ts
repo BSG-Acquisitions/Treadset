@@ -18,15 +18,15 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
-    console.log('Received partner application:', JSON.stringify(body, null, 2));
+    console.log('Received contact form submission:', JSON.stringify(body, null, 2));
 
     // Validate required fields
-    const { companyName, contactName, email, phone, dotNumber } = body;
+    const { name, email, subject, message } = body;
     
-    if (!companyName || !contactName || !email || !phone || !dotNumber) {
+    if (!name || !email || !subject || !message) {
       console.error('Missing required fields');
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: companyName, contactName, email, phone, dotNumber' }),
+        JSON.stringify({ error: 'Missing required fields: name, email, subject, message' }),
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -44,7 +44,7 @@ serve(async (req) => {
     if (orgError || !orgs) {
       console.error('Error fetching organization:', orgError);
       return new Response(
-        JSON.stringify({ error: 'Unable to process application' }),
+        JSON.stringify({ error: 'Unable to process submission' }),
         { 
           status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -52,34 +52,25 @@ serve(async (req) => {
       );
     }
 
-    // Create hauler application record
-    const { data: hauler, error: haulerError } = await supabase
-      .from('haulers')
+    // Create contact submission record
+    const { data: submission, error: submitError } = await supabase
+      .from('contact_submissions')
       .insert({
         organization_id: orgs.id,
-        hauler_name: companyName, // Use hauler_name as primary field
-        company_name: companyName,
-        contact_name: contactName,
+        name: name,
         email: email,
-        phone: phone,
-        dot_number: dotNumber,
-        mc_number: body.mcNumber || null,
-        address: body.address || null,
-        city: body.city || null,
-        state: body.state || 'MI',
-        zip: body.zip || null,
-        notes: `Fleet size: ${body.fleetSize || 'Not specified'}\n\nAdditional notes: ${body.notes || 'None'}`,
-        status: 'pending',
-        application_status: 'pending',
-        is_active: false, // Not active until approved
+        phone: body.phone || null,
+        subject: subject,
+        message: message,
+        is_read: false,
       })
       .select()
       .single();
 
-    if (haulerError) {
-      console.error('Error creating hauler record:', haulerError);
+    if (submitError) {
+      console.error('Error creating contact submission:', submitError);
       return new Response(
-        JSON.stringify({ error: 'Failed to submit application' }),
+        JSON.stringify({ error: 'Failed to submit message' }),
         { 
           status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -87,7 +78,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('Partner application created successfully:', hauler.id);
+    console.log('Contact submission created successfully:', submission.id);
 
     // Create a notification for admins
     try {
@@ -95,26 +86,26 @@ serve(async (req) => {
         .from('notifications')
         .insert({
           organization_id: orgs.id,
-          type: 'partner_application',
-          title: 'New Partner Application',
-          message: `${companyName} has applied to become a transport partner. DOT: ${dotNumber}`,
+          type: 'contact_form',
+          title: 'New Contact Form Submission',
+          message: `${name} sent a message: "${subject}"`,
           metadata: {
-            hauler_id: hauler.id,
-            company_name: companyName,
+            submission_id: submission.id,
             contact_email: email,
+            subject: subject,
           },
           is_read: false,
         });
     } catch (notifError) {
-      // Don't fail the application if notification fails
+      // Don't fail the submission if notification fails
       console.error('Failed to create notification:', notifError);
     }
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Application submitted successfully',
-        applicationId: hauler.id 
+        message: 'Message sent successfully',
+        submissionId: submission.id 
       }),
       { 
         status: 200, 
@@ -123,7 +114,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error processing partner application:', error);
+    console.error('Error processing contact form:', error);
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
       { 

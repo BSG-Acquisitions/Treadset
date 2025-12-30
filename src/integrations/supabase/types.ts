@@ -1501,6 +1501,53 @@ export type Database = {
           },
         ]
       }
+      contact_submissions: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          is_read: boolean
+          message: string
+          name: string
+          organization_id: string
+          phone: string | null
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          is_read?: boolean
+          message: string
+          name: string
+          organization_id: string
+          phone?: string | null
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          name?: string
+          organization_id?: string
+          phone?: string | null
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_submissions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversions: {
         Row: {
           created_at: string | null
@@ -2196,6 +2243,7 @@ export type Database = {
       }
       haulers: {
         Row: {
+          application_status: string | null
           city: string | null
           company_name: string | null
           created_at: string | null
@@ -2223,6 +2271,7 @@ export type Database = {
           zip: string | null
         }
         Insert: {
+          application_status?: string | null
           city?: string | null
           company_name?: string | null
           created_at?: string | null
@@ -2250,6 +2299,7 @@ export type Database = {
           zip?: string | null
         }
         Update: {
+          application_status?: string | null
           city?: string | null
           company_name?: string | null
           created_at?: string | null

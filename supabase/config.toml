@@ -230,3 +230,6 @@ verify_jwt = false
 
 [functions.public-partner-application]
 verify_jwt = false
+
+[functions.public-contact-form]
+verify_jwt = false
