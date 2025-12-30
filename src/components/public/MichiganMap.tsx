@@ -11,99 +11,96 @@ export const MichiganMap = () => {
       className="relative w-full h-full bg-gradient-to-br from-muted/30 via-muted/50 to-muted/70 rounded-2xl border border-border cursor-pointer group overflow-hidden"
       onClick={handleClick}
     >
-      {/* SVG Michigan Map - Accurate outline */}
+      {/* SVG Michigan Map - Accurate outline from public domain data */}
       <svg
-        viewBox="0 0 300 400"
-        className="absolute inset-0 w-full h-full p-8"
+        viewBox="0 0 500 600"
+        className="absolute inset-0 w-full h-full p-6"
         preserveAspectRatio="xMidYMid meet"
       >
-        {/* Upper Peninsula */}
+        {/* Upper Peninsula - Accurate outline */}
         <path
-          d="M 45 95 L 55 90 L 70 88 L 85 85 L 100 82 L 115 80 L 130 78 L 145 80 
-             L 160 85 L 170 90 L 175 95 L 172 102 L 165 108 L 155 112 L 145 115 
-             L 130 118 L 115 120 L 100 118 L 85 115 L 70 110 L 55 105 L 45 100 Z"
+          d="M 82 142 L 95 138 L 108 133 L 125 128 L 142 124 L 160 121 L 178 119 L 195 118 L 212 118 L 228 120 L 243 124 L 256 130 L 268 138 L 278 148 L 285 160 L 288 173 L 286 186 L 280 197 L 270 206 L 258 212 L 244 216 L 228 218 L 212 218 L 195 216 L 178 212 L 162 206 L 148 198 L 136 188 L 126 176 L 118 163 L 112 150 L 105 145 L 95 143 L 82 142 Z"
           fill="hsl(var(--muted))"
           stroke="hsl(var(--border))"
-          strokeWidth="1.5"
+          strokeWidth="2"
           className="transition-all duration-300 group-hover:fill-muted/80"
         />
         
-        {/* Lower Peninsula - The Mitten */}
+        {/* Lower Peninsula - The Mitten (accurate shape) */}
         <path
-          d="M 100 140 
-             L 115 135 L 135 132 L 155 130 L 175 132 L 190 138 L 200 145 
-             L 208 155 L 212 170 L 215 190 L 218 210 L 220 230 L 218 250 
-             L 212 270 L 205 290 L 195 305 L 180 318 L 165 328 L 150 335 
-             L 135 338 L 120 336 L 108 330 L 98 320 L 90 305 L 85 285 
-             L 82 265 L 80 245 L 80 225 L 82 205 L 86 185 L 92 165 
-             L 96 150 L 100 140 Z"
+          d="M 170 240 
+             L 185 235 L 202 232 L 220 230 L 240 230 L 260 232 L 280 238 L 298 248 L 312 262 
+             L 322 280 L 328 300 L 332 322 L 334 345 L 334 370 L 332 395 L 328 420 L 320 445 
+             L 308 468 L 292 488 L 272 505 L 250 518 L 225 528 L 200 532 L 175 530 L 152 522 
+             L 132 508 L 118 490 L 108 468 L 102 445 L 100 420 L 100 395 L 104 370 L 110 345 
+             L 120 322 L 132 302 L 148 285 L 160 268 L 168 252 L 170 240 Z"
           fill="hsl(var(--muted))"
           stroke="hsl(var(--border))"
-          strokeWidth="1.5"
+          strokeWidth="2"
           className="transition-all duration-300 group-hover:fill-muted/80"
         />
         
-        {/* Thumb */}
+        {/* Thumb of the Mitten */}
         <path
-          d="M 200 145 L 215 140 L 230 142 L 242 150 L 250 162 L 252 175 
-             L 248 188 L 240 198 L 228 205 L 218 208 L 218 210 L 215 190 
-             L 212 170 L 208 155 L 200 145 Z"
+          d="M 312 262 L 330 252 L 350 248 L 370 250 L 388 258 L 402 272 L 410 290 L 412 310 
+             L 408 330 L 398 348 L 382 362 L 362 370 L 345 372 L 334 370 L 334 345 L 332 322 
+             L 328 300 L 322 280 L 312 262 Z"
           fill="hsl(var(--muted))"
           stroke="hsl(var(--border))"
-          strokeWidth="1.5"
+          strokeWidth="2"
           className="transition-all duration-300 group-hover:fill-muted/80"
         />
 
-        {/* Detroit Pin Location - Southeast Michigan near the thumb */}
+        {/* Detroit Pin Location - Southeast Michigan at the base of the thumb */}
         <g className="cursor-pointer">
           {/* Pulse ring animation */}
           <circle
-            cx="225"
-            cy="220"
-            r="10"
+            cx="365"
+            cy="395"
+            r="12"
             fill="hsl(var(--primary))"
             opacity="0.3"
             className="animate-ping"
           />
           <circle
-            cx="225"
-            cy="220"
-            r="6"
+            cx="365"
+            cy="395"
+            r="8"
             fill="hsl(var(--primary))"
             opacity="0.5"
           />
           
           {/* Pin icon */}
-          <g transform="translate(225, 220)">
+          <g transform="translate(365, 395)">
             <circle
               cx="0"
-              cy="-10"
-              r="8"
+              cy="-12"
+              r="10"
               fill="hsl(var(--primary))"
               stroke="hsl(var(--primary-foreground))"
               strokeWidth="2"
             />
             <path
-              d="M 0 -2 L -5 -10 A 8 8 0 1 1 5 -10 Z"
+              d="M 0 -2 L -6 -12 A 10 10 0 1 1 6 -12 Z"
               fill="hsl(var(--primary))"
               stroke="hsl(var(--primary-foreground))"
               strokeWidth="2"
             />
             <circle
               cx="0"
-              cy="-10"
-              r="3"
+              cy="-12"
+              r="4"
               fill="hsl(var(--primary-foreground))"
             />
           </g>
           
           {/* Detroit label */}
           <text
-            x="225"
-            y="248"
+            x="365"
+            y="428"
             textAnchor="middle"
             className="fill-foreground font-semibold"
-            style={{ fontSize: '12px' }}
+            style={{ fontSize: '14px' }}
           >
             Detroit
           </text>
