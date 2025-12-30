@@ -224,7 +224,7 @@ export default function PublicDropoff() {
               className="rounded-2xl overflow-hidden border border-border h-80 lg:h-96"
             >
               <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2948.8!2d-83.0316!3d42.3489!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8824d2c9b3c5c5c5%3A0x0!2s2971%20Bellevue%20St%2C%20Detroit%2C%20MI%2048207!5e0!3m2!1sen!2sus!4v1600000000000!5m2!1sen!2sus"
+                src="https://www.google.com/maps?q=2971+Bellevue+St,+Detroit,+MI+48207&output=embed"
                 width="100%"
                 height="100%"
                 style={{ border: 0 }}
