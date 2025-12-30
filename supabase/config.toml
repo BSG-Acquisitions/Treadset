@@ -227,3 +227,6 @@ verify_jwt = false
 
 [functions.public-stats]
 verify_jwt = false
+
+[functions.public-partner-application]
+verify_jwt = false
