@@ -2,6 +2,11 @@ import { motion } from "framer-motion";
 import { Truck, Search, Scissors, Cog, Package, ArrowRight, Recycle } from "lucide-react";
 import { SectionHeader } from "./SectionHeader";
 
+// Process images
+import tirePileImg from "@/assets/facility/tire-pile.jpeg";
+import steelWireImg from "@/assets/products/steel-wire.jpeg";
+import facilityDisplayImg from "@/assets/facility/products-display.jpeg";
+
 const processSteps = [
   {
     step: 1,
@@ -9,7 +14,8 @@ const processSteps = [
     description: "Tires are collected from businesses across Michigan and Ohio through our pickup service, drop-offs, and transport partners.",
     icon: Truck,
     color: "from-blue-500 to-blue-600",
-    details: ["Scheduled pickups", "Drop-off facility", "Partner network"]
+    details: ["Scheduled pickups", "Drop-off facility", "Partner network"],
+    image: tirePileImg
   },
   {
     step: 2,
@@ -17,7 +23,8 @@ const processSteps = [
     description: "Every tire is inspected for quality. Usable tires are set aside for resale, while damaged tires proceed to recycling.",
     icon: Search,
     color: "from-amber-500 to-orange-500",
-    details: ["Quality assessment", "Tread depth check", "Air pressure test"]
+    details: ["Quality assessment", "Tread depth check", "Air pressure test"],
+    image: null
   },
   {
     step: 3,
@@ -25,7 +32,8 @@ const processSteps = [
     description: "Tires are fed through industrial shredders that break them down into smaller pieces while separating steel and rubber.",
     icon: Scissors,
     color: "from-red-500 to-red-600",
-    details: ["Industrial shredders", "Steel extraction", "Size reduction"]
+    details: ["Industrial shredders", "Steel extraction", "Size reduction"],
+    image: null
   },
   {
     step: 4,
@@ -33,7 +41,8 @@ const processSteps = [
     description: "Shredded material is further processed. Steel is cleaned and baled. Rubber is ground and colored for mulch or sized for shreds.",
     icon: Cog,
     color: "from-purple-500 to-purple-600",
-    details: ["Steel cleaning", "Rubber grinding", "Color treatment"]
+    details: ["Steel cleaning", "Rubber grinding", "Color treatment"],
+    image: steelWireImg
   },
   {
     step: 5,
@@ -41,7 +50,8 @@ const processSteps = [
     description: "Materials become valuable products: quality used tires, colorful rubber mulch, recycled steel, and tire shreds for various applications.",
     icon: Package,
     color: "from-green-500 to-emerald-600",
-    details: ["Used tires", "Rubber mulch", "Recycled steel", "Tire shreds"]
+    details: ["Used tires", "Rubber mulch", "Recycled steel", "Tire shreds"],
+    image: facilityDisplayImg
   }
 ];
 
@@ -74,38 +84,51 @@ export function TireRecyclingProcess() {
                 className="relative"
               >
                 {/* Step Card */}
-                <div className="bg-card rounded-2xl p-6 border border-border/50 h-full hover:border-primary/30 transition-colors group">
-                  {/* Step Number & Icon */}
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${step.color} flex items-center justify-center shadow-lg`}>
-                      <step.icon className="w-7 h-7 text-white" />
+                <div className="bg-card rounded-2xl border border-border/50 h-full hover:border-primary/30 transition-colors group overflow-hidden">
+                  {/* Image if available */}
+                  {step.image && (
+                    <div className="aspect-[16/10] overflow-hidden">
+                      <img 
+                        src={step.image} 
+                        alt={step.title}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-muted-foreground">STEP</span>
-                      <span className={`text-2xl font-bold bg-gradient-to-br ${step.color} bg-clip-text text-transparent`}>
-                        {step.step}
-                      </span>
+                  )}
+                  
+                  <div className="p-6">
+                    {/* Step Number & Icon */}
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${step.color} flex items-center justify-center shadow-lg`}>
+                        <step.icon className="w-7 h-7 text-white" />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-muted-foreground">STEP</span>
+                        <span className={`text-2xl font-bold bg-gradient-to-br ${step.color} bg-clip-text text-transparent`}>
+                          {step.step}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                  
-                  {/* Content */}
-                  <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">
-                    {step.title}
-                  </h3>
-                  <p className="text-muted-foreground text-sm mb-4">
-                    {step.description}
-                  </p>
-                  
-                  {/* Details */}
-                  <div className="flex flex-wrap gap-2">
-                    {step.details.map((detail) => (
-                      <span
-                        key={detail}
-                        className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium"
-                      >
-                        {detail}
-                      </span>
-                    ))}
+                    
+                    {/* Content */}
+                    <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">
+                      {step.title}
+                    </h3>
+                    <p className="text-muted-foreground text-sm mb-4">
+                      {step.description}
+                    </p>
+                    
+                    {/* Details */}
+                    <div className="flex flex-wrap gap-2">
+                      {step.details.map((detail) => (
+                        <span
+                          key={detail}
+                          className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium"
+                        >
+                          {detail}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
                 

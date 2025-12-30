@@ -4,6 +4,27 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Package, Recycle, Leaf, Truck, CheckCircle, Phone, ArrowRight, Palette, Construction, Fuel } from "lucide-react";
 import { SectionHeader } from "@/components/public/SectionHeader";
+import { useState } from "react";
+
+// Product images
+import usedTiresImg from "@/assets/products/used-tires.jpeg";
+import tireShredsImg from "@/assets/products/tire-shreds.jpeg";
+import mulchBlackImg from "@/assets/products/mulch-black.jpeg";
+import mulchRedImg from "@/assets/products/mulch-red.jpeg";
+import mulchBrownImg from "@/assets/products/mulch-brown.jpeg";
+import steelWireImg from "@/assets/products/steel-wire.jpeg";
+import facilityDisplayImg from "@/assets/facility/products-display.jpeg";
+
+// Logo images for credentials section
+import egleLogo from "@/assets/logos/egle.jpeg";
+import detroitNewsLogo from "@/assets/logos/detroit-news.jpeg";
+import michiganFarmNewsLogo from "@/assets/logos/michigan-farm-news.jpeg";
+
+const mulchImages = {
+  Red: mulchRedImg,
+  Black: mulchBlackImg,
+  Brown: mulchBrownImg,
+};
 
 const products = [
   {
@@ -21,7 +42,8 @@ const products = [
     icon: Package,
     cta: "Visit Our Facility",
     ctaLink: "/drop-off",
-    accent: "from-blue-500 to-blue-600"
+    accent: "from-blue-500 to-blue-600",
+    image: usedTiresImg
   },
   {
     id: "rubber-mulch",
@@ -35,11 +57,12 @@ const products = [
       "Safe for playgrounds (ASTM certified)",
       "Environmentally responsible"
     ],
-    colors: ["Red", "Black", "Brown"],
+    colors: ["Red", "Black", "Brown"] as const,
     icon: Palette,
     cta: "Inquire About Pricing",
     ctaLink: "/contact",
-    accent: "from-amber-500 to-orange-600"
+    accent: "from-amber-500 to-orange-600",
+    image: mulchBlackImg
   },
   {
     id: "recycled-steel",
@@ -56,7 +79,8 @@ const products = [
     icon: Construction,
     cta: "Request Quote",
     ctaLink: "/contact",
-    accent: "from-slate-500 to-slate-700"
+    accent: "from-slate-500 to-slate-700",
+    image: steelWireImg
   },
   {
     id: "tire-shreds",
@@ -73,16 +97,60 @@ const products = [
     icon: Fuel,
     cta: "Learn More",
     ctaLink: "/contact",
-    accent: "from-green-500 to-emerald-600"
+    accent: "from-green-500 to-emerald-600",
+    image: tireShredsImg
   }
 ];
 
+function MulchColorSelector({ colors, onColorChange, selectedColor }: { 
+  colors: readonly string[], 
+  onColorChange: (color: string) => void,
+  selectedColor: string 
+}) {
+  return (
+    <div className="flex items-center gap-4 mb-6">
+      <span className="text-sm font-medium">Available Colors:</span>
+      <div className="flex gap-2">
+        {colors.map((color) => (
+          <button
+            key={color}
+            onClick={() => onColorChange(color)}
+            className={`w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all ${
+              selectedColor === color 
+                ? "ring-2 ring-primary ring-offset-2" 
+                : "border-border hover:scale-110"
+            } ${
+              color === "Red" ? "bg-red-600" :
+              color === "Black" ? "bg-gray-900" :
+              "bg-amber-800"
+            }`}
+            title={color}
+            aria-label={`Select ${color} mulch`}
+          />
+        ))}
+      </div>
+      <span className="text-sm text-muted-foreground">{selectedColor}</span>
+    </div>
+  );
+}
+
 export default function PublicProducts() {
+  const [selectedMulchColor, setSelectedMulchColor] = useState<string>("Black");
+
   return (
     <PublicLayout>
       {/* Hero Section */}
-      <section className="relative py-20 lg:py-32 bg-gradient-to-b from-primary/5 to-background overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent" />
+      <section className="relative py-20 lg:py-32 overflow-hidden">
+        {/* Background Image */}
+        <div className="absolute inset-0">
+          <img 
+            src={facilityDisplayImg} 
+            alt="BSG Tire Recycling facility showing recycled products" 
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/70 to-background" />
+        </div>
+        
         <div className="container mx-auto px-4 relative">
           <SectionHeader
             eyebrow="Our Products"
@@ -125,24 +193,13 @@ export default function PublicProducts() {
                   <h2 className="text-3xl lg:text-4xl font-bold mb-4">{product.title}</h2>
                   <p className="text-lg text-muted-foreground mb-6">{product.description}</p>
                   
-                  {/* Color swatches for mulch */}
+                  {/* Color selector for mulch */}
                   {product.colors && (
-                    <div className="flex items-center gap-4 mb-6">
-                      <span className="text-sm font-medium">Available Colors:</span>
-                      <div className="flex gap-2">
-                        {product.colors.map((color) => (
-                          <div
-                            key={color}
-                            className={`w-8 h-8 rounded-full border-2 border-border flex items-center justify-center ${
-                              color === "Red" ? "bg-red-600" :
-                              color === "Black" ? "bg-gray-900" :
-                              "bg-amber-800"
-                            }`}
-                            title={color}
-                          />
-                        ))}
-                      </div>
-                    </div>
+                    <MulchColorSelector 
+                      colors={product.colors}
+                      selectedColor={selectedMulchColor}
+                      onColorChange={setSelectedMulchColor}
+                    />
                   )}
                   
                   {/* Features */}
@@ -163,22 +220,62 @@ export default function PublicProducts() {
                   </Button>
                 </div>
                 
-                {/* Visual */}
+                {/* Product Image */}
                 <div className={index % 2 === 1 ? "lg:order-1" : ""}>
-                  <div className={`aspect-[4/3] rounded-3xl bg-gradient-to-br ${product.accent} p-8 flex items-center justify-center relative overflow-hidden`}>
-                    <div className="absolute inset-0 bg-black/10" />
-                    <div className="relative text-center text-white">
-                      <product.icon className="w-24 h-24 mx-auto mb-4 opacity-90" />
-                      <p className="text-xl font-semibold">{product.title}</p>
-                      <p className="text-white/80 mt-2">Premium Quality</p>
+                  <div className="aspect-[4/3] rounded-3xl overflow-hidden relative group">
+                    <img 
+                      src={product.colors ? mulchImages[selectedMulchColor as keyof typeof mulchImages] : product.image}
+                      alt={product.title}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+                    <div className="absolute bottom-6 left-6 right-6">
+                      <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-br ${product.accent} text-white text-sm font-medium`}>
+                        <product.icon className="w-4 h-4" />
+                        {product.title}
+                      </div>
                     </div>
-                    {/* Decorative circles */}
-                    <div className="absolute -top-12 -right-12 w-48 h-48 bg-white/10 rounded-full" />
-                    <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-white/10 rounded-full" />
                   </div>
                 </div>
               </motion.div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Credentials Section */}
+      <section className="py-16 border-y border-border/50">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-10">
+            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+              Certified & Recognized
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-12 md:gap-16">
+            <div className="flex flex-col items-center gap-3">
+              <img 
+                src={egleLogo} 
+                alt="Michigan EGLE - Environment, Great Lakes & Energy" 
+                className="h-16 md:h-20 w-auto object-contain grayscale hover:grayscale-0 transition-all duration-300"
+              />
+              <span className="text-xs text-muted-foreground">Licensed Facility</span>
+            </div>
+            <div className="flex flex-col items-center gap-3">
+              <img 
+                src={detroitNewsLogo} 
+                alt="The Detroit News" 
+                className="h-12 md:h-16 w-auto object-contain grayscale hover:grayscale-0 transition-all duration-300"
+              />
+              <span className="text-xs text-muted-foreground">Featured In</span>
+            </div>
+            <div className="flex flex-col items-center gap-3">
+              <img 
+                src={michiganFarmNewsLogo} 
+                alt="Michigan Farm News" 
+                className="h-12 md:h-16 w-auto object-contain grayscale hover:grayscale-0 transition-all duration-300"
+              />
+              <span className="text-xs text-muted-foreground">Featured In</span>
+            </div>
           </div>
         </div>
       </section>
