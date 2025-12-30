@@ -37,10 +37,13 @@ export function ServiceAreaPreview() {
 
       if (error) throw error;
 
-      if (data?.inZone) {
+      if (data?.zone) {
+        const serviceDays = data.zone.primary_service_days
+          ?.map((d: string) => d.charAt(0).toUpperCase() + d.slice(1))
+          ?.join(" & ") || "scheduled days";
         setResult({
           served: true,
-          message: `Great news! We service your area on ${data.serviceDays?.join(" & ") || "scheduled days"}.`
+          message: `Great news! We service your area on ${serviceDays}.`
         });
       } else {
         setResult({
