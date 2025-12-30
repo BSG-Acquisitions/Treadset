@@ -11,7 +11,9 @@ export interface PublicStats {
   ytd_pte: number;
   active_clients: number;
   co2_saved_lbs: number;
+  co2_saved_tons: number;
   landfill_diverted_lbs: number;
+  landfill_diverted_tons: number;
   years_in_business: number;
   service_regions: {
     name: string;
@@ -26,7 +28,7 @@ export interface PublicStats {
 
 export const usePublicStats = () => {
   return useQuery({
-    queryKey: ['public-stats'],
+    queryKey: ['public-stats', 'v2'],
     queryFn: async (): Promise<PublicStats> => {
       const { data, error } = await supabase.functions.invoke('public-stats');
       

@@ -116,9 +116,11 @@ Deno.serve(async (req) => {
     // Average tire weight: ~20 lbs for PTE
     const avgTireWeight = 20;
     const landfillDivertedLbs = ytdTires * avgTireWeight;
+    const landfillDivertedTons = landfillDivertedLbs / 2000;
     
     // CO2 savings: ~3 lbs CO2 saved per tire recycled vs landfill
     const co2SavedLbs = ytdTires * 3;
+    const co2SavedTons = co2SavedLbs / 2000;
 
     const stats = {
       // Primary stat for hero counter
@@ -135,7 +137,9 @@ Deno.serve(async (req) => {
       // Other stats
       active_clients: clientCount || 0,
       co2_saved_lbs: Math.round(co2SavedLbs),
+      co2_saved_tons: Math.round(co2SavedTons),
       landfill_diverted_lbs: Math.round(landfillDivertedLbs),
+      landfill_diverted_tons: Math.round(landfillDivertedTons),
       years_in_business: 15,
       service_regions: serviceRegions.slice(0, 5),
       
