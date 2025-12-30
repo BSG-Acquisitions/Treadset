@@ -68,24 +68,24 @@ export function EnvironmentalImpact() {
   const impactStats = [
     {
       icon: <Recycle className="h-6 w-6" />,
-      value: stats?.ytd_tires || 38500,
+      value: stats?.ytd_tires || 0,
       label: "Tires Recycled This Year",
     },
     {
       icon: <Leaf className="h-6 w-6" />,
-      value: Math.round((stats?.landfill_diverted_lbs || 89000) / 1000),
+      value: Math.round((stats?.landfill_diverted_lbs || 0) / 1000),
       label: "Tons Diverted from Landfill",
       suffix: "K lbs",
     },
     {
       icon: <TreePine className="h-6 w-6" />,
-      value: Math.round((stats?.co2_saved_lbs || 15600) / 100),
+      value: Math.round((stats?.co2_saved_lbs || 0) / 2000),
       label: "CO₂ Emissions Prevented",
       suffix: " tons",
     },
     {
       icon: <Users className="h-6 w-6" />,
-      value: stats?.active_clients || 131,
+      value: stats?.active_clients || 0,
       label: "Michigan Businesses Served",
       suffix: "+",
     },
