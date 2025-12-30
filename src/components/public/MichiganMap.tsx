@@ -24,7 +24,7 @@ export const MichiganMap = () => {
       {/* Detroit Pin Overlay - positioned at southeast Lower Peninsula */}
       <div 
         className="absolute"
-        style={{ left: '72%', top: '75%' }}
+        style={{ left: '72%', top: '85%' }}
       >
         {/* Pulse ring animation */}
         <div className="absolute -translate-x-1/2 -translate-y-1/2">
