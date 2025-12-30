@@ -53,7 +53,7 @@ export function CTASection() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="border-2 border-white/50 text-white hover:bg-white/10 px-8 py-6 text-lg h-auto group"
+                  className="bg-transparent border-2 border-white/50 text-white hover:bg-white/10 hover:text-white px-8 py-6 text-lg h-auto group"
                 >
                   <MapPin className="mr-2 h-5 w-5" />
                   Drop-off Info
