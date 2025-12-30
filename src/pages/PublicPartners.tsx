@@ -2,9 +2,13 @@ import { PublicLayout } from "@/components/public/PublicLayout";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Truck, Shield, DollarSign, Clock, CheckCircle, FileText, Award, Handshake, ClipboardList, Zap } from "lucide-react";
+import { Truck, Shield, DollarSign, Clock, CheckCircle, FileText, Award, Handshake, ClipboardList, Zap, Smartphone, PenTool } from "lucide-react";
 import { SectionHeader } from "@/components/public/SectionHeader";
 
+// Images
+import tireManifestImg from "@/assets/technology/tire-manifest.jpeg";
+import treadsetSignatureImg from "@/assets/technology/treadset-signature.png";
+import techSigningImg from "@/assets/team/tech-signing.jpeg";
 export default function PublicPartners() {
   return (
     <PublicLayout>
@@ -175,6 +179,105 @@ export default function PublicPartners() {
                 </motion.div>
               ))}
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* TreadSet Technology Section */}
+      <section className="py-20 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <div className="mb-16">
+            <SectionHeader
+              eyebrow="Powered by TreadSet"
+              title="Digital Tire Manifest System"
+              titleAccent="TreadSet"
+              subtitle="Our partners benefit from TreadSet's cutting-edge digital manifest and tracking technology"
+              icon={Smartphone}
+            />
+          </div>
+
+          <div className="grid lg:grid-cols-2 gap-12 items-center max-w-6xl mx-auto">
+            {/* Technology Images */}
+            <motion.div
+              className="space-y-6"
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+            >
+              <div className="rounded-2xl overflow-hidden shadow-xl border border-border/50">
+                <img 
+                  src={tireManifestImg} 
+                  alt="TreadSet digital tire manifest interface" 
+                  className="w-full h-auto"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="rounded-xl overflow-hidden shadow-lg border border-border/50">
+                  <img 
+                    src={treadsetSignatureImg} 
+                    alt="TreadSet digital signature capture" 
+                    className="w-full h-auto"
+                  />
+                </div>
+                <div className="rounded-xl overflow-hidden shadow-lg border border-border/50">
+                  <img 
+                    src={techSigningImg} 
+                    alt="Technician using TreadSet signature system" 
+                    className="w-full h-auto"
+                  />
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Technology Benefits */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+            >
+              <h3 className="text-2xl font-bold mb-6">Streamlined Operations for Partners</h3>
+              <div className="space-y-4">
+                {[
+                  {
+                    icon: FileText,
+                    title: "Digital Manifests",
+                    description: "Paperless manifest generation with instant access to all documentation"
+                  },
+                  {
+                    icon: PenTool,
+                    title: "Electronic Signatures",
+                    description: "Capture signatures on-site with our mobile app for faster processing"
+                  },
+                  {
+                    icon: Clock,
+                    title: "Real-Time Tracking",
+                    description: "Track loads, inventory, and payments in real-time through your partner dashboard"
+                  },
+                  {
+                    icon: Shield,
+                    title: "Compliance Ready",
+                    description: "All documentation meets EPA and Michigan DEQ requirements automatically"
+                  }
+                ].map((feature, index) => (
+                  <motion.div
+                    key={feature.title}
+                    className="flex gap-4 p-4 rounded-xl bg-card border border-border/50"
+                    initial={{ opacity: 0, y: 10 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <feature.icon className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold mb-1">{feature.title}</h4>
+                      <p className="text-sm text-muted-foreground">{feature.description}</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
           </div>
         </div>
       </section>

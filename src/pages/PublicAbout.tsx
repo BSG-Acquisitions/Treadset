@@ -6,6 +6,10 @@ import { Leaf, Shield, Users, Recycle, Target, Heart, Info, Sparkles, MapPin } f
 import { EnvironmentalImpact } from "@/components/public/EnvironmentalImpact";
 import { SectionHeader } from "@/components/public/SectionHeader";
 
+// Images
+import bsgTruckImg from "@/assets/facility/bsg-truck.jpeg";
+import teamPhotoImg from "@/assets/team/team-photo.jpeg";
+import detroitSkylineImg from "@/assets/facility/detroit-skyline.jpeg";
 export default function PublicAbout() {
   return (
     <PublicLayout>
@@ -58,15 +62,43 @@ export default function PublicAbout() {
                 </div>
               </div>
               <div className="relative">
-                <div className="aspect-square rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                  <div className="text-center p-8">
-                    <Recycle className="w-24 h-24 text-primary mx-auto mb-4" />
-                    <p className="text-2xl font-bold text-primary">Old Tires</p>
-                    <p className="text-2xl font-bold">=</p>
-                    <p className="text-2xl font-bold text-primary">New Possibilities</p>
-                  </div>
+                <div className="aspect-square rounded-3xl overflow-hidden">
+                  <img 
+                    src={bsgTruckImg} 
+                    alt="BSG Tire Recycling truck ready for pickup service" 
+                    className="w-full h-full object-cover"
+                  />
                 </div>
               </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Team Section */}
+      <section className="py-20 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <div className="max-w-5xl mx-auto">
+            <div className="mb-12">
+              <SectionHeader
+                eyebrow="Our Team"
+                title="The People Behind BSG"
+                titleAccent="People"
+                subtitle="Our dedicated team makes tire recycling simple and reliable"
+                icon={Users}
+              />
+            </div>
+            <motion.div
+              className="rounded-3xl overflow-hidden shadow-xl"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+            >
+              <img 
+                src={teamPhotoImg} 
+                alt="The BSG Tire Recycling team" 
+                className="w-full h-auto"
+              />
             </motion.div>
           </div>
         </div>
@@ -141,8 +173,18 @@ export default function PublicAbout() {
       <EnvironmentalImpact />
 
       {/* Service Area */}
-      <section className="py-20 bg-muted/30">
-        <div className="container mx-auto px-4">
+      <section className="py-20 bg-muted/30 relative overflow-hidden">
+        {/* Detroit Skyline Background */}
+        <div className="absolute inset-0">
+          <img 
+            src={detroitSkylineImg} 
+            alt="Detroit skyline" 
+            className="w-full h-full object-cover opacity-10"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-muted/80 via-muted/90 to-muted" />
+        </div>
+        
+        <div className="container mx-auto px-4 relative">
           <motion.div 
             className="max-w-3xl mx-auto text-center"
             initial={{ opacity: 0, y: 20 }}

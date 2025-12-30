@@ -15,11 +15,6 @@ import mulchBrownImg from "@/assets/products/mulch-brown.jpeg";
 import steelWireImg from "@/assets/products/steel-wire.jpeg";
 import facilityDisplayImg from "@/assets/facility/products-display.jpeg";
 
-// Logo images for credentials section
-import egleLogo from "@/assets/logos/egle.jpeg";
-import detroitNewsLogo from "@/assets/logos/detroit-news.jpeg";
-import michiganFarmNewsLogo from "@/assets/logos/michigan-farm-news.jpeg";
-
 const mulchImages = {
   Red: mulchRedImg,
   Black: mulchBlackImg,
@@ -239,43 +234,6 @@ export default function PublicProducts() {
                 </div>
               </motion.div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Credentials Section */}
-      <section className="py-16 border-y border-border/50">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-10">
-            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-              Certified & Recognized
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center justify-center gap-12 md:gap-16">
-            <div className="flex flex-col items-center gap-3">
-              <img 
-                src={egleLogo} 
-                alt="Michigan EGLE - Environment, Great Lakes & Energy" 
-                className="h-16 md:h-20 w-auto object-contain grayscale hover:grayscale-0 transition-all duration-300"
-              />
-              <span className="text-xs text-muted-foreground">Licensed Facility</span>
-            </div>
-            <div className="flex flex-col items-center gap-3">
-              <img 
-                src={detroitNewsLogo} 
-                alt="The Detroit News" 
-                className="h-12 md:h-16 w-auto object-contain grayscale hover:grayscale-0 transition-all duration-300"
-              />
-              <span className="text-xs text-muted-foreground">Featured In</span>
-            </div>
-            <div className="flex flex-col items-center gap-3">
-              <img 
-                src={michiganFarmNewsLogo} 
-                alt="Michigan Farm News" 
-                className="h-12 md:h-16 w-auto object-contain grayscale hover:grayscale-0 transition-all duration-300"
-              />
-              <span className="text-xs text-muted-foreground">Featured In</span>
-            </div>
           </div>
         </div>
       </section>
