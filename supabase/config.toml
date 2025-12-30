@@ -224,3 +224,6 @@ verify_jwt = false
 
 [functions.send-invite-reminders]
 verify_jwt = false
+
+[functions.public-stats]
+verify_jwt = false
