@@ -5,6 +5,7 @@ import { SectionHeader } from "./SectionHeader";
 // Process images
 import tirePileImg from "@/assets/facility/tire-pile.jpeg";
 import tireInspectionImg from "@/assets/facility/tire-inspection.jpeg";
+import tireShredImg from "@/assets/facility/tire-shredding.jpeg";
 import steelWireImg from "@/assets/products/steel-wire.jpeg";
 import facilityDisplayImg from "@/assets/facility/products-display.jpeg";
 
@@ -34,7 +35,7 @@ const processSteps = [
     icon: Scissors,
     color: "from-red-500 to-red-600",
     details: ["Industrial shredders", "Steel extraction", "Size reduction"],
-    image: null
+    image: tireShredImg
   },
   {
     step: 4,
