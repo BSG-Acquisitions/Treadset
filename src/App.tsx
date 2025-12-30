@@ -80,6 +80,7 @@ import PublicPartners from "./pages/PublicPartners";
 import PublicPartnerApply from "./pages/PublicPartnerApply";
 import PublicAbout from "./pages/PublicAbout";
 import PublicContact from "./pages/PublicContact";
+import PublicProducts from "./pages/PublicProducts";
 import { FEATURE_FLAGS } from "./lib/featureFlags";
 
 const queryClient = new QueryClient();
@@ -96,6 +97,7 @@ const App = () => (
 {/* Public Marketing Routes - No Authentication Required */}
               <Route path="/landing" element={<PublicLanding />} />
               <Route path="/services" element={<PublicServices />} />
+              <Route path="/products" element={<PublicProducts />} />
               <Route path="/drop-off" element={<PublicDropoff />} />
               <Route path="/partners" element={<PublicPartners />} />
               <Route path="/partner-apply" element={<PublicPartnerApply />} />
