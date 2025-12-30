@@ -6,6 +6,7 @@ export interface PublicStats {
   weekly_pte: number;
   monthly_tires: number;
   monthly_pte: number;
+  today_tires: number;
   ytd_tires: number;
   ytd_pte: number;
   active_clients: number;
@@ -16,6 +17,11 @@ export interface PublicStats {
     name: string;
     days: string[];
   }[];
+  // Metadata
+  source?: string;
+  generated_at?: string;
+  cache_hit?: boolean;
+  data_unavailable?: boolean;
 }
 
 export const usePublicStats = () => {
@@ -31,8 +37,8 @@ export const usePublicStats = () => {
       
       return data as PublicStats;
     },
-    staleTime: 1000 * 60, // 1 minute
+    staleTime: 1000 * 15, // 15 seconds
     gcTime: 1000 * 60 * 5, // 5 minutes
-    refetchInterval: 1000 * 60, // Refetch every minute for live feel
+    refetchInterval: 1000 * 30, // Refetch every 30 seconds for live feel
   });
 };
