@@ -8,7 +8,7 @@ import { SectionHeader } from "@/components/public/SectionHeader";
 
 // Images
 import bsgTruckImg from "@/assets/facility/bsg-truck.jpeg";
-import teamPhotoImg from "@/assets/team/team-photo.jpeg";
+import teamPhotoImg from "@/assets/team/team-huge-tires.jpeg";
 import detroitSkylineImg from "@/assets/facility/detroit-skyline.jpeg";
 export default function PublicAbout() {
   return (
