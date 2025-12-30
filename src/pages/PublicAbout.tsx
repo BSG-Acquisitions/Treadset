@@ -197,6 +197,7 @@ export default function PublicAbout() {
               titleAccent="Michigan & Ohio"
               subtitle="From Metro Detroit across Southeast Michigan and into Ohio, we provide comprehensive tire recycling services to businesses and individuals throughout the region. Our network of routes and transport partners ensures we can serve you efficiently, no matter where you're located."
               icon={MapPin}
+              overImage
             />
             <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
               <Button asChild size="lg">

@@ -154,6 +154,7 @@ export default function PublicProducts() {
             subtitle="From quality used tires to recycled materials, we give tires new life through responsible processing"
             size="large"
             icon={Package}
+            overImage
           />
         </div>
       </section>

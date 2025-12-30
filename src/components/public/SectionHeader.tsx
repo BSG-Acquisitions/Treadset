@@ -11,6 +11,7 @@ interface SectionHeaderProps {
   icon?: LucideIcon;
   size?: "default" | "large";
   light?: boolean;
+  overImage?: boolean;
   className?: string;
 }
 
@@ -23,6 +24,7 @@ export function SectionHeader({
   icon: Icon,
   size = "default",
   light = false,
+  overImage = false,
   className = "",
 }: SectionHeaderProps) {
   // Split title around the accent word if provided
@@ -59,11 +61,15 @@ export function SectionHeader({
 
   const mutedColorClasses = light 
     ? "text-primary-foreground/80" 
-    : "text-muted-foreground";
+    : overImage 
+      ? "text-foreground/90"
+      : "text-muted-foreground";
 
   const eyebrowBgClasses = light 
     ? "bg-white/10 text-primary-foreground" 
-    : "bg-primary/10 text-primary";
+    : overImage
+      ? "bg-primary/20 text-primary"
+      : "bg-primary/10 text-primary";
 
   const accentLineClasses = light 
     ? "bg-white/30" 
