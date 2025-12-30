@@ -4,6 +4,7 @@ import { SectionHeader } from "./SectionHeader";
 
 // Process images
 import tirePileImg from "@/assets/facility/tire-pile.jpeg";
+import tireInspectionImg from "@/assets/facility/tire-inspection.jpeg";
 import steelWireImg from "@/assets/products/steel-wire.jpeg";
 import facilityDisplayImg from "@/assets/facility/products-display.jpeg";
 
@@ -24,7 +25,7 @@ const processSteps = [
     icon: Search,
     color: "from-amber-500 to-orange-500",
     details: ["Quality assessment", "Tread depth check", "Air pressure test"],
-    image: null
+    image: tireInspectionImg
   },
   {
     step: 3,
