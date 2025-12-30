@@ -63,29 +63,33 @@ Deno.serve(async (req) => {
     const organizationId = orgData.id;
     console.log('Fetching stats for org:', organizationId);
 
-    // Use the SAME RPCs as the dashboard for accurate data
-    // These RPCs properly aggregate manifests + dropoffs (excluding duplicates)
-    const [monthlyResult, weeklyResult, todayResult] = await Promise.all([
+    // Use RPCs for accurate data aggregation
+    // get_ytd_pte_totals properly aggregates manifests + dropoffs for the full year
+    const [monthlyResult, weeklyResult, todayResult, ytdResult] = await Promise.all([
       supabase.rpc('get_monthly_pte_totals', { org_id: organizationId }),
       supabase.rpc('get_weekly_pte_totals', { org_id: organizationId }),
       supabase.rpc('get_today_pte_totals', { org_id: organizationId }),
+      supabase.rpc('get_ytd_pte_totals', { org_id: organizationId }),
     ]);
 
     console.log('Monthly RPC result:', monthlyResult);
     console.log('Weekly RPC result:', weeklyResult);
     console.log('Today RPC result:', todayResult);
+    console.log('YTD RPC result:', ytdResult);
 
     // Extract totals from RPC results (returns { pickup_ptes, dropoff_ptes, total_ptes })
     const monthlyData = monthlyResult.data?.[0] || { pickup_ptes: 0, dropoff_ptes: 0, total_ptes: 0 };
     const weeklyData = weeklyResult.data?.[0] || { pickup_ptes: 0, dropoff_ptes: 0, total_ptes: 0 };
     const todayData = todayResult.data?.[0] || { pickup_ptes: 0, dropoff_ptes: 0, total_ptes: 0 };
+    const ytdData = ytdResult.data?.[0] || { pickup_ptes: 0, dropoff_ptes: 0, total_ptes: 0 };
 
     // The RPC returns PTEs - these ARE the tire counts (1 PTE = 1 tire equivalent)
     const monthlyTires = Number(monthlyData.total_ptes) || 0;
     const weeklyTires = Number(weeklyData.total_ptes) || 0;
     const todayTires = Number(todayData.total_ptes) || 0;
+    const ytdTires = Number(ytdData.total_ptes) || 0;
 
-    console.log('Calculated totals - Monthly:', monthlyTires, 'Weekly:', weeklyTires, 'Today:', todayTires);
+    console.log('Calculated totals - YTD:', ytdTires, 'Monthly:', monthlyTires, 'Weekly:', weeklyTires, 'Today:', todayTires);
 
     // Count active clients
     const { count: clientCount } = await supabase
@@ -108,25 +112,25 @@ Deno.serve(async (req) => {
       days: (zone.service_days || []).map((d: number) => dayNames[d]).filter(Boolean)
     })) || [];
 
-    // Environmental calculations based on monthly tires
+    // Environmental calculations based on YTD tires (not monthly)
     // Average tire weight: ~20 lbs for PTE
     const avgTireWeight = 20;
-    const landfillDivertedLbs = monthlyTires * avgTireWeight;
+    const landfillDivertedLbs = ytdTires * avgTireWeight;
     
     // CO2 savings: ~3 lbs CO2 saved per tire recycled vs landfill
-    const co2SavedLbs = monthlyTires * 3;
+    const co2SavedLbs = ytdTires * 3;
 
     const stats = {
       // Primary stat for hero counter
       monthly_tires: monthlyTires,
       weekly_tires: weeklyTires,
       today_tires: todayTires,
+      ytd_tires: ytdTires,
       
       // Legacy fields for compatibility
       monthly_pte: monthlyTires,
       weekly_pte: weeklyTires,
-      ytd_tires: monthlyTires, // Using monthly for now until YTD RPC exists
-      ytd_pte: monthlyTires,
+      ytd_pte: ytdTires,
       
       // Other stats
       active_clients: clientCount || 0,
@@ -136,7 +140,7 @@ Deno.serve(async (req) => {
       service_regions: serviceRegions.slice(0, 5),
       
       // Metadata for transparency
-      source: 'rpc:get_monthly_pte_totals',
+      source: 'rpc:get_ytd_pte_totals',
       generated_at: new Date().toISOString(),
       cache_hit: false,
     };

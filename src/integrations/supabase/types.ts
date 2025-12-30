@@ -5359,6 +5359,14 @@ export type Database = {
           total_ptes: number
         }[]
       }
+      get_ytd_pte_totals: {
+        Args: { org_id: string }
+        Returns: {
+          dropoff_ptes: number
+          pickup_ptes: number
+          total_ptes: number
+        }[]
+      }
       log_slow_query: {
         Args: {
           p_execution_time_ms: number
