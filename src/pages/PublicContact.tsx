@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Phone, Mail, MapPin, Clock, Send, CheckCircle, Loader2, MessageSquare } from "lucide-react";
+import { Phone, Mail, MapPin, Clock, Send, CheckCircle, Loader2, MessageSquare, Facebook, Linkedin, Instagram } from "lucide-react";
 import { toast } from "sonner";
 import { SectionHeader } from "@/components/public/SectionHeader";
 
@@ -149,19 +149,34 @@ export default function PublicContact() {
                   </div>
                 </div>
 
-                {/* Map */}
+                {/* Social Media */}
                 <div className="mt-10">
-                  <div className="aspect-video rounded-2xl overflow-hidden border border-border/50">
-                    <iframe
-                      src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2951.8751!2d-83.0334!3d42.3334!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x883b2d3d71e8b3c9%3A0x8b4c!2s2971%20Bellevue%20St%2C%20Detroit%2C%20MI%2048207!5e0!3m2!1sen!2sus!4v1"
-                      width="100%"
-                      height="100%"
-                      style={{ border: 0 }}
-                      allowFullScreen
-                      loading="lazy"
-                      referrerPolicy="no-referrer-when-downgrade"
-                      title="BSG Tire Recycling Location"
-                    />
+                  <h3 className="font-semibold mb-4">Follow Us</h3>
+                  <div className="flex items-center gap-4">
+                    <a
+                      href="https://facebook.com/bsgtirerecycling"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center w-12 h-12 rounded-full bg-muted hover:bg-primary hover:text-primary-foreground transition-colors"
+                    >
+                      <Facebook className="h-5 w-5" />
+                    </a>
+                    <a
+                      href="https://linkedin.com/company/bsgtirerecycling"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center w-12 h-12 rounded-full bg-muted hover:bg-primary hover:text-primary-foreground transition-colors"
+                    >
+                      <Linkedin className="h-5 w-5" />
+                    </a>
+                    <a
+                      href="https://instagram.com/bsgtirerecycling"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center w-12 h-12 rounded-full bg-muted hover:bg-primary hover:text-primary-foreground transition-colors"
+                    >
+                      <Instagram className="h-5 w-5" />
+                    </a>
                   </div>
                 </div>
               </motion.div>
