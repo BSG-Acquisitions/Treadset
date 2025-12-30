@@ -2,8 +2,9 @@ import { PublicLayout } from "@/components/public/PublicLayout";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Truck, MapPin, Clock, CheckCircle, Recycle } from "lucide-react";
+import { Truck, MapPin, Clock, CheckCircle, Recycle, Briefcase } from "lucide-react";
 import { ServiceAreaPreview } from "@/components/public/ServiceAreaPreview";
+import { SectionHeader } from "@/components/public/SectionHeader";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
@@ -17,19 +18,14 @@ export default function PublicServices() {
       {/* Hero Section */}
       <section className="relative py-20 lg:py-32 bg-gradient-to-b from-primary/5 to-background">
         <div className="container mx-auto px-4">
-          <motion.div 
-            className="max-w-3xl mx-auto text-center"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
-              Our Services
-            </h1>
-            <p className="text-xl text-muted-foreground">
-              Comprehensive tire recycling solutions for businesses and individuals across Michigan
-            </p>
-          </motion.div>
+          <SectionHeader
+            eyebrow="What We Do"
+            title="Our Services"
+            titleAccent="Services"
+            subtitle="Comprehensive tire recycling solutions for businesses and individuals across Michigan"
+            size="large"
+            icon={Briefcase}
+          />
         </div>
       </section>
 
@@ -120,17 +116,15 @@ export default function PublicServices() {
       {/* Accepted Tires */}
       <section className="py-20 bg-muted/30">
         <div className="container mx-auto px-4">
-          <motion.div 
-            className="text-center mb-12"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="text-3xl lg:text-4xl font-bold mb-4">What We Accept</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              We recycle all types of tires, with or without rims
-            </p>
-          </motion.div>
+          <div className="mb-12">
+            <SectionHeader
+              eyebrow="Tire Types"
+              title="What We Accept"
+              titleAccent="Accept"
+              subtitle="We recycle all types of tires, with or without rims"
+              icon={Recycle}
+            />
+          </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {[
@@ -176,13 +170,14 @@ export default function PublicServices() {
       <section className="py-20 bg-primary text-primary-foreground">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl lg:text-4xl font-bold mb-6">
-              Ready to Get Started?
-            </h2>
-            <p className="text-primary-foreground/80 text-lg mb-8">
-              Whether you have 1 tire or 1,000, we have a solution for you.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <SectionHeader
+              eyebrow="Get Started"
+              title="Ready to Get Started?"
+              titleAccent="Get Started"
+              subtitle="Whether you have 1 tire or 1,000, we have a solution for you."
+              light
+            />
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
               <Button asChild size="lg" variant="secondary">
                 <Link to="/public-book">Schedule a Pickup</Link>
               </Button>

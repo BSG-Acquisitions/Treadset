@@ -1,5 +1,5 @@
-import { motion } from "framer-motion";
 import { MapPin, Calendar, CheckCircle2 } from "lucide-react";
+import { motion } from "framer-motion";
 import { usePublicStats } from "@/hooks/usePublicStats";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { SectionHeader } from "./SectionHeader";
 
 export function ServiceAreaPreview() {
   const { data: stats } = usePublicStats();
@@ -61,21 +62,15 @@ export function ServiceAreaPreview() {
   return (
     <section className="py-16 lg:py-24">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          viewport={{ once: true }}
-          className="text-center mb-12"
-        >
-          <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
-            We're In Your Area This Week
-          </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Our trucks are on the road throughout Southeast Michigan every week. 
-            Check if we service your area.
-          </p>
-        </motion.div>
+        <div className="mb-12">
+          <SectionHeader
+            eyebrow="Service Area"
+            title="We're In Your Area This Week"
+            titleAccent="This Week"
+            subtitle="Our trucks are on the road throughout Southeast Michigan every week. Check if we service your area."
+            icon={MapPin}
+          />
+        </div>
 
         {/* Service Regions Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">

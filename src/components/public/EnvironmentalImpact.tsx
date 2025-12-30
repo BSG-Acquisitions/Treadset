@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Leaf, Recycle, TreePine, Users } from "lucide-react";
 import { usePublicStats } from "@/hooks/usePublicStats";
 import { useEffect, useState } from "react";
+import { SectionHeader } from "./SectionHeader";
 
 interface StatCardProps {
   icon: React.ReactNode;
@@ -94,21 +95,15 @@ export function EnvironmentalImpact() {
   return (
     <section className="py-16 lg:py-24 bg-muted/30">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          viewport={{ once: true }}
-          className="text-center mb-12"
-        >
-          <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
-            Our Environmental Impact
-          </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Every tire we recycle is a tire saved from the landfill. See the difference 
-            we're making together for Michigan and the planet.
-          </p>
-        </motion.div>
+        <div className="mb-12">
+          <SectionHeader
+            eyebrow="Our Impact"
+            title="Our Environmental Impact"
+            titleAccent="Impact"
+            subtitle="Every tire we recycle is a tire saved from the landfill. See the difference we're making together for Michigan and the planet."
+            icon={Leaf}
+          />
+        </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
           {impactStats.map((stat, index) => (

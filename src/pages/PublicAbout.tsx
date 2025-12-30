@@ -2,8 +2,9 @@ import { PublicLayout } from "@/components/public/PublicLayout";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Leaf, Shield, Users, Recycle, Target, Heart } from "lucide-react";
+import { Leaf, Shield, Users, Recycle, Target, Heart, Info, Sparkles, MapPin } from "lucide-react";
 import { EnvironmentalImpact } from "@/components/public/EnvironmentalImpact";
+import { SectionHeader } from "@/components/public/SectionHeader";
 
 export default function PublicAbout() {
   return (
@@ -12,19 +13,14 @@ export default function PublicAbout() {
       <section className="relative py-20 lg:py-32 bg-gradient-to-b from-primary/5 to-background overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent" />
         <div className="container mx-auto px-4 relative">
-          <motion.div 
-            className="max-w-3xl mx-auto text-center"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
-              About BSG Tire Recycling
-            </h1>
-            <p className="text-xl text-muted-foreground">
-              Michigan's trusted partner in sustainable tire recycling
-            </p>
-          </motion.div>
+          <SectionHeader
+            eyebrow="About Us"
+            title="About BSG Tire Recycling"
+            titleAccent="BSG"
+            subtitle="Michigan's trusted partner in sustainable tire recycling"
+            size="large"
+            icon={Info}
+          />
         </div>
       </section>
 
@@ -39,8 +35,12 @@ export default function PublicAbout() {
               viewport={{ once: true }}
             >
               <div>
-                <h2 className="text-3xl lg:text-4xl font-bold mb-6">Our Story</h2>
-                <div className="space-y-4 text-muted-foreground">
+                <SectionHeader
+                  eyebrow="Who We Are"
+                  title="Our Story"
+                  centered={false}
+                />
+                <div className="space-y-4 text-muted-foreground mt-6">
                   <p>
                     BSG Tire Recycling was founded with a simple mission: to provide Michigan 
                     businesses and individuals with a reliable, professional tire recycling service 
@@ -75,17 +75,15 @@ export default function PublicAbout() {
       {/* Mission & Values */}
       <section className="py-20 bg-muted/30">
         <div className="container mx-auto px-4">
-          <motion.div 
-            className="text-center mb-16"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="text-3xl lg:text-4xl font-bold mb-4">Our Mission & Values</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              Guiding principles that drive everything we do
-            </p>
-          </motion.div>
+          <div className="mb-16">
+            <SectionHeader
+              eyebrow="What We Believe"
+              title="Our Mission & Values"
+              titleAccent="Values"
+              subtitle="Guiding principles that drive everything we do"
+              icon={Sparkles}
+            />
+          </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {[
@@ -151,14 +149,14 @@ export default function PublicAbout() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-3xl lg:text-4xl font-bold mb-6">Proudly Serving Michigan</h2>
-            <p className="text-muted-foreground text-lg mb-8">
-              From Metro Detroit to Southeast Michigan, we provide comprehensive tire recycling 
-              services to businesses and individuals throughout the region. Our network of 
-              routes and transport partners ensures we can serve you efficiently, no matter 
-              where you're located.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <SectionHeader
+              eyebrow="Michigan Proud"
+              title="Proudly Serving Michigan"
+              titleAccent="Michigan"
+              subtitle="From Metro Detroit to Southeast Michigan, we provide comprehensive tire recycling services to businesses and individuals throughout the region. Our network of routes and transport partners ensures we can serve you efficiently, no matter where you're located."
+              icon={MapPin}
+            />
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
               <Button asChild size="lg">
                 <Link to="/services">View Our Services</Link>
               </Button>
@@ -174,13 +172,14 @@ export default function PublicAbout() {
       <section className="py-20 bg-primary text-primary-foreground">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl lg:text-4xl font-bold mb-6">
-              Ready to Work With Us?
-            </h2>
-            <p className="text-primary-foreground/80 text-lg mb-8">
-              Join the hundreds of Michigan businesses who trust BSG for their tire recycling needs.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <SectionHeader
+              eyebrow="Let's Work Together"
+              title="Ready to Work With Us?"
+              titleAccent="Work With Us"
+              subtitle="Join the hundreds of Michigan businesses who trust BSG for their tire recycling needs."
+              light
+            />
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
               <Button asChild size="lg" variant="secondary">
                 <Link to="/public-book">Schedule a Pickup</Link>
               </Button>

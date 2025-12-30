@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { ArrowRight, Phone, Truck, MapPin } from "lucide-react";
+import { ArrowRight, Phone, Truck, MapPin, Recycle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SectionHeader } from "./SectionHeader";
 
 export function CTASection() {
   return (
@@ -21,33 +22,21 @@ export function CTASection() {
           </div>
 
           <div className="relative text-center max-w-3xl mx-auto">
-            <motion.h2
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              viewport={{ once: true }}
-              className="text-3xl lg:text-5xl font-bold text-primary-foreground mb-6"
-            >
-              Ready to Recycle Your Tires?
-            </motion.h2>
-            
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              viewport={{ once: true }}
-              className="text-lg lg:text-xl text-primary-foreground/90 mb-10"
-            >
-              Whether you have 5 tires or 5,000, we're here to help. 
-              Schedule a pickup or drop them off at our facility.
-            </motion.p>
+            <SectionHeader
+              eyebrow="Get Started"
+              title="Ready to Recycle Your Tires?"
+              titleAccent="Tires"
+              subtitle="Whether you have 5 tires or 5,000, we're here to help. Schedule a pickup or drop them off at our facility."
+              icon={Recycle}
+              light
+            />
 
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
               viewport={{ once: true }}
-              className="flex flex-col sm:flex-row items-center justify-center gap-4"
+              className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10"
             >
               <Link to="/public-book">
                 <Button

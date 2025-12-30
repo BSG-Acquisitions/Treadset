@@ -1,8 +1,9 @@
 import { motion } from "framer-motion";
-import { Phone, MapPin, Clock, AlertCircle, CheckCircle2, Car, Navigation } from "lucide-react";
+import { Phone, MapPin, Clock, AlertCircle, CheckCircle2, Car, Navigation, Truck } from "lucide-react";
 import { PublicLayout } from "@/components/public/PublicLayout";
 import { Button } from "@/components/ui/button";
 import { MichiganMap } from "@/components/public/MichiganMap";
+import { SectionHeader } from "@/components/public/SectionHeader";
 
 const steps = [
   {
@@ -53,20 +54,14 @@ export default function PublicDropoff() {
       {/* Hero */}
       <section className="pt-12 pb-8 lg:pt-20 lg:pb-12">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="text-center max-w-3xl mx-auto"
-          >
-            <h1 className="text-4xl lg:text-5xl font-bold text-foreground mb-4">
-              Drop Off Your Tires
-            </h1>
-            <p className="text-lg text-muted-foreground">
-              Bring your tires directly to our Detroit facility. Any quantity welcome, 
-              no appointment needed for under 100 tires.
-            </p>
-          </motion.div>
+          <SectionHeader
+            eyebrow="Drop-off Service"
+            title="Drop Off Your Tires"
+            titleAccent="Your Tires"
+            subtitle="Bring your tires directly to our Detroit facility. Any quantity welcome, no appointment needed for under 100 tires."
+            size="large"
+            icon={Truck}
+          />
         </div>
       </section>
 
@@ -118,20 +113,14 @@ export default function PublicDropoff() {
       {/* Step by Step Process */}
       <section className="py-12 lg:py-16">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            viewport={{ once: true }}
-            className="text-center mb-12"
-          >
-            <h2 className="text-3xl font-bold text-foreground mb-4">
-              Step-by-Step Process
-            </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Dropping off tires is quick and easy. Here's what to expect when you arrive.
-            </p>
-          </motion.div>
+          <div className="mb-12">
+            <SectionHeader
+              eyebrow="What to Expect"
+              title="Step-by-Step Process"
+              titleAccent="Process"
+              subtitle="Dropping off tires is quick and easy. Here's what to expect when you arrive."
+            />
+          </div>
 
           <div className="max-w-3xl mx-auto space-y-6">
             {steps.map((step, index) => (
@@ -182,10 +171,13 @@ export default function PublicDropoff() {
               transition={{ duration: 0.5 }}
               viewport={{ once: true }}
             >
-              <h2 className="text-3xl font-bold text-foreground mb-4">
-                Find Us
-              </h2>
-              <div className="space-y-4 mb-6">
+              <SectionHeader
+                eyebrow="Location"
+                title="Find Us"
+                centered={false}
+                icon={MapPin}
+              />
+              <div className="space-y-4 mb-6 mt-6">
                 <div className="flex items-start gap-3">
                   <MapPin className="h-5 w-5 text-primary mt-1 shrink-0" />
                   <div>
@@ -234,20 +226,14 @@ export default function PublicDropoff() {
       <section className="py-12 lg:py-16">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              viewport={{ once: true }}
-              className="text-center mb-8"
-            >
-              <h2 className="text-3xl font-bold text-foreground mb-4">
-                What We Accept
-              </h2>
-              <p className="text-muted-foreground">
-                We accept all types of tires, with or without rims.
-              </p>
-            </motion.div>
+            <div className="mb-8">
+              <SectionHeader
+                eyebrow="Accepted Tires"
+                title="What We Accept"
+                titleAccent="Accept"
+                subtitle="We accept all types of tires, with or without rims."
+              />
+            </div>
 
             <motion.div
               initial={{ opacity: 0, y: 20 }}
