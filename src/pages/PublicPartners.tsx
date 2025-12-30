@@ -127,7 +127,7 @@ export default function PublicPartners() {
                   "Michigan Registration",
                   "Current Business License",
                   "Proof of Insurance",
-                  "MC Number (if applicable)",
+                  "Michigan Tire Hauler License",
                   "Fleet Information"
                 ].map((req, index) => (
                   <div key={req} className="flex items-center gap-3">
