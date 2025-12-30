@@ -155,12 +155,31 @@ export function HeroSection() {
           {/* Animated Subheadline */}
           <AnimatedParagraph
             delay={1}
-            className="text-lg sm:text-xl lg:text-2xl text-muted-foreground mb-12 max-w-2xl mx-auto leading-relaxed"
+            className="text-lg sm:text-xl lg:text-2xl text-muted-foreground mb-6 max-w-2xl mx-auto leading-relaxed"
           >
             Detroit's trusted tire recycling experts. 
             Serving Southeast Michigan businesses and individuals 
             with reliable, environmentally responsible tire disposal.
           </AnimatedParagraph>
+
+          {/* Detroit Location Badge */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 1.1 }}
+            className="mb-10 flex items-center justify-center"
+          >
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/5 border border-primary/10 backdrop-blur-sm">
+              <MapPin className="h-4 w-4 text-primary" />
+              <span className="text-sm text-muted-foreground">
+                Detroit, MI
+              </span>
+              <span className="text-muted-foreground/40">|</span>
+              <span className="text-sm text-muted-foreground">
+                Serving Southeast Michigan
+              </span>
+            </div>
+          </motion.div>
 
           {/* Premium CTA Buttons with Magnetic Effect */}
           <motion.div

@@ -93,15 +93,15 @@ export function FloatingParticles() {
         }}
       />
 
-      {/* Subtle grid lines */}
+      {/* Detroit-style angled grid lines (mimics city's rotated street layout) */}
       <div 
-        className="absolute inset-0 opacity-[0.02]"
+        className="absolute inset-0 opacity-[0.015]"
         style={{
           backgroundImage: `
-            linear-gradient(hsl(var(--primary)) 1px, transparent 1px),
-            linear-gradient(90deg, hsl(var(--primary)) 1px, transparent 1px)
+            linear-gradient(42deg, hsl(var(--primary)) 1px, transparent 1px),
+            linear-gradient(-42deg, hsl(var(--primary)) 1px, transparent 1px)
           `,
-          backgroundSize: "100px 100px",
+          backgroundSize: "120px 120px",
         }}
       />
     </div>

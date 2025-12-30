@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-
+import { DetroitMotifOverlay } from "./DetroitMotifOverlay";
 export function HeroVideoBackground() {
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [videoError, setVideoError] = useState(false);
@@ -121,6 +121,9 @@ export function HeroVideoBackground() {
           }}
         />
       </div>
+
+      {/* Detroit Motif Overlay */}
+      <DetroitMotifOverlay />
 
       {/* Noise texture overlay for premium depth */}
       <div 
