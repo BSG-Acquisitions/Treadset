@@ -3,21 +3,27 @@ import { motion } from "framer-motion";
 // Partner logos
 import michiganFarmNewsImg from "@/assets/partners/michigan-farm-news.jpeg";
 import detroitNewsImg from "@/assets/partners/detroit-news.jpeg";
+import egleImg from "@/assets/partners/egle.jpeg";
+import fordImg from "@/assets/partners/ford.png";
+import lincolnImg from "@/assets/partners/lincoln.png";
+import hondaImg from "@/assets/partners/honda.png";
+import catImg from "@/assets/partners/cat.png";
+import chevroletImg from "@/assets/partners/chevrolet.png";
 
 interface Partner {
   name: string;
-  logo?: string;
-  isPlaceholder?: boolean;
+  logo: string;
 }
 
 const partners: Partner[] = [
   { name: "Michigan Farm News", logo: michiganFarmNewsImg },
   { name: "The Detroit News", logo: detroitNewsImg },
-  { name: "EGLE", isPlaceholder: true },
-  { name: "Ford", isPlaceholder: true },
-  { name: "Lincoln", isPlaceholder: true },
-  { name: "Honda", isPlaceholder: true },
-  { name: "CAT", isPlaceholder: true },
+  { name: "EGLE", logo: egleImg },
+  { name: "Ford", logo: fordImg },
+  { name: "Lincoln", logo: lincolnImg },
+  { name: "Honda", logo: hondaImg },
+  { name: "CAT", logo: catImg },
+  { name: "Chevrolet", logo: chevroletImg },
 ];
 
 export function PartnerLogosCarousel() {
@@ -53,21 +59,13 @@ export function PartnerLogosCarousel() {
               key={`${partner.name}-${index}`}
               className="flex-shrink-0 mx-6 lg:mx-10"
             >
-              {partner.logo ? (
-                <div className="h-16 lg:h-20 w-32 lg:w-40 flex items-center justify-center grayscale hover:grayscale-0 transition-all duration-300 opacity-70 hover:opacity-100">
-                  <img
-                    src={partner.logo}
-                    alt={partner.name}
-                    className="max-h-full max-w-full object-contain"
-                  />
-                </div>
-              ) : (
-                <div className="h-16 lg:h-20 w-32 lg:w-40 flex items-center justify-center bg-card border border-border/50 rounded-lg grayscale hover:grayscale-0 transition-all duration-300 opacity-70 hover:opacity-100">
-                  <span className="text-sm font-semibold text-muted-foreground">
-                    {partner.name}
-                  </span>
-                </div>
-              )}
+              <div className="h-16 lg:h-20 w-32 lg:w-40 flex items-center justify-center grayscale hover:grayscale-0 transition-all duration-300 opacity-70 hover:opacity-100">
+                <img
+                  src={partner.logo}
+                  alt={partner.name}
+                  className="max-h-full max-w-full object-contain"
+                />
+              </div>
             </div>
           ))}
         </div>
