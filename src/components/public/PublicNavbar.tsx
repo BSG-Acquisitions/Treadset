@@ -3,10 +3,9 @@ import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, Phone, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { TreadSetLogo } from "@/components/TreadSetLogo";
 
 const navLinks = [
-  { href: "/", label: "Home" },
+  { href: "/landing", label: "Home" },
   { href: "/services", label: "Services" },
   { href: "/drop-off", label: "Drop Off" },
   { href: "/partners", label: "Partners" },
@@ -23,13 +22,12 @@ export function PublicNavbar() {
       <nav className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-3">
-            <TreadSetLogo size="sm" />
-            <div className="hidden sm:block">
-              <p className="text-xs text-muted-foreground font-medium tracking-wide">
-                Old Tires = New Possibilities
-              </p>
-            </div>
+          <Link to="/landing" className="flex items-center gap-3">
+            <img 
+              src="/bsg-logo.png" 
+              alt="BSG Tire Recycling" 
+              className="h-10 w-auto"
+            />
           </Link>
 
           {/* Desktop Navigation */}

@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
-import { Phone, MapPin, Clock, Mail, Recycle } from "lucide-react";
-import { TreadSetLogo } from "@/components/TreadSetLogo";
+import { Phone, MapPin, Clock, Recycle } from "lucide-react";
 
 const quickLinks = [
   { href: "/services", label: "Services" },
@@ -22,17 +21,15 @@ export function PublicFooter() {
           {/* Brand Column */}
           <div className="lg:col-span-1">
             <div className="flex items-center gap-3 mb-4">
-              <div className="bg-background rounded-lg p-2">
-                <Recycle className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-bold text-lg">BSG Tire Recycling</h3>
-                <p className="text-sm text-background/70">Powered by TreadSet</p>
-              </div>
+              <img 
+                src="/bsg-logo.png" 
+                alt="BSG Tire Recycling" 
+                className="h-12 w-auto bg-background rounded-lg p-1"
+              />
             </div>
             <p className="text-background/80 text-sm leading-relaxed mb-4">
-              Old Tires = New Possibilities. Michigan's trusted tire recycling 
-              experts serving businesses and individuals.
+              Detroit's trusted tire recycling experts serving businesses 
+              and individuals throughout Michigan.
             </p>
             <div className="flex items-center gap-2 text-sm text-background/70">
               <Recycle className="h-4 w-4 text-brand-recycling" />
