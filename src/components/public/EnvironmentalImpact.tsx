@@ -74,9 +74,9 @@ export function EnvironmentalImpact() {
     },
     {
       icon: <Leaf className="h-6 w-6" />,
-      value: Math.round((stats?.landfill_diverted_lbs || 0) / 1000),
+      value: Math.round((stats?.landfill_diverted_lbs || 0) / 2000),
       label: "Tons Diverted from Landfill",
-      suffix: "K lbs",
+      suffix: " tons",
     },
     {
       icon: <TreePine className="h-6 w-6" />,
