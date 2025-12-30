@@ -6,6 +6,10 @@ import { Truck, MapPin, Clock, CheckCircle, Recycle, Briefcase } from "lucide-re
 import { ServiceAreaPreview } from "@/components/public/ServiceAreaPreview";
 import { SectionHeader } from "@/components/public/SectionHeader";
 
+// Images
+import workerTabletImg from "@/assets/team/worker-tablet.jpeg";
+import collectionTrailerImg from "@/assets/operations/collection-trailer.jpeg";
+import industrialTiresImg from "@/assets/facility/industrial-tires.jpeg";
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
   animate: { opacity: 1, y: 0 },
@@ -35,79 +39,105 @@ export default function PublicServices() {
           <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
             {/* Pickup Service */}
             <motion.div 
-              className="group relative bg-card rounded-3xl p-8 lg:p-10 border border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-xl"
+              className="group relative bg-card rounded-3xl overflow-hidden border border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-xl"
               {...fadeInUp}
             >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -z-10" />
-              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
-                <Truck className="w-8 h-8 text-primary" />
+              {/* Image Header */}
+              <div className="relative h-48 overflow-hidden">
+                <img 
+                  src={workerTabletImg} 
+                  alt="BSG technician using tablet to manage tire pickup" 
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-card to-transparent" />
+                <div className="absolute bottom-4 left-6">
+                  <div className="w-14 h-14 rounded-2xl bg-primary/90 backdrop-blur flex items-center justify-center">
+                    <Truck className="w-7 h-7 text-primary-foreground" />
+                  </div>
+                </div>
               </div>
-              <h2 className="text-2xl lg:text-3xl font-bold mb-4">Pickup Service</h2>
-              <p className="text-muted-foreground mb-6">
-                We come to you. Schedule a pickup and our professional team will collect your tires at your location.
-              </p>
               
-              <div className="space-y-3 mb-8">
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span>Minimum 50 tires per pickup</span>
+              <div className="p-8 lg:p-10">
+                <h2 className="text-2xl lg:text-3xl font-bold mb-4">Pickup Service</h2>
+                <p className="text-muted-foreground mb-6">
+                  We come to you. Schedule a pickup and our professional team will collect your tires at your location.
+                </p>
+                
+                <div className="space-y-3 mb-8">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                    <span>Minimum 50 tires per pickup</span>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                    <span>Commercial and individual customers</span>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                    <span>Flexible scheduling options</span>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                    <span>All tire types accepted</span>
+                  </div>
                 </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span>Commercial and individual customers</span>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span>Flexible scheduling options</span>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span>All tire types accepted</span>
-                </div>
-              </div>
 
-              <Button asChild size="lg" className="w-full sm:w-auto">
-                <Link to="/public-book">Schedule a Pickup</Link>
-              </Button>
+                <Button asChild size="lg" className="w-full sm:w-auto">
+                  <Link to="/public-book">Schedule a Pickup</Link>
+                </Button>
+              </div>
             </motion.div>
 
             {/* Drop-off Service */}
             <motion.div 
-              className="group relative bg-card rounded-3xl p-8 lg:p-10 border border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-xl"
+              className="group relative bg-card rounded-3xl overflow-hidden border border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-xl"
               {...fadeInUp}
               transition={{ delay: 0.1 }}
             >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -z-10" />
-              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
-                <MapPin className="w-8 h-8 text-primary" />
+              {/* Image Header */}
+              <div className="relative h-48 overflow-hidden">
+                <img 
+                  src={collectionTrailerImg} 
+                  alt="BSG collection trailer for tire drop-off" 
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-card to-transparent" />
+                <div className="absolute bottom-4 left-6">
+                  <div className="w-14 h-14 rounded-2xl bg-primary/90 backdrop-blur flex items-center justify-center">
+                    <MapPin className="w-7 h-7 text-primary-foreground" />
+                  </div>
+                </div>
               </div>
-              <h2 className="text-2xl lg:text-3xl font-bold mb-4">Drop-off Service</h2>
-              <p className="text-muted-foreground mb-6">
-                Bring your tires to our Detroit facility. Open to everyone with no minimum quantity required.
-              </p>
               
-              <div className="space-y-3 mb-8">
-                <div className="flex items-start gap-3">
-                  <Clock className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span>Monday - Friday, 8:30 AM - 3:30 PM</span>
+              <div className="p-8 lg:p-10">
+                <h2 className="text-2xl lg:text-3xl font-bold mb-4">Drop-off Service</h2>
+                <p className="text-muted-foreground mb-6">
+                  Bring your tires to our Detroit facility. Open to everyone with no minimum quantity required.
+                </p>
+                
+                <div className="space-y-3 mb-8">
+                  <div className="flex items-start gap-3">
+                    <Clock className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                    <span>Monday - Friday, 8:30 AM - 3:30 PM</span>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <MapPin className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                    <span>2971 Bellevue St, Detroit, MI 48207</span>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                    <span>No minimum quantity</span>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                    <span>100+ tires? Call ahead to schedule</span>
+                  </div>
                 </div>
-                <div className="flex items-start gap-3">
-                  <MapPin className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span>2971 Bellevue St, Detroit, MI 48207</span>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span>No minimum quantity</span>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span>100+ tires? Call ahead to schedule</span>
-                </div>
-              </div>
 
-              <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
-                <Link to="/drop-off">Drop-off Details</Link>
-              </Button>
+                <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
+                  <Link to="/drop-off">Drop-off Details</Link>
+                </Button>
+              </div>
             </motion.div>
           </div>
         </div>
