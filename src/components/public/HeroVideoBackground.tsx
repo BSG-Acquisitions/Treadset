@@ -25,12 +25,15 @@ export function HeroVideoBackground() {
           onLoadedData={() => setVideoLoaded(true)}
           onError={() => setVideoError(true)}
           className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
-            videoLoaded ? "opacity-40" : "opacity-0"
+            videoLoaded ? "opacity-60" : "opacity-0"
           }`}
-          poster="/placeholder.svg"
         >
           <source
-            src="https://videos.pexels.com/video-files/3129671/3129671-uhd_2560_1440_30fps.mp4"
+            src="/videos/detroit-hero.mov"
+            type="video/quicktime"
+          />
+          <source
+            src="/videos/detroit-hero.mp4"
             type="video/mp4"
           />
         </video>
@@ -39,7 +42,7 @@ export function HeroVideoBackground() {
       {/* Animated Gradient Fallback / Overlay */}
       <div className="absolute inset-0">
         {/* Base dark overlay */}
-        <div className="absolute inset-0 bg-background/80" />
+        <div className="absolute inset-0 bg-background/50" />
         
         {/* Morphing gradient mesh */}
         <motion.div
