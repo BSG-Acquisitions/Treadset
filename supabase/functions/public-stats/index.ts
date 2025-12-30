@@ -8,7 +8,7 @@ const corsHeaders = {
 // Cache for stats to reduce database load
 let cachedStats: any = null;
 let cacheTimestamp: number = 0;
-const CACHE_DURATION_MS = 60000; // 1 minute cache
+const CACHE_DURATION_MS = 30000; // 30 second cache for fresher data
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
@@ -17,11 +17,17 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Check cache first
     const now = Date.now();
-    if (cachedStats && (now - cacheTimestamp) < CACHE_DURATION_MS) {
+    const cacheHit = cachedStats && (now - cacheTimestamp) < CACHE_DURATION_MS;
+    
+    // Check cache first
+    if (cacheHit) {
       console.log('Returning cached stats');
-      return new Response(JSON.stringify(cachedStats), {
+      return new Response(JSON.stringify({
+        ...cachedStats,
+        cache_hit: true,
+        generated_at: new Date(cacheTimestamp).toISOString(),
+      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -31,144 +37,115 @@ Deno.serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get BSG organization ID (hardcoded for now, can be made dynamic later)
-    const { data: orgData } = await supabase
+    // Get BSG organization ID
+    const { data: orgData, error: orgError } = await supabase
       .from('organizations')
       .select('id')
       .eq('slug', 'bsg')
       .single();
 
-    if (!orgData) {
-      // Return mock data if org not found
-      const mockStats = {
-        weekly_tires: 847,
-        weekly_pte: 1250,
-        monthly_tires: 3420,
-        monthly_pte: 4890,
-        ytd_tires: 38500,
-        ytd_pte: 52000,
-        active_clients: 131,
-        co2_saved_lbs: 15600,
-        landfill_diverted_lbs: 89000,
-        years_in_business: 15,
-        service_regions: [
-          { name: "Southeast Michigan", days: ["Tuesday", "Wednesday"] },
-          { name: "Metro Detroit", days: ["Monday", "Friday"] },
-          { name: "Greater Detroit Area", days: ["Thursday"] }
-        ]
-      };
-      
-      cachedStats = mockStats;
-      cacheTimestamp = now;
-      
-      return new Response(JSON.stringify(mockStats), {
+    if (orgError || !orgData) {
+      console.error('Organization not found:', orgError);
+      return new Response(JSON.stringify({
+        error: 'Organization not found',
+        data_unavailable: true,
+        monthly_tires: 0,
+        weekly_tires: 0,
+        ytd_tires: 0,
+        active_clients: 0,
+        generated_at: new Date().toISOString(),
+      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200, // Return 200 so UI can handle gracefully
       });
     }
 
     const organizationId = orgData.id;
-    const currentYear = new Date().getFullYear();
-    const currentDate = new Date();
-    
-    // Calculate date ranges
-    const weekStart = new Date(currentDate);
-    weekStart.setDate(currentDate.getDate() - currentDate.getDay());
-    weekStart.setHours(0, 0, 0, 0);
-    
-    const monthStart = new Date(currentYear, currentDate.getMonth(), 1);
-    const yearStart = new Date(currentYear, 0, 1);
+    console.log('Fetching stats for org:', organizationId);
 
-    // Fetch aggregate pickup data for the week
-    const { data: weeklyData } = await supabase
-      .from('pickups')
-      .select('pte_count, otr_count, tractor_count')
-      .eq('organization_id', organizationId)
-      .gte('pickup_date', weekStart.toISOString().split('T')[0])
-      .in('status', ['completed', 'manifested']);
+    // Use the SAME RPCs as the dashboard for accurate data
+    // These RPCs properly aggregate manifests + dropoffs (excluding duplicates)
+    const [monthlyResult, weeklyResult, todayResult] = await Promise.all([
+      supabase.rpc('get_monthly_pte_totals', { org_id: organizationId }),
+      supabase.rpc('get_weekly_pte_totals', { org_id: organizationId }),
+      supabase.rpc('get_today_pte_totals', { org_id: organizationId }),
+    ]);
 
-    // Fetch aggregate pickup data for the month
-    const { data: monthlyData } = await supabase
-      .from('pickups')
-      .select('pte_count, otr_count, tractor_count')
-      .eq('organization_id', organizationId)
-      .gte('pickup_date', monthStart.toISOString().split('T')[0])
-      .in('status', ['completed', 'manifested']);
+    console.log('Monthly RPC result:', monthlyResult);
+    console.log('Weekly RPC result:', weeklyResult);
+    console.log('Today RPC result:', todayResult);
 
-    // Fetch aggregate pickup data for YTD
-    const { data: ytdData } = await supabase
-      .from('pickups')
-      .select('pte_count, otr_count, tractor_count')
-      .eq('organization_id', organizationId)
-      .gte('pickup_date', yearStart.toISOString().split('T')[0])
-      .in('status', ['completed', 'manifested']);
+    // Extract totals from RPC results (returns { pickup_ptes, dropoff_ptes, total_ptes })
+    const monthlyData = monthlyResult.data?.[0] || { pickup_ptes: 0, dropoff_ptes: 0, total_ptes: 0 };
+    const weeklyData = weeklyResult.data?.[0] || { pickup_ptes: 0, dropoff_ptes: 0, total_ptes: 0 };
+    const todayData = todayResult.data?.[0] || { pickup_ptes: 0, dropoff_ptes: 0, total_ptes: 0 };
 
-    // Count active clients (no details, just count)
+    // The RPC returns PTEs - these ARE the tire counts (1 PTE = 1 tire equivalent)
+    const monthlyTires = Number(monthlyData.total_ptes) || 0;
+    const weeklyTires = Number(weeklyData.total_ptes) || 0;
+    const todayTires = Number(todayData.total_ptes) || 0;
+
+    console.log('Calculated totals - Monthly:', monthlyTires, 'Weekly:', weeklyTires, 'Today:', todayTires);
+
+    // Count active clients
     const { count: clientCount } = await supabase
       .from('clients')
       .select('id', { count: 'exact', head: true })
       .eq('organization_id', organizationId)
       .eq('is_active', true);
 
-    // Get service zones for region display (only names and days, no ZIP codes)
+    // Get service zones for region display
     const { data: zones } = await supabase
       .from('service_zones')
       .select('name, service_days')
       .eq('organization_id', organizationId)
       .eq('is_active', true);
 
-    // Calculate aggregates
-    const calculateTotals = (data: any[] | null) => {
-      if (!data) return { pte: 0, otr: 0, tractor: 0 };
-      return data.reduce((acc, row) => ({
-        pte: acc.pte + (row.pte_count || 0),
-        otr: acc.otr + (row.otr_count || 0),
-        tractor: acc.tractor + (row.tractor_count || 0),
-      }), { pte: 0, otr: 0, tractor: 0 });
-    };
-
-    const weeklyTotals = calculateTotals(weeklyData);
-    const monthlyTotals = calculateTotals(monthlyData);
-    const ytdTotals = calculateTotals(ytdData);
-
-    // Calculate total tire counts (PTE is already normalized, OTR = 4 PTE, Tractor = 6 PTE)
-    const weeklyTires = weeklyTotals.pte + (weeklyTotals.otr * 4) + (weeklyTotals.tractor * 6);
-    const monthlyTires = monthlyTotals.pte + (monthlyTotals.otr * 4) + (monthlyTotals.tractor * 6);
-    const ytdTires = ytdTotals.pte + (ytdTotals.otr * 4) + (ytdTotals.tractor * 6);
-
-    // Environmental calculations (rough estimates)
-    // Average tire weight: ~20 lbs for PTE
-    const avgTireWeight = 20;
-    const landfillDivertedLbs = ytdTires * avgTireWeight;
-    
-    // CO2 savings: ~3 lbs CO2 saved per tire recycled vs landfill
-    const co2SavedLbs = ytdTires * 3;
-
-    // Format service regions (safe - only shows general areas and days)
+    // Format service regions
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const serviceRegions = zones?.map(zone => ({
       name: zone.name,
       days: (zone.service_days || []).map((d: number) => dayNames[d]).filter(Boolean)
     })) || [];
 
+    // Environmental calculations based on monthly tires
+    // Average tire weight: ~20 lbs for PTE
+    const avgTireWeight = 20;
+    const landfillDivertedLbs = monthlyTires * avgTireWeight;
+    
+    // CO2 savings: ~3 lbs CO2 saved per tire recycled vs landfill
+    const co2SavedLbs = monthlyTires * 3;
+
     const stats = {
-      weekly_tires: Math.round(weeklyTires),
-      weekly_pte: weeklyTotals.pte,
-      monthly_tires: Math.round(monthlyTires),
-      monthly_pte: monthlyTotals.pte,
-      ytd_tires: Math.round(ytdTires),
-      ytd_pte: ytdTotals.pte,
+      // Primary stat for hero counter
+      monthly_tires: monthlyTires,
+      weekly_tires: weeklyTires,
+      today_tires: todayTires,
+      
+      // Legacy fields for compatibility
+      monthly_pte: monthlyTires,
+      weekly_pte: weeklyTires,
+      ytd_tires: monthlyTires, // Using monthly for now until YTD RPC exists
+      ytd_pte: monthlyTires,
+      
+      // Other stats
       active_clients: clientCount || 0,
       co2_saved_lbs: Math.round(co2SavedLbs),
       landfill_diverted_lbs: Math.round(landfillDivertedLbs),
-      years_in_business: 15, // Can be made dynamic from org settings
-      service_regions: serviceRegions.slice(0, 5) // Limit to 5 regions for display
+      years_in_business: 15,
+      service_regions: serviceRegions.slice(0, 5),
+      
+      // Metadata for transparency
+      source: 'rpc:get_monthly_pte_totals',
+      generated_at: new Date().toISOString(),
+      cache_hit: false,
     };
 
     // Cache the results
     cachedStats = stats;
     cacheTimestamp = now;
 
-    console.log('Returning fresh stats:', stats);
+    console.log('Returning fresh stats:', JSON.stringify(stats, null, 2));
 
     return new Response(JSON.stringify(stats), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -177,27 +154,23 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Error fetching public stats:', error);
     
-    // Return fallback mock data on error
-    const fallbackStats = {
-      weekly_tires: 847,
-      weekly_pte: 1250,
-      monthly_tires: 3420,
-      monthly_pte: 4890,
-      ytd_tires: 38500,
-      ytd_pte: 52000,
-      active_clients: 131,
-      co2_saved_lbs: 15600,
-      landfill_diverted_lbs: 89000,
+    // Return error response with zeros - NO fake data
+    return new Response(JSON.stringify({
+      error: 'Failed to fetch stats',
+      data_unavailable: true,
+      monthly_tires: 0,
+      weekly_tires: 0,
+      today_tires: 0,
+      ytd_tires: 0,
+      active_clients: 0,
+      co2_saved_lbs: 0,
+      landfill_diverted_lbs: 0,
       years_in_business: 15,
-      service_regions: [
-        { name: "Southeast Michigan", days: ["Tuesday", "Wednesday"] },
-        { name: "Metro Detroit", days: ["Monday", "Friday"] },
-        { name: "Greater Detroit Area", days: ["Thursday"] }
-      ]
-    };
-
-    return new Response(JSON.stringify(fallbackStats), {
+      service_regions: [],
+      generated_at: new Date().toISOString(),
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200, // Return 200 so UI can handle gracefully
     });
   }
 });

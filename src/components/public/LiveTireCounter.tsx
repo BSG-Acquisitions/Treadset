@@ -51,7 +51,8 @@ export function LiveTireCounter() {
     }
   }, [stats, hasAnimated]);
 
-  const weeklyTires = stats?.weekly_tires || 0;
+  // Use monthly_tires - this now comes from the same RPC as the dashboard
+  const monthlyTires = stats?.monthly_tires || 0;
 
   return (
     <motion.div
@@ -69,12 +70,12 @@ export function LiveTireCounter() {
       </motion.div>
       
       <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-muted-foreground">This Week:</span>
+        <span className="text-sm font-medium text-muted-foreground">This Month:</span>
         <span className="text-lg font-bold text-primary">
           {isLoading ? (
             <span className="animate-pulse">---</span>
           ) : (
-            <AnimatedNumber value={weeklyTires} />
+            <AnimatedNumber value={monthlyTires} />
           )}
         </span>
         <span className="text-sm font-medium text-muted-foreground">Tires Recycled</span>
