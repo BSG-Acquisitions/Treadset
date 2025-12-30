@@ -73,6 +73,13 @@ import ServiceZones from "./pages/ServiceZones";
 import ClientPortal from "./pages/ClientPortal";
 import PortalUnsubscribe from "./pages/PortalUnsubscribe";
 import PortalInvites from "./pages/PortalInvites";
+import PublicLanding from "./pages/PublicLanding";
+import PublicDropoff from "./pages/PublicDropoff";
+import PublicServices from "./pages/PublicServices";
+import PublicPartners from "./pages/PublicPartners";
+import PublicPartnerApply from "./pages/PublicPartnerApply";
+import PublicAbout from "./pages/PublicAbout";
+import PublicContact from "./pages/PublicContact";
 import { FEATURE_FLAGS } from "./lib/featureFlags";
 
 const queryClient = new QueryClient();
@@ -86,7 +93,16 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
-{/* Public Routes - No Authentication Required */}
+{/* Public Marketing Routes - No Authentication Required */}
+              <Route path="/landing" element={<PublicLanding />} />
+              <Route path="/services" element={<PublicServices />} />
+              <Route path="/drop-off" element={<PublicDropoff />} />
+              <Route path="/partners" element={<PublicPartners />} />
+              <Route path="/partner-apply" element={<PublicPartnerApply />} />
+              <Route path="/about" element={<PublicAbout />} />
+              <Route path="/contact" element={<PublicContact />} />
+              
+              {/* Public Booking Routes */}
               <Route path="/public-book" element={<PublicBook />} />
               <Route path="/public-booking-confirmation" element={<PublicBookingConfirmation />} />
               <Route path="/invite/:token" element={<Invite />} />
