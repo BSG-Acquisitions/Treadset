@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { Resend } from "npm:resend@2.0.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,6 +17,8 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    
+    const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
     const body = await req.json();
     console.log('Received contact form submission:', JSON.stringify(body, null, 2));
@@ -99,6 +102,50 @@ serve(async (req) => {
     } catch (notifError) {
       // Don't fail the submission if notification fails
       console.error('Failed to create notification:', notifError);
+    }
+
+    // Send confirmation email to the sender
+    try {
+      const emailResponse = await resend.emails.send({
+        from: "BSG Tire Recycling <onboarding@resend.dev>",
+        to: [email],
+        subject: "We received your message!",
+        html: `
+          <!DOCTYPE html>
+          <html>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+              <div style="background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+                <h1 style="color: white; margin: 0;">Thank You, ${name}!</h1>
+              </div>
+              <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px;">
+                <p>We've received your message and appreciate you reaching out to BSG Tire Recycling.</p>
+                
+                <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #16a34a;">
+                  <p style="margin: 0 0 10px 0;"><strong>Subject:</strong> ${subject}</p>
+                  <p style="margin: 0; color: #666;"><strong>Your message:</strong></p>
+                  <p style="margin: 10px 0 0 0; color: #666; font-style: italic;">"${message}"</p>
+                </div>
+                
+                <p>Our team will review your inquiry and get back to you as soon as possible, typically within 1-2 business days.</p>
+                
+                <p style="margin-top: 30px;">Best regards,<br><strong>The BSG Tire Recycling Team</strong></p>
+                
+                <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+                
+                <p style="font-size: 12px; color: #9ca3af; text-align: center;">
+                  BSG Tire Recycling<br>
+                  2971 Bellevue St, Detroit, MI 48207<br>
+                  (313) 744-4139
+                </p>
+              </div>
+            </body>
+          </html>
+        `,
+      });
+      console.log("Confirmation email sent successfully:", emailResponse);
+    } catch (emailError) {
+      // Don't fail the submission if email fails
+      console.error("Failed to send confirmation email:", emailError);
     }
 
     return new Response(
