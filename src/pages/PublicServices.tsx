@@ -211,7 +211,7 @@ export default function PublicServices() {
               <Button asChild size="lg" variant="secondary">
                 <Link to="/public-book">Schedule a Pickup</Link>
               </Button>
-              <Button asChild size="lg" variant="outline" className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10">
+              <Button asChild size="lg" variant="outline" className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground/10 bg-transparent">
                 <Link to="/drop-off">Drop Off Tires</Link>
               </Button>
             </div>
