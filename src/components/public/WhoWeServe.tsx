@@ -9,7 +9,7 @@ const audiences = [
     icon: Building2,
     title: "Tire Shops & Dealers",
     description: "Regular pickup service tailored to your volume. Flexible scheduling, competitive rates, and reliable manifests for compliance.",
-    features: ["Scheduled Route Service", "Volume Discounts", "Compliance Documentation"],
+    features: ["Scheduled Route Service", "Trailers for High Volume", "Compliance Documentation"],
     cta: "Schedule Business Pickup",
     href: "/public-book",
   },
