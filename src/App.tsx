@@ -81,6 +81,8 @@ import PublicPartnerApply from "./pages/PublicPartnerApply";
 import PublicAbout from "./pages/PublicAbout";
 import PublicContact from "./pages/PublicContact";
 import PublicProducts from "./pages/PublicProducts";
+import PartnerApplications from "./pages/PartnerApplications";
+import ContactSubmissions from "./pages/ContactSubmissions";
 import { FEATURE_FLAGS } from "./lib/featureFlags";
 
 const queryClient = new QueryClient();
@@ -297,6 +299,16 @@ const App = () => (
               <Route path="/haulers" element={
                 <ProtectedRoute roles={['admin', 'ops_manager']}>
                   <IndependentHaulers />
+                </ProtectedRoute>
+              } />
+              <Route path="/partner-applications" element={
+                <ProtectedRoute roles={['admin', 'ops_manager']}>
+                  <PartnerApplications />
+                </ProtectedRoute>
+              } />
+              <Route path="/contact-submissions" element={
+                <ProtectedRoute roles={['admin', 'ops_manager']}>
+                  <ContactSubmissions />
                 </ProtectedRoute>
               } />
               <Route path="/receivers" element={
