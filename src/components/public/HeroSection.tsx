@@ -3,11 +3,11 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Truck, MapPin, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LiveTireCounter } from "./LiveTireCounter";
-import { HeroVideoBackground } from "./HeroVideoBackground";
 import { FloatingParticles } from "./FloatingParticles";
 import { AnimatedHeadline, GradientText, AnimatedParagraph } from "@/components/ui/animated-text";
 import { MagneticButton, RippleButton } from "@/components/ui/magnetic-button";
 import { useRef } from "react";
+import bsgTruckImg from "@/assets/facility/bsg-truck.jpeg";
 
 export function HeroSection() {
   const containerRef = useRef<HTMLElement>(null);
@@ -32,12 +32,18 @@ export function HeroSection() {
       ref={containerRef}
       className="relative min-h-[100vh] flex items-center justify-center overflow-hidden"
     >
-      {/* Video Background with Parallax */}
+      {/* Image Background with Parallax */}
       <motion.div 
         className="absolute inset-0"
         style={{ y: backgroundY }}
       >
-        <HeroVideoBackground />
+        <img 
+          src={bsgTruckImg} 
+          alt="BSG Tire Recycling truck" 
+          className="w-full h-full object-cover"
+        />
+        {/* Gradient overlay for translucent effect */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/70 to-background" />
       </motion.div>
 
       {/* Floating Particles */}
