@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
-import { Phone, MapPin, Clock, AlertCircle, CheckCircle2, Car, Navigation, ExternalLink } from "lucide-react";
+import { Phone, MapPin, Clock, AlertCircle, CheckCircle2, Car, Navigation } from "lucide-react";
 import { PublicLayout } from "@/components/public/PublicLayout";
 import { Button } from "@/components/ui/button";
+import { MichiganMap } from "@/components/public/MichiganMap";
 
 const steps = [
   {
@@ -221,31 +222,9 @@ export default function PublicDropoff() {
               whileInView={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5 }}
               viewport={{ once: true }}
-              className="rounded-2xl overflow-hidden border border-border h-80 lg:h-96 relative group cursor-pointer"
-              onClick={() => window.open('https://www.google.com/maps/search/?api=1&query=2971+Bellevue+St,+Detroit,+MI+48207', '_blank')}
+              className="h-80 lg:h-96"
             >
-              {/* Map-themed background */}
-              <div className="absolute inset-0 bg-gradient-to-br from-muted/50 via-muted to-muted/80" />
-              
-              {/* Grid pattern overlay for map feel */}
-              <div 
-                className="absolute inset-0 opacity-10" 
-                style={{ 
-                  backgroundImage: 'linear-gradient(to right, currentColor 1px, transparent 1px), linear-gradient(to bottom, currentColor 1px, transparent 1px)', 
-                  backgroundSize: '40px 40px' 
-                }} 
-              />
-              
-              {/* Center content */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
-                <MapPin className="h-12 w-12 text-primary mb-4" />
-                <p className="text-lg font-semibold text-foreground">2971 Bellevue St</p>
-                <p className="text-muted-foreground mb-4">Detroit, MI 48207</p>
-                <Button variant="outline" className="group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  View on Google Maps
-                </Button>
-              </div>
+              <MichiganMap />
             </motion.div>
           </div>
         </div>
