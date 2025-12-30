@@ -8,7 +8,7 @@ import { SectionHeader } from "@/components/public/SectionHeader";
 
 // Images
 import workerTabletImg from "@/assets/team/worker-tablet.jpeg";
-import collectionTrailerImg from "@/assets/operations/collection-trailer.jpeg";
+import bsgBuildingImg from "@/assets/facility/bsg-building.jpeg";
 import industrialTiresImg from "@/assets/facility/industrial-tires.jpeg";
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
@@ -97,8 +97,8 @@ export default function PublicServices() {
               {/* Image Header */}
               <div className="relative h-48 overflow-hidden">
                 <img 
-                  src={collectionTrailerImg} 
-                  alt="BSG collection trailer for tire drop-off" 
+                  src={bsgBuildingImg} 
+                  alt="BSG Tire Recycling facility in Detroit" 
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-card to-transparent" />

@@ -1,5 +1,6 @@
 import { PublicLayout } from "@/components/public/PublicLayout";
 import { HeroSection } from "@/components/public/HeroSection";
+import { PartnerLogosCarousel } from "@/components/public/PartnerLogosCarousel";
 import { WhoWeServe } from "@/components/public/WhoWeServe";
 import { HowItWorks } from "@/components/public/HowItWorks";
 import { EnvironmentalImpact } from "@/components/public/EnvironmentalImpact";
@@ -11,6 +12,7 @@ export default function PublicLanding() {
   return (
     <PublicLayout>
       <HeroSection />
+      <PartnerLogosCarousel />
       <WhoWeServe />
       <TireRecyclingProcess />
       <EnvironmentalImpact />
