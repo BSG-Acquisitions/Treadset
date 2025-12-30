@@ -39,7 +39,7 @@ All colors MUST be HSL.
     --secondary-foreground: 210 11% 15%;
     
     --muted: 85 15% 94%;               /* Light olive backgrounds */
-    --muted-foreground: 210 11% 45%;   /* Medium gray text */
+    --muted-foreground: 210 11% 30%;   /* Darker gray text for better readability */
     
     --accent: 85 15% 90%;              /* Subtle accent backgrounds */
     --accent-foreground: 210 11% 15%;
@@ -98,7 +98,7 @@ All colors MUST be HSL.
     --secondary-foreground: 210 40% 98%;
     
     --muted: 215 28% 17%;
-    --muted-foreground: 217 11% 65%;
+    --muted-foreground: 217 11% 75%;   /* Lighter for dark mode readability */
     
     --accent: 215 28% 17%;
     --accent-foreground: 210 40% 98%;
