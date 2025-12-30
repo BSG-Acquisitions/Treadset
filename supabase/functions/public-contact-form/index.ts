@@ -107,7 +107,7 @@ serve(async (req) => {
     // Send confirmation email to the sender
     try {
       const emailResponse = await resend.emails.send({
-        from: "BSG Tire Recycling <onboarding@resend.dev>",
+        from: "BSG Tire Recycling <noreply@bsgtirerecycling.com>",
         to: [email],
         subject: "We received your message!",
         html: `
