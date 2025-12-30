@@ -42,7 +42,10 @@ export function SectionHeader({
       <>
         {parts[0]}
         <span className="relative inline-block">
-          <span className="bg-gradient-to-r from-primary via-primary/80 to-primary bg-clip-text text-transparent">
+          <span className={light 
+            ? "text-white" 
+            : "bg-gradient-to-r from-primary via-primary/80 to-primary bg-clip-text text-transparent"
+          }>
             {titleAccent}
           </span>
         </span>
