@@ -5,7 +5,7 @@ import { Menu, X, Phone, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const navLinks = [
-  { href: "/landing", label: "Home" },
+  { href: "/", label: "Home" },
   { href: "/services", label: "Services" },
   { href: "/products", label: "Products" },
   { href: "/drop-off", label: "Drop Off" },
@@ -23,7 +23,7 @@ export function PublicNavbar() {
       <nav className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}
-          <Link to="/landing" className="flex items-center gap-3">
+          <Link to="/" className="flex items-center gap-3">
             <img 
               src="/bsg-logo.png" 
               alt="BSG Tire Recycling" 

@@ -35,8 +35,8 @@ export default function Auth() {
     // Only redirect once per mount, and only if user is authenticated
     if (user && !hasRedirected.current) {
       hasRedirected.current = true;
-      console.log('User detected, redirecting to home:', user);
-      navigate('/', { replace: true });
+      console.log('User detected, redirecting to dashboard:', user);
+      navigate('/dashboard', { replace: true });
     }
   }, [user, loading, navigate]);
 
@@ -70,8 +70,8 @@ export default function Auth() {
         console.log('Sign in error:', result.error);
         setError(result.error.message || 'An error occurred during sign in');
       } else {
-        console.log('Sign in successful, navigating to home...');
-        navigate('/');
+        console.log('Sign in successful, navigating to dashboard...');
+        navigate('/dashboard');
       }
     } catch (error: any) {
       console.error('Sign in catch block error:', error);
@@ -246,7 +246,7 @@ export default function Auth() {
 
             <div className="mt-6 pt-6 border-t border-border">
               <p className="text-sm text-center text-muted-foreground">
-                Need help? <Link to="/" className="text-primary hover:underline">Contact support</Link>
+                Need help? <Link to="/contact" className="text-primary hover:underline">Contact support</Link>
               </p>
             </div>
           </CardContent>

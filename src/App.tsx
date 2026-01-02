@@ -97,7 +97,7 @@ const App = () => (
           <BrowserRouter>
             <Routes>
 {/* Public Marketing Routes - No Authentication Required */}
-              <Route path="/landing" element={<PublicLanding />} />
+              <Route path="/" element={<PublicLanding />} />
               <Route path="/services" element={<PublicServices />} />
               <Route path="/products" element={<PublicProducts />} />
               <Route path="/drop-off" element={<PublicDropoff />} />
@@ -125,7 +125,7 @@ const App = () => (
                   <Onboarding />
                 </ProtectedRoute>
               } />
-              <Route path="/" element={
+              <Route path="/dashboard" element={
                 <ProtectedRoute>
                   <AppLayout>
                     <Index />
