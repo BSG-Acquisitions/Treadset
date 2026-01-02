@@ -21,7 +21,7 @@ export default function SignIn() {
   useEffect(() => {
     document.title = 'Sign In – TreadSet';
     if (user) {
-      navigate('/', { replace: true });
+      navigate('/dashboard', { replace: true });
     }
   }, [user, navigate]);
 

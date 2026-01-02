@@ -63,7 +63,7 @@ export function AppSidebar() {
   };
 
   const isActive = (path: string) => {
-    if (path === '/') return currentPath === '/';
+    if (path === '/dashboard') return currentPath === '/dashboard';
     return currentPath.startsWith(path);
   };
 
@@ -75,7 +75,7 @@ export function AppSidebar() {
   // Organized navigation for super admin
   const superAdminNavigation = {
     overview: [
-      { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/', roles: ['admin', 'ops_manager', 'dispatcher', 'sales'] as const },
+      { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/dashboard', roles: ['admin', 'ops_manager', 'dispatcher', 'sales'] as const },
     ],
     scheduling: [
       { id: 'clients', label: 'Clients', icon: Users, path: '/clients', roles: ['admin', 'ops_manager', 'sales'] as const },
@@ -124,7 +124,7 @@ export function AppSidebar() {
 
   // Flat list for regular users
   const navigationItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/', roles: ['admin', 'ops_manager', 'dispatcher', 'sales'] as const },
+    { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/dashboard', roles: ['admin', 'ops_manager', 'dispatcher', 'sales'] as const },
     { id: 'clients', label: 'Clients', icon: Users, path: '/clients', roles: ['admin', 'ops_manager', 'sales'] as const },
     { id: 'routes', label: 'Routes', icon: MapPin, path: '/routes/today', roles: ['admin', 'ops_manager', 'dispatcher'] as const },
     { id: 'driver-dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/driver/dashboard', roles: ['driver'] as const },

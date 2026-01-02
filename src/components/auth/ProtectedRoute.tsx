@@ -42,7 +42,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Check if user is authenticated - use delayed redirect
   if (!user && shouldRedirect) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/auth/sign-in" replace />;
   }
 
   // Still waiting for redirect delay or user exists
