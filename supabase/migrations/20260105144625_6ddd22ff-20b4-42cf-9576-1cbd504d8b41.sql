@@ -1,0 +1,1 @@
+UPDATE haulers SET is_licensed_hauler = true WHERE id = 'c6765550-3a80-4dae-8a8b-c24a18ddf8a1';
