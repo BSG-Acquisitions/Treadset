@@ -158,11 +158,6 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
         notes: data.notes,
       });
       
-      toast({
-        title: "Success",
-        description: "Pickup scheduled successfully!",
-      });
-
       // Get nearby suggestions
       const client = clients?.data?.find(c => c.id === data.clientId);
       if (client && user?.currentOrganization?.id) {

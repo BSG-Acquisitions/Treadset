@@ -127,11 +127,6 @@ useEffect(() => {
         assignmentType: 'auto', // Let system auto-assign
       });
 
-      toast({
-        title: "Pickup Scheduled",
-        description: "The pickup has been added to today's schedule and will be automatically assigned.",
-      });
-
       setOpen(false);
       form.reset();
       setSelectedClientId("");
