@@ -162,6 +162,55 @@ export function useProcessBookingRequest() {
   });
 }
 
+export function useUpdateBookingRequest() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const organizationId = user?.currentOrganization?.id;
+
+  return useMutation({
+    mutationFn: async (params: {
+      bookingRequestId: string;
+      updates: {
+        company_name?: string | null;
+        contact_name?: string;
+        contact_email?: string | null;
+        contact_phone?: string | null;
+        pickup_address?: string;
+        pickup_city?: string | null;
+        pickup_state?: string | null;
+        pickup_zip?: string | null;
+        tire_estimate_pte?: number;
+        tire_estimate_otr?: number;
+        tire_estimate_tractor?: number;
+        notes?: string | null;
+      };
+    }) => {
+      if (!organizationId) {
+        throw new Error('No organization selected');
+      }
+
+      const { data, error } = await supabase
+        .from('booking_requests')
+        .update(params.updates)
+        .eq('id', params.bookingRequestId)
+        .eq('organization_id', organizationId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['booking-requests'] });
+      toast.success('Booking request updated');
+    },
+    onError: (error: Error) => {
+      console.error('Error updating booking request:', error);
+      toast.error(`Failed to update: ${error.message}`);
+    },
+  });
+}
+
 export function useDeleteBookingRequest() {
   const queryClient = useQueryClient();
   const { user } = useAuth();

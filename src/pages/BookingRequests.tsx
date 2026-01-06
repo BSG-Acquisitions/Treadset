@@ -11,8 +11,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format, parseISO } from 'date-fns';
-import { Calendar, MapPin, Clock, User, Building2, Check, X, CalendarClock, Truck, AlertTriangle, Trash2 } from 'lucide-react';
+import { Calendar, MapPin, Clock, User, Building2, Check, X, CalendarClock, Truck, AlertTriangle, Trash2, Pencil } from 'lucide-react';
 import { SlideUp } from '@/components/motion/SlideUp';
+import { EditBookingDialog } from '@/components/booking/EditBookingDialog';
 
 export default function BookingRequests() {
   const [activeTab, setActiveTab] = useState('pending');
@@ -24,6 +25,7 @@ export default function BookingRequests() {
   const [selectedBooking, setSelectedBooking] = useState<BookingRequest | null>(null);
   const [actionType, setActionType] = useState<'approve' | 'modify' | 'decline' | null>(null);
   const [bookingToDelete, setBookingToDelete] = useState<BookingRequest | null>(null);
+  const [bookingToEdit, setBookingToEdit] = useState<BookingRequest | null>(null);
   const [formData, setFormData] = useState({
     scheduledDate: '',
     scheduledTimeWindow: '',
@@ -231,6 +233,13 @@ export default function BookingRequests() {
                       )}
 
                       <div className="flex gap-2 mt-4 pt-4 border-t">
+                        <Button 
+                          variant="outline"
+                          onClick={() => setBookingToEdit(booking)}
+                        >
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Edit
+                        </Button>
                         {booking.status === 'pending' && (
                           <>
                             <Button 
@@ -435,6 +444,13 @@ export default function BookingRequests() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Booking Dialog */}
+      <EditBookingDialog
+        booking={bookingToEdit}
+        open={!!bookingToEdit}
+        onOpenChange={(open) => !open && setBookingToEdit(null)}
+      />
     </div>
   );
 }
