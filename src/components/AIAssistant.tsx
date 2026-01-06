@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { MessageSquare, X, Send, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +9,29 @@ import { Badge } from '@/components/ui/badge';
 import { useAIAssistant } from '@/hooks/useAIAssistant';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
+
+// Public website routes where the AI chatbot should NOT appear
+const PUBLIC_ROUTES = [
+  '/',
+  '/services',
+  '/products',
+  '/drop-off',
+  '/partners',
+  '/partner-apply',
+  '/about',
+  '/contact',
+  '/public-book',
+  '/public-booking-confirmation',
+  '/auth',
+  '/reset-password',
+];
+
+const PUBLIC_ROUTE_PREFIXES = [
+  '/invite/',
+  '/client-invite/',
+  '/client-team-invite/',
+  '/portal-unsubscribe/',
+];
 import {
   Sheet,
   SheetContent,
@@ -130,9 +154,14 @@ export const AIAssistant = () => {
   const [input, setInput] = useState('');
   const { messages, isLoading, sendQuery, clearHistory } = useAIAssistant();
   const { hasAnyRole } = useAuth();
+  const location = useLocation();
 
-  // Only show for Admin, Ops Manager, and Sales Manager
-  if (!hasAnyRole(['admin', 'ops_manager', 'sales'])) {
+  // Check if current route is a public website route
+  const isPublicRoute = PUBLIC_ROUTES.includes(location.pathname) ||
+    PUBLIC_ROUTE_PREFIXES.some(prefix => location.pathname.startsWith(prefix));
+
+  // Don't show on public routes OR if user doesn't have required role
+  if (isPublicRoute || !hasAnyRole(['admin', 'ops_manager', 'sales'])) {
     return null;
   }
 
