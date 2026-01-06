@@ -89,7 +89,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Build the invite URL - use the app's URL
-    const appUrl = Deno.env.get("APP_URL") || "https://wvjehbozyxhmgdljwsiz.lovableproject.com";
+    const appUrl = "https://bsgtires.com";
     const inviteUrl = `${appUrl}/invite/${invite.token}`;
 
     // Format role for display
@@ -109,7 +109,7 @@ const handler = async (req: Request): Promise<Response> => {
         </head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="text-align: center; margin-bottom: 30px;">
-            <img src="${org.logo_url || 'https://wvjehbozyxhmgdljwsiz.lovableproject.com/treadset-logo.png'}" alt="${org.name}" style="max-width: 150px; height: auto;">
+            <img src="${org.logo_url || 'https://bsgtires.com/treadset-logo.png'}" alt="${org.name}" style="max-width: 150px; height: auto;">
           </div>
           
           <div style="background: linear-gradient(135deg, #1A4314 0%, #2d5a24 100%); color: white; padding: 30px; border-radius: 12px; text-align: center; margin-bottom: 30px;">
