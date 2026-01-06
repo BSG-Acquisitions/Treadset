@@ -134,7 +134,7 @@ const handler = async (req: Request): Promise<Response> => {
         }
 
         // Build tracking and invite URLs
-        const appUrl = "https://treadset.lovable.app";
+        const appUrl = "https://bsgtires.com";
         const trackingBaseUrl = `${supabaseUrl}/functions/v1/track-email-event`;
         
         // Open tracking pixel URL

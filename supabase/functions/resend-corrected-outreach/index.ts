@@ -172,7 +172,7 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      const bookingUrl = `https://treadset.lovable.app/public-book?client=${client.id}`;
+      const bookingUrl = `https://bsgtires.com/public-book?client=${client.id}`;
       const suggestedDates = generateSuggestedDates(null);
       const contactName = client.contact_name || 'there';
 
@@ -188,7 +188,7 @@ Deno.serve(async (req) => {
             <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
               <!-- Header -->
               <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); padding: 30px; text-align: center;">
-                <img src="${org.logo_url || 'https://treadset.lovable.app/treadset-logo.png'}" alt="${org.name}" style="height: 50px; margin-bottom: 15px;">
+                <img src="${org.logo_url || 'https://bsgtires.com/treadset-logo.png'}" alt="${org.name}" style="height: 50px; margin-bottom: 15px;">
                 <h1 style="color: white; margin: 0; font-size: 24px;">CORRECTED: Schedule Your Pickup</h1>
               </div>
               

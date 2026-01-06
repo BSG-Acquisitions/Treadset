@@ -82,7 +82,7 @@ const handler = async (req: Request): Promise<Response> => {
       : 'A team member';
 
     // Build the invite URL
-    const appUrl = "https://treadset.lovable.app";
+    const appUrl = "https://bsgtires.com";
     const inviteUrl = `${appUrl}/client-team-invite/${invite.token}`;
 
     // Role display name

@@ -147,7 +147,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
       // 5) Fetch from public app assets as a final fallback
       try {
-        const publicBaseUrl = 'https://9afe9a8a-0280-4803-b6c2-3c5497b7f0eb.lovableproject.com';
+        const publicBaseUrl = 'https://bsgtires.com';
         const publicUrl = `${publicBaseUrl}/manifests/templates/${body.templatePath}`;
         console.log(`Attempt 5: public URL ${publicUrl}`);
         const resp = await fetch(publicUrl);

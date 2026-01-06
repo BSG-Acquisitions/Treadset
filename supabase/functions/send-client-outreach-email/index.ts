@@ -133,7 +133,7 @@ Deno.serve(async (req) => {
 
     // Generate suggested dates
     const suggestedDates = generateSuggestedDates(pattern?.typical_day_of_week ?? null);
-    const bookingUrl = `https://treadset.lovable.app/public-book?client=${client.id}`;
+    const bookingUrl = `https://bsgtires.com/public-book?client=${client.id}`;
     const contactName = client.contact_name || 'there';
     
     const frequencyText = pattern?.frequency === 'weekly' ? 'weekly' : 
