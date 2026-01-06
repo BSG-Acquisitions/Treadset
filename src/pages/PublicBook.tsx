@@ -21,16 +21,53 @@ import { format, addDays, getDay } from "date-fns";
 
 const MIN_TIRE_THRESHOLD = 50; // Minimum 50 PTE required
 
-// Full schema for new visitors - all contact fields required
+// Common email domain typos to detect
+const COMMON_EMAIL_TYPOS = [
+  '@yaho.com', '@yahooo.com', '@yhaoo.com',
+  '@gmial.com', '@gmal.com', '@gamil.com', '@gmaill.com', '@gmali.com',
+  '@hotmal.com', '@hotmial.com', '@hotamil.com',
+  '@outloo.com', '@outlok.com',
+  '@aol.co', '@aoI.com',
+];
+
+// Generic company names to reject
+const GENERIC_COMPANY_NAMES = [
+  'company', 'my company', 'business', 'my business', 'test', 'testing',
+  'n/a', 'na', 'none', 'abc', 'xxx', 'asdf', 'sample', 'example',
+];
+
+// Full schema for new visitors - all contact fields required with enhanced validation
 const newVisitorSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Please enter a valid email address"),
-  phone: z.string().min(10, "Please enter a valid phone number"),
-  company: z.string().min(2, "Company name must be at least 2 characters"),
-  address: z.string().min(5, "Please enter a complete address"),
-  pteCount: z.number().min(0, "Count must be 0 or greater"),
-  otrCount: z.number().min(0, "Count must be 0 or greater"),
-  tractorCount: z.number().min(0, "Count must be 0 or greater"),
+  name: z.string()
+    .min(2, "Name is required")
+    .refine(val => val.trim().split(/\s+/).length >= 2, {
+      message: "Please enter your full name (first and last)"
+    }),
+  email: z.string()
+    .email("Please enter a valid email address")
+    .refine(val => !COMMON_EMAIL_TYPOS.some(typo => val.toLowerCase().includes(typo)), {
+      message: "Check your email - common typo detected (e.g., @gmail.com, @yahoo.com)"
+    }),
+  phone: z.string()
+    .min(10, "Phone number is required")
+    .regex(/^[\d\s\-\(\)\.+]+$/, "Please enter a valid phone number")
+    .refine(val => val.replace(/\D/g, '').length >= 10, {
+      message: "Phone number must have at least 10 digits"
+    }),
+  company: z.string()
+    .min(2, "Company name is required")
+    .refine(val => !GENERIC_COMPANY_NAMES.includes(val.toLowerCase().trim()), {
+      message: "Please enter your actual company/business name"
+    }),
+  address: z.string()
+    .min(5, "Address is required")
+    .refine(val => /\b\d{5}(-\d{4})?\b/.test(val), {
+      message: "Please enter a complete address including ZIP code"
+    }),
+  passengerOffRim: z.number().min(0, "Count must be 0 or greater"),
+  passengerOnRim: z.number().min(0, "Count must be 0 or greater"),
+  semiCount: z.number().min(0, "Count must be 0 or greater"),
+  oversizedCount: z.number().min(0, "Count must be 0 or greater"),
   preferredDate: z.string().min(1, "Please select a preferred date"),
   preferredWindow: z.enum(['AM', 'PM', 'Any']),
   notes: z.string().optional(),
@@ -43,9 +80,10 @@ const returningClientSchema = z.object({
   phone: z.string().optional(),
   company: z.string().optional(),
   address: z.string().optional(),
-  pteCount: z.number().min(0, "Count must be 0 or greater"),
-  otrCount: z.number().min(0, "Count must be 0 or greater"),
-  tractorCount: z.number().min(0, "Count must be 0 or greater"),
+  passengerOffRim: z.number().min(0, "Count must be 0 or greater"),
+  passengerOnRim: z.number().min(0, "Count must be 0 or greater"),
+  semiCount: z.number().min(0, "Count must be 0 or greater"),
+  oversizedCount: z.number().min(0, "Count must be 0 or greater"),
   preferredDate: z.string().min(1, "Please select a preferred date"),
   preferredWindow: z.enum(['AM', 'PM', 'Any']),
   notes: z.string().optional(),
@@ -98,24 +136,27 @@ export default function PublicBook() {
   // Use conditional schema based on whether this is a returning client
   const form = useForm<PublicBookingData>({
     resolver: zodResolver(returningClientName ? returningClientSchema : newVisitorSchema),
+    mode: "onBlur", // Validate on blur for immediate feedback
     defaultValues: {
       name: "",
       email: "",
       phone: "",
       company: "",
       address: "",
-      pteCount: 0,
-      otrCount: 0,
-      tractorCount: 0,
+      passengerOffRim: 0,
+      passengerOnRim: 0,
+      semiCount: 0,
+      oversizedCount: 0,
       preferredDate: "",
       preferredWindow: "Any",
       notes: "",
     },
   });
 
-  const pteCount = form.watch("pteCount");
-  const otrCount = form.watch("otrCount");
-  const tractorCount = form.watch("tractorCount");
+  const passengerOffRim = form.watch("passengerOffRim");
+  const passengerOnRim = form.watch("passengerOnRim");
+  const semiCount = form.watch("semiCount");
+  const oversizedCount = form.watch("oversizedCount");
   const address = form.watch("address");
 
   // Check for client pre-fill from URL parameter (from outreach emails or portal invites)
@@ -169,11 +210,17 @@ export default function PublicBook() {
 
   // Calculate estimated PTE value when tire counts change
   useEffect(() => {
-    const totalPte = (pteCount || 0) + (otrCount || 0) * 15 + (tractorCount || 0) * 5;
+    // PTE conversion: Passenger = 1:1, Semi = 5:1, Oversized (OTR/Tractor) = 15:1
+    const totalPte = 
+      (passengerOffRim || 0) + 
+      (passengerOnRim || 0) + 
+      (semiCount || 0) * 5 + 
+      (oversizedCount || 0) * 15;
+    const totalTires = (passengerOffRim || 0) + (passengerOnRim || 0) + (semiCount || 0) + (oversizedCount || 0);
     setEstimatedPteValue(totalPte);
     setIsHighValue(totalPte >= 200);
     setIsBelowMinimum(totalPte < MIN_TIRE_THRESHOLD);
-  }, [pteCount, otrCount, tractorCount]);
+  }, [passengerOffRim, passengerOnRim, semiCount, oversizedCount]);
 
   // Extract ZIP code and check service zones when address changes
   useEffect(() => {
@@ -271,11 +318,16 @@ export default function PublicBook() {
 
   const handleSubmit = async (data: PublicBookingData) => {
     // Final validation for minimum tires
-    const totalPte = (data.pteCount || 0) + (data.otrCount || 0) * 15 + (data.tractorCount || 0) * 5;
+    const totalPte = 
+      (data.passengerOffRim || 0) + 
+      (data.passengerOnRim || 0) + 
+      (data.semiCount || 0) * 5 + 
+      (data.oversizedCount || 0) * 15;
+    
     if (totalPte < MIN_TIRE_THRESHOLD) {
       toast({
         title: "Minimum Not Met",
-        description: `A minimum of ${MIN_TIRE_THRESHOLD} PTE is required for pickup scheduling. You currently have ${totalPte} PTE.`,
+        description: `A minimum of ${MIN_TIRE_THRESHOLD} tires (PTE equivalent) is required for pickup scheduling. You currently have ${totalPte}.`,
         variant: "destructive",
       });
       return;
@@ -295,16 +347,22 @@ export default function PublicBook() {
         phone: data.phone || clientData?.phone || '',
         company: data.company || clientData?.company || '',
         address: data.address || clientData?.address || '',
-        pteCount: data.pteCount,
-        otrCount: data.otrCount,
-        tractorCount: data.tractorCount,
+        // New tire fields
+        passengerOffRim: data.passengerOffRim,
+        passengerOnRim: data.passengerOnRim,
+        semiCount: data.semiCount,
+        oversizedCount: data.oversizedCount,
+        // Legacy fields for backward compatibility
+        pteCount: (data.passengerOffRim || 0) + (data.passengerOnRim || 0),
+        otrCount: data.oversizedCount || 0,
+        tractorCount: 0, // Deprecated, merged into oversized
         preferredDate: data.preferredDate,
         preferredWindow: data.preferredWindow,
         notes: data.notes,
         source: returningClientName ? 'client_portal' : 'direct',
-        clientId: clientId || undefined, // Include clientId for conversion tracking
-        inviteId: inviteId || undefined, // Track portal invite conversions
-        fromEmailBooking: !!(clientId || inviteId), // Flag to track email conversions
+        clientId: clientId || undefined,
+        inviteId: inviteId || undefined,
+        fromEmailBooking: !!(clientId || inviteId),
       };
 
       const { data: result, error } = await supabase.functions.invoke('public-booking', {
@@ -531,48 +589,99 @@ export default function PublicBook() {
                   )}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="pteCount">Passenger/Light Truck Tires</Label>
-                    <Input
-                      id="pteCount"
-                      type="number"
-                      min="0"
-                      {...form.register("pteCount", { valueAsNumber: true })}
-                      placeholder="0"
-                    />
+              <CardContent className="space-y-6">
+                {/* Passenger Tires Section */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">🚗</span>
+                    <Label className="text-base font-semibold">Passenger Tires</Label>
                   </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="otrCount">OTR (Off-The-Road) Tires</Label>
-                    <Input
-                      id="otrCount"
-                      type="number"
-                      min="0"
-                      {...form.register("otrCount", { valueAsNumber: true })}
-                      placeholder="0"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="tractorCount">Tractor Trailer Tires</Label>
-                    <Input
-                      id="tractorCount"
-                      type="number"
-                      min="0"
-                      {...form.register("tractorCount", { valueAsNumber: true })}
-                      placeholder="0"
-                    />
+                  <div className="grid md:grid-cols-2 gap-4 pl-7">
+                    <div className="space-y-2">
+                      <Label htmlFor="passengerOffRim" className="text-sm text-muted-foreground">
+                        Off-Rim (tires only, no wheel)
+                      </Label>
+                      <Input
+                        id="passengerOffRim"
+                        type="number"
+                        min="0"
+                        {...form.register("passengerOffRim", { valueAsNumber: true })}
+                        placeholder="0"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="passengerOnRim" className="text-sm text-muted-foreground">
+                        On-Rim (tire still on wheel)
+                      </Label>
+                      <Input
+                        id="passengerOnRim"
+                        type="number"
+                        min="0"
+                        {...form.register("passengerOnRim", { valueAsNumber: true })}
+                        placeholder="0"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                {/* PTE Counter */}
+                {/* Commercial Tires Section */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">🚛</span>
+                    <Label className="text-base font-semibold">Commercial Tires</Label>
+                  </div>
+                  <div className="pl-7">
+                    <div className="space-y-2">
+                      <Label htmlFor="semiCount" className="text-sm text-muted-foreground">
+                        Semi / Truck Tires (18-wheelers, commercial trucks)
+                      </Label>
+                      <Input
+                        id="semiCount"
+                        type="number"
+                        min="0"
+                        {...form.register("semiCount", { valueAsNumber: true })}
+                        placeholder="0"
+                        className="md:max-w-[50%]"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Large Equipment Section */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">🚜</span>
+                    <Label className="text-base font-semibold">Large Equipment Tires</Label>
+                  </div>
+                  <div className="pl-7">
+                    <div className="space-y-2">
+                      <Label htmlFor="oversizedCount" className="text-sm text-muted-foreground">
+                        OTR / Tractor / Heavy Equipment
+                      </Label>
+                      <Input
+                        id="oversizedCount"
+                        type="number"
+                        min="0"
+                        {...form.register("oversizedCount", { valueAsNumber: true })}
+                        placeholder="0"
+                        className="md:max-w-[50%]"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tire Count Summary */}
                 <div className={`p-4 rounded-lg border ${isBelowMinimum ? 'bg-destructive/10 border-destructive/30' : 'bg-green-500/10 border-green-500/30'}`}>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium">Total PTE</p>
-                      <p className="text-sm text-muted-foreground">Minimum {MIN_TIRE_THRESHOLD} required</p>
+                      <p className="font-medium">Total Tire Count</p>
+                      <p className="text-sm text-muted-foreground">
+                        {(passengerOffRim || 0) + (passengerOnRim || 0) + (semiCount || 0) + (oversizedCount || 0)} tires
+                        {' • '}Estimated PTE: {estimatedPteValue}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Minimum {MIN_TIRE_THRESHOLD} PTE required for pickup
+                      </p>
                     </div>
                     <div className="text-right">
                       <p className={`text-3xl font-bold ${isBelowMinimum ? 'text-destructive' : 'text-green-600'}`}>
@@ -591,10 +700,6 @@ export default function PublicBook() {
                   <p className="text-sm text-amber-600">
                     ⭐ High volume pickups (200+ PTE) receive priority scheduling
                   </p>
-                )}
-
-                {form.formState.errors.pteCount && (
-                  <p className="text-sm text-destructive">{form.formState.errors.pteCount.message}</p>
                 )}
               </CardContent>
             </Card>

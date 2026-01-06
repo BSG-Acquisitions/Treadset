@@ -350,7 +350,11 @@ export type Database = {
           status: string
           suggested_date: string | null
           tire_estimate_otr: number | null
+          tire_estimate_oversized: number | null
+          tire_estimate_passenger_off_rim: number | null
+          tire_estimate_passenger_on_rim: number | null
           tire_estimate_pte: number | null
+          tire_estimate_semi: number | null
           tire_estimate_tractor: number | null
           updated_at: string
           zone_id: string | null
@@ -389,7 +393,11 @@ export type Database = {
           status?: string
           suggested_date?: string | null
           tire_estimate_otr?: number | null
+          tire_estimate_oversized?: number | null
+          tire_estimate_passenger_off_rim?: number | null
+          tire_estimate_passenger_on_rim?: number | null
           tire_estimate_pte?: number | null
+          tire_estimate_semi?: number | null
           tire_estimate_tractor?: number | null
           updated_at?: string
           zone_id?: string | null
@@ -428,7 +436,11 @@ export type Database = {
           status?: string
           suggested_date?: string | null
           tire_estimate_otr?: number | null
+          tire_estimate_oversized?: number | null
+          tire_estimate_passenger_off_rim?: number | null
+          tire_estimate_passenger_on_rim?: number | null
           tire_estimate_pte?: number | null
+          tire_estimate_semi?: number | null
           tire_estimate_tractor?: number | null
           updated_at?: string
           zone_id?: string | null
