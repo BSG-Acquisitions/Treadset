@@ -11,13 +11,22 @@ interface BookingRequest {
   phone?: string;
   company: string;
   address: string;
-  pteCount: number;
-  otrCount: number;
-  tractorCount: number;
+  // New tire fields
+  passengerOffRim?: number;
+  passengerOnRim?: number;
+  semiCount?: number;
+  oversizedCount?: number;
+  // Legacy fields (for backward compatibility)
+  pteCount?: number;
+  otrCount?: number;
+  tractorCount?: number;
   preferredDate: string;
   preferredWindow: 'AM' | 'PM' | 'Any';
   notes?: string;
   source?: string;
+  clientId?: string;
+  inviteId?: string;
+  fromEmailBooking?: boolean;
 }
 
 interface Coordinates {
@@ -342,11 +351,23 @@ Deno.serve(async (req) => {
       outreach_frequency_days: orgSettings?.outreach_frequency_days ?? 14,
     };
 
-    // Calculate total PTE value
-    const estimatedPteValue = 
-      (bookingData.pteCount * 1) + 
-      (bookingData.otrCount * 15) + 
-      (bookingData.tractorCount * 5);
+    // Calculate total PTE value using new fields (with legacy fallback)
+    const passengerOffRim = bookingData.passengerOffRim ?? 0;
+    const passengerOnRim = bookingData.passengerOnRim ?? 0;
+    const semiCount = bookingData.semiCount ?? 0;
+    const oversizedCount = bookingData.oversizedCount ?? 0;
+    
+    // Legacy fallback for old form submissions
+    const legacyPte = bookingData.pteCount ?? 0;
+    const legacyOtr = bookingData.otrCount ?? 0;
+    const legacyTractor = bookingData.tractorCount ?? 0;
+    
+    // Use new fields if any are set, otherwise fall back to legacy
+    const hasNewFields = passengerOffRim > 0 || passengerOnRim > 0 || semiCount > 0 || oversizedCount > 0;
+    
+    const estimatedPteValue = hasNewFields
+      ? (passengerOffRim + passengerOnRim) + (semiCount * 5) + (oversizedCount * 15)
+      : (legacyPte * 1) + (legacyOtr * 15) + (legacyTractor * 5);
 
     // Validate minimum tire threshold
     if (estimatedPteValue < settings.min_tire_threshold) {
@@ -427,7 +448,7 @@ Deno.serve(async (req) => {
     const bookingStatus = shouldAutoApprove ? 'approved' : 'pending';
     console.log('[PUBLIC_BOOKING] Auto-approve decision:', { shouldAutoApprove, bookingStatus, existingClient: !!existingClient, matchedZone: !!matchedZone });
 
-    // Create booking request
+    // Create booking request with new tire fields
     const { data: bookingRequest, error: bookingError } = await supabase
       .from('booking_requests')
       .insert({
@@ -444,9 +465,15 @@ Deno.serve(async (req) => {
         pickup_lng: coordinates?.lng || null,
         requested_date: bookingData.preferredDate,
         preferred_time_window: bookingData.preferredWindow,
-        tire_estimate_pte: bookingData.pteCount,
-        tire_estimate_otr: bookingData.otrCount,
-        tire_estimate_tractor: bookingData.tractorCount,
+        // New tire fields
+        tire_estimate_passenger_off_rim: passengerOffRim,
+        tire_estimate_passenger_on_rim: passengerOnRim,
+        tire_estimate_semi: semiCount,
+        tire_estimate_oversized: oversizedCount,
+        // Legacy fields for backward compatibility
+        tire_estimate_pte: hasNewFields ? (passengerOffRim + passengerOnRim) : legacyPte,
+        tire_estimate_otr: hasNewFields ? oversizedCount : legacyOtr,
+        tire_estimate_tractor: hasNewFields ? 0 : legacyTractor,
         notes: bookingData.notes || null,
         status: bookingStatus,
         zone_id: matchedZone?.id || null,

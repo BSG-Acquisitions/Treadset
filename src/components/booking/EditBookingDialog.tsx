@@ -25,6 +25,12 @@ export function EditBookingDialog({ booking, open, onOpenChange }: EditBookingDi
     pickup_city: '',
     pickup_state: '',
     pickup_zip: '',
+    // New tire fields
+    tire_estimate_passenger_off_rim: 0,
+    tire_estimate_passenger_on_rim: 0,
+    tire_estimate_semi: 0,
+    tire_estimate_oversized: 0,
+    // Legacy fields
     tire_estimate_pte: 0,
     tire_estimate_otr: 0,
     tire_estimate_tractor: 0,
@@ -45,6 +51,12 @@ export function EditBookingDialog({ booking, open, onOpenChange }: EditBookingDi
         pickup_city: booking.pickup_city || '',
         pickup_state: booking.pickup_state || '',
         pickup_zip: booking.pickup_zip || '',
+        // New tire fields
+        tire_estimate_passenger_off_rim: (booking as any).tire_estimate_passenger_off_rim || 0,
+        tire_estimate_passenger_on_rim: (booking as any).tire_estimate_passenger_on_rim || 0,
+        tire_estimate_semi: (booking as any).tire_estimate_semi || 0,
+        tire_estimate_oversized: (booking as any).tire_estimate_oversized || 0,
+        // Legacy fields
         tire_estimate_pte: booking.tire_estimate_pte || 0,
         tire_estimate_otr: booking.tire_estimate_otr || 0,
         tire_estimate_tractor: booking.tire_estimate_tractor || 0,
@@ -69,6 +81,13 @@ export function EditBookingDialog({ booking, open, onOpenChange }: EditBookingDi
     }
   };
 
+  // Calculate PTE from new fields
+  const calculatedPte = 
+    formData.tire_estimate_passenger_off_rim + 
+    formData.tire_estimate_passenger_on_rim + 
+    (formData.tire_estimate_semi * 5) + 
+    (formData.tire_estimate_oversized * 15);
+
   const handleSubmit = async () => {
     if (!booking) return;
     
@@ -88,9 +107,10 @@ export function EditBookingDialog({ booking, open, onOpenChange }: EditBookingDi
         pickup_city: formData.pickup_city || null,
         pickup_state: formData.pickup_state || null,
         pickup_zip: formData.pickup_zip || null,
-        tire_estimate_pte: formData.tire_estimate_pte,
-        tire_estimate_otr: formData.tire_estimate_otr,
-        tire_estimate_tractor: formData.tire_estimate_tractor,
+        // Update legacy fields from new fields for backward compatibility
+        tire_estimate_pte: formData.tire_estimate_passenger_off_rim + formData.tire_estimate_passenger_on_rim,
+        tire_estimate_otr: formData.tire_estimate_oversized,
+        tire_estimate_tractor: 0, // Deprecated
         notes: formData.notes || null,
       },
     });
@@ -193,37 +213,75 @@ export function EditBookingDialog({ booking, open, onOpenChange }: EditBookingDi
             </div>
           </div>
 
-          {/* Tire Estimates */}
-          <div className="grid sm:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="tire_pte">PTE Tires</Label>
-              <Input
-                id="tire_pte"
-                type="number"
-                min="0"
-                value={formData.tire_estimate_pte}
-                onChange={(e) => setFormData({ ...formData, tire_estimate_pte: parseInt(e.target.value) || 0 })}
-              />
+          {/* Tire Estimates - New Categories */}
+          <div className="space-y-4 pt-2">
+            <Label className="text-base font-semibold">Tire Estimates</Label>
+            
+            {/* Passenger Tires */}
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="tire_passenger_off" className="text-sm text-muted-foreground">
+                  🚗 Passenger (Off-Rim)
+                </Label>
+                <Input
+                  id="tire_passenger_off"
+                  type="number"
+                  min="0"
+                  value={formData.tire_estimate_passenger_off_rim}
+                  onChange={(e) => setFormData({ ...formData, tire_estimate_passenger_off_rim: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tire_passenger_on" className="text-sm text-muted-foreground">
+                  🚗 Passenger (On-Rim)
+                </Label>
+                <Input
+                  id="tire_passenger_on"
+                  type="number"
+                  min="0"
+                  value={formData.tire_estimate_passenger_on_rim}
+                  onChange={(e) => setFormData({ ...formData, tire_estimate_passenger_on_rim: parseInt(e.target.value) || 0 })}
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="tire_otr">OTR Tires</Label>
-              <Input
-                id="tire_otr"
-                type="number"
-                min="0"
-                value={formData.tire_estimate_otr}
-                onChange={(e) => setFormData({ ...formData, tire_estimate_otr: parseInt(e.target.value) || 0 })}
-              />
+
+            {/* Commercial & Large */}
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="tire_semi" className="text-sm text-muted-foreground">
+                  🚛 Semi / Truck Tires
+                </Label>
+                <Input
+                  id="tire_semi"
+                  type="number"
+                  min="0"
+                  value={formData.tire_estimate_semi}
+                  onChange={(e) => setFormData({ ...formData, tire_estimate_semi: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tire_oversized" className="text-sm text-muted-foreground">
+                  🚜 OTR / Tractor / Heavy Equipment
+                </Label>
+                <Input
+                  id="tire_oversized"
+                  type="number"
+                  min="0"
+                  value={formData.tire_estimate_oversized}
+                  onChange={(e) => setFormData({ ...formData, tire_estimate_oversized: parseInt(e.target.value) || 0 })}
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="tire_tractor">Tractor Tires</Label>
-              <Input
-                id="tire_tractor"
-                type="number"
-                min="0"
-                value={formData.tire_estimate_tractor}
-                onChange={(e) => setFormData({ ...formData, tire_estimate_tractor: parseInt(e.target.value) || 0 })}
-              />
+
+            {/* PTE Summary */}
+            <div className="p-3 bg-muted/50 rounded-lg text-sm">
+              <span className="font-medium">Estimated PTE: </span>
+              <span className={calculatedPte >= 50 ? 'text-green-600' : 'text-destructive'}>
+                {calculatedPte}
+              </span>
+              <span className="text-muted-foreground ml-2">
+                (Passenger: 1:1, Semi: 5:1, OTR: 15:1)
+              </span>
             </div>
           </div>
 
