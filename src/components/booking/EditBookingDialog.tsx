@@ -25,6 +25,7 @@ export function EditBookingDialog({ booking, open, onOpenChange }: EditBookingDi
     pickup_city: '',
     pickup_state: '',
     pickup_zip: '',
+    requested_date: '',
     // New tire fields
     tire_estimate_passenger_off_rim: 0,
     tire_estimate_passenger_on_rim: 0,
@@ -51,6 +52,7 @@ export function EditBookingDialog({ booking, open, onOpenChange }: EditBookingDi
         pickup_city: booking.pickup_city || '',
         pickup_state: booking.pickup_state || '',
         pickup_zip: booking.pickup_zip || '',
+        requested_date: booking.requested_date || '',
         // New tire fields
         tire_estimate_passenger_off_rim: (booking as any).tire_estimate_passenger_off_rim || 0,
         tire_estimate_passenger_on_rim: (booking as any).tire_estimate_passenger_on_rim || 0,
@@ -107,6 +109,7 @@ export function EditBookingDialog({ booking, open, onOpenChange }: EditBookingDi
         pickup_city: formData.pickup_city || null,
         pickup_state: formData.pickup_state || null,
         pickup_zip: formData.pickup_zip || null,
+        requested_date: formData.requested_date,
         // Update legacy fields from new fields for backward compatibility
         tire_estimate_pte: formData.tire_estimate_passenger_off_rim + formData.tire_estimate_passenger_on_rim,
         tire_estimate_otr: formData.tire_estimate_oversized,
@@ -172,6 +175,20 @@ export function EditBookingDialog({ booking, open, onOpenChange }: EditBookingDi
                 onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
               />
             </div>
+          </div>
+
+          {/* Requested Date */}
+          <div className="space-y-2">
+            <Label htmlFor="requested_date">Requested Pickup Date</Label>
+            <Input
+              id="requested_date"
+              type="date"
+              value={formData.requested_date}
+              onChange={(e) => setFormData({ ...formData, requested_date: e.target.value })}
+            />
+            <p className="text-xs text-muted-foreground">
+              Change the date before approving if the driver prefers a different day
+            </p>
           </div>
 
           {/* Address */}
