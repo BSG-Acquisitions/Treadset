@@ -46,7 +46,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
   
 
   const getCurrentTab = () => {
-    if (location.pathname === '/') return 'dashboard';
+    if (location.pathname === '/dashboard') return 'dashboard';
     if (location.pathname.startsWith('/clients')) return 'clients';
     if (location.pathname.startsWith('/routes')) return 'routes';
     if (location.pathname.startsWith('/driver')) return 'driver';
@@ -59,7 +59,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
   };
 
   const navigationTabs = [
-    { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/', roles: [] as const, featureFlag: null },
+    { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/dashboard', roles: [] as const, featureFlag: null },
     { id: 'clients', label: 'Clients', icon: Users, path: '/clients', roles: ['admin', 'ops_manager', 'sales'] as const, featureFlag: null },
     { id: 'routes', label: 'Routes', icon: MapPin, path: '/routes/today', roles: ['admin', 'ops_manager', 'dispatcher'] as const, featureFlag: null },
     { id: 'driver', label: 'My Routes', icon: UserCheck, path: '/routes/driver', roles: ['driver'] as const, featureFlag: null },
