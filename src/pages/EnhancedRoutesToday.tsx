@@ -376,7 +376,11 @@ export default function EnhancedRoutesToday() {
                                   <div className="flex items-center gap-1.5">
                                     <MapPin className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                                     <span className="text-xs text-muted-foreground truncate">
-                                      {pickup.location?.name || pickup.location?.address || 'No address'}
+                                      {pickup.location?.name || pickup.location?.address || 
+                                       pickup.client?.physical_address || pickup.client?.mailing_address || 
+                                       (pickup.client?.city && pickup.client?.state 
+                                         ? `${pickup.client.city}, ${pickup.client.state}` 
+                                         : 'No address')}
                                     </span>
                                   </div>
                                   

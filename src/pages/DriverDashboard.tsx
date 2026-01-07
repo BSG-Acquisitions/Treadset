@@ -200,7 +200,12 @@ export default function DriverDashboard() {
                           </Badge>
                         </div>
                         <p className="text-sm text-muted-foreground truncate">
-                          {assignment.pickup?.location?.address || 'No address'}
+                          {assignment.pickup?.location?.address || 
+                           assignment.pickup?.client?.physical_address || 
+                           assignment.pickup?.client?.mailing_address ||
+                           (assignment.pickup?.client?.city && assignment.pickup?.client?.state 
+                             ? `${assignment.pickup.client.city}, ${assignment.pickup.client.state}` 
+                             : 'No address')}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {assignment.pickup?.preferred_window || 'Time TBD'} • {assignment.vehicle?.name}
