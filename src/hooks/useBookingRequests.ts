@@ -179,6 +179,7 @@ export function useUpdateBookingRequest() {
         pickup_city?: string | null;
         pickup_state?: string | null;
         pickup_zip?: string | null;
+        requested_date?: string;
         tire_estimate_pte?: number;
         tire_estimate_otr?: number;
         tire_estimate_tractor?: number;
