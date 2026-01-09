@@ -34,8 +34,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { CalendarIcon, Check, ChevronsUpDown } from "lucide-react";
+import { CalendarIcon, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -58,17 +57,24 @@ interface DriverSchedulePickupDialogProps {
 
 export function DriverSchedulePickupDialog({ trigger }: DriverSchedulePickupDialogProps) {
   const [open, setOpen] = useState(false);
-  const [clientSearchOpen, setClientSearchOpen] = useState(false);
   const [clientSearch, setClientSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [showResults, setShowResults] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState("");
 
   const { toast } = useToast();
   const schedulePickup = useSchedulePickup();
   
-  // Fetch clients with search
-  const { data: clientsData } = useClients({
-    search: clientSearch,
-    limit: 50,
+  // Debounce search to avoid excessive database queries
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(clientSearch), 300);
+    return () => clearTimeout(timer);
+  }, [clientSearch]);
+  
+  // Fetch clients with debounced search
+  const { data: clientsData, isLoading: clientsLoading } = useClients({
+    search: debouncedSearch,
+    limit: 20,
   });
   
   // Fetch locations for selected client
@@ -97,14 +103,14 @@ export function DriverSchedulePickupDialog({ trigger }: DriverSchedulePickupDial
     form.setValue("location_id", "");
   }
 
-const clients = clientsData?.data || [];
-const locations = locationsData || [];
+  const clients = clientsData?.data || [];
+  const locations = locationsData || [];
 
-useEffect(() => {
-  if (selectedClientId && locations.length > 0) {
-    form.setValue("location_id", locations[0].id);
-  }
-}, [selectedClientId, locations, form]);
+  useEffect(() => {
+    if (selectedClientId && locations.length > 0) {
+      form.setValue("location_id", locations[0].id);
+    }
+  }, [selectedClientId, locations, form]);
 
   const onSubmit = async (data: DriverPickupFormData) => {
     try {
@@ -156,67 +162,81 @@ useEffect(() => {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             
-            {/* Client Selection */}
+            {/* Client Selection - Simple search input with results list */}
             <FormField
               control={form.control}
               name="client_id"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>Select Client *</FormLabel>
-                  <Popover open={clientSearchOpen} onOpenChange={setClientSearchOpen}>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          className={cn(
-                            "justify-between",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {selectedClient ? selectedClient.company_name : "Search and select client..."}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[400px] p-0">
-                      <Command>
-                        <CommandInput
-                          placeholder="Search clients..."
+                  
+                  {/* Show selected client or search input */}
+                  {selectedClient ? (
+                    <div className="flex items-center justify-between p-3 border rounded-md bg-muted">
+                      <div>
+                        <div className="font-medium">{selectedClient.company_name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {selectedClient.mailing_address || 'No address on file'}
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          field.onChange("");
+                          setSelectedClientId("");
+                          setClientSearch("");
+                        }}
+                      >
+                        Change
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Type to search clients..."
                           value={clientSearch}
-                          onValueChange={setClientSearch}
+                          onChange={(e) => {
+                            setClientSearch(e.target.value);
+                            setShowResults(true);
+                          }}
+                          onFocus={() => setShowResults(true)}
+                          className="pl-9"
                         />
-                        <CommandList>
-                          <CommandEmpty>No clients found.</CommandEmpty>
-                          <CommandGroup>
-                            {clients.map((client) => (
-                              <CommandItem
+                      </div>
+                      
+                      {/* Results dropdown */}
+                      {showResults && clientSearch.length > 0 && (
+                        <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                          {clientsLoading ? (
+                            <div className="p-3 text-center text-muted-foreground">Searching...</div>
+                          ) : clients.length === 0 ? (
+                            <div className="p-3 text-center text-muted-foreground">No clients found</div>
+                          ) : (
+                            clients.map((client) => (
+                              <div
                                 key={client.id}
-                                value={client.id}
-                                onSelect={() => {
+                                className="p-3 hover:bg-accent cursor-pointer border-b last:border-b-0"
+                                onClick={() => {
                                   field.onChange(client.id);
-                                  setClientSearchOpen(false);
+                                  setShowResults(false);
+                                  setClientSearch("");
                                 }}
                               >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    client.id === field.value ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                                <div className="flex-1">
-                                  <div className="font-medium">{client.company_name}</div>
-                                  <div className="text-sm text-muted-foreground">
-                                    {client.mailing_address || 'No address on file'}
-                                  </div>
+                                <div className="font-medium">{client.company_name}</div>
+                                <div className="text-sm text-muted-foreground">
+                                  {client.mailing_address || 'No address on file'}
                                 </div>
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
