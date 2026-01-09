@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useDriverAssignments } from "@/hooks/useDriverAssignments";
+import { useClientPickupStats } from "@/hooks/useClientPickupStats";
 import { DriverAssignmentInterface } from "@/components/driver/DriverAssignmentInterface";
+import { DriverSchedulePickupDialog } from "@/components/driver/DriverSchedulePickupDialog";
 import { MovePickupDialog } from "@/components/MovePickupDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-import { Building, MapPin, Calendar, CheckCircle2, Clock, AlertCircle, Package, Truck, MoreVertical, Move, Phone } from "lucide-react";
+import { Building, MapPin, Calendar, CheckCircle2, Clock, AlertCircle, Package, Truck, MoreVertical, Move, Phone, Plus, TrendingUp, DollarSign } from "lucide-react";
 import { format } from "date-fns";
 
 export default function DriverRoutes() {
@@ -17,6 +19,16 @@ export default function DriverRoutes() {
   const [movePickupOpen, setMovePickupOpen] = useState(false);
   const [selectedPickupToMove, setSelectedPickupToMove] = useState<any>(null);
   const { data: assignments = [], isLoading } = useDriverAssignments(selectedDate);
+
+  // Extract unique client IDs for stats lookup
+  const clientIds = useMemo(() => {
+    const ids = assignments
+      .map(a => a.pickup?.client?.id)
+      .filter((id): id is string => !!id);
+    return [...new Set(ids)];
+  }, [assignments]);
+
+  const { data: clientStats = {} } = useClientPickupStats(clientIds);
 
   useEffect(() => {
     document.title = "Driver Routes – TreadSet";
@@ -89,14 +101,24 @@ export default function DriverRoutes() {
               {format(new Date(selectedDate + 'T00:00:00'), 'EEEE, MMMM d, yyyy')} • {assignments.length} stops scheduled
             </p>
           </div>
-          <div className="flex items-center gap-2 bg-card p-2 rounded-lg border">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            <Input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-auto border-0 bg-transparent p-0 text-sm focus-visible:ring-0"
+          <div className="flex items-center gap-3">
+            <DriverSchedulePickupDialog
+              trigger={
+                <Button size="sm" className="bg-brand-primary hover:bg-brand-primary/90">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Pickup
+                </Button>
+              }
             />
+            <div className="flex items-center gap-2 bg-card p-2 rounded-lg border">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <Input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="w-auto border-0 bg-transparent p-0 text-sm focus-visible:ring-0"
+              />
+            </div>
           </div>
         </div>
 
@@ -213,21 +235,33 @@ export default function DriverRoutes() {
                           </div>
                         </div>
 
-                        {/* Tire Counts - Simplified */}
-                        <div className="mb-4 grid grid-cols-3 gap-2 md:gap-3">
-                          <div className="text-center p-2 md:p-3 bg-green-50 rounded-lg border border-green-200">
-                            <div className="text-lg md:text-xl font-bold text-green-700">{assignment.pickup?.pte_count || 0}</div>
-                            <div className="text-xs md:text-sm text-green-600">PTE</div>
-                          </div>
-                          <div className="text-center p-2 md:p-3 bg-orange-50 rounded-lg border border-orange-200">
-                            <div className="text-lg md:text-xl font-bold text-orange-700">{assignment.pickup?.otr_count || 0}</div>
-                            <div className="text-xs md:text-sm text-orange-600">OTR</div>
-                          </div>
-                          <div className="text-center p-2 md:p-3 bg-purple-50 rounded-lg border border-purple-200">
-                            <div className="text-lg md:text-xl font-bold text-purple-700">{assignment.pickup?.tractor_count || 0}</div>
-                            <div className="text-xs md:text-sm text-purple-600">Tractor</div>
-                          </div>
-                        </div>
+                        {/* Client Historical Stats */}
+                        {(() => {
+                          const clientId = assignment.pickup?.client?.id;
+                          const stats = clientId ? clientStats[clientId] : null;
+                          return (
+                            <div className="mb-4 grid grid-cols-2 gap-2 md:gap-3">
+                              <div className="text-center p-2 md:p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                <div className="flex items-center justify-center gap-1 mb-1">
+                                  <TrendingUp className="h-4 w-4 text-blue-600" />
+                                </div>
+                                <div className="text-lg md:text-xl font-bold text-blue-700">
+                                  {stats?.avgTires ?? '--'}
+                                </div>
+                                <div className="text-xs md:text-sm text-blue-600">Avg Tires/Pickup</div>
+                              </div>
+                              <div className="text-center p-2 md:p-3 bg-green-50 rounded-lg border border-green-200">
+                                <div className="flex items-center justify-center gap-1 mb-1">
+                                  <DollarSign className="h-4 w-4 text-green-600" />
+                                </div>
+                                <div className="text-lg md:text-xl font-bold text-green-700">
+                                  {stats?.avgPrice ? `$${stats.avgPrice.toFixed(2)}` : '--'}
+                                </div>
+                                <div className="text-xs md:text-sm text-green-600">Avg Pickup Price</div>
+                              </div>
+                            </div>
+                          );
+                        })()}
 
                         {/* Notes if present */}
                         {assignment.pickup?.notes && (
