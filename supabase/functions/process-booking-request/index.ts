@@ -414,19 +414,64 @@ Deno.serve(async (req) => {
 
       // Create assignment if vehicle/driver provided
       if (vehicleId) {
+        // Resolve driver_id from vehicle if not explicitly provided
+        let resolvedDriverId = driverId;
+        
+        if (!resolvedDriverId) {
+          console.log(`No driverId provided, resolving from vehicle ${vehicleId}...`);
+          
+          // Fetch the vehicle to get driver_email
+          const { data: vehicle, error: vehicleError } = await supabase
+            .from('vehicles')
+            .select('driver_email, assigned_driver_id')
+            .eq('id', vehicleId)
+            .single();
+          
+          if (vehicleError) {
+            console.error('Error fetching vehicle:', vehicleError);
+          } else if (vehicle) {
+            // First try assigned_driver_id if available
+            if (vehicle.assigned_driver_id) {
+              resolvedDriverId = vehicle.assigned_driver_id;
+              console.log(`Resolved driver from assigned_driver_id: ${resolvedDriverId}`);
+            } 
+            // Otherwise look up user by driver_email
+            else if (vehicle.driver_email) {
+              const { data: driverUser, error: userError } = await supabase
+                .from('users')
+                .select('id')
+                .ilike('email', vehicle.driver_email)
+                .single();
+              
+              if (userError) {
+                console.error('Error finding driver by email:', userError);
+              } else if (driverUser) {
+                resolvedDriverId = driverUser.id;
+                console.log(`Resolved driver from driver_email (${vehicle.driver_email}): ${resolvedDriverId}`);
+              }
+            }
+          }
+          
+          if (!resolvedDriverId) {
+            console.warn(`Could not resolve driver_id for vehicle ${vehicleId} - assignment will have null driver_id`);
+          }
+        }
+
         const { error: assignmentError } = await supabase
           .from('assignments')
           .insert({
             organization_id: booking.organization_id,
             pickup_id: pickupId,
             vehicle_id: vehicleId,
-            driver_id: driverId,
+            driver_id: resolvedDriverId,
             scheduled_date: pickupDate,
             status: 'assigned',
           });
 
         if (assignmentError) {
           console.error('Error creating assignment:', assignmentError);
+        } else {
+          console.log(`Created assignment with driver_id: ${resolvedDriverId}`);
         }
       }
 
