@@ -44,8 +44,6 @@ export const useAuth = () => {
   return context;
 };
 
-const DISABLE_AUTH = false; // Set to true to bypass auth for demo
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -127,7 +125,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoadingUserData(true);
     
     try {
-      if (!authUser && !DISABLE_AUTH) {
+      if (!authUser) {
         console.log('No auth user, setting user to null');
         setUserIfChanged(null);
         return;
@@ -135,23 +133,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const orgSlug = getCurrentOrgSlug();
       console.log('Current org slug:', orgSlug);
-      
-      if (DISABLE_AUTH) {
-        // Demo mode - create a mock admin user with real organization
-        setUserIfChanged({
-          id: '00000000-0000-0000-0000-000000000000',
-          email: 'admin@bsg.com',
-          firstName: 'Demo',
-          lastName: 'Admin',
-          roles: ['admin'],
-          currentOrganization: {
-            id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
-            name: 'BSG Logistics',
-            slug: 'bsg'
-          }
-        });
-        return;
-      }
 
       console.log('Fetching user data for auth user:', authUser.id);
       
@@ -331,28 +312,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  // DISABLED: Aggressive session validation was causing login issues
-  // Session validation will be handled by Supabase's built-in refresh mechanism
-  // useEffect(() => {
-  //   if (!session) {
-  //     if (intervalRef.current) {
-  //       clearInterval(intervalRef.current);
-  //       intervalRef.current = null;
-  //     }
-  //     return;
-  //   }
-
-  //   // Validate session every 10 minutes
-  //   intervalRef.current = setInterval(validateSession, 10 * 60 * 1000);
-
-  //   return () => {
-  //     if (intervalRef.current) {
-  //       clearInterval(intervalRef.current);
-  //       intervalRef.current = null;
-  //     }
-  //   };
-  // }, [session, validateSession]);
-
   // Check if user needs onboarding - only once per session
   useEffect(() => {
     const checkOnboarding = async () => {
@@ -388,12 +347,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signIn = async (email: string, password: string) => {
     console.log('signIn called with email:', email);
-    
-    if (DISABLE_AUTH) {
-      // Demo mode - always succeed
-      setTimeout(() => loadUserData(null), 0);
-      return {};
-    }
 
     console.log('Attempting to sign in with Supabase...');
     
@@ -420,12 +373,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signUp = async (email: string, password: string, firstName?: string, lastName?: string) => {
-    if (DISABLE_AUTH) {
-      // Demo mode - always succeed
-      setTimeout(() => loadUserData(null), 0);
-      return {};
-    }
-
     const redirectUrl = `${window.location.origin}/`;
     
     const { data, error } = await supabase.auth.signUp({
@@ -460,20 +407,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
-    if (DISABLE_AUTH) {
-      setUser(null);
-      setSession(null);
-      return;
-    }
-
     await supabase.auth.signOut();
   };
 
   const resetPassword = async (email: string) => {
-    if (DISABLE_AUTH) {
-      return {};
-    }
-
     // Get the current domain/URL for the redirect
     const currentUrl = window.location.origin;
     const redirectUrl = `${currentUrl}/reset-password`;
@@ -487,21 +424,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updatePassword = async (password: string) => {
-    if (DISABLE_AUTH) {
-      return {};
-    }
-
     const { error } = await supabase.auth.updateUser({ password });
     return { error };
   };
 
   const hasRole = (role: AppRole) => {
-    if (DISABLE_AUTH) return true;
     return user?.roles.includes(role) ?? false;
   };
 
   const hasAnyRole = (roles: AppRole[]) => {
-    if (DISABLE_AUTH) return true;
     return roles.some(role => user?.roles.includes(role)) ?? false;
   };
 

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { validatePartnerApplication, checkRateLimit, getClientIP } from "../_shared/validation.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,26 +14,47 @@ serve(async (req) => {
   }
 
   try {
+    // Rate limiting - 3 applications per hour per IP
+    const clientIP = getClientIP(req);
+    const rateLimit = checkRateLimit(`partner-app:${clientIP}`, 3, 60 * 60 * 1000);
+    
+    if (!rateLimit.allowed) {
+      console.log(`Rate limit exceeded for IP: ${clientIP}`);
+      return new Response(
+        JSON.stringify({ error: 'Too many applications. Please try again later.' }),
+        { 
+          status: 429, 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json',
+            'Retry-After': String(Math.ceil((rateLimit.resetAt - Date.now()) / 1000))
+          }
+        }
+      );
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
-    console.log('Received partner application:', JSON.stringify(body, null, 2));
-
-    // Validate required fields
-    const { companyName, contactName, email, phone, dotNumber } = body;
     
-    if (!companyName || !contactName || !email || !phone || !dotNumber) {
-      console.error('Missing required fields');
+    // Validate input using shared validation
+    const validation = validatePartnerApplication(body);
+    
+    if (!validation.success) {
+      console.error('Validation failed:', validation.error);
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: companyName, contactName, email, phone, dotNumber' }),
+        JSON.stringify({ error: validation.error }),
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
     }
+
+    const { companyName, contactName, email, phone, dotNumber, mcNumber, address, city, state, zip, fleetSize, notes } = validation.data!;
+    console.log('Processing validated partner application');
 
     // Get the default organization (BSG)
     const { data: orgs, error: orgError } = await supabase
@@ -57,18 +79,18 @@ serve(async (req) => {
       .from('haulers')
       .insert({
         organization_id: orgs.id,
-        hauler_name: companyName, // Use hauler_name as primary field
+        hauler_name: companyName,
         company_name: companyName,
         contact_name: contactName,
         email: email,
         phone: phone,
         dot_number: dotNumber,
-        mc_number: body.mcNumber || null,
-        address: body.address || null,
-        city: body.city || null,
-        state: body.state || 'MI',
-        zip: body.zip || null,
-        notes: `Fleet size: ${body.fleetSize || 'Not specified'}\n\nAdditional notes: ${body.notes || 'None'}`,
+        mc_number: mcNumber || null,
+        address: address || null,
+        city: city || null,
+        state: state || 'MI',
+        zip: zip || null,
+        notes: `Fleet size: ${fleetSize || 'Not specified'}\n\nAdditional notes: ${notes || 'None'}`,
         status: 'pending',
         application_status: 'pending',
         is_active: false, // Not active until approved
