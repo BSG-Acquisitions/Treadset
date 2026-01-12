@@ -104,7 +104,7 @@ export default function DriverRoutes() {
           <div className="flex items-center gap-3">
             <DriverSchedulePickupDialog
               trigger={
-                <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                <Button size="sm" className="!bg-green-600 hover:!bg-green-700 text-white">
                   <Plus className="h-4 w-4 mr-2" />
                   Add Pickup
                 </Button>
