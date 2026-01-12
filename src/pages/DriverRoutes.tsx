@@ -240,33 +240,33 @@ export default function DriverRoutes() {
                           const clientId = assignment.pickup?.client?.id;
                           const stats = clientId ? clientStats[clientId] : null;
                           return (
-                            <div className="mb-4 grid grid-cols-3 gap-2 md:gap-3">
-                              <div className="text-center p-2 md:p-3 bg-blue-50 rounded-lg border border-blue-200">
-                                <div className="flex items-center justify-center gap-1 mb-1">
-                                  <TrendingUp className="h-4 w-4 text-blue-600" />
+                            <div className="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-3">
+                              <div className="flex sm:flex-col items-center sm:text-center justify-between sm:justify-start p-3 md:p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                <div className="flex items-center gap-2 sm:flex-col sm:gap-1">
+                                  <TrendingUp className="hidden sm:block h-4 w-4 text-blue-600" />
+                                  <span className="text-sm sm:text-xs md:text-sm text-blue-600 sm:order-2">Avg Tires</span>
                                 </div>
                                 <div className="text-lg md:text-xl font-bold text-blue-700">
                                   {stats?.avgTires ?? '--'}
                                 </div>
-                                <div className="text-xs md:text-sm text-blue-600">Avg Tires/Pickup</div>
                               </div>
-                              <div className="text-center p-2 md:p-3 bg-green-50 rounded-lg border border-green-200">
-                                <div className="flex items-center justify-center gap-1 mb-1">
-                                  <DollarSign className="h-4 w-4 text-green-600" />
+                              <div className="flex sm:flex-col items-center sm:text-center justify-between sm:justify-start p-3 md:p-3 bg-green-50 rounded-lg border border-green-200">
+                                <div className="flex items-center gap-2 sm:flex-col sm:gap-1">
+                                  <DollarSign className="hidden sm:block h-4 w-4 text-green-600" />
+                                  <span className="text-sm sm:text-xs md:text-sm text-green-600 sm:order-2">Avg Revenue</span>
                                 </div>
                                 <div className="text-lg md:text-xl font-bold text-green-700">
                                   {stats?.avgPrice ? `$${stats.avgPrice.toFixed(2)}` : '--'}
                                 </div>
-                                <div className="text-xs md:text-sm text-green-600">Avg Pickup Revenue</div>
                               </div>
-                              <div className="text-center p-2 md:p-3 bg-purple-50 rounded-lg border border-purple-200">
-                                <div className="flex items-center justify-center gap-1 mb-1">
-                                  <DollarSign className="h-4 w-4 text-purple-600" />
+                              <div className="flex sm:flex-col items-center sm:text-center justify-between sm:justify-start p-3 md:p-3 bg-purple-50 rounded-lg border border-purple-200">
+                                <div className="flex items-center gap-2 sm:flex-col sm:gap-1">
+                                  <DollarSign className="hidden sm:block h-4 w-4 text-purple-600" />
+                                  <span className="text-sm sm:text-xs md:text-sm text-purple-600 sm:order-2">Last $/Tire</span>
                                 </div>
                                 <div className="text-lg md:text-xl font-bold text-purple-700">
                                   {stats?.lastPricePerTire ? `$${stats.lastPricePerTire.toFixed(2)}` : '--'}
                                 </div>
-                                <div className="text-xs md:text-sm text-purple-600">Last $/Tire</div>
                               </div>
                             </div>
                           );
