@@ -257,7 +257,7 @@ export default function DriverRoutes() {
                                 <div className="text-lg md:text-xl font-bold text-green-700">
                                   {stats?.avgPrice ? `$${stats.avgPrice.toFixed(2)}` : '--'}
                                 </div>
-                                <div className="text-xs md:text-sm text-green-600">Avg Pickup Price</div>
+                                <div className="text-xs md:text-sm text-green-600">Avg Pickup Revenue</div>
                               </div>
                               <div className="text-center p-2 md:p-3 bg-purple-50 rounded-lg border border-purple-200">
                                 <div className="flex items-center justify-center gap-1 mb-1">
