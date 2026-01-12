@@ -1,33 +1,10 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
+import { validateBookingRequest, checkRateLimit, getClientIP, sanitizeString, isValidString } from '../_shared/validation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-interface BookingRequest {
-  name: string;
-  email: string;
-  phone?: string;
-  company: string;
-  address: string;
-  // New tire fields
-  passengerOffRim?: number;
-  passengerOnRim?: number;
-  semiCount?: number;
-  oversizedCount?: number;
-  // Legacy fields (for backward compatibility)
-  pteCount?: number;
-  otrCount?: number;
-  tractorCount?: number;
-  preferredDate: string;
-  preferredWindow: 'AM' | 'PM' | 'Any';
-  notes?: string;
-  source?: string;
-  clientId?: string;
-  inviteId?: string;
-  fromEmailBooking?: boolean;
-}
 
 interface Coordinates {
   lat: number;
@@ -162,33 +139,46 @@ Deno.serve(async (req) => {
     
     // Handle different actions
     if (body.action === 'check-client') {
-      // Secure client lookup for pre-fill - returns ONLY safe public data
-      // Supports either clientId directly or inviteId (from portal invite email tracking)
-      console.log('[PUBLIC_BOOKING] Client lookup request:', { clientId: body.clientId, inviteId: body.inviteId });
+      // Rate limit client checks - 20 per minute per IP
+      const clientIP = getClientIP(req);
+      const rateLimit = checkRateLimit(`booking-check:${clientIP}`, 20, 60 * 1000);
       
-      let clientId = body.clientId;
+      if (!rateLimit.allowed) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Too many requests' }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Validate clientId/inviteId format (UUID)
+      const clientId = body.clientId ? sanitizeString(body.clientId, 50) : null;
+      const inviteId = body.inviteId ? sanitizeString(body.inviteId, 50) : null;
+      
+      console.log('[PUBLIC_BOOKING] Client lookup request:', { clientId, inviteId });
+      
+      let resolvedClientId = clientId;
       
       // If inviteId provided, look up the client from the invite
-      if (body.inviteId && !clientId) {
+      if (inviteId && !resolvedClientId) {
         const { data: invite, error: inviteError } = await supabase
           .from('client_invites')
           .select('client_id')
-          .eq('id', body.inviteId)
+          .eq('id', inviteId)
           .single();
         
         if (inviteError || !invite) {
-          console.log('[PUBLIC_BOOKING] Invite not found:', body.inviteId);
+          console.log('[PUBLIC_BOOKING] Invite not found:', inviteId);
           return new Response(
             JSON.stringify({ success: false, error: 'Invite not found' }),
             { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
         
-        clientId = invite.client_id;
-        console.log('[PUBLIC_BOOKING] Resolved clientId from invite:', clientId);
+        resolvedClientId = invite.client_id;
+        console.log('[PUBLIC_BOOKING] Resolved clientId from invite:', resolvedClientId);
       }
       
-      if (!clientId) {
+      if (!resolvedClientId) {
         return new Response(
           JSON.stringify({ success: false, error: 'Client ID or Invite ID required' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -199,35 +189,32 @@ Deno.serve(async (req) => {
       const { data: client, error: clientError } = await supabase
         .from('clients')
         .select('id, company_name, contact_name, email, phone, physical_address, physical_city, physical_state, physical_zip, mailing_address, city, state, zip, organization_id')
-        .eq('id', clientId)
+        .eq('id', resolvedClientId)
         .single();
 
       if (clientError || !client) {
-        console.log('[PUBLIC_BOOKING] Client not found:', clientId);
+        console.log('[PUBLIC_BOOKING] Client not found:', resolvedClientId);
         return new Response(
           JSON.stringify({ success: false, error: 'Client not found' }),
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      // TRACK EMAIL CLICK - increment emails_clicked in client_email_preferences
-      // This happens when a client clicks the email link and lands on /public-book?client={id} or ?invite={id}
+      // TRACK EMAIL CLICK
       if (body.fromEmail) {
-        console.log('[PUBLIC_BOOKING] Tracking email click for client:', clientId);
+        console.log('[PUBLIC_BOOKING] Tracking email click for client:', resolvedClientId);
         const { error: clickError } = await supabase.rpc('increment_email_clicks', {
-          p_client_id: clientId,
+          p_client_id: resolvedClientId,
           p_organization_id: client.organization_id
         });
         
         if (clickError) {
-          // Fallback: direct update if RPC doesn't exist
           console.log('[PUBLIC_BOOKING] RPC failed, trying direct update:', clickError.message);
           
-          // Alternative: upsert approach
           const { data: existingPref } = await supabase
             .from('client_email_preferences')
             .select('emails_clicked')
-            .eq('client_id', clientId)
+            .eq('client_id', resolvedClientId)
             .eq('organization_id', client.organization_id)
             .single();
           
@@ -235,13 +222,13 @@ Deno.serve(async (req) => {
             await supabase
               .from('client_email_preferences')
               .update({ emails_clicked: (existingPref.emails_clicked || 0) + 1 })
-              .eq('client_id', clientId)
+              .eq('client_id', resolvedClientId)
               .eq('organization_id', client.organization_id);
           } else {
             await supabase
               .from('client_email_preferences')
               .insert({
-                client_id: clientId,
+                client_id: resolvedClientId,
                 organization_id: client.organization_id,
                 emails_clicked: 1
               });
@@ -254,7 +241,7 @@ Deno.serve(async (req) => {
       const { data: location } = await supabase
         .from('locations')
         .select('address')
-        .eq('client_id', clientId)
+        .eq('client_id', resolvedClientId)
         .eq('is_active', true)
         .limit(1)
         .maybeSingle();
@@ -279,7 +266,7 @@ Deno.serve(async (req) => {
         isReturningClient: true,
       };
 
-      console.log('[PUBLIC_BOOKING] Returning safe client data for pre-fill:', safeClientData);
+      console.log('[PUBLIC_BOOKING] Returning safe client data for pre-fill');
       return new Response(
         JSON.stringify({ success: true, client: safeClientData }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -288,7 +275,27 @@ Deno.serve(async (req) => {
 
     // Handle zone check action
     if (body.action === 'check-zone') {
-      console.log('[PUBLIC_BOOKING] Zone check request for ZIP:', body.zipCode);
+      // Rate limit zone checks - 30 per minute per IP
+      const clientIP = getClientIP(req);
+      const rateLimit = checkRateLimit(`zone-check:${clientIP}`, 30, 60 * 1000);
+      
+      if (!rateLimit.allowed) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Too many requests' }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const zipCode = body.zipCode ? sanitizeString(body.zipCode, 10) : null;
+      console.log('[PUBLIC_BOOKING] Zone check request for ZIP:', zipCode);
+      
+      // Validate ZIP code format
+      if (!zipCode || !/^\d{5}(-\d{4})?$/.test(zipCode)) {
+        return new Response(
+          JSON.stringify({ success: true, zone: null }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
       
       // Get the default BSG organization
       const { data: organization } = await supabase
@@ -297,13 +304,13 @@ Deno.serve(async (req) => {
         .eq('slug', 'bsg')
         .single();
 
-      if (organization && body.zipCode) {
+      if (organization) {
         const { data: zones } = await supabase
           .from('service_zones')
           .select('id, zone_name, primary_service_days, zip_codes')
           .eq('organization_id', organization.id)
           .eq('is_active', true)
-          .contains('zip_codes', [body.zipCode]);
+          .contains('zip_codes', [zipCode.substring(0, 5)]);
 
         if (zones && zones.length > 0) {
           return new Response(
@@ -319,9 +326,49 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Default: process booking request
-    const bookingData: BookingRequest = body;
-    console.log('[PUBLIC_BOOKING] Processing booking request:', bookingData);
+    // Rate limiting for booking requests - 5 per hour per IP
+    const clientIP = getClientIP(req);
+    const rateLimit = checkRateLimit(`booking:${clientIP}`, 5, 60 * 60 * 1000);
+    
+    if (!rateLimit.allowed) {
+      console.log(`Rate limit exceeded for booking from IP: ${clientIP}`);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Too many booking requests. Please try again later.',
+          code: 'RATE_LIMITED'
+        }),
+        { 
+          status: 429, 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json',
+            'Retry-After': String(Math.ceil((rateLimit.resetAt - Date.now()) / 1000))
+          }
+        }
+      );
+    }
+
+    // Validate booking request
+    const validation = validateBookingRequest(body);
+    
+    if (!validation.success) {
+      console.error('[PUBLIC_BOOKING] Validation failed:', validation.error);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: validation.error,
+          code: 'VALIDATION_ERROR'
+        }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    const bookingData = validation.data!;
+    console.log('[PUBLIC_BOOKING] Processing validated booking request');
 
     // Get the default BSG organization
     const { data: organization, error: orgError } = await supabase
@@ -506,7 +553,7 @@ Deno.serve(async (req) => {
       }
     });
 
-    // TRACK EMAIL BOOKING CONVERSION - increment bookings_from_email if this came from an email link
+    // TRACK EMAIL BOOKING CONVERSION
     if (bookingData.fromEmailBooking && (bookingData.clientId || existingClient?.id)) {
       const trackingClientId = bookingData.clientId || existingClient?.id;
       console.log('[PUBLIC_BOOKING] Tracking email booking conversion for client:', trackingClientId);
@@ -646,7 +693,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error?.message || 'Internal server error'
+        error: 'An error occurred processing your request. Please try again.'
       }),
       { 
         status: 500,
