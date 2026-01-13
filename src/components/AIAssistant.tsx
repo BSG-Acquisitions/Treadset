@@ -144,6 +144,49 @@ const formatResultData = (result: any) => {
         </div>
       );
 
+    case 'route_call_list':
+      return (
+        <div className="space-y-3">
+          <div className="flex justify-between text-xs text-muted-foreground border-b pb-2">
+            <span>Route Date: {result.data.route_date}</span>
+            <span>{result.data.total_stops} stops scheduled</span>
+          </div>
+          {result.data.suggestions.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No nearby clients found to call</p>
+          ) : (
+            result.data.suggestions.map((suggestion: any) => (
+              <div key={suggestion.client_id} className="text-sm border rounded-lg p-2 space-y-1">
+                <div className="flex justify-between items-start">
+                  <div className="font-medium">{suggestion.company_name}</div>
+                  <Badge 
+                    variant={suggestion.priority === 'high' ? 'destructive' : suggestion.priority === 'medium' ? 'default' : 'secondary'}
+                  >
+                    {suggestion.priority}
+                  </Badge>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {suggestion.nearest_stop_distance} mi from route • {suggestion.days_since_pickup} days since pickup
+                </div>
+                {suggestion.phone && (
+                  <a 
+                    href={`tel:${suggestion.phone}`} 
+                    className="text-xs text-primary hover:underline block"
+                  >
+                    📞 {suggestion.phone}
+                  </a>
+                )}
+                {suggestion.address && (
+                  <div className="text-xs text-muted-foreground truncate">📍 {suggestion.address}</div>
+                )}
+                <div className="text-xs italic text-muted-foreground mt-1">
+                  💡 {suggestion.reasoning}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      );
+
     default:
       return <pre className="text-xs">{JSON.stringify(result.data, null, 2)}</pre>;
   }
@@ -224,8 +267,8 @@ export const AIAssistant = () => {
                     <ul className="text-sm space-y-2 list-disc list-inside text-muted-foreground">
                       <li>Show me top clients by revenue this month</li>
                       <li>How many PTEs did we process last week?</li>
-                      <li>List drivers with on-time rate below 90%</li>
-                      <li>What's the revenue forecast for next quarter?</li>
+                      <li>Who should I call near tomorrow's route?</li>
+                      <li>Give me a call list for today's stops</li>
                       <li>Show clients at high risk of churn</li>
                     </ul>
                   </CardContent>

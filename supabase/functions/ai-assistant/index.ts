@@ -11,6 +11,22 @@ interface QueryResult {
   summary: string;
 }
 
+// Calculate distance between two coordinates using Haversine formula
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 3959; // Earth's radius in miles
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function toRad(deg: number): number {
+  return deg * (Math.PI / 180);
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -49,9 +65,14 @@ Available query types:
 - revenue_forecast: Revenue projections (params: period)
 - manifest_status: Manifest completion status (params: status)
 - client_risk: At-risk clients (params: risk_level)
+- route_call_list: Recommend clients to call near scheduled route stops (params: date, driver_id, limit)
 
 Time periods: today, this_week, last_week, this_month, last_month, this_year
 Risk levels: high, medium, low
+
+For route_call_list queries:
+- "date" should be ISO format (YYYY-MM-DD). Use today's date if not specified or if user says "today", "tomorrow" use the next day
+- Examples: "who should I call near tomorrow's route", "call list for monday's stops", "clients near today's pickups"
 
 Return ONLY valid JSON.`
           },
@@ -70,7 +91,7 @@ Return ONLY valid JSON.`
               properties: {
                 query_type: {
                   type: 'string',
-                  enum: ['top_clients_revenue', 'pte_processed', 'driver_performance', 'recent_pickups', 'revenue_forecast', 'manifest_status', 'client_risk']
+                  enum: ['top_clients_revenue', 'pte_processed', 'driver_performance', 'recent_pickups', 'revenue_forecast', 'manifest_status', 'client_risk', 'route_call_list']
                 },
                 parameters: {
                   type: 'object',
@@ -80,7 +101,9 @@ Return ONLY valid JSON.`
                     threshold: { type: 'number' },
                     days: { type: 'number' },
                     status: { type: 'string' },
-                    risk_level: { type: 'string' }
+                    risk_level: { type: 'string' },
+                    date: { type: 'string' },
+                    driver_id: { type: 'string' }
                   }
                 }
               },
@@ -292,6 +315,254 @@ Return ONLY valid JSON.`
           type: 'client_risk',
           data,
           summary: `${data.length} client(s) at ${riskLevel} risk of churn`
+        };
+        break;
+      }
+
+      case 'route_call_list': {
+        const limit = parsedQuery.parameters.limit || 10;
+        const targetDate = parsedQuery.parameters.date || new Date().toISOString().split('T')[0];
+        const driverId = parsedQuery.parameters.driver_id;
+        
+        console.log('Route call list for date:', targetDate, 'driver:', driverId);
+
+        // 1. Get all scheduled assignments for the target date
+        let assignmentsQuery = supabase
+          .from('assignments')
+          .select(`
+            id,
+            pickup_id,
+            driver_id,
+            pickups!assignments_pickup_id_fkey(
+              id,
+              client_id,
+              clients!pickups_client_id_fkey(
+                id,
+                company_name,
+                depot_lat,
+                depot_lng
+              )
+            )
+          `)
+          .eq('organization_id', organizationId)
+          .eq('scheduled_date', targetDate);
+
+        if (driverId) {
+          assignmentsQuery = assignmentsQuery.eq('driver_id', driverId);
+        }
+
+        const { data: assignments, error: assignmentsError } = await assignmentsQuery;
+        
+        if (assignmentsError) throw assignmentsError;
+
+        if (!assignments || assignments.length === 0) {
+          result = {
+            type: 'route_call_list',
+            data: {
+              route_date: targetDate,
+              total_stops: 0,
+              suggestions: []
+            },
+            summary: `No stops scheduled for ${targetDate}. Schedule some pickups first to get call list recommendations.`
+          };
+          break;
+        }
+
+        // 2. Extract route stop coordinates
+        const routeStops: { lat: number; lng: number; clientId: string }[] = [];
+        const scheduledClientIds = new Set<string>();
+        
+        for (const assignment of assignments) {
+          const pickup = assignment.pickups as any;
+          const client = pickup?.clients;
+          if (client?.depot_lat && client?.depot_lng) {
+            routeStops.push({
+              lat: client.depot_lat,
+              lng: client.depot_lng,
+              clientId: client.id
+            });
+            scheduledClientIds.add(client.id);
+          }
+        }
+
+        if (routeStops.length === 0) {
+          result = {
+            type: 'route_call_list',
+            data: {
+              route_date: targetDate,
+              total_stops: assignments.length,
+              suggestions: []
+            },
+            summary: `${assignments.length} stops scheduled but no geocoded locations available.`
+          };
+          break;
+        }
+
+        // 3. Get all active clients with locations
+        const { data: allClients, error: clientsError } = await supabase
+          .from('clients')
+          .select('id, company_name, phone, email, depot_lat, depot_lng, last_pickup_at, lifetime_revenue, physical_address, physical_city, physical_state')
+          .eq('organization_id', organizationId)
+          .eq('is_active', true)
+          .not('depot_lat', 'is', null)
+          .not('depot_lng', 'is', null);
+
+        if (clientsError) throw clientsError;
+
+        // 4. Filter clients not already scheduled and within radius of any route stop
+        const maxDistance = 8; // miles
+        const nearbyClients: any[] = [];
+
+        for (const client of allClients || []) {
+          if (scheduledClientIds.has(client.id)) continue;
+
+          // Find minimum distance to any route stop
+          let minDistance = Infinity;
+          for (const stop of routeStops) {
+            const dist = calculateDistance(
+              stop.lat, stop.lng,
+              client.depot_lat!, client.depot_lng!
+            );
+            if (dist < minDistance) minDistance = dist;
+          }
+
+          if (minDistance <= maxDistance) {
+            const daysSincePickup = client.last_pickup_at 
+              ? Math.floor((Date.now() - new Date(client.last_pickup_at).getTime()) / (1000 * 60 * 60 * 24))
+              : 999;
+
+            nearbyClients.push({
+              ...client,
+              nearest_stop_distance: Math.round(minDistance * 10) / 10,
+              days_since_pickup: daysSincePickup
+            });
+          }
+        }
+
+        // 5. Score and sort candidates
+        nearbyClients.sort((a, b) => {
+          // Score based on: proximity (lower better), days since pickup (higher better)
+          const scoreA = (a.nearest_stop_distance * 2) - (Math.min(a.days_since_pickup, 90) / 10);
+          const scoreB = (b.nearest_stop_distance * 2) - (Math.min(b.days_since_pickup, 90) / 10);
+          return scoreA - scoreB;
+        });
+
+        const topCandidates = nearbyClients.slice(0, Math.min(limit, 15));
+
+        // 6. Use AI to prioritize and add reasoning
+        let suggestions = [];
+        
+        if (topCandidates.length > 0) {
+          const prioritizeResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${lovableApiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'google/gemini-2.5-flash',
+              messages: [
+                {
+                  role: 'system',
+                  content: `You are a route optimization assistant for a tire recycling business. 
+                  Prioritize which clients to call based on proximity to an existing route and time since last pickup.
+                  Return a brief reasoning for each suggestion (max 15 words).`
+                },
+                {
+                  role: 'user',
+                  content: `Prioritize these clients for a call list. Route has ${routeStops.length} stops on ${targetDate}.
+                  
+Candidates:
+${topCandidates.map((c, i) => `${i + 1}. ${c.company_name} - ${c.nearest_stop_distance} miles from route, ${c.days_since_pickup} days since last pickup, $${c.lifetime_revenue || 0} lifetime revenue`).join('\n')}
+
+Return JSON array with client priorities.`
+                }
+              ],
+              tools: [{
+                type: 'function',
+                function: {
+                  name: 'prioritize_clients',
+                  description: 'Return prioritized client list with reasoning',
+                  parameters: {
+                    type: 'object',
+                    properties: {
+                      suggestions: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            index: { type: 'number' },
+                            priority: { type: 'string', enum: ['high', 'medium', 'low'] },
+                            reasoning: { type: 'string' }
+                          },
+                          required: ['index', 'priority', 'reasoning']
+                        }
+                      }
+                    },
+                    required: ['suggestions']
+                  }
+                }
+              }],
+              tool_choice: { type: 'function', function: { name: 'prioritize_clients' } }
+            })
+          });
+
+          if (prioritizeResponse.ok) {
+            const prioritizeData = await prioritizeResponse.json();
+            const priorityCall = prioritizeData.choices[0].message.tool_calls?.[0];
+            
+            if (priorityCall) {
+              const priorities = JSON.parse(priorityCall.function.arguments);
+              
+              suggestions = priorities.suggestions
+                .slice(0, limit)
+                .map((p: any) => {
+                  const client = topCandidates[p.index - 1];
+                  if (!client) return null;
+                  return {
+                    client_id: client.id,
+                    company_name: client.company_name,
+                    phone: client.phone,
+                    email: client.email,
+                    address: [client.physical_address, client.physical_city, client.physical_state].filter(Boolean).join(', '),
+                    nearest_stop_distance: client.nearest_stop_distance,
+                    last_pickup_at: client.last_pickup_at,
+                    days_since_pickup: client.days_since_pickup,
+                    priority: p.priority,
+                    reasoning: p.reasoning
+                  };
+                })
+                .filter(Boolean);
+            }
+          }
+          
+          // Fallback if AI prioritization fails
+          if (suggestions.length === 0) {
+            suggestions = topCandidates.slice(0, limit).map(client => ({
+              client_id: client.id,
+              company_name: client.company_name,
+              phone: client.phone,
+              email: client.email,
+              address: [client.physical_address, client.physical_city, client.physical_state].filter(Boolean).join(', '),
+              nearest_stop_distance: client.nearest_stop_distance,
+              last_pickup_at: client.last_pickup_at,
+              days_since_pickup: client.days_since_pickup,
+              priority: client.days_since_pickup > 30 ? 'high' : client.days_since_pickup > 14 ? 'medium' : 'low',
+              reasoning: `${client.nearest_stop_distance} mi from route, ${client.days_since_pickup} days since pickup`
+            }));
+          }
+        }
+
+        result = {
+          type: 'route_call_list',
+          data: {
+            route_date: targetDate,
+            total_stops: routeStops.length,
+            suggestions
+          },
+          summary: suggestions.length > 0 
+            ? `Found ${suggestions.length} clients to call near your ${routeStops.length}-stop route on ${targetDate}`
+            : `No nearby clients found for the ${routeStops.length}-stop route on ${targetDate}`
         };
         break;
       }
