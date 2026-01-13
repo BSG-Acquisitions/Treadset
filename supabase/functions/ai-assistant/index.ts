@@ -43,6 +43,13 @@ Deno.serve(async (req) => {
 
     console.log('Processing AI query:', query);
 
+    // Get current date for AI context
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
     // Use Lovable AI to interpret the query and extract parameters
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -56,6 +63,8 @@ Deno.serve(async (req) => {
           {
             role: 'system',
             content: `You are a data analyst for a tire recycling business. Parse user queries and extract structured parameters.
+
+IMPORTANT: Today's date is ${todayStr}. Tomorrow is ${tomorrowStr}.
             
 Available query types:
 - top_clients_revenue: Top clients by revenue (params: period, limit)
@@ -71,8 +80,11 @@ Time periods: today, this_week, last_week, this_month, last_month, this_year
 Risk levels: high, medium, low
 
 For route_call_list queries:
-- "date" should be ISO format (YYYY-MM-DD). Use today's date if not specified or if user says "today", "tomorrow" use the next day
-- Examples: "who should I call near tomorrow's route", "call list for monday's stops", "clients near today's pickups"
+- "date" must be ISO format (YYYY-MM-DD)
+- If user says "today", use ${todayStr}
+- If user says "tomorrow", use ${tomorrowStr}
+- If user says a day name like "Monday", calculate the next occurrence from ${todayStr}
+- Examples: "who should I call near tomorrow's route" → date: "${tomorrowStr}"
 
 Return ONLY valid JSON.`
           },
