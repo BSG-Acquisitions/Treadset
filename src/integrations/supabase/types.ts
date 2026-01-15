@@ -5503,6 +5503,7 @@ export type Database = {
         | "client"
         | "hauler"
         | "receptionist"
+        | "viewer"
       client_user_role: "primary" | "billing" | "viewer"
       direction: "inbound" | "outbound" | "internal"
       end_use:
@@ -5724,6 +5725,7 @@ export const Constants = {
         "client",
         "hauler",
         "receptionist",
+        "viewer",
       ],
       client_user_role: ["primary", "billing", "viewer"],
       direction: ["inbound", "outbound", "internal"],
