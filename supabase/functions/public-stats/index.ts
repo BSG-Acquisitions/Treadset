@@ -101,15 +101,15 @@ Deno.serve(async (req) => {
     // Get service zones for region display
     const { data: zones } = await supabase
       .from('service_zones')
-      .select('name, service_days')
+      .select('zone_name, primary_service_days')
       .eq('organization_id', organizationId)
       .eq('is_active', true);
 
     // Format service regions
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const serviceRegions = zones?.map(zone => ({
-      name: zone.name,
-      days: (zone.service_days || []).map((d: number) => dayNames[d]).filter(Boolean)
+      name: zone.zone_name,
+      days: (zone.primary_service_days || []).map((d: number) => dayNames[d]).filter(Boolean)
     })) || [];
 
     // Environmental calculations based on YTD tires (not monthly)
