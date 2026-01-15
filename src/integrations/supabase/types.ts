@@ -5429,6 +5429,8 @@ export type Database = {
           total_ptes: number
         }[]
       }
+      is_org_admin: { Args: { org_id: string }; Returns: boolean }
+      is_own_user_role: { Args: { check_user_id: string }; Returns: boolean }
       log_slow_query: {
         Args: {
           p_execution_time_ms: number
