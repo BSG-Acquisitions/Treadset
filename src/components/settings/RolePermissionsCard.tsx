@@ -47,26 +47,32 @@ const ROLE_DEFINITIONS = [
     description: "Customer portal - view own pickup history and manifests (coming soon)",
     color: "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200",
   },
+  {
+    role: "viewer",
+    label: "Viewer (Demo)",
+    description: "Read-only access for demos and investors - can view all pages but cannot make changes",
+    color: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200",
+  },
 ];
 
-// Permission matrix
+// Permission matrix - viewer has same view access as ops_manager but read-only
 const PERMISSIONS = [
-  { page: "Dashboard", admin: true, ops_manager: true, dispatcher: true, driver: true, sales: true, hauler: false, client: false },
-  { page: "Clients", admin: true, ops_manager: true, dispatcher: true, driver: false, sales: true, hauler: false, client: false },
-  { page: "Routes/Schedules", admin: true, ops_manager: true, dispatcher: true, driver: false, sales: true, hauler: false, client: false },
-  { page: "Driver Routes", admin: true, ops_manager: false, dispatcher: false, driver: true, sales: false, hauler: false, client: false },
-  { page: "Manifests", admin: true, ops_manager: true, dispatcher: true, driver: true, sales: true, hauler: true, client: false },
-  { page: "Drop-offs", admin: true, ops_manager: true, dispatcher: true, driver: false, sales: true, hauler: false, client: false },
-  { page: "Receiver Signatures", admin: true, ops_manager: true, dispatcher: false, driver: false, sales: false, hauler: false, client: false },
-  { page: "Reports", admin: true, ops_manager: true, dispatcher: false, driver: false, sales: false, hauler: false, client: false },
-  { page: "Analytics", admin: true, ops_manager: true, dispatcher: false, driver: false, sales: false, hauler: false, client: false },
-  { page: "Intelligence", admin: true, ops_manager: true, dispatcher: false, driver: false, sales: false, hauler: false, client: false },
-  { page: "Trailers", admin: true, ops_manager: true, dispatcher: true, driver: false, sales: true, hauler: false, client: false },
-  { page: "Employees", admin: true, ops_manager: false, dispatcher: false, driver: false, sales: false, hauler: false, client: false },
-  { page: "Settings", admin: true, ops_manager: true, dispatcher: false, driver: false, sales: false, hauler: false, client: false },
-  { page: "Integrations", admin: true, ops_manager: false, dispatcher: false, driver: false, sales: false, hauler: false, client: false },
-  { page: "Hauler Dashboard", admin: false, ops_manager: false, dispatcher: false, driver: false, sales: false, hauler: true, client: false },
-  { page: "Invite Team Members", admin: true, ops_manager: true, dispatcher: false, driver: false, sales: false, hauler: false, client: false },
+  { page: "Dashboard", admin: true, ops_manager: true, dispatcher: true, driver: true, sales: true, hauler: false, client: false, viewer: true },
+  { page: "Clients", admin: true, ops_manager: true, dispatcher: true, driver: false, sales: true, hauler: false, client: false, viewer: true },
+  { page: "Routes/Schedules", admin: true, ops_manager: true, dispatcher: true, driver: false, sales: true, hauler: false, client: false, viewer: true },
+  { page: "Driver Routes", admin: true, ops_manager: false, dispatcher: false, driver: true, sales: false, hauler: false, client: false, viewer: false },
+  { page: "Manifests", admin: true, ops_manager: true, dispatcher: true, driver: true, sales: true, hauler: true, client: false, viewer: true },
+  { page: "Drop-offs", admin: true, ops_manager: true, dispatcher: true, driver: false, sales: true, hauler: false, client: false, viewer: true },
+  { page: "Receiver Signatures", admin: true, ops_manager: true, dispatcher: false, driver: false, sales: false, hauler: false, client: false, viewer: true },
+  { page: "Reports", admin: true, ops_manager: true, dispatcher: false, driver: false, sales: false, hauler: false, client: false, viewer: true },
+  { page: "Analytics", admin: true, ops_manager: true, dispatcher: false, driver: false, sales: false, hauler: false, client: false, viewer: true },
+  { page: "Intelligence", admin: true, ops_manager: true, dispatcher: false, driver: false, sales: false, hauler: false, client: false, viewer: true },
+  { page: "Trailers", admin: true, ops_manager: true, dispatcher: true, driver: false, sales: true, hauler: false, client: false, viewer: true },
+  { page: "Employees", admin: true, ops_manager: false, dispatcher: false, driver: false, sales: false, hauler: false, client: false, viewer: true },
+  { page: "Settings", admin: true, ops_manager: true, dispatcher: false, driver: false, sales: false, hauler: false, client: false, viewer: true },
+  { page: "Integrations", admin: true, ops_manager: false, dispatcher: false, driver: false, sales: false, hauler: false, client: false, viewer: true },
+  { page: "Hauler Dashboard", admin: false, ops_manager: false, dispatcher: false, driver: false, sales: false, hauler: true, client: false, viewer: false },
+  { page: "Invite Team Members", admin: true, ops_manager: true, dispatcher: false, driver: false, sales: false, hauler: false, client: false, viewer: false },
 ];
 
 export function RolePermissionsCard() {
@@ -110,6 +116,7 @@ export function RolePermissionsCard() {
                   <TableHead className="text-center">Sales</TableHead>
                   <TableHead className="text-center">Hauler</TableHead>
                   <TableHead className="text-center">Client</TableHead>
+                  <TableHead className="text-center">Viewer</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -136,6 +143,9 @@ export function RolePermissionsCard() {
                     </TableCell>
                     <TableCell className="text-center">
                       {perm.client ? <Check className="h-4 w-4 text-green-600 mx-auto" /> : <X className="h-4 w-4 text-muted-foreground/30 mx-auto" />}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {perm.viewer ? <Check className="h-4 w-4 text-cyan-600 mx-auto" /> : <X className="h-4 w-4 text-muted-foreground/30 mx-auto" />}
                     </TableCell>
                   </TableRow>
                 ))}

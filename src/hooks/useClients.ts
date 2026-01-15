@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useCanWrite } from "@/hooks/useCanWrite";
 import type { Database } from "@/integrations/supabase/types";
 
 type Client = Database["public"]["Tables"]["clients"]["Row"];
@@ -99,9 +100,13 @@ export const useClient = (id: string) => {
 export const useCreateClient = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const canWrite = useCanWrite();
 
   return useMutation({
     mutationFn: async (client: ClientInsert) => {
+      if (!canWrite) {
+        throw new Error('Demo mode - changes are disabled');
+      }
       const { data, error } = await supabase
         .from('clients')
         .insert(client)
@@ -193,9 +198,13 @@ export const useCreateClient = () => {
 export const useUpdateClient = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const canWrite = useCanWrite();
 
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: ClientUpdate }) => {
+      if (!canWrite) {
+        throw new Error('Demo mode - changes are disabled');
+      }
       // Check if address-related fields changed
       const addressFieldsChanged = 
         updates.physical_address !== undefined ||
@@ -264,9 +273,13 @@ export const useUpdateClient = () => {
 export const useDeleteClient = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const canWrite = useCanWrite();
 
   return useMutation({
     mutationFn: async ({ id, forceDelete = false }: { id: string; forceDelete?: boolean }) => {
+      if (!canWrite) {
+        throw new Error('Demo mode - changes are disabled');
+      }
       if (forceDelete) {
         // Force delete: cascade delete all related records in correct order
         

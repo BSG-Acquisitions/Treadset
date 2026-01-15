@@ -26,6 +26,7 @@ import { useEnhancedNotifications } from '@/hooks/useEnhancedNotifications';
 import { useContextualNotifications } from '@/hooks/useContextualNotifications';
 import { useManifestReminders } from '@/hooks/useManifestReminders';
 import { usePendingBookingCount } from '@/hooks/useBookingRequests';
+import { ViewerModeBadge } from '@/components/ViewerModeBadge';
 
 import { formatDistanceToNow } from 'date-fns';
 import { LiveSearch } from '@/components/LiveSearch';
@@ -60,13 +61,13 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
 
   const navigationTabs = [
     { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/dashboard', roles: [] as const, featureFlag: null },
-    { id: 'clients', label: 'Clients', icon: Users, path: '/clients', roles: ['admin', 'ops_manager', 'sales'] as const, featureFlag: null },
-    { id: 'routes', label: 'Routes', icon: MapPin, path: '/routes/today', roles: ['admin', 'ops_manager', 'dispatcher'] as const, featureFlag: null },
+    { id: 'clients', label: 'Clients', icon: Users, path: '/clients', roles: ['admin', 'ops_manager', 'sales', 'viewer'] as const, featureFlag: null },
+    { id: 'routes', label: 'Routes', icon: MapPin, path: '/routes/today', roles: ['admin', 'ops_manager', 'dispatcher', 'viewer'] as const, featureFlag: null },
     { id: 'driver', label: 'My Routes', icon: UserCheck, path: '/routes/driver', roles: ['driver'] as const, featureFlag: null },
-    { id: 'trailers', label: 'Trailers', icon: Container, path: '/trailers/inventory', roles: ['admin', 'ops_manager', 'dispatcher'] as const, featureFlag: 'TRAILERS' as const },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics', roles: ['admin', 'ops_manager'] as const, featureFlag: null },
-    { id: 'reports', label: 'Reports', icon: FileText, path: '/reports', roles: ['admin', 'ops_manager'] as const, featureFlag: null },
-    { id: 'dropoffs', label: 'Drop-offs', icon: PackageOpen, path: '/dropoffs', roles: ['admin', 'ops_manager', 'sales'] as const, featureFlag: null },
+    { id: 'trailers', label: 'Trailers', icon: Container, path: '/trailers/inventory', roles: ['admin', 'ops_manager', 'dispatcher', 'viewer'] as const, featureFlag: 'TRAILERS' as const },
+    { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics', roles: ['admin', 'ops_manager', 'viewer'] as const, featureFlag: null },
+    { id: 'reports', label: 'Reports', icon: FileText, path: '/reports', roles: ['admin', 'ops_manager', 'viewer'] as const, featureFlag: null },
+    { id: 'dropoffs', label: 'Drop-offs', icon: PackageOpen, path: '/dropoffs', roles: ['admin', 'ops_manager', 'sales', 'viewer'] as const, featureFlag: null },
   ];
 
 
@@ -105,8 +106,11 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
 
         {/* Right side - Actions and user menu */}
         <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+          {/* Viewer Mode Badge */}
+          <ViewerModeBadge />
+          
           {/* Organization Switcher */}
-          {hasAnyRole(['admin','ops_manager','dispatcher','sales']) && <OrganizationSwitcher />}
+          {hasAnyRole(['admin','ops_manager','dispatcher','sales','viewer']) && <OrganizationSwitcher />}
           
           {/* Enhanced notifications */}
           <Popover>
@@ -145,7 +149,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
               </div>
               <DropdownMenuSeparator />
               {/* Most frequently used - top */}
-              {hasAnyRole(['admin', 'ops_manager']) && (
+              {hasAnyRole(['admin', 'ops_manager', 'viewer']) && (
                 <DropdownMenuItem asChild>
                   <Link to="/receiver-signatures" className="flex items-center gap-2">
                     <PenTool className="h-4 w-4" />
@@ -153,7 +157,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                   </Link>
                 </DropdownMenuItem>
               )}
-              {hasAnyRole(['admin', 'ops_manager', 'dispatcher']) && (
+              {hasAnyRole(['admin', 'ops_manager', 'dispatcher', 'viewer']) && (
                 <DropdownMenuItem asChild>
                   <Link to="/manifests" className="flex items-center gap-2">
                     <FileText className="h-4 w-4" />
@@ -161,7 +165,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                   </Link>
                 </DropdownMenuItem>
               )}
-              {hasAnyRole(['admin','ops_manager']) && (
+              {hasAnyRole(['admin','ops_manager', 'viewer']) && (
                 <DropdownMenuItem asChild>
                   <Link to="/settings" className="flex items-center gap-2">
                     <Settings className="h-4 w-4" />
@@ -170,7 +174,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                 </DropdownMenuItem>
               )}
               {/* Occasional use - middle */}
-              {hasAnyRole(['admin']) && (
+              {hasAnyRole(['admin', 'viewer']) && (
                 <DropdownMenuItem asChild>
                   <Link to="/employees" className="flex items-center gap-2">
                     <UserCheck className="h-4 w-4" />
@@ -178,7 +182,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                   </Link>
                 </DropdownMenuItem>
               )}
-              {hasAnyRole(['admin']) && (
+              {hasAnyRole(['admin', 'viewer']) && (
                 <DropdownMenuItem asChild>
                   <Link to="/integrations" className="flex items-center gap-2">
                     <CreditCard className="h-4 w-4" />
@@ -187,7 +191,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                 </DropdownMenuItem>
               )}
               {/* Booking Management */}
-              {hasAnyRole(['admin', 'ops_manager']) && (
+              {hasAnyRole(['admin', 'ops_manager', 'viewer']) && (
                 <DropdownMenuItem asChild>
                   <Link to="/booking-requests" className="flex items-center gap-2">
                     <CalendarCheck className="h-4 w-4" />
@@ -200,7 +204,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                   </Link>
                 </DropdownMenuItem>
               )}
-              {hasAnyRole(['admin', 'ops_manager']) && (
+              {hasAnyRole(['admin', 'ops_manager', 'viewer']) && (
                 <DropdownMenuItem asChild>
                   <Link to="/service-zones" className="flex items-center gap-2">
                     <Map className="h-4 w-4" />
@@ -208,7 +212,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                   </Link>
                 </DropdownMenuItem>
               )}
-              {hasAnyRole(['admin', 'ops_manager']) && (
+              {hasAnyRole(['admin', 'ops_manager', 'viewer']) && (
                 <DropdownMenuItem asChild>
                   <Link to="/intelligence" className="flex items-center gap-2">
                     <Brain className="h-4 w-4" />
@@ -217,7 +221,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                 </DropdownMenuItem>
               )}
               {/* Rarely used - bottom */}
-              {hasAnyRole(['admin', 'ops_manager']) && (
+              {hasAnyRole(['admin', 'ops_manager', 'viewer']) && (
                 <DropdownMenuItem asChild>
                   <Link to="/haulers" className="flex items-center gap-2">
                     <Truck className="h-4 w-4" />
@@ -225,7 +229,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                   </Link>
                 </DropdownMenuItem>
               )}
-              {hasAnyRole(['admin', 'ops_manager']) && (
+              {hasAnyRole(['admin', 'ops_manager', 'viewer']) && (
                 <DropdownMenuItem asChild>
                   <Link to="/receivers" className="flex items-center gap-2">
                     <Building className="h-4 w-4" />

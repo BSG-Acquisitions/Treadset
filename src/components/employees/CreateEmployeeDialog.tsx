@@ -27,7 +27,8 @@ const ROLE_OPTIONS = [
   { value: 'ops_manager', label: 'Operations Manager', description: 'Manage clients, routes, and operations' },
   { value: 'dispatcher', label: 'Dispatcher', description: 'Route planning and assignments' },
   { value: 'driver', label: 'Driver', description: 'Execute routes and complete pickups' },
-  { value: 'sales', label: 'Sales', description: 'Client management and booking' }
+  { value: 'sales', label: 'Sales', description: 'Client management and booking' },
+  { value: 'viewer', label: 'Viewer (Demo)', description: 'Read-only access for demos and investors' }
 ];
 
 interface CreateEmployeeDialogProps {
