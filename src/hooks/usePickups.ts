@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useCanWrite } from "@/hooks/useCanWrite";
 import type { Database } from "@/integrations/supabase/types";
 import { sanitizeUUID } from "@/lib/uuidHelpers";
 
@@ -138,9 +139,13 @@ export const useAssignments = (date?: string) => {
 export const useSchedulePickup = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const canWrite = useCanWrite();
 
   return useMutation({
     mutationFn: async (data: SchedulePickupData): Promise<{ pickup: Pickup; assignment: Assignment; options?: RouteOption[] }> => {
+      if (!canWrite) {
+        throw new Error('Demo mode - changes are disabled');
+      }
       // Get current organization ID
       const orgSlug = 'bsg'; // For now, default to BSG
       const { data: orgData } = await supabase.rpc('get_current_user_organization', { org_slug: orgSlug });
@@ -304,9 +309,13 @@ export const useSchedulePickup = () => {
 export const useDeletePickup = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const canWrite = useCanWrite();
 
   return useMutation({
     mutationFn: async (pickupId: string) => {
+      if (!canWrite) {
+        throw new Error('Demo mode - changes are disabled');
+      }
       // Perform secure cascade delete via RPC (bypasses RLS with org check)
       const { error } = await supabase.rpc('delete_pickup_cascade', { p_pickup_id: pickupId });
       if (error) throw error;

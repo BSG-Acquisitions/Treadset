@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useCanWrite } from "@/hooks/useCanWrite";
 
 export interface Manifest {
   id: string;
@@ -184,9 +185,13 @@ export const useCreateManifest = (opts?: { toastOnSuccess?: boolean }) => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const toastOnSuccess = opts?.toastOnSuccess ?? true;
+  const canWrite = useCanWrite();
 
   return useMutation({
     mutationFn: async (data: CreateManifestData) => {
+      if (!canWrite) {
+        throw new Error('Demo mode - changes are disabled');
+      }
       // Resolve organization once
       const { data: orgId, error: orgErr } = await supabase.rpc('get_current_user_organization', { org_slug: 'bsg' });
       if (orgErr) throw orgErr;
@@ -240,9 +245,13 @@ export const useCreateManifest = (opts?: { toastOnSuccess?: boolean }) => {
 export const useUpdateManifest = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const canWrite = useCanWrite();
 
   return useMutation({
     mutationFn: async ({ id, ...data }: UpdateManifestData) => {
+      if (!canWrite) {
+        throw new Error('Demo mode - changes are disabled');
+      }
       const updates = {
         ...data,
         updated_at: new Date().toISOString()
@@ -288,9 +297,13 @@ export const useUpdateManifest = () => {
 export const useFinalizeManifest = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const canWrite = useCanWrite();
 
   return useMutation({
     mutationFn: async (manifestId: string) => {
+      if (!canWrite) {
+        throw new Error('Demo mode - changes are disabled');
+      }
       const { data, error } = await supabase.functions.invoke('manifest-finalize', {
         body: { manifest_id: manifestId }
       });

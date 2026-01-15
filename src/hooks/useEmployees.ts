@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCanWrite } from "@/hooks/useCanWrite";
 
 export interface Employee {
   id: string;
@@ -86,9 +87,14 @@ export const useCreateEmployee = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user } = useAuth();
+  const canWrite = useCanWrite();
 
   return useMutation({
     mutationFn: async (employeeData: CreateEmployeeData) => {
+      if (!canWrite) {
+        throw new Error('Demo mode - changes are disabled');
+      }
+      
       if (!user?.currentOrganization?.id) {
         throw new Error('No organization selected');
       }
@@ -145,9 +151,14 @@ export const useUpdateEmployee = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user } = useAuth();
+  const canWrite = useCanWrite();
 
   return useMutation({
     mutationFn: async ({ employeeId, updates }: { employeeId: string; updates: UpdateEmployeeData }) => {
+      if (!canWrite) {
+        throw new Error('Demo mode - changes are disabled');
+      }
+      
       if (!user?.currentOrganization?.id) {
         throw new Error('No organization selected');
       }
@@ -220,9 +231,13 @@ export const useUpdateEmployee = () => {
 export const useDeactivateEmployee = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const canWrite = useCanWrite();
 
   return useMutation({
     mutationFn: async (employeeId: string) => {
+      if (!canWrite) {
+        throw new Error('Demo mode - changes are disabled');
+      }
       const { error } = await supabase
         .from('users')
         .update({ is_active: false })
