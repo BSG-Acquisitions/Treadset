@@ -102,8 +102,25 @@ export interface DeepAnalytics {
   insights: ActionableInsight[];
 }
 
-const getPeriodDates = (period: AnalyticsPeriod) => {
+const getPeriodDates = (period: AnalyticsPeriod, selectedYear?: number) => {
   const now = new Date();
+  const currentYear = now.getFullYear();
+  
+  // If a specific year is selected and it's not the current year, use year-based filtering
+  if (selectedYear && selectedYear !== currentYear) {
+    const yearStart = new Date(selectedYear, 0, 1);
+    const yearEnd = new Date(selectedYear, 11, 31);
+    const prevYearStart = new Date(selectedYear - 1, 0, 1);
+    const prevYearEnd = new Date(selectedYear - 1, 11, 31);
+    
+    return {
+      currentStart: format(yearStart, 'yyyy-MM-dd'),
+      currentEnd: format(yearEnd, 'yyyy-MM-dd'),
+      previousStart: format(prevYearStart, 'yyyy-MM-dd'),
+      previousEnd: format(prevYearEnd, 'yyyy-MM-dd'),
+    };
+  }
+  
   let currentStart: Date;
   let previousStart: Date;
   let previousEnd: Date;
@@ -139,16 +156,16 @@ const getPeriodDates = (period: AnalyticsPeriod) => {
   };
 };
 
-export const useClientAnalyticsDeep = (period: AnalyticsPeriod = 'month') => {
+export const useClientAnalyticsDeep = (period: AnalyticsPeriod = 'month', selectedYear?: number) => {
   const { user } = useAuth();
   const organizationId = user?.currentOrganization?.id;
 
   return useQuery({
-    queryKey: ['client-analytics-deep', organizationId, period],
+    queryKey: ['client-analytics-deep', organizationId, period, selectedYear],
     queryFn: async (): Promise<DeepAnalytics> => {
       if (!organizationId) throw new Error('No organization found');
 
-      const dates = getPeriodDates(period);
+      const dates = getPeriodDates(period, selectedYear);
       const now = new Date();
 
       // Minimum date filter for real data (Nov 2025+)

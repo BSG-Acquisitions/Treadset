@@ -3,12 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useClientAnalyticsDeep, AnalyticsPeriod } from "@/hooks/useClientAnalyticsDeep";
 import { RevenueCharts, RevenueTrendChart, DayOfWeekChart, ConcentrationChart } from "./RevenueCharts";
 import { ClientHealthPanel } from "./ClientHealthPanel";
 import { ClientInsightCards } from "./ClientInsightCards";
 import { TopClientsTable } from "./TopClientsTable";
-import { TrendingUp, TrendingDown, DollarSign, Users, Truck, Package, ArrowDownToLine } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, Users, Truck, Package, ArrowDownToLine, Calendar } from "lucide-react";
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('en-US', {
@@ -68,9 +69,26 @@ function StatCard({
   );
 }
 
+// Generate available years (current year back to 2024)
+const getAvailableYears = () => {
+  const currentYear = new Date().getFullYear();
+  const years: number[] = [];
+  for (let year = currentYear; year >= 2024; year--) {
+    years.push(year);
+  }
+  return years;
+};
+
 export function ClientAnalyticsDashboard() {
+  const currentYear = new Date().getFullYear();
   const [period, setPeriod] = useState<AnalyticsPeriod>('month');
-  const { data: analytics, isLoading } = useClientAnalyticsDeep(period);
+  const [selectedYear, setSelectedYear] = useState<number>(currentYear);
+  
+  // When viewing a past year, force the period to 'year' since week/month/quarter don't make sense
+  const effectivePeriod = selectedYear !== currentYear ? 'year' : period;
+  const { data: analytics, isLoading } = useClientAnalyticsDeep(effectivePeriod, selectedYear);
+  
+  const availableYears = getAvailableYears();
 
   if (isLoading) {
     return (
@@ -117,18 +135,48 @@ export function ClientAnalyticsDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Period Selector */}
+      {/* Period & Year Selector */}
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <Tabs value={period} onValueChange={(v) => setPeriod(v as AnalyticsPeriod)}>
-          <TabsList>
-            <TabsTrigger value="week">Week</TabsTrigger>
-            <TabsTrigger value="month">Month</TabsTrigger>
-            <TabsTrigger value="quarter">Quarter</TabsTrigger>
-            <TabsTrigger value="year">Year</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="flex items-center gap-4">
+          {/* Year Selector */}
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <Select
+              value={selectedYear.toString()}
+              onValueChange={(v) => setSelectedYear(parseInt(v))}
+            >
+              <SelectTrigger className="w-[120px]">
+                <SelectValue placeholder="Select year" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableYears.map((year) => (
+                  <SelectItem key={year} value={year.toString()}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {/* Period Selector - only show for current year */}
+          {selectedYear === currentYear && (
+            <Tabs value={period} onValueChange={(v) => setPeriod(v as AnalyticsPeriod)}>
+              <TabsList>
+                <TabsTrigger value="week">Week</TabsTrigger>
+                <TabsTrigger value="month">Month</TabsTrigger>
+                <TabsTrigger value="quarter">Quarter</TabsTrigger>
+                <TabsTrigger value="year">Year</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
+        </div>
+        
         <p className="text-sm text-muted-foreground">
-          Showing data for <span className="font-medium text-foreground">{periodLabels[period]}</span>
+          {selectedYear !== currentYear ? (
+            <>Showing data for <span className="font-medium text-foreground">{selectedYear}</span></>
+          ) : (
+            <>Showing data for <span className="font-medium text-foreground">{periodLabels[effectivePeriod]}</span></>
+          )}
         </p>
       </div>
 
@@ -139,14 +187,14 @@ export function ClientAnalyticsDashboard() {
           value={formatCurrency(analytics.totalRevenue)}
           change={analytics.revenueChange}
           icon={DollarSign}
-          subtitle={`vs last ${period}`}
+          subtitle={selectedYear !== currentYear ? `vs ${selectedYear - 1}` : `vs last ${effectivePeriod}`}
         />
         <StatCard
           title="Total Pickups"
           value={formatNumber(analytics.totalPickups)}
           change={analytics.pickupsChange}
           icon={Truck}
-          subtitle={`vs last ${period}`}
+          subtitle={selectedYear !== currentYear ? `vs ${selectedYear - 1}` : `vs last ${effectivePeriod}`}
         />
         <StatCard
           title="Tires Recycled"
@@ -158,7 +206,7 @@ export function ClientAnalyticsDashboard() {
           title="Active Clients"
           value={formatNumber(analytics.activeClients)}
           icon={Users}
-          subtitle={`${analytics.newClients.length} new this ${period}`}
+          subtitle={selectedYear !== currentYear ? `in ${selectedYear}` : `${analytics.newClients.length} new this ${effectivePeriod}`}
         />
       </div>
 
@@ -178,7 +226,7 @@ export function ClientAnalyticsDashboard() {
 
         <TabsContent value="overview" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <RevenueTrendChart data={analytics.revenueTrend} period={period} />
+            <RevenueTrendChart data={analytics.revenueTrend} period={effectivePeriod} />
             <DayOfWeekChart data={analytics.revenueByDay} />
             <ConcentrationChart data={analytics.concentration} />
           </div>
@@ -273,7 +321,7 @@ export function ClientAnalyticsDashboard() {
           <TopClientsTable clients={analytics.topClientsWithBreakdown} />
 
           <div className="grid gap-4 md:grid-cols-2">
-            <RevenueTrendChart data={analytics.revenueTrend} period={period} />
+            <RevenueTrendChart data={analytics.revenueTrend} period={effectivePeriod} />
             <ConcentrationChart data={analytics.concentration} />
           </div>
 
