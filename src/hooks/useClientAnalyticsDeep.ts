@@ -48,6 +48,16 @@ export interface ConcentrationData {
   topClients: { name: string; revenue: number; percent: number }[];
 }
 
+export interface TopClientWithBreakdown {
+  client_id: string;
+  company_name: string;
+  totalRevenue: number;
+  pickupRevenue: number;
+  dropoffRevenue: number;
+  pickupCount: number;
+  dropoffCount: number;
+}
+
 export interface ActionableInsight {
   type: 'warning' | 'success' | 'info' | 'alert';
   title: string;
@@ -84,6 +94,9 @@ export interface DeepAnalytics {
   revenueByDay: RevenueByDay[];
   revenueTrend: RevenueTrend[];
   concentration: ConcentrationData;
+  
+  // Top clients with breakdown
+  topClientsWithBreakdown: TopClientWithBreakdown[];
   
   // Insights
   insights: ActionableInsight[];
@@ -399,16 +412,36 @@ export const useClientAnalyticsDeep = (period: AnalyticsPeriod = 'month') => {
       const pickupsChange = previousPickupsCount > 0 ? ((totalPickupsCount - previousPickupsCount) / previousPickupsCount) * 100 : 0;
 
       // Group by client for segmentation (use pickups table for revenue data)
-      const clientCurrentStats = new Map<string, { revenue: number; pickups: number; name: string }>();
+      // Enhanced to track pickup vs dropoff separately
+      const clientCurrentStats = new Map<string, { 
+        revenue: number; 
+        pickups: number; 
+        name: string;
+        pickupRevenue: number;
+        dropoffRevenue: number;
+        pickupCount: number;
+        dropoffCount: number;
+      }>();
       const clientPreviousStats = new Map<string, { revenue: number; pickups: number }>();
 
       // Include pickups in client stats (using filtered data)
       filteredCurrentPickups.forEach((p: any) => {
         const clientId = p.client_id;
         const clientData = p.clients as any;
-        const existing = clientCurrentStats.get(clientId) || { revenue: 0, pickups: 0, name: clientData?.company_name || 'Unknown' };
-        existing.revenue += Number(p.final_revenue) || Number(p.computed_revenue) || 0;
+        const revenue = Number(p.final_revenue) || Number(p.computed_revenue) || 0;
+        const existing = clientCurrentStats.get(clientId) || { 
+          revenue: 0, 
+          pickups: 0, 
+          name: clientData?.company_name || 'Unknown',
+          pickupRevenue: 0,
+          dropoffRevenue: 0,
+          pickupCount: 0,
+          dropoffCount: 0
+        };
+        existing.revenue += revenue;
         existing.pickups += 1;
+        existing.pickupRevenue += revenue;
+        existing.pickupCount += 1;
         clientCurrentStats.set(clientId, existing);
       });
 
@@ -416,9 +449,20 @@ export const useClientAnalyticsDeep = (period: AnalyticsPeriod = 'month') => {
       filteredCurrentDropoffs.forEach((d: any) => {
         const clientId = d.client_id;
         const clientData = d.clients as any;
-        const existing = clientCurrentStats.get(clientId) || { revenue: 0, pickups: 0, name: clientData?.company_name || 'Unknown' };
-        existing.revenue += Number(d.computed_revenue) || 0;
+        const revenue = Number(d.computed_revenue) || 0;
+        const existing = clientCurrentStats.get(clientId) || { 
+          revenue: 0, 
+          pickups: 0, 
+          name: clientData?.company_name || 'Unknown',
+          pickupRevenue: 0,
+          dropoffRevenue: 0,
+          pickupCount: 0,
+          dropoffCount: 0
+        };
+        existing.revenue += revenue;
         existing.pickups += 1;
+        existing.dropoffRevenue += revenue;
+        existing.dropoffCount += 1;
         clientCurrentStats.set(clientId, existing);
       });
 
@@ -595,9 +639,17 @@ export const useClientAnalyticsDeep = (period: AnalyticsPeriod = 'month') => {
         revenueTrend.push({ date, ...data });
       }
 
-      // Revenue concentration
+      // Revenue concentration and top clients with breakdown
       const clientRevenues = Array.from(clientCurrentStats.entries())
-        .map(([id, data]) => ({ id, name: data.name, revenue: data.revenue }))
+        .map(([id, data]) => ({ 
+          id, 
+          name: data.name, 
+          revenue: data.revenue,
+          pickupRevenue: data.pickupRevenue,
+          dropoffRevenue: data.dropoffRevenue,
+          pickupCount: data.pickupCount,
+          dropoffCount: data.dropoffCount
+        }))
         .sort((a, b) => b.revenue - a.revenue);
 
       const top3Revenue = clientRevenues.slice(0, 3).reduce((sum, c) => sum + c.revenue, 0);
@@ -614,6 +666,17 @@ export const useClientAnalyticsDeep = (period: AnalyticsPeriod = 'month') => {
           percent: totalRevenue > 0 ? (c.revenue / totalRevenue) * 100 : 0,
         })),
       };
+
+      // Build top clients with pickup vs dropoff breakdown
+      const topClientsWithBreakdown: TopClientWithBreakdown[] = clientRevenues.slice(0, 10).map(c => ({
+        client_id: c.id,
+        company_name: c.name,
+        totalRevenue: c.revenue,
+        pickupRevenue: c.pickupRevenue,
+        dropoffRevenue: c.dropoffRevenue,
+        pickupCount: c.pickupCount,
+        dropoffCount: c.dropoffCount,
+      }));
 
       // Generate actionable insights
       const insights: ActionableInsight[] = [];
@@ -689,6 +752,7 @@ export const useClientAnalyticsDeep = (period: AnalyticsPeriod = 'month') => {
         revenueByDay,
         revenueTrend,
         concentration,
+        topClientsWithBreakdown,
         insights,
       };
     },
