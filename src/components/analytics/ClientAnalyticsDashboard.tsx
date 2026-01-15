@@ -7,7 +7,8 @@ import { useClientAnalyticsDeep, AnalyticsPeriod } from "@/hooks/useClientAnalyt
 import { RevenueCharts, RevenueTrendChart, DayOfWeekChart, ConcentrationChart } from "./RevenueCharts";
 import { ClientHealthPanel } from "./ClientHealthPanel";
 import { ClientInsightCards } from "./ClientInsightCards";
-import { TrendingUp, TrendingDown, DollarSign, Users, Truck, Package } from "lucide-react";
+import { TopClientsTable } from "./TopClientsTable";
+import { TrendingUp, TrendingDown, DollarSign, Users, Truck, Package, ArrowDownToLine } from "lucide-react";
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('en-US', {
@@ -222,35 +223,59 @@ export function ClientAnalyticsDashboard() {
         </TabsContent>
 
         <TabsContent value="revenue" className="space-y-4">
+          {/* Source Summary Cards */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card className="border-l-4 border-l-primary">
+              <CardContent className="pt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                      <Truck className="h-4 w-4" />
+                      Pickup Revenue
+                    </p>
+                    <div className="text-2xl font-bold">{formatCurrency(analytics.pickupRevenue)}</div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {analytics.totalRevenue > 0 
+                        ? Math.round((analytics.pickupRevenue / analytics.totalRevenue) * 100) 
+                        : 0}% of total revenue
+                    </p>
+                  </div>
+                  <div className="text-4xl font-light text-primary/20">
+                    {analytics.topClientsWithBreakdown.reduce((sum, c) => sum + c.pickupCount, 0)}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-l-4 border-l-secondary">
+              <CardContent className="pt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                      <ArrowDownToLine className="h-4 w-4" />
+                      Drop-off Revenue
+                    </p>
+                    <div className="text-2xl font-bold">{formatCurrency(analytics.dropoffRevenue)}</div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {analytics.totalRevenue > 0 
+                        ? Math.round((analytics.dropoffRevenue / analytics.totalRevenue) * 100) 
+                        : 0}% of total revenue
+                    </p>
+                  </div>
+                  <div className="text-4xl font-light text-secondary/40">
+                    {analytics.topClientsWithBreakdown.reduce((sum, c) => sum + c.dropoffCount, 0)}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Top Clients with Breakdown */}
+          <TopClientsTable clients={analytics.topClientsWithBreakdown} />
+
           <div className="grid gap-4 md:grid-cols-2">
             <RevenueTrendChart data={analytics.revenueTrend} period={period} />
             <ConcentrationChart data={analytics.concentration} />
           </div>
-          
-          {/* Top Revenue Clients Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Top Revenue Clients</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {analytics.concentration.topClients.map((client, index) => (
-                  <div key={client.name} className="flex items-center justify-between p-3 rounded-lg border">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-sm">
-                        {index + 1}
-                      </div>
-                      <span className="font-medium">{client.name}</span>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-muted-foreground text-sm">{Math.round(client.percent)}%</span>
-                      <span className="font-bold">{formatCurrency(client.revenue)}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Day of Week Insights */}
           <div className="grid gap-4 md:grid-cols-2">
