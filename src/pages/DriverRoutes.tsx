@@ -47,6 +47,17 @@ export default function DriverRoutes() {
 
   const { data: clientStats = {} } = useClientPickupStats(clientIds);
 
+  // Group assignments by date for week view - MUST be before any conditional returns
+  const assignmentsByDate = useMemo(() => {
+    const grouped: Record<string, typeof weekAssignments> = {};
+    weekAssignments.forEach(assignment => {
+      const date = assignment.scheduled_date;
+      if (!grouped[date]) grouped[date] = [];
+      grouped[date].push(assignment);
+    });
+    return grouped;
+  }, [weekAssignments]);
+
   useEffect(() => {
     document.title = "Driver Routes – TreadSet";
   }, []);
@@ -104,16 +115,6 @@ export default function DriverRoutes() {
     );
   }
 
-  // Group assignments by date for week view
-  const assignmentsByDate = useMemo(() => {
-    const grouped: Record<string, typeof weekAssignments> = {};
-    weekAssignments.forEach(assignment => {
-      const date = assignment.scheduled_date;
-      if (!grouped[date]) grouped[date] = [];
-      grouped[date].push(assignment);
-    });
-    return grouped;
-  }, [weekAssignments]);
 
   return (
     <div className="min-h-screen bg-background">
