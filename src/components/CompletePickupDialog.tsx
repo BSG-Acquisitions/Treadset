@@ -75,11 +75,17 @@ export function CompletePickupDialog({ pickup, trigger, onSuccess }: CompletePic
         </DialogHeader>
 
         <div className="w-full max-w-full sm:max-w-3xl mx-auto px-4 py-3 sm:p-0 overflow-x-hidden">
-          <DriverManifestCreationWizard
-            pickupId={pickup.id}
-            clientId={pickup.client?.id}
-            onComplete={handleComplete}
-          />
+          {pickup.id ? (
+            <DriverManifestCreationWizard
+              pickupId={pickup.id}
+              clientId={pickup.client?.id}
+              onComplete={handleComplete}
+            />
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              Missing pickup data. Please try again.
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

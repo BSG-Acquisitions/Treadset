@@ -55,8 +55,8 @@ const manifestSchema = z.object({
 type ManifestFormData = z.infer<typeof manifestSchema>;
 
 interface DriverManifestCreationWizardProps {
-  pickupId: string;
-  clientId: string;
+  pickupId?: string;
+  clientId?: string;
   onComplete?: () => void;
 }
 
@@ -77,6 +77,30 @@ export function DriverManifestCreationWizard({
   clientId,
   onComplete 
 }: DriverManifestCreationWizardProps) {
+  // Guard for missing pickupId - render error state
+  if (!pickupId) {
+    return (
+      <Card className="max-w-4xl mx-auto">
+        <CardContent className="flex items-center justify-center p-12">
+          <div className="text-center">
+            <div className="font-semibold mb-2">Missing Pickup ID</div>
+            <div className="text-muted-foreground text-sm">
+              Cannot create a manifest without a valid pickup.
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return <DriverManifestCreationWizardInner pickupId={pickupId} clientId={clientId} onComplete={onComplete} />;
+}
+
+function DriverManifestCreationWizardInner({ 
+  pickupId, 
+  clientId,
+  onComplete 
+}: { pickupId: string; clientId?: string; onComplete?: () => void }) {
   const [step, setStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pickupData, setPickupData] = useState<any>(null);
