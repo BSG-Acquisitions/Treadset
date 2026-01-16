@@ -47,7 +47,7 @@ export default function DriverManifestCreate() {
             locations (name)
           `)
           .eq('id', pickupId)
-          .single();
+          .maybeSingle();
 
         if (error) throw error;
         setPickup(data);
