@@ -6,13 +6,39 @@ export function useIsMobile() {
   const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
 
   React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
-    const onChange = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+    // Guard against SSR or missing API
+    if (typeof window === 'undefined' || !window.matchMedia) {
+      setIsMobile(false)
+      return
     }
-    mql.addEventListener("change", onChange)
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    return () => mql.removeEventListener("change", onChange)
+
+    try {
+      const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
+      const onChange = () => {
+        setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+      }
+
+      // Feature detection: prefer addEventListener, fallback to legacy addListener
+      if (mql.addEventListener) {
+        mql.addEventListener("change", onChange)
+      } else if ((mql as any).addListener) {
+        // Legacy API for older browsers (Safari < 14, older Android WebView)
+        (mql as any).addListener(onChange)
+      }
+
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+
+      return () => {
+        if (mql.removeEventListener) {
+          mql.removeEventListener("change", onChange)
+        } else if ((mql as any).removeListener) {
+          (mql as any).removeListener(onChange)
+        }
+      }
+    } catch (e) {
+      console.error('[useIsMobile] Error setting up media query listener:', e)
+      setIsMobile(false)
+    }
   }, [])
 
   return !!isMobile

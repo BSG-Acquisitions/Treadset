@@ -31,7 +31,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
     console.error('Error Boundary caught an error:', error, errorInfo);
     
     // Log to external service in production
-    if (process.env.NODE_ENV === 'production') {
+    if (!import.meta.env.DEV) {
       // TODO: Send to error tracking service like Sentry
     }
 
@@ -65,7 +65,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {process.env.NODE_ENV === 'development' && this.state.error && (
+              {import.meta.env.DEV && this.state.error && (
                 <details className="text-sm bg-muted p-3 rounded-md">
                   <summary className="cursor-pointer font-medium mb-2">
                     Technical Details
