@@ -5443,6 +5443,13 @@ export type Database = {
       }
       refresh_reporting_views: { Args: never; Returns: undefined }
       update_system_health_metrics: { Args: never; Returns: undefined }
+      user_has_org_role: {
+        Args: {
+          allowed_roles: Database["public"]["Enums"]["app_role"][]
+          org_id: string
+        }
+        Returns: boolean
+      }
       user_has_role: {
         Args: {
           org_slug?: string
