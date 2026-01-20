@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useSchedulePickup } from "@/hooks/usePickups";
+import { useDriverSchedulePickup } from "@/hooks/useDriverSchedulePickup";
 import { useClients } from "@/hooks/useClients";
 import { useLocations } from "@/hooks/useLocations";
 import { useToast } from "@/hooks/use-toast";
@@ -63,7 +63,7 @@ export function DriverSchedulePickupDialog({ trigger }: DriverSchedulePickupDial
   const [selectedClientId, setSelectedClientId] = useState("");
 
   const { toast } = useToast();
-  const schedulePickup = useSchedulePickup();
+  const schedulePickup = useDriverSchedulePickup();
   
   // Debounce search to avoid excessive database queries
   useEffect(() => {
@@ -130,7 +130,6 @@ export function DriverSchedulePickupDialog({ trigger }: DriverSchedulePickupDial
         otrCount: data.otr_count,
         tractorCount: data.tractor_count,
         notes: data.notes,
-        assignmentType: 'auto', // Let system auto-assign
       });
 
       setOpen(false);

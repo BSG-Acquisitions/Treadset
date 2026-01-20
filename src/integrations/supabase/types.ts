@@ -5334,6 +5334,22 @@ export type Database = {
         Args: { p_pickup_id: string }
         Returns: undefined
       }
+      driver_schedule_pickup: {
+        Args: {
+          p_client_id: string
+          p_driver_id: string
+          p_location_id: string
+          p_notes: string
+          p_organization_id: string
+          p_otr_count: number
+          p_pickup_date: string
+          p_preferred_window: string
+          p_pte_count: number
+          p_tractor_count: number
+          p_vehicle_id: string
+        }
+        Returns: Json
+      }
       generate_invoice_number: { Args: never; Returns: string }
       generate_manifest_number: { Args: { org_id: string }; Returns: string }
       generate_trailer_manifest_number: {
