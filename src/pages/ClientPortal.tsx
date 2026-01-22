@@ -93,6 +93,10 @@ export default function ClientPortal() {
   const { data: teamMembers } = useClientUsers(clientInfo?.id);
 
   // Fetch manifests for this client
+  // ⚠️ SECURITY: Do NOT add any revenue/pricing fields to this query!
+  // Fields like 'total', 'computed_revenue', 'final_revenue', 'rate', 
+  // 'price_per_unit', etc. must NEVER be exposed to clients.
+  // This is a client-facing portal - only show non-financial data.
   const { data: manifests, isLoading: manifestsLoading } = useQuery({
     queryKey: ['client-portal-manifests', clientInfo?.id],
     queryFn: async () => {
