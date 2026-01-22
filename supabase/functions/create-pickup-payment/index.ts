@@ -25,13 +25,25 @@ serve(async (req) => {
   try {
     console.log('[CREATE-PICKUP-PAYMENT] Function started');
 
-    const authHeader = req.headers.get('Authorization')!;
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('[CREATE-PICKUP-PAYMENT] No Authorization header provided');
+      return new Response(
+        JSON.stringify({ error: 'Authentication required. Please log in again.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
+    }
+    
     const token = authHeader.replace('Bearer ', '');
-    const { data } = await supabaseClient.auth.getUser(token);
+    const { data, error: authError } = await supabaseClient.auth.getUser(token);
     const user = data.user;
     
-    if (!user) {
-      throw new Error('User not authenticated');
+    if (authError || !user) {
+      console.error('[CREATE-PICKUP-PAYMENT] Authentication failed:', authError?.message);
+      return new Response(
+        JSON.stringify({ error: 'Session expired. Please log in again.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
     }
     console.log('[CREATE-PICKUP-PAYMENT] User authenticated:', user.id);
 
