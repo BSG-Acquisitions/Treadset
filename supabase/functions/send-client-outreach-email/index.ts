@@ -136,6 +136,9 @@ Deno.serve(async (req) => {
     const bookingUrl = `https://bsgtires.com/public-book?client=${client.id}`;
     const contactName = client.contact_name || 'there';
     
+    // Create tracking pixel URL for open tracking
+    const trackingPixelUrl = `https://wvjehbozyxhmgdljwsiz.supabase.co/functions/v1/track-email-event?type=open&client=${client.id}&source=outreach`;
+    
     const frequencyText = pattern?.frequency === 'weekly' ? 'weekly' : 
                          pattern?.frequency === 'biweekly' ? 'every two weeks' : 'monthly';
     const subjectLine = `${client.company_name} - Time for a tire pickup?`;
@@ -197,6 +200,8 @@ Deno.serve(async (req) => {
               <p style="color: #b0b0b0; font-size: 10px; margin: 15px 0 0 0;">
                 Powered by <a href="https://treadset.com" style="color: #1A4314; text-decoration: none;">TreadSet</a>
               </p>
+              <!-- Open tracking pixel -->
+              <img src="${trackingPixelUrl}" width="1" height="1" style="display:none;" alt="" />
             </div>
           </div>
         </div>

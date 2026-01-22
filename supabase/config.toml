@@ -233,3 +233,9 @@ verify_jwt = false
 
 [functions.public-contact-form]
 verify_jwt = false
+
+[functions.resend-webhook]
+verify_jwt = false
+
+[functions.send-diagnostic-email]
+verify_jwt = false
