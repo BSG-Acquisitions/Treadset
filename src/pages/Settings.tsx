@@ -21,6 +21,7 @@ import { InviteTeamDialog } from "@/components/settings/InviteTeamDialog";
 import { PendingInvitesTable } from "@/components/settings/PendingInvitesTable";
 import { RolePermissionsCard } from "@/components/settings/RolePermissionsCard";
 import { AutoSchedulingSettings } from "@/components/settings/AutoSchedulingSettings";
+import { EmailDiagnosticCard } from "@/components/settings/EmailDiagnosticCard";
 
 export default function Settings() {
   const { user } = useAuth();
@@ -310,6 +311,14 @@ if (preferencesLoading) {
                     Portal Invites
                   </Link>
                 </Button>
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start"
+                  onClick={() => scrollToSection('email-diagnostics-section')}
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  Email Diagnostics
+                </Button>
               </CardContent>
             </Card>
           </SlideUp>
@@ -333,6 +342,13 @@ if (preferencesLoading) {
                 <PendingInvitesTable />
               </CardContent>
             </Card>
+          </SlideUp>
+
+          {/* Email Diagnostics Section */}
+          <SlideUp delay={0.16} className="lg:col-span-2">
+            <div id="email-diagnostics-section">
+              <EmailDiagnosticCard />
+            </div>
           </SlideUp>
 
           {/* Role Permissions Section */}

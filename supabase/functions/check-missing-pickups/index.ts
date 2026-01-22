@@ -460,6 +460,9 @@ async function sendOutreachEmail(
     // Use public booking URL so clients don't need to login
     const bookingUrl = `https://treadset.lovable.app/public-book?client=${client.id}`;
     
+    // Create tracking pixel URL for open tracking
+    const trackingPixelUrl = `https://wvjehbozyxhmgdljwsiz.supabase.co/functions/v1/track-email-event?type=open&client=${client.id}&source=${emailType}`;
+    
     const contactName = client.contact_name || 'there';
     
     // Different messaging for pattern-based vs inactive clients
@@ -531,6 +534,8 @@ async function sendOutreachEmail(
               <p style="color: #b0b0b0; font-size: 10px; margin: 15px 0 0 0;">
                 Powered by <a href="https://treadset.com" style="color: #1A4314; text-decoration: none;">TreadSet</a>
               </p>
+              <!-- Open tracking pixel -->
+              <img src="${trackingPixelUrl}" width="1" height="1" style="display:none;" alt="" />
             </div>
           </div>
         </div>

@@ -5,7 +5,8 @@ import { OperationalMetricsCard } from '@/components/intelligence/OperationalMet
 import { AIInsightsCard } from '@/components/intelligence/AIInsightsCard';
 import { BookingRequestsWidget } from '@/components/intelligence/BookingRequestsWidget';
 import { EmailOutreachWidget } from '@/components/intelligence/EmailOutreachWidget';
-import { Brain, TrendingUp, Zap, CalendarPlus } from 'lucide-react';
+import { EmailHealthCard } from '@/components/intelligence/EmailHealthCard';
+import { Brain, TrendingUp, Zap, CalendarPlus, Mail } from 'lucide-react';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { SlideUp } from '@/components/motion/SlideUp';
 import { useEffect } from 'react';
@@ -56,17 +57,28 @@ const IntelligenceDashboard = () => {
         </div>
       </SlideUp>
 
-      {/* Self-Scheduling & Outreach */}
+      {/* Email Health & Outreach */}
       <SlideUp delay={0.3}>
         <div className="space-y-4">
           <div className="flex items-center gap-2">
-            <CalendarPlus className="h-5 w-5 text-brand-accent" />
-            <h2 className="text-xl font-semibold text-foreground">Self-Scheduling & Outreach</h2>
+            <Mail className="h-5 w-5 text-brand-accent" />
+            <h2 className="text-xl font-semibold text-foreground">Email Health & Outreach</h2>
           </div>
           <div className="grid gap-6 md:grid-cols-2">
-            <BookingRequestsWidget />
+            <EmailHealthCard />
             <EmailOutreachWidget />
           </div>
+        </div>
+      </SlideUp>
+
+      {/* Self-Scheduling */}
+      <SlideUp delay={0.35}>
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <CalendarPlus className="h-5 w-5 text-brand-accent" />
+            <h2 className="text-xl font-semibold text-foreground">Self-Scheduling</h2>
+          </div>
+          <BookingRequestsWidget />
         </div>
       </SlideUp>
 

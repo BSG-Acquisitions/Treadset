@@ -1938,6 +1938,36 @@ export type Database = {
           },
         ]
       }
+      email_bounces: {
+        Row: {
+          bounce_reason: string | null
+          bounce_type: string
+          bounced_at: string
+          created_at: string
+          email: string
+          id: string
+          resend_email_id: string | null
+        }
+        Insert: {
+          bounce_reason?: string | null
+          bounce_type: string
+          bounced_at?: string
+          created_at?: string
+          email: string
+          id?: string
+          resend_email_id?: string | null
+        }
+        Update: {
+          bounce_reason?: string | null
+          bounce_type?: string
+          bounced_at?: string
+          created_at?: string
+          email?: string
+          id?: string
+          resend_email_id?: string | null
+        }
+        Relationships: []
+      }
       email_events: {
         Row: {
           client_id: string | null
