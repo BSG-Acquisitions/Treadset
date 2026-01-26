@@ -1,137 +1,88 @@
 
-# Phase 2 & 3: Database Setup and Seed Data
+# Plan: Fix Demo Mode Organization Context
 
-## Overview
+## Problem
+The demo user (`demo@treadset.com`) is logged in but seeing no data because:
+1. The AuthContext reads org slug from a cookie (defaults to `bsg`)
+2. The demo user only has access to org slug `demo` (TreadSet Demo)
+3. When no matching org is found, it falls back to hardcoded BSG org ID
+4. All dashboard queries use `user?.currentOrganization?.id` which points to BSG instead of demo org
 
-This plan covers creating the demo organization, user account, and seeding realistic sample data. All operations are **INSERT statements only** - no schema changes, no RLS policy modifications.
+## Solution
+Modify the AuthContext to intelligently fall back to the user's first available organization when the cookie-stored org slug doesn't match any of their organizations.
 
-## What Will Be Created
+## Implementation Details
 
-### Demo Organization
-| Field | Value |
-|-------|-------|
-| ID | New UUID (generated) |
-| Name | "TreadSet Demo" |
-| Slug | "demo" (unique, verified available) |
-| Depot Location | Detroit, MI (42.3314, -83.0458) |
-| Service Hours | 7:00 AM - 5:00 PM |
-| Default Rates | PTE: $1.50, OTR: $22.50, Tractor: $7.50 |
+### File: `src/contexts/AuthContext.tsx`
 
-### Demo User Account
-| Field | Value |
-|-------|-------|
-| Email | demo@treadset.com |
-| Password | TreadSet2026! (sales team only) |
-| First Name | Demo |
-| Last Name | Account |
-| Role | viewer (read-only) |
+**Change 1: Update the fallback logic in `loadUserData` function (around lines 203-225)**
 
-### Sample Clients (12 fictional Michigan tire shops)
-1. Motor City Tire & Auto - Detroit
-2. Great Lakes Rubber Co - Grand Rapids
-3. Wolverine Tire Shop - Ann Arbor
-4. Mackinac Auto Service - Traverse City
-5. Upper Peninsula Recycling - Marquette
-6. Lansing Tire Center - Lansing
-7. Flint Auto & Tire - Flint
-8. Kalamazoo Wheel Works - Kalamazoo
-9. Saginaw Tire Depot - Saginaw
-10. Monroe Auto Care - Monroe
-11. Jackson Wheel & Tire - Jackson
-12. Bay City Tire Service - Bay City
+Current behavior:
+```typescript
+// Find current organization by cookie slug
+const currentOrg = userData.user_organization_roles?.find(
+  (uor: any) => uor.organization?.slug === orgSlug
+)?.organization;
 
-### Sample Locations
-- 1 primary location per client with geocoded Michigan coordinates
-
-### Sample Trailers (4 units)
-| Trailer | Status | Location |
-|---------|--------|----------|
-| DEMO-T01 | empty | BSG Yard |
-| DEMO-T02 | full | Great Lakes Rubber Co |
-| DEMO-T03 | waiting_unload | Processing Facility |
-| DEMO-T04 | empty | Motor City Tire |
-
-### Sample Vehicles (2 trucks)
-| Vehicle | Driver |
-|---------|--------|
-| DEMO Truck 1 | Mike Driver |
-| DEMO Truck 2 | Sarah Driver |
-
-### Sample Employees (4 team members)
-- 2 drivers (Mike Driver, Sarah Driver)
-- 1 dispatcher (Alex Dispatcher)
-- 1 ops manager (Jordan Manager)
-
-### Sample Pickups (35 historical + 5 today)
-- Mix of statuses: completed, in_progress, scheduled
-- Realistic PTE counts (15-85 per pickup)
-- Spanning past 90 days
-
-### Sample Manifests (25 completed)
-- Linked to completed pickups
-- Realistic tire counts and revenue
-- Status: COMPLETED
-
-## Implementation Order
-
-### Step 1: Create Demo Organization
-```sql
-INSERT INTO organizations (id, name, slug, depot_lat, depot_lng, ...)
-VALUES (uuid, 'TreadSet Demo', 'demo', 42.3314, -83.0458, ...);
+// Falls back to hardcoded BSG if not found
+currentOrganization: currentOrg || {
+  id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
+  name: 'BSG Logistics',
+  slug: 'bsg'
+}
 ```
 
-### Step 2: Create Demo User
-This requires two parts:
-1. Create auth.users entry via Supabase Dashboard (manual step)
-2. Insert into public.users table
-3. Insert into user_organization_roles with 'viewer' role
+New behavior:
+```typescript
+// Find current organization by cookie slug
+let currentOrg = userData.user_organization_roles?.find(
+  (uor: any) => uor.organization?.slug === orgSlug
+)?.organization;
 
-### Step 3: Seed Clients & Locations
-12 clients with matching locations, all with demo organization_id
+// If cookie slug doesn't match, use user's first available org
+if (!currentOrg && userData.user_organization_roles?.length > 0) {
+  currentOrg = userData.user_organization_roles[0]?.organization;
+  console.log('No matching org for cookie slug, using first available:', currentOrg?.slug);
+}
 
-### Step 4: Seed Trailers
-4 trailers with varied statuses
-
-### Step 5: Seed Vehicles & Employees
-2 vehicles + 4 employee records
-
-### Step 6: Seed Pickups
-40 pickups spanning 90 days, all demo organization_id
-
-### Step 7: Seed Manifests
-25 completed manifests linked to pickups
-
-## Data Isolation Verification
-
-After seeding, this query confirms isolation:
-```sql
-SELECT 
-  (SELECT COUNT(*) FROM clients WHERE organization_id = '[demo_org_id]') as demo_clients,
-  (SELECT COUNT(*) FROM clients WHERE organization_id = 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73') as bsg_clients
+// Use user's actual org, only fall back to BSG if truly no orgs
+currentOrganization: currentOrg || {
+  id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
+  name: 'BSG Logistics',
+  slug: 'bsg'
+}
 ```
 
-Demo data will be completely separate from BSG data.
+**Change 2: Update the role extraction to match**
 
-## Manual Step Required
+Current:
+```typescript
+const roles = userData.user_organization_roles?.
+  filter((uor: any) => uor.organization?.slug === orgSlug)
+  .map((uor: any) => uor.role) || ['admin'];
+```
 
-**Creating the Auth User**: The demo@treadset.com user needs to be created through Supabase Dashboard → Authentication → Users → Add User because:
-- We cannot insert directly into auth.users table
-- The auth_user_id from that step is needed for linking
+New:
+```typescript
+// Get roles for the current organization
+const roles = userData.user_organization_roles?.
+  filter((uor: any) => uor.organization?.id === currentOrg?.id)
+  .map((uor: any) => uor.role) || ['admin'];
+```
 
-I will provide the exact SQL for all other inserts, and guide you through the auth user creation step.
+## Expected Result
+After this change:
+- Demo user logs in with `demo@treadset.com`
+- AuthContext detects no org matching cookie slug `bsg`
+- Falls back to user's first organization: **TreadSet Demo** (`de300000-0000-4000-8000-000000000001`)
+- Dashboard queries use correct org ID
+- Demo data (12 clients, 10 pickups, 7 manifests) appears on dashboard
 
-## Technical Notes
+## Additional Consideration
+The demo user currently has the `viewer` role which may restrict some actions - this is intentional for marketing demos to prevent accidental data modification.
 
-- All UUIDs will be pre-generated to ensure proper foreign key relationships
-- All organization_id values will reference the demo organization
-- No schema changes required
-- No RLS policy changes required
-- Existing viewer role security applies automatically
-
-## Next Steps
-
-When you approve, I will:
-1. Create the demo organization via SQL insert
-2. Guide you to create the auth user in Supabase Dashboard
-3. Insert the public.users record and link to demo org with viewer role
-4. Seed all sample data (clients, locations, trailers, vehicles, employees, pickups, manifests)
+## Testing
+1. Log out and log back in as `demo@treadset.com`
+2. Dashboard should show demo organization data
+3. Verify "TreadSet Demo" appears in org name display
+4. Confirm all dashboard tiles show demo data
