@@ -1,234 +1,171 @@
 
-# Demo Mode Implementation Plan
+# Seed Data Approach for Marketing Demo Mode
 
-## Overview
-Create a **marketing demo mode** that displays realistic but anonymized sample data for trade shows, investor presentations, and sales demos. This will be **completely isolated** from production data and will not affect normal business operations.
+## What This Approach Entails
 
-## Architecture Design
+Instead of building a separate fake app with static fixtures, the **Seed Data Approach** uses the **real production application** with a dedicated demo organization containing realistic sample data. This gives prospects the authentic TreadSet experience.
 
-### Activation Methods
-1. **Dedicated URL path**: `/demo/dashboard`, `/demo/clients`, etc.
-2. **Query parameter**: `?demo=true` on any protected route
-3. Both methods activate identical demo mode behavior
+## How It Works
 
-### Core Principle: Complete Isolation
 ```text
 ┌─────────────────────────────────────────────────────────────────┐
-│                         App.tsx                                  │
+│                    SEED DATA APPROACH                            │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│   /dashboard (Normal)              /demo/dashboard (Demo)        │
-│   ├─ AuthProvider                  ├─ DemoModeProvider           │
-│   ├─ ProtectedRoute                │   (no auth required)        │
-│   ├─ Real Supabase queries         ├─ Static fixture data        │
-│   └─ Full write access             └─ Read-only mode             │
+│   Demo User Login                                                │
+│   ├─ Email: demo@treadset.com                                   │
+│   ├─ Password: [secure demo password]                           │
+│   ├─ Role: viewer (read-only)                                   │
+│   └─ Organization: "TreadSet Demo"                              │
+│                                                                  │
+│   What They See:                                                 │
+│   ├─ REAL Dashboard (src/pages/Index.tsx)                       │
+│   ├─ REAL Client List (src/pages/Clients.tsx)                   │
+│   ├─ REAL Route Planning (src/pages/routes/...)                 │
+│   ├─ REAL Analytics Charts (src/pages/Analytics.tsx)            │
+│   └─ REAL Service Zones Map (src/pages/ServiceZones.tsx)        │
+│                                                                  │
+│   Data Source:                                                   │
+│   └─ Real Supabase tables, filtered by demo organization_id     │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
----
+## Key Benefits
 
-## Implementation Components
+| Aspect | Fake App (Previous) | Seed Data (Proposed) |
+|--------|---------------------|----------------------|
+| User Experience | Simplified mock UI | Exact production experience |
+| Features Shown | Limited subset | All features work |
+| Maintenance | Two codebases | Single codebase |
+| Updates | Manual sync needed | Automatic with releases |
+| Credibility | Obvious it's a demo | Feels like real product |
+| Interactivity | Static displays | Full navigation/filtering |
 
-### 1. Demo Mode Context (`src/contexts/DemoModeContext.tsx`)
+## Implementation Steps
 
-Creates a React context that:
-- Detects demo mode from URL path (`/demo/*`) or query param (`?demo=true`)
-- Provides `isDemoMode` flag to all components
-- Provides static demo data getters
-- Exposes a fake "user" object for UI display
+### Step 1: Create Demo Organization in Database
 
-### 2. Demo Data Fixtures (`src/lib/demo/`)
+Insert a new organization specifically for demos:
+- Organization name: "TreadSet Demo" (or "BSG Demo")
+- Organization slug: "demo"
+- Organization ID: Generate new UUID
 
-Static TypeScript files containing realistic Michigan tire recycling data:
+### Step 2: Create Demo User Account
 
-**Clients (10 fictional Michigan tire shops):**
-- Motor City Tire & Auto - Detroit, MI
-- Great Lakes Rubber Co - Grand Rapids, MI
-- Wolverine Tire Shop - Ann Arbor, MI
-- Mackinac Auto Service - Traverse City, MI
-- Upper Peninsula Recycling - Marquette, MI
-- Lansing Tire Center - Lansing, MI
-- Flint Auto & Tire - Flint, MI
-- Kalamazoo Wheel Works - Kalamazoo, MI
-- Saginaw Tire Depot - Saginaw, MI
-- Monroe Auto Care - Monroe, MI
+Create a Supabase auth user that prospects can log into:
+- Email: `demo@treadset.com` (or similar)
+- Password: Secure but memorable for sales team
+- Role: `viewer` (existing read-only role)
+- Linked to demo organization
 
-**Dashboard Metrics:**
-- Today's PTEs: 218
-- Yesterday's PTEs: 195
-- This Week: 1,847 PTEs
-- This Month: 11,234 PTEs
-- Active Clients: 83
-- Monthly Revenue: $24,750
+### Step 3: Seed Realistic Sample Data
 
-**Today's Routes (5 pickups):**
-- 2 completed with signatures
-- 1 in progress
-- 2 scheduled
+Insert sample records into the production database, all scoped to the demo organization_id:
 
-**Trailers (4 units):**
-- 2 empty, 1 full, 1 waiting unload
+**Clients (10-15 fictional Michigan tire shops):**
+- Motor City Tire & Auto - Detroit
+- Great Lakes Rubber Co - Grand Rapids
+- Wolverine Tire Shop - Ann Arbor
+- (Similar to what was in fixtures.ts)
 
-**Employees (5 team members):**
-- 2 drivers, 1 dispatcher, 1 ops manager, 1 admin
+**Locations:**
+- Primary location for each client with geocoded coordinates
 
-**Service Zones (3 regions):**
-- Metro Detroit Zone
-- West Michigan Zone
-- Northern Michigan Zone
+**Pickups (30-50 historical + 5-7 today):**
+- Mix of completed, in-progress, and scheduled
+- Realistic PTE counts
 
-### 3. Demo Layout Wrapper (`src/components/demo/DemoLayout.tsx`)
+**Manifests (20-30 completed):**
+- Linked to pickups with real PDF paths (or placeholder)
+- Realistic signature data
 
-A layout wrapper that:
-- Wraps the standard `AppLayout`
-- Adds prominent "DEMO MODE - Sample Data" banner at top
-- Includes "Exit Demo" button returning to landing page
-- Uses demo-specific styling (subtle gradient background)
+**Vehicles & Drivers:**
+- 2-3 demo vehicles
+- 2 demo driver accounts
 
-### 4. Demo-Aware Hooks (`src/hooks/demo/`)
+**Trailers:**
+- 4 trailers with varied statuses
 
-Wrapper hooks that intercept data fetching:
+### Step 4: Existing Security Already Handles It
 
-```text
-useDemoPickups()     → Returns DEMO_PICKUPS if isDemoMode
-useDemoClients()     → Returns DEMO_CLIENTS if isDemoMode
-useDemoDashboard()   → Returns DEMO_METRICS if isDemoMode
-useDemoTrailers()    → Returns DEMO_TRAILERS if isDemoMode
-useDemoEmployees()   → Returns DEMO_EMPLOYEES if isDemoMode
-useDemoAnalytics()   → Returns DEMO_ANALYTICS if isDemoMode
-```
+The `viewer` role already:
+- Has read access to all major features (via TopNav.tsx roles)
+- Is blocked from write operations (via useCanWrite.ts)
+- Shows "Demo Mode" badge (via ViewerModeBadge.tsx)
 
-### 5. Demo Routes (`src/App.tsx`)
+### Step 5: Clean Up Previous Demo Code
 
-New public routes that don't require authentication:
+Remove the isolated demo implementation:
+- Delete `src/pages/demo/*` (7 files)
+- Delete `src/components/demo/*` (3 files)
+- Delete `src/lib/demo/*` (4 files)
+- Delete `src/hooks/demo/*` (1 file)
+- Remove demo routes from App.tsx
+- Update DemoModeContext to only detect viewer role
+- Update useCanWrite to only check viewer role
 
-```text
-/demo                → Redirect to /demo/dashboard
-/demo/dashboard      → Demo dashboard with sample metrics
-/demo/clients        → Demo client list
-/demo/routes/today   → Demo route planning view
-/demo/analytics      → Demo analytics charts
-/demo/trailers       → Demo trailer inventory
-/demo/employees      → Demo employee directory
-/demo/service-zones  → Demo service zones map
-```
+## Demo Access Flow
 
-### 6. Write Operation Blocking
+**For Trade Shows / Sales Demos:**
+1. Open app in browser
+2. Log in with demo@treadset.com credentials
+3. App loads with TreadSet Demo organization
+4. "Demo Mode" badge appears in header
+5. All navigation works, all data is real (but sample)
+6. Write operations blocked with friendly message
 
-Enhance `useCanWrite.ts` and mutation hooks:
-- Check `isDemoMode` from context
-- Block all create/update/delete operations
-- Show toast: "This is a demo - actions are disabled"
+**For Quick Preview Link:**
+- Optionally create a magic link or remember-me flow
+- Could also add `/demo-login` page that auto-logs into demo account
 
----
+## Data Isolation Guarantee
 
-## File Changes Summary
+| Your Real Data | Demo Data |
+|----------------|-----------|
+| organization_id: `ba2e9dc3-...` (BSG) | organization_id: `[new demo UUID]` |
+| Completely separate | Completely separate |
+| Not visible to demo user | Not visible to real users |
 
-### New Files to Create
+The existing RLS policies already filter all data by organization_id, so demo users CANNOT see real business data, and real users CANNOT see demo data.
 
-| File | Purpose |
-|------|---------|
-| `src/contexts/DemoModeContext.tsx` | Demo state management and detection |
-| `src/lib/demo/fixtures.ts` | All static demo data |
-| `src/lib/demo/types.ts` | Type definitions for demo data |
-| `src/lib/demo/index.ts` | Export barrel file |
-| `src/hooks/demo/useDemoData.ts` | Demo-aware data hooks |
-| `src/components/demo/DemoLayout.tsx` | Layout with demo banner |
-| `src/components/demo/DemoModeBanner.tsx` | Prominent demo indicator |
-| `src/pages/demo/DemoDashboard.tsx` | Demo dashboard entry page |
-| `src/pages/demo/DemoClients.tsx` | Demo clients page |
-| `src/pages/demo/DemoRoutes.tsx` | Demo routes page |
-| `src/pages/demo/DemoAnalytics.tsx` | Demo analytics page |
-| `src/pages/demo/DemoTrailers.tsx` | Demo trailer inventory |
-| `src/pages/demo/DemoEmployees.tsx` | Demo employee directory |
-| `src/pages/demo/DemoServiceZones.tsx` | Demo service zones |
+## What Needs to Be Done
 
-### Files to Modify
+### Phase 1: Clean Up Previous Implementation
+- Remove all `/demo` route files and components
+- Simplify DemoModeContext to just check viewer role
+- Update useCanWrite.ts to remove demo mode checks
 
-| File | Changes |
-|------|---------|
-| `src/App.tsx` | Add DemoModeProvider wrapper, demo routes |
-| `src/hooks/useCanWrite.ts` | Check demo mode for write blocking |
-| `src/lib/featureFlags.ts` | Add DEMO_MODE flag (optional) |
+### Phase 2: Database Setup (SQL Migrations)
+- Create demo organization record
+- Create demo user in auth.users
+- Link demo user to demo org with viewer role
 
----
+### Phase 3: Seed Sample Data (SQL Inserts)
+- Insert 10-15 demo clients
+- Insert locations with coordinates
+- Insert historical pickups
+- Insert completed manifests
+- Insert trailers
+- Insert sample employees
 
-## Demo Data Preview
+### Phase 4: Polish
+- Ensure ViewerModeBadge shows prominently
+- Test all navigation paths work for viewer
+- Verify no write actions are possible
+- Add demo login credentials to sales team documentation
 
-### Sample Manifest View
-```text
-Michigan Scrap Tire Transportation Record
-Manifest #: DEMO-20260126-0001
+## Timeline Estimate
 
-GENERATOR:
-Motor City Tire & Auto
-1234 Woodward Ave
-Detroit, MI 48201
+| Phase | Effort |
+|-------|--------|
+| Cleanup demo code | 1 message |
+| Database migrations | 1 message |
+| Seed data inserts | 1 message |
+| Testing & polish | 1 message |
 
-HAULER:
-BSG Tire Recycling (Demo)
-MI Reg: DEMO-12345
+**Total: ~4 messages**
 
-DESTINATION:
-Michigan Tire Processing (Demo)
+## End Result
 
-TIRE COUNT: 145 PTEs
-Signed: [Demo Signature]
-```
-
-### Sample Analytics Chart Data
-```text
-Month    | Revenue   | Pickups | PTEs
----------|-----------|---------|-------
-Jan      | $18,500   | 52      | 9,450
-Feb      | $21,200   | 58      | 10,200
-Mar      | $19,800   | 55      | 9,800
-...      | ...       | ...     | ...
-```
-
----
-
-## Security & Isolation Guarantees
-
-1. **No Database Access**: Demo mode uses only static TypeScript fixtures
-2. **No Authentication Required**: Demo routes are public
-3. **All Writes Blocked**: Mutations throw errors in demo mode
-4. **Clear Visual Indicator**: Unmissable banner prevents confusion
-5. **Separate Route Tree**: `/demo/*` routes are completely independent
-6. **No Cookie/Session Sharing**: Demo mode doesn't touch auth state
-
----
-
-## Implementation Order
-
-**Phase 1: Foundation**
-1. Create `DemoModeContext.tsx` with URL detection
-2. Create `fixtures.ts` with all demo data
-3. Create `DemoLayout.tsx` and `DemoModeBanner.tsx`
-
-**Phase 2: Demo Pages**
-4. Create demo page variants for each major feature
-5. Wire up static data to demo pages
-
-**Phase 3: Routing**
-6. Add demo routes to `App.tsx`
-7. Update `useCanWrite.ts` to check demo mode
-
-**Phase 4: Polish**
-8. Add "Try Demo" button to landing page
-9. Test all demo routes work without auth
-10. Verify normal operations unaffected
-
----
-
-## Testing Checklist
-
-- [ ] Demo routes load without authentication
-- [ ] All demo data displays correctly
-- [ ] Write operations blocked with friendly message
-- [ ] Demo banner always visible
-- [ ] "Exit Demo" returns to landing page
-- [ ] Normal authenticated routes work as before
-- [ ] No real data visible in demo mode
-- [ ] Mobile viewport renders correctly
+Sales team and trade show attendees log into the **real TreadSet app** with a demo account, see realistic sample data that looks just like a thriving tire recycling operation, can explore all features, but cannot modify anything. This gives the most authentic and impressive demo experience possible.
