@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useMemo } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface DemoModeContextType {
   isDemoMode: boolean;
@@ -18,18 +18,12 @@ interface DemoModeProviderProps {
 }
 
 export function DemoModeProvider({ children }: DemoModeProviderProps) {
-  const location = useLocation();
+  const { hasRole } = useAuth();
 
+  // Demo mode is now simply when the user has the 'viewer' role
   const isDemoMode = useMemo(() => {
-    // Check if path starts with /demo
-    const isOnDemoRoute = location.pathname.startsWith('/demo');
-    
-    // Check for ?demo=true query param
-    const searchParams = new URLSearchParams(location.search);
-    const hasDemoParam = searchParams.get('demo') === 'true';
-    
-    return isOnDemoRoute || hasDemoParam;
-  }, [location.pathname, location.search]);
+    return hasRole('viewer');
+  }, [hasRole]);
 
   return (
     <DemoModeContext.Provider value={{ isDemoMode }}>

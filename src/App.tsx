@@ -85,14 +85,6 @@ import PublicProducts from "./pages/PublicProducts";
 import PartnerApplications from "./pages/PartnerApplications";
 import ContactSubmissions from "./pages/ContactSubmissions";
 import { FEATURE_FLAGS } from "./lib/featureFlags";
-// Demo Mode Pages
-import DemoDashboard from "./pages/demo/DemoDashboard";
-import DemoClients from "./pages/demo/DemoClients";
-import DemoRoutes from "./pages/demo/DemoRoutes";
-import DemoAnalytics from "./pages/demo/DemoAnalytics";
-import DemoTrailers from "./pages/demo/DemoTrailers";
-import DemoEmployees from "./pages/demo/DemoEmployees";
-import DemoServiceZones from "./pages/demo/DemoServiceZones";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -105,16 +97,6 @@ const App = () => (
           <BrowserRouter>
             <DemoModeProvider>
             <Routes>
-{/* Demo Mode Routes - No Authentication Required */}
-              <Route path="/demo" element={<Navigate to="/demo/dashboard" replace />} />
-              <Route path="/demo/dashboard" element={<DemoDashboard />} />
-              <Route path="/demo/clients" element={<DemoClients />} />
-              <Route path="/demo/routes" element={<DemoRoutes />} />
-              <Route path="/demo/analytics" element={<DemoAnalytics />} />
-              <Route path="/demo/trailers" element={<DemoTrailers />} />
-              <Route path="/demo/employees" element={<DemoEmployees />} />
-              <Route path="/demo/service-zones" element={<DemoServiceZones />} />
-
 {/* Public Marketing Routes - No Authentication Required */}
               <Route path="/" element={<PublicLanding />} />
               <Route path="/services" element={<PublicServices />} />
