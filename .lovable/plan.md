@@ -1,106 +1,140 @@
 
-# Populate Dashboard Tiles with Demo Data
 
-## Problem
-The dashboard tiles show zeros because:
-1. The demo manifests have `signed_at` dates spread across Dec-Jan (Dec 27, Jan 1, 6, 11, 16, 21, 23)
-2. The RPC functions (`get_today_pte_totals`, `get_weekly_pte_totals`, etc.) filter by `signed_at` date
-3. None of the demo manifests have `signed_at = 2026-01-26` (today), so "Today's PTEs" = 0
-4. The pickups for today (3 exist) are not yet completed, so they don't count toward manifests
+# Fix and Populate Demo Trailers Page
+
+## Current State
+
+**Trailers exist but have issues:**
+- 4 trailers in demo org: `DEMO-T01`, `DEMO-T02`, `DEMO-T03`, `DEMO-T04`
+- One trailer (`DEMO-T03`) has status `waiting_unload` which isn't displayed in the UI (only `empty`, `full`, `staged` are shown as columns)
+- No `trailer_events` records exist, so "last event" info is blank on trailer cards
+
+**Missing demo data:**
+- No trailer events to show activity history
+- No driver with a name associated for trailer events
+- Demo user has no `first_name`/`last_name` set
+
+---
 
 ## Solution
-Update the demo data dates directly in the database to show realistic "active" numbers:
-- Update 2-3 manifests to have `signed_at` = today
-- Update 2-3 manifests to have `signed_at` = yesterday  
-- Keep the rest spread across this week/month
-- Update corresponding pickups to match
+
+Run SQL to:
+1. Update the demo user to have a driver name
+2. Create a dedicated demo driver user
+3. Fix trailer statuses to only use UI-supported values (`empty`, `full`, `staged`)
+4. Add realistic trailer events with timestamps spread across recent days
+
+---
 
 ## SQL to Run in Supabase SQL Editor
 
 ```sql
--- UPDATE DEMO MANIFESTS TO SHOW REALISTIC DATES
--- This makes the dashboard tiles show active numbers
+-- STEP 1: Update demo user with a name (for audit purposes)
+UPDATE users 
+SET first_name = 'Demo', last_name = 'User'
+WHERE id = '1fd28e38-9a86-4b04-aff3-51fe28e795bc';
 
--- Manifest 7: Set to TODAY (signed today, counts in "Today" tile)
-UPDATE manifests 
-SET signed_at = CURRENT_DATE::timestamp + interval '10 hours',
-    created_at = CURRENT_DATE::timestamp + interval '8 hours'
-WHERE id = 'de30aa00-0000-4000-8000-000000000007';
+-- STEP 2: Create a demo driver user for trailer events
+INSERT INTO users (id, email, first_name, last_name, auth_user_id)
+VALUES ('de30e000-0000-4000-8000-000000000001', 'driver@treadset-demo.com', 'Marcus', 'Johnson', NULL)
+ON CONFLICT (id) DO UPDATE SET first_name = 'Marcus', last_name = 'Johnson';
 
--- Manifest 6: Set to TODAY (2nd pickup today)  
-UPDATE manifests 
-SET signed_at = CURRENT_DATE::timestamp + interval '14 hours',
-    created_at = CURRENT_DATE::timestamp + interval '11 hours'
-WHERE id = 'de30aa00-0000-4000-8000-000000000006';
+-- Add driver to demo org
+INSERT INTO user_organization_roles (user_id, organization_id, role)
+VALUES ('de30e000-0000-4000-8000-000000000001', 'de300000-0000-4000-8000-000000000001', 'driver')
+ON CONFLICT (user_id, organization_id) DO NOTHING;
 
--- Manifest 5: Set to YESTERDAY
-UPDATE manifests 
-SET signed_at = (CURRENT_DATE - interval '1 day')::timestamp + interval '15 hours',
-    created_at = (CURRENT_DATE - interval '1 day')::timestamp + interval '9 hours'
-WHERE id = 'de30aa00-0000-4000-8000-000000000005';
+-- STEP 3: Fix trailer statuses (use only empty, full, staged)
+UPDATE trailers SET current_status = 'staged' 
+WHERE id = 'de30d000-0000-4000-8000-000000000003' 
+AND organization_id = 'de300000-0000-4000-8000-000000000001';
 
--- Manifest 4: Set to 2 days ago
-UPDATE manifests 
-SET signed_at = (CURRENT_DATE - interval '2 days')::timestamp + interval '13 hours',
-    created_at = (CURRENT_DATE - interval '2 days')::timestamp + interval '10 hours'
-WHERE id = 'de30aa00-0000-4000-8000-000000000004';
+-- STEP 4: Create trailer events for activity history
+-- Event 1: T01 was dropped empty at yard 2 days ago
+INSERT INTO trailer_events (id, organization_id, trailer_id, event_type, location_name, driver_id, timestamp, notes)
+VALUES (
+  'de30c000-0000-4000-8000-000000000001',
+  'de300000-0000-4000-8000-000000000001',
+  'de30d000-0000-4000-8000-000000000001',
+  'drop_empty',
+  'TreadSet Yard',
+  'de30e000-0000-4000-8000-000000000001',
+  CURRENT_TIMESTAMP - interval '2 days',
+  'Returned empty from Great Lakes Rubber'
+);
 
--- Manifest 3: Set to 3 days ago (this week)
-UPDATE manifests 
-SET signed_at = (CURRENT_DATE - interval '3 days')::timestamp + interval '11 hours',
-    created_at = (CURRENT_DATE - interval '3 days')::timestamp + interval '8 hours'
-WHERE id = 'de30aa00-0000-4000-8000-000000000003';
+-- Event 2: T02 picked up full at Great Lakes yesterday
+INSERT INTO trailer_events (id, organization_id, trailer_id, event_type, location_name, driver_id, timestamp, notes)
+VALUES (
+  'de30c000-0000-4000-8000-000000000002',
+  'de300000-0000-4000-8000-000000000001',
+  'de30d000-0000-4000-8000-000000000002',
+  'pickup_full',
+  'Great Lakes Rubber Co',
+  'de30e000-0000-4000-8000-000000000001',
+  CURRENT_TIMESTAMP - interval '1 day',
+  'Full load - 450 PTEs'
+);
 
--- Manifest 2: Set to 5 days ago (this week)
-UPDATE manifests 
-SET signed_at = (CURRENT_DATE - interval '5 days')::timestamp + interval '16 hours',
-    created_at = (CURRENT_DATE - interval '5 days')::timestamp + interval '12 hours'
-WHERE id = 'de30aa00-0000-4000-8000-000000000002';
+-- Event 3: T03 staged for unload today
+INSERT INTO trailer_events (id, organization_id, trailer_id, event_type, location_name, driver_id, timestamp, notes)
+VALUES (
+  'de30c000-0000-4000-8000-000000000003',
+  'de300000-0000-4000-8000-000000000001',
+  'de30d000-0000-4000-8000-000000000003',
+  'stage_empty',
+  'Processing Facility',
+  'de30e000-0000-4000-8000-000000000001',
+  CURRENT_TIMESTAMP - interval '4 hours',
+  'Staged for unload - processing queue'
+);
 
--- Manifest 1: Set to 10 days ago (this month, earlier)
-UPDATE manifests 
-SET signed_at = (CURRENT_DATE - interval '10 days')::timestamp + interval '14 hours',
-    created_at = (CURRENT_DATE - interval '10 days')::timestamp + interval '9 hours'
-WHERE id = 'de30aa00-0000-4000-8000-000000000001';
+-- Event 4: T04 dropped empty at Motor City today
+INSERT INTO trailer_events (id, organization_id, trailer_id, event_type, location_name, driver_id, timestamp, notes)
+VALUES (
+  'de30c000-0000-4000-8000-000000000004',
+  'de300000-0000-4000-8000-000000000001',
+  'de30d000-0000-4000-8000-000000000004',
+  'drop_empty',
+  'Motor City Tire',
+  'de30e000-0000-4000-8000-000000000001',
+  CURRENT_TIMESTAMP - interval '6 hours',
+  'Swapped for pickup tomorrow'
+);
 
--- UPDATE CORRESPONDING PICKUPS TO MATCH
-UPDATE pickups SET pickup_date = CURRENT_DATE, status = 'completed'
-WHERE id = 'de30f000-0000-4000-8000-000000000007';
+-- STEP 5: Update trailers with last_event_id references
+UPDATE trailers SET last_event_id = 'de30c000-0000-4000-8000-000000000001' WHERE id = 'de30d000-0000-4000-8000-000000000001';
+UPDATE trailers SET last_event_id = 'de30c000-0000-4000-8000-000000000002' WHERE id = 'de30d000-0000-4000-8000-000000000002';
+UPDATE trailers SET last_event_id = 'de30c000-0000-4000-8000-000000000003' WHERE id = 'de30d000-0000-4000-8000-000000000003';
+UPDATE trailers SET last_event_id = 'de30c000-0000-4000-8000-000000000004' WHERE id = 'de30d000-0000-4000-8000-000000000004';
 
-UPDATE pickups SET pickup_date = CURRENT_DATE, status = 'completed'
-WHERE id = 'de30f000-0000-4000-8000-000000000006';
-
-UPDATE pickups SET pickup_date = CURRENT_DATE - interval '1 day'
-WHERE id = 'de30f000-0000-4000-8000-000000000005';
-
-UPDATE pickups SET pickup_date = CURRENT_DATE - interval '2 days'
-WHERE id = 'de30f000-0000-4000-8000-000000000004';
-
-UPDATE pickups SET pickup_date = CURRENT_DATE - interval '3 days'
-WHERE id = 'de30f000-0000-4000-8000-000000000003';
-
-UPDATE pickups SET pickup_date = CURRENT_DATE - interval '5 days'
-WHERE id = 'de30f000-0000-4000-8000-000000000002';
-
-UPDATE pickups SET pickup_date = CURRENT_DATE - interval '10 days'
-WHERE id = 'de30f000-0000-4000-8000-000000000001';
+-- STEP 6: Update vehicles with driver assignment
+UPDATE vehicles SET assigned_driver_id = 'de30e000-0000-4000-8000-000000000001' 
+WHERE id = 'de30a000-0000-4000-8000-000000000001';
 ```
 
-## Expected Dashboard Results After Running SQL
+---
 
-| Tile | Expected Value |
-|------|---------------|
-| Today's PTEs | ~120 PTEs (manifests 6+7) |
-| Yesterday's PTEs | ~175 PTEs (manifest 5) |
-| This Week's PTEs | ~500+ PTEs (manifests 2-7) |
-| This Month's PTEs | ~535 PTEs (all manifests) |
-| Today's Revenue | ~$333 (manifests 6+7 totals) |
-| Month Revenue | ~$1,447 (all manifest totals) |
-| Today's Pickups | Shows 2 completed + 2-3 scheduled |
+## Expected Results After Running SQL
+
+| Column | Trailers |
+|--------|----------|
+| Empty | 2 trailers (T01 at Yard, T04 at Motor City) |
+| Full | 1 trailer (T02 at Great Lakes) |
+| Staged | 1 trailer (T03 at Processing Facility) |
+
+Each trailer card will show:
+- Last event type (e.g., "Drop Empty")
+- Location name
+- Timestamp (relative, e.g., "2 days ago")
+- Driver name: "Marcus Johnson"
+
+---
 
 ## Steps to Execute
+
 1. Go to [Supabase SQL Editor](https://supabase.com/dashboard/project/wvjehbozyxhmgdljwsiz/sql/new)
 2. Paste and run the SQL above
-3. Refresh the dashboard page
-4. All tiles should now show realistic active numbers
-5. Take your screenshots
+3. Refresh the Trailer Inventory page (`/trailers/inventory`)
+4. The board should now show 4 trailers across 3 status columns with activity history
+
