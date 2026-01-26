@@ -1,183 +1,152 @@
 
-# Plan: Populate Demo Organization with Rich Marketing Data
 
-## Current State
-The demo organization (`de300000-0000-4000-8000-000000000001`) already has:
-- 12 clients (Michigan tire shops)
-- 12 locations
-- 10 pickups (mix of scheduled, in_progress, completed)
-- 7 manifests (all COMPLETED with payment)
-- 2 vehicles
+# Access Code Demo Mode
 
-## Gaps Identified
-1. **Client city/state fields are NULL** - Dashboard address displays are empty
-2. **`lifetime_revenue` is $0 for all clients** - Revenue metrics show nothing
-3. **Pickup `computed_revenue` is $0** - Revenue breakdowns are empty
-4. **Limited manifest history** - Charts look sparse
-5. **No assignments/routes** - Route planning views are empty
+## Overview
+Create a public demo experience where prospects can enter an access code (e.g., "DEMO2025") to view a read-only dashboard with sample data - no account creation required.
 
-## Solution: Run SQL Update Script
+## How It Will Work
 
-You'll need to run this in the [Supabase SQL Editor](https://supabase.com/dashboard/project/wvjehbozyxhmgdljwsiz/sql/new):
+1. **Prospect visits** `/demo` or clicks "See Demo" on the marketing site
+2. **Code entry screen** asks for the access code
+3. **On valid code**, they see the full dashboard with sample data
+4. **All write operations blocked** - buttons show "Demo Mode" toast
+5. **Session stored in browser** (localStorage) - expires after configured time
 
-```sql
--- =============================================
--- DEMO DATA ENRICHMENT SCRIPT
--- Organization: TreadSet Demo (de300000-0000-4000-8000-000000000001)
--- =============================================
-
--- 1. UPDATE CLIENT ADDRESSES & REVENUE
-UPDATE clients SET
-  city = CASE company_name
-    WHEN 'Motor City Tire & Auto' THEN 'Detroit'
-    WHEN 'Great Lakes Rubber Co' THEN 'Grand Rapids'
-    WHEN 'Wolverine Tire Shop' THEN 'Ann Arbor'
-    WHEN 'Mackinac Auto Service' THEN 'Mackinaw City'
-    WHEN 'Upper Peninsula Recycling' THEN 'Marquette'
-    WHEN 'Lansing Tire Center' THEN 'Lansing'
-    WHEN 'Flint Auto & Tire' THEN 'Flint'
-    WHEN 'Kalamazoo Wheel Works' THEN 'Kalamazoo'
-    WHEN 'Saginaw Tire Depot' THEN 'Saginaw'
-    WHEN 'Monroe Auto Care' THEN 'Monroe'
-    WHEN 'Jackson Wheel & Tire' THEN 'Jackson'
-    WHEN 'Bay City Tire Service' THEN 'Bay City'
-    ELSE city
-  END,
-  state = 'MI',
-  mailing_address = CASE company_name
-    WHEN 'Motor City Tire & Auto' THEN '4521 Woodward Ave'
-    WHEN 'Great Lakes Rubber Co' THEN '1200 Lake Michigan Dr NW'
-    WHEN 'Wolverine Tire Shop' THEN '825 S State St'
-    WHEN 'Mackinac Auto Service' THEN '102 Central Ave'
-    WHEN 'Upper Peninsula Recycling' THEN '450 Industrial Park Rd'
-    WHEN 'Lansing Tire Center' THEN '3300 S Cedar St'
-    WHEN 'Flint Auto & Tire' THEN '2100 S Dort Hwy'
-    WHEN 'Kalamazoo Wheel Works' THEN '5600 W Main St'
-    WHEN 'Saginaw Tire Depot' THEN '1800 Bay Rd'
-    WHEN 'Monroe Auto Care' THEN '750 N Telegraph Rd'
-    WHEN 'Jackson Wheel & Tire' THEN '1550 E Michigan Ave'
-    WHEN 'Bay City Tire Service' THEN '905 N Euclid Ave'
-    ELSE mailing_address
-  END,
-  zip = CASE company_name
-    WHEN 'Motor City Tire & Auto' THEN '48201'
-    WHEN 'Great Lakes Rubber Co' THEN '49504'
-    WHEN 'Wolverine Tire Shop' THEN '48104'
-    WHEN 'Mackinac Auto Service' THEN '49701'
-    WHEN 'Upper Peninsula Recycling' THEN '49855'
-    WHEN 'Lansing Tire Center' THEN '48910'
-    WHEN 'Flint Auto & Tire' THEN '48503'
-    WHEN 'Kalamazoo Wheel Works' THEN '49009'
-    WHEN 'Saginaw Tire Depot' THEN '48604'
-    WHEN 'Monroe Auto Care' THEN '48162'
-    WHEN 'Jackson Wheel & Tire' THEN '49201'
-    WHEN 'Bay City Tire Service' THEN '48706'
-    ELSE zip
-  END,
-  lifetime_revenue = CASE company_name
-    WHEN 'Motor City Tire & Auto' THEN 4250.00
-    WHEN 'Great Lakes Rubber Co' THEN 6890.50
-    WHEN 'Wolverine Tire Shop' THEN 2340.00
-    WHEN 'Mackinac Auto Service' THEN 1875.25
-    WHEN 'Upper Peninsula Recycling' THEN 8920.00
-    WHEN 'Lansing Tire Center' THEN 3150.75
-    WHEN 'Flint Auto & Tire' THEN 5430.00
-    WHEN 'Kalamazoo Wheel Works' THEN 1290.50
-    WHEN 'Saginaw Tire Depot' THEN 2780.00
-    WHEN 'Monroe Auto Care' THEN 1650.25
-    WHEN 'Jackson Wheel & Tire' THEN 980.00
-    WHEN 'Bay City Tire Service' THEN 1540.00
-    ELSE lifetime_revenue
-  END
-WHERE organization_id = 'de300000-0000-4000-8000-000000000001';
-
--- 2. UPDATE PICKUP REVENUE (realistic tire pickup prices)
-UPDATE pickups SET
-  computed_revenue = (pte_count * 1.25) + (COALESCE(otr_count, 0) * 18.75) + (COALESCE(tractor_count, 0) * 6.25),
-  final_revenue = (pte_count * 1.25) + (COALESCE(otr_count, 0) * 18.75) + (COALESCE(tractor_count, 0) * 6.25)
-WHERE organization_id = 'de300000-0000-4000-8000-000000000001';
-
--- 3. UPDATE MANIFEST TOTALS with realistic values
-UPDATE manifests SET
-  total = CASE id
-    WHEN 'de30aa00-0000-4000-8000-000000000001' THEN 156.25  -- Motor City
-    WHEN 'de30aa00-0000-4000-8000-000000000002' THEN 227.50  -- Great Lakes
-    WHEN 'de30aa00-0000-4000-8000-000000000003' THEN 98.75   -- Wolverine
-    WHEN 'de30aa00-0000-4000-8000-000000000004' THEN 224.75  -- Mackinac
-    WHEN 'de30aa00-0000-4000-8000-000000000005' THEN 406.25  -- UP Recycling
-    WHEN 'de30aa00-0000-4000-8000-000000000006' THEN 135.00  -- Lansing
-    WHEN 'de30aa00-0000-4000-8000-000000000007' THEN 198.50  -- Flint
-    ELSE total
-  END
-WHERE organization_id = 'de300000-0000-4000-8000-000000000001';
-
--- 4. ADD DRIVER/VEHICLE TO DEMO (for route views)
-UPDATE vehicles SET
-  driver_name = CASE unit_number
-    WHEN 'DEMO-01' THEN 'Mike Johnson'
-    WHEN 'DEMO-02' THEN 'Sarah Williams'
-    ELSE driver_name
-  END,
-  driver_email = CASE unit_number
-    WHEN 'DEMO-01' THEN 'mike@treadsetdemo.com'
-    WHEN 'DEMO-02' THEN 'sarah@treadsetdemo.com'
-    ELSE driver_email
-  END
-WHERE organization_id = 'de300000-0000-4000-8000-000000000001';
-
--- 5. CREATE ASSIGNMENTS for today's pickups (route planning)
-INSERT INTO assignments (
-  id, pickup_id, vehicle_id, organization_id, scheduled_date, status, sequence_order
-)
-SELECT 
-  gen_random_uuid(),
-  p.id,
-  'de300d00-0000-4000-8000-000000000001', -- DEMO-01 vehicle
-  p.organization_id,
-  p.pickup_date,
-  CASE p.status 
-    WHEN 'completed' THEN 'completed'
-    WHEN 'in_progress' THEN 'in_progress'
-    ELSE 'assigned'
-  END,
-  ROW_NUMBER() OVER (ORDER BY p.pickup_date)
-FROM pickups p
-WHERE p.organization_id = 'de300000-0000-4000-8000-000000000001'
-  AND NOT EXISTS (
-    SELECT 1 FROM assignments a WHERE a.pickup_id = p.id
-  );
-
--- Verify the updates
-SELECT 'Clients updated' as action, COUNT(*) as count 
-FROM clients WHERE organization_id = 'de300000-0000-4000-8000-000000000001' AND city IS NOT NULL
-UNION ALL
-SELECT 'Pickups with revenue', COUNT(*) 
-FROM pickups WHERE organization_id = 'de300000-0000-4000-8000-000000000001' AND computed_revenue > 0
-UNION ALL
-SELECT 'Manifests with totals', COUNT(*) 
-FROM manifests WHERE organization_id = 'de300000-0000-4000-8000-000000000001' AND total > 0
-UNION ALL
-SELECT 'Assignments created', COUNT(*) 
-FROM assignments WHERE organization_id = 'de300000-0000-4000-8000-000000000001';
+```text
+┌─────────────────────────────────────────────────────┐
+│                    /demo                            │
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│         [TreadSet Logo]                             │
+│                                                     │
+│     Enter Demo Access Code                          │
+│     ┌─────────────────────────────────┐            │
+│     │  DEMO2025                       │            │
+│     └─────────────────────────────────┘            │
+│                                                     │
+│           [ Access Demo ]                           │
+│                                                     │
+│     Need access? Contact sales@treadset.com        │
+│                                                     │
+└─────────────────────────────────────────────────────┘
 ```
 
-## Expected Result After Running
+## Implementation Steps
 
-| Dashboard Element | Before | After |
-|-------------------|--------|-------|
-| Total Revenue | $0 | ~$41,097 |
-| Active Clients | 12 | 12 (with addresses) |
-| Completed Pickups | 7 | 7 (with revenue) |
-| Today's Routes | 0 | 3 pickups assigned |
-| Client Addresses | Empty | Full MI addresses |
+### Step 1: Create Demo Access Context
+Create `src/contexts/DemoAccessContext.tsx` to manage demo session state:
+- Check localStorage for valid demo token
+- Validate access code against allowed codes
+- Provide `isDemoAccess` flag to child components
+- Store demo session with expiration (e.g., 24 hours)
 
-## How to Run
+### Step 2: Create Demo Entry Page
+Create `src/pages/DemoAccess.tsx`:
+- Simple form with code input field
+- Validates code and stores session in localStorage
+- Redirects to `/demo/dashboard` on success
+- Shows error for invalid codes
 
-1. Go to [Supabase SQL Editor](https://supabase.com/dashboard/project/wvjehbozyxhmgdljwsiz/sql/new)
-2. Paste the SQL script above
-3. Click **Run**
-4. Log back in as `demo@treadset.com` to see the populated dashboard
+### Step 3: Create Demo Dashboard Wrapper
+Create `src/pages/DemoDashboard.tsx`:
+- Reuses the existing `Index.tsx` dashboard component
+- Wraps it with demo context that:
+  - Sets `isDemoMode = true` automatically
+  - Uses hardcoded demo organization ID
+  - Shows "Demo Mode" badge in header
+  - Blocks all write operations
 
-## Alternative: I Can Run Individual Updates
+### Step 4: Add Demo Routes
+Update `src/App.tsx` to add public demo routes:
+```
+/demo          → DemoAccess (code entry)
+/demo/dashboard → DemoDashboard (read-only view)
+```
 
-If you prefer, I can execute smaller UPDATE statements one at a time using the insert tool, though the SQL Editor approach is faster for this bulk operation.
+### Step 5: Create Demo Data Hook
+Create `src/hooks/useDemoData.ts`:
+- Fetches data from the "TreadSet Demo" organization (already seeded)
+- Uses a service role or public access pattern
+- Returns same data shape as production hooks
+
+### Step 6: Update Write Guards
+Modify `src/hooks/useCanWrite.ts` to also check for demo access mode:
+- If `isDemoAccess` from context is true → return false
+- Existing `viewer` role check still works for logged-in demos
+
+### Step 7: Add Access Code Management
+Store allowed codes in environment or database:
+- Option A: Edge function validates code server-side (more secure)
+- Option B: Client-side validation against a hash (simpler)
+
+Recommend Option A for production use.
+
+---
+
+## Technical Details
+
+### Demo Session Storage
+```typescript
+interface DemoSession {
+  validUntil: number; // Unix timestamp
+  accessedAt: number;
+}
+
+// Stored in localStorage as:
+localStorage.setItem('treadset_demo', JSON.stringify(session));
+```
+
+### Access Code Validation (Edge Function)
+```typescript
+// POST /demo-validate
+// Body: { code: "DEMO2025" }
+// Response: { valid: true, expiresIn: 86400 } or { valid: false }
+```
+
+### Data Access Pattern
+Since RLS requires authentication, the demo will:
+1. Query a special public view or
+2. Use an edge function that returns demo org data
+3. Or fetch via a service role in the edge function
+
+Recommend approach #2 (edge function) for security.
+
+---
+
+## Files to Create/Modify
+
+| File | Action |
+|------|--------|
+| `src/contexts/DemoAccessContext.tsx` | Create - manages demo session |
+| `src/pages/DemoAccess.tsx` | Create - code entry page |
+| `src/pages/DemoDashboard.tsx` | Create - wrapper for demo view |
+| `src/App.tsx` | Modify - add /demo routes |
+| `src/hooks/useCanWrite.ts` | Modify - check demo access flag |
+| `supabase/functions/demo-validate/index.ts` | Create - validates access codes |
+| `supabase/functions/demo-data/index.ts` | Create - returns demo org data |
+
+---
+
+## Security Considerations
+
+- Access codes should be rotated periodically
+- Demo data is completely isolated from production via organization_id
+- No authentication tokens are created - just localStorage session
+- Edge function uses service role only for demo org data
+- Write operations are blocked at the UI level AND validated server-side
+
+---
+
+## Configuration
+
+The access code(s) will be stored as a Supabase edge function secret:
+```
+DEMO_ACCESS_CODES=DEMO2025,TREADSET2025
+```
+
+This allows you to:
+- Have multiple codes for different events/prospects
+- Rotate codes without code deployment
+- Track which codes are used (optional logging)
+
