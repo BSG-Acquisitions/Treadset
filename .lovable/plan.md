@@ -1,152 +1,106 @@
 
+# Populate Dashboard Tiles with Demo Data
 
-# Access Code Demo Mode
+## Problem
+The dashboard tiles show zeros because:
+1. The demo manifests have `signed_at` dates spread across Dec-Jan (Dec 27, Jan 1, 6, 11, 16, 21, 23)
+2. The RPC functions (`get_today_pte_totals`, `get_weekly_pte_totals`, etc.) filter by `signed_at` date
+3. None of the demo manifests have `signed_at = 2026-01-26` (today), so "Today's PTEs" = 0
+4. The pickups for today (3 exist) are not yet completed, so they don't count toward manifests
 
-## Overview
-Create a public demo experience where prospects can enter an access code (e.g., "DEMO2025") to view a read-only dashboard with sample data - no account creation required.
+## Solution
+Update the demo data dates directly in the database to show realistic "active" numbers:
+- Update 2-3 manifests to have `signed_at` = today
+- Update 2-3 manifests to have `signed_at` = yesterday  
+- Keep the rest spread across this week/month
+- Update corresponding pickups to match
 
-## How It Will Work
+## SQL to Run in Supabase SQL Editor
 
-1. **Prospect visits** `/demo` or clicks "See Demo" on the marketing site
-2. **Code entry screen** asks for the access code
-3. **On valid code**, they see the full dashboard with sample data
-4. **All write operations blocked** - buttons show "Demo Mode" toast
-5. **Session stored in browser** (localStorage) - expires after configured time
+```sql
+-- UPDATE DEMO MANIFESTS TO SHOW REALISTIC DATES
+-- This makes the dashboard tiles show active numbers
 
-```text
-┌─────────────────────────────────────────────────────┐
-│                    /demo                            │
-├─────────────────────────────────────────────────────┤
-│                                                     │
-│         [TreadSet Logo]                             │
-│                                                     │
-│     Enter Demo Access Code                          │
-│     ┌─────────────────────────────────┐            │
-│     │  DEMO2025                       │            │
-│     └─────────────────────────────────┘            │
-│                                                     │
-│           [ Access Demo ]                           │
-│                                                     │
-│     Need access? Contact sales@treadset.com        │
-│                                                     │
-└─────────────────────────────────────────────────────┘
+-- Manifest 7: Set to TODAY (signed today, counts in "Today" tile)
+UPDATE manifests 
+SET signed_at = CURRENT_DATE::timestamp + interval '10 hours',
+    created_at = CURRENT_DATE::timestamp + interval '8 hours'
+WHERE id = 'de30aa00-0000-4000-8000-000000000007';
+
+-- Manifest 6: Set to TODAY (2nd pickup today)  
+UPDATE manifests 
+SET signed_at = CURRENT_DATE::timestamp + interval '14 hours',
+    created_at = CURRENT_DATE::timestamp + interval '11 hours'
+WHERE id = 'de30aa00-0000-4000-8000-000000000006';
+
+-- Manifest 5: Set to YESTERDAY
+UPDATE manifests 
+SET signed_at = (CURRENT_DATE - interval '1 day')::timestamp + interval '15 hours',
+    created_at = (CURRENT_DATE - interval '1 day')::timestamp + interval '9 hours'
+WHERE id = 'de30aa00-0000-4000-8000-000000000005';
+
+-- Manifest 4: Set to 2 days ago
+UPDATE manifests 
+SET signed_at = (CURRENT_DATE - interval '2 days')::timestamp + interval '13 hours',
+    created_at = (CURRENT_DATE - interval '2 days')::timestamp + interval '10 hours'
+WHERE id = 'de30aa00-0000-4000-8000-000000000004';
+
+-- Manifest 3: Set to 3 days ago (this week)
+UPDATE manifests 
+SET signed_at = (CURRENT_DATE - interval '3 days')::timestamp + interval '11 hours',
+    created_at = (CURRENT_DATE - interval '3 days')::timestamp + interval '8 hours'
+WHERE id = 'de30aa00-0000-4000-8000-000000000003';
+
+-- Manifest 2: Set to 5 days ago (this week)
+UPDATE manifests 
+SET signed_at = (CURRENT_DATE - interval '5 days')::timestamp + interval '16 hours',
+    created_at = (CURRENT_DATE - interval '5 days')::timestamp + interval '12 hours'
+WHERE id = 'de30aa00-0000-4000-8000-000000000002';
+
+-- Manifest 1: Set to 10 days ago (this month, earlier)
+UPDATE manifests 
+SET signed_at = (CURRENT_DATE - interval '10 days')::timestamp + interval '14 hours',
+    created_at = (CURRENT_DATE - interval '10 days')::timestamp + interval '9 hours'
+WHERE id = 'de30aa00-0000-4000-8000-000000000001';
+
+-- UPDATE CORRESPONDING PICKUPS TO MATCH
+UPDATE pickups SET pickup_date = CURRENT_DATE, status = 'completed'
+WHERE id = 'de30f000-0000-4000-8000-000000000007';
+
+UPDATE pickups SET pickup_date = CURRENT_DATE, status = 'completed'
+WHERE id = 'de30f000-0000-4000-8000-000000000006';
+
+UPDATE pickups SET pickup_date = CURRENT_DATE - interval '1 day'
+WHERE id = 'de30f000-0000-4000-8000-000000000005';
+
+UPDATE pickups SET pickup_date = CURRENT_DATE - interval '2 days'
+WHERE id = 'de30f000-0000-4000-8000-000000000004';
+
+UPDATE pickups SET pickup_date = CURRENT_DATE - interval '3 days'
+WHERE id = 'de30f000-0000-4000-8000-000000000003';
+
+UPDATE pickups SET pickup_date = CURRENT_DATE - interval '5 days'
+WHERE id = 'de30f000-0000-4000-8000-000000000002';
+
+UPDATE pickups SET pickup_date = CURRENT_DATE - interval '10 days'
+WHERE id = 'de30f000-0000-4000-8000-000000000001';
 ```
 
-## Implementation Steps
+## Expected Dashboard Results After Running SQL
 
-### Step 1: Create Demo Access Context
-Create `src/contexts/DemoAccessContext.tsx` to manage demo session state:
-- Check localStorage for valid demo token
-- Validate access code against allowed codes
-- Provide `isDemoAccess` flag to child components
-- Store demo session with expiration (e.g., 24 hours)
+| Tile | Expected Value |
+|------|---------------|
+| Today's PTEs | ~120 PTEs (manifests 6+7) |
+| Yesterday's PTEs | ~175 PTEs (manifest 5) |
+| This Week's PTEs | ~500+ PTEs (manifests 2-7) |
+| This Month's PTEs | ~535 PTEs (all manifests) |
+| Today's Revenue | ~$333 (manifests 6+7 totals) |
+| Month Revenue | ~$1,447 (all manifest totals) |
+| Today's Pickups | Shows 2 completed + 2-3 scheduled |
 
-### Step 2: Create Demo Entry Page
-Create `src/pages/DemoAccess.tsx`:
-- Simple form with code input field
-- Validates code and stores session in localStorage
-- Redirects to `/demo/dashboard` on success
-- Shows error for invalid codes
-
-### Step 3: Create Demo Dashboard Wrapper
-Create `src/pages/DemoDashboard.tsx`:
-- Reuses the existing `Index.tsx` dashboard component
-- Wraps it with demo context that:
-  - Sets `isDemoMode = true` automatically
-  - Uses hardcoded demo organization ID
-  - Shows "Demo Mode" badge in header
-  - Blocks all write operations
-
-### Step 4: Add Demo Routes
-Update `src/App.tsx` to add public demo routes:
-```
-/demo          → DemoAccess (code entry)
-/demo/dashboard → DemoDashboard (read-only view)
-```
-
-### Step 5: Create Demo Data Hook
-Create `src/hooks/useDemoData.ts`:
-- Fetches data from the "TreadSet Demo" organization (already seeded)
-- Uses a service role or public access pattern
-- Returns same data shape as production hooks
-
-### Step 6: Update Write Guards
-Modify `src/hooks/useCanWrite.ts` to also check for demo access mode:
-- If `isDemoAccess` from context is true → return false
-- Existing `viewer` role check still works for logged-in demos
-
-### Step 7: Add Access Code Management
-Store allowed codes in environment or database:
-- Option A: Edge function validates code server-side (more secure)
-- Option B: Client-side validation against a hash (simpler)
-
-Recommend Option A for production use.
-
----
-
-## Technical Details
-
-### Demo Session Storage
-```typescript
-interface DemoSession {
-  validUntil: number; // Unix timestamp
-  accessedAt: number;
-}
-
-// Stored in localStorage as:
-localStorage.setItem('treadset_demo', JSON.stringify(session));
-```
-
-### Access Code Validation (Edge Function)
-```typescript
-// POST /demo-validate
-// Body: { code: "DEMO2025" }
-// Response: { valid: true, expiresIn: 86400 } or { valid: false }
-```
-
-### Data Access Pattern
-Since RLS requires authentication, the demo will:
-1. Query a special public view or
-2. Use an edge function that returns demo org data
-3. Or fetch via a service role in the edge function
-
-Recommend approach #2 (edge function) for security.
-
----
-
-## Files to Create/Modify
-
-| File | Action |
-|------|--------|
-| `src/contexts/DemoAccessContext.tsx` | Create - manages demo session |
-| `src/pages/DemoAccess.tsx` | Create - code entry page |
-| `src/pages/DemoDashboard.tsx` | Create - wrapper for demo view |
-| `src/App.tsx` | Modify - add /demo routes |
-| `src/hooks/useCanWrite.ts` | Modify - check demo access flag |
-| `supabase/functions/demo-validate/index.ts` | Create - validates access codes |
-| `supabase/functions/demo-data/index.ts` | Create - returns demo org data |
-
----
-
-## Security Considerations
-
-- Access codes should be rotated periodically
-- Demo data is completely isolated from production via organization_id
-- No authentication tokens are created - just localStorage session
-- Edge function uses service role only for demo org data
-- Write operations are blocked at the UI level AND validated server-side
-
----
-
-## Configuration
-
-The access code(s) will be stored as a Supabase edge function secret:
-```
-DEMO_ACCESS_CODES=DEMO2025,TREADSET2025
-```
-
-This allows you to:
-- Have multiple codes for different events/prospects
-- Rotate codes without code deployment
-- Track which codes are used (optional logging)
-
+## Steps to Execute
+1. Go to [Supabase SQL Editor](https://supabase.com/dashboard/project/wvjehbozyxhmgdljwsiz/sql/new)
+2. Paste and run the SQL above
+3. Refresh the dashboard page
+4. All tiles should now show realistic active numbers
+5. Take your screenshots
