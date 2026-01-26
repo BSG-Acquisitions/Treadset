@@ -199,14 +199,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('Processing user data...');
 
-      // Find current organization
-      const currentOrg = userData.user_organization_roles?.find(
+      // Find current organization by cookie slug
+      let currentOrg = userData.user_organization_roles?.find(
         (uor: any) => uor.organization?.slug === orgSlug
       )?.organization;
 
-      // Get all roles for current organization
+      // If cookie slug doesn't match, use user's first available org
+      if (!currentOrg && userData.user_organization_roles?.length > 0) {
+        currentOrg = userData.user_organization_roles[0]?.organization;
+        console.log('No matching org for cookie slug, using first available:', currentOrg?.slug);
+      }
+
+      // Get all roles for current organization (match by ID, not slug)
       const roles = userData.user_organization_roles?.
-        filter((uor: any) => uor.organization?.slug === orgSlug)
+        filter((uor: any) => uor.organization?.id === currentOrg?.id)
         .map((uor: any) => uor.role) || ['admin'];
 
       const finalUser = {
