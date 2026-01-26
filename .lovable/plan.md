@@ -1,171 +1,137 @@
 
-# Seed Data Approach for Marketing Demo Mode
+# Phase 2 & 3: Database Setup and Seed Data
 
-## What This Approach Entails
+## Overview
 
-Instead of building a separate fake app with static fixtures, the **Seed Data Approach** uses the **real production application** with a dedicated demo organization containing realistic sample data. This gives prospects the authentic TreadSet experience.
+This plan covers creating the demo organization, user account, and seeding realistic sample data. All operations are **INSERT statements only** - no schema changes, no RLS policy modifications.
 
-## How It Works
+## What Will Be Created
 
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│                    SEED DATA APPROACH                            │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│   Demo User Login                                                │
-│   ├─ Email: demo@treadset.com                                   │
-│   ├─ Password: [secure demo password]                           │
-│   ├─ Role: viewer (read-only)                                   │
-│   └─ Organization: "TreadSet Demo"                              │
-│                                                                  │
-│   What They See:                                                 │
-│   ├─ REAL Dashboard (src/pages/Index.tsx)                       │
-│   ├─ REAL Client List (src/pages/Clients.tsx)                   │
-│   ├─ REAL Route Planning (src/pages/routes/...)                 │
-│   ├─ REAL Analytics Charts (src/pages/Analytics.tsx)            │
-│   └─ REAL Service Zones Map (src/pages/ServiceZones.tsx)        │
-│                                                                  │
-│   Data Source:                                                   │
-│   └─ Real Supabase tables, filtered by demo organization_id     │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
+### Demo Organization
+| Field | Value |
+|-------|-------|
+| ID | New UUID (generated) |
+| Name | "TreadSet Demo" |
+| Slug | "demo" (unique, verified available) |
+| Depot Location | Detroit, MI (42.3314, -83.0458) |
+| Service Hours | 7:00 AM - 5:00 PM |
+| Default Rates | PTE: $1.50, OTR: $22.50, Tractor: $7.50 |
+
+### Demo User Account
+| Field | Value |
+|-------|-------|
+| Email | demo@treadset.com |
+| Password | TreadSet2026! (sales team only) |
+| First Name | Demo |
+| Last Name | Account |
+| Role | viewer (read-only) |
+
+### Sample Clients (12 fictional Michigan tire shops)
+1. Motor City Tire & Auto - Detroit
+2. Great Lakes Rubber Co - Grand Rapids
+3. Wolverine Tire Shop - Ann Arbor
+4. Mackinac Auto Service - Traverse City
+5. Upper Peninsula Recycling - Marquette
+6. Lansing Tire Center - Lansing
+7. Flint Auto & Tire - Flint
+8. Kalamazoo Wheel Works - Kalamazoo
+9. Saginaw Tire Depot - Saginaw
+10. Monroe Auto Care - Monroe
+11. Jackson Wheel & Tire - Jackson
+12. Bay City Tire Service - Bay City
+
+### Sample Locations
+- 1 primary location per client with geocoded Michigan coordinates
+
+### Sample Trailers (4 units)
+| Trailer | Status | Location |
+|---------|--------|----------|
+| DEMO-T01 | empty | BSG Yard |
+| DEMO-T02 | full | Great Lakes Rubber Co |
+| DEMO-T03 | waiting_unload | Processing Facility |
+| DEMO-T04 | empty | Motor City Tire |
+
+### Sample Vehicles (2 trucks)
+| Vehicle | Driver |
+|---------|--------|
+| DEMO Truck 1 | Mike Driver |
+| DEMO Truck 2 | Sarah Driver |
+
+### Sample Employees (4 team members)
+- 2 drivers (Mike Driver, Sarah Driver)
+- 1 dispatcher (Alex Dispatcher)
+- 1 ops manager (Jordan Manager)
+
+### Sample Pickups (35 historical + 5 today)
+- Mix of statuses: completed, in_progress, scheduled
+- Realistic PTE counts (15-85 per pickup)
+- Spanning past 90 days
+
+### Sample Manifests (25 completed)
+- Linked to completed pickups
+- Realistic tire counts and revenue
+- Status: COMPLETED
+
+## Implementation Order
+
+### Step 1: Create Demo Organization
+```sql
+INSERT INTO organizations (id, name, slug, depot_lat, depot_lng, ...)
+VALUES (uuid, 'TreadSet Demo', 'demo', 42.3314, -83.0458, ...);
 ```
 
-## Key Benefits
+### Step 2: Create Demo User
+This requires two parts:
+1. Create auth.users entry via Supabase Dashboard (manual step)
+2. Insert into public.users table
+3. Insert into user_organization_roles with 'viewer' role
 
-| Aspect | Fake App (Previous) | Seed Data (Proposed) |
-|--------|---------------------|----------------------|
-| User Experience | Simplified mock UI | Exact production experience |
-| Features Shown | Limited subset | All features work |
-| Maintenance | Two codebases | Single codebase |
-| Updates | Manual sync needed | Automatic with releases |
-| Credibility | Obvious it's a demo | Feels like real product |
-| Interactivity | Static displays | Full navigation/filtering |
+### Step 3: Seed Clients & Locations
+12 clients with matching locations, all with demo organization_id
 
-## Implementation Steps
+### Step 4: Seed Trailers
+4 trailers with varied statuses
 
-### Step 1: Create Demo Organization in Database
+### Step 5: Seed Vehicles & Employees
+2 vehicles + 4 employee records
 
-Insert a new organization specifically for demos:
-- Organization name: "TreadSet Demo" (or "BSG Demo")
-- Organization slug: "demo"
-- Organization ID: Generate new UUID
+### Step 6: Seed Pickups
+40 pickups spanning 90 days, all demo organization_id
 
-### Step 2: Create Demo User Account
+### Step 7: Seed Manifests
+25 completed manifests linked to pickups
 
-Create a Supabase auth user that prospects can log into:
-- Email: `demo@treadset.com` (or similar)
-- Password: Secure but memorable for sales team
-- Role: `viewer` (existing read-only role)
-- Linked to demo organization
+## Data Isolation Verification
 
-### Step 3: Seed Realistic Sample Data
+After seeding, this query confirms isolation:
+```sql
+SELECT 
+  (SELECT COUNT(*) FROM clients WHERE organization_id = '[demo_org_id]') as demo_clients,
+  (SELECT COUNT(*) FROM clients WHERE organization_id = 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73') as bsg_clients
+```
 
-Insert sample records into the production database, all scoped to the demo organization_id:
+Demo data will be completely separate from BSG data.
 
-**Clients (10-15 fictional Michigan tire shops):**
-- Motor City Tire & Auto - Detroit
-- Great Lakes Rubber Co - Grand Rapids
-- Wolverine Tire Shop - Ann Arbor
-- (Similar to what was in fixtures.ts)
+## Manual Step Required
 
-**Locations:**
-- Primary location for each client with geocoded coordinates
+**Creating the Auth User**: The demo@treadset.com user needs to be created through Supabase Dashboard → Authentication → Users → Add User because:
+- We cannot insert directly into auth.users table
+- The auth_user_id from that step is needed for linking
 
-**Pickups (30-50 historical + 5-7 today):**
-- Mix of completed, in-progress, and scheduled
-- Realistic PTE counts
+I will provide the exact SQL for all other inserts, and guide you through the auth user creation step.
 
-**Manifests (20-30 completed):**
-- Linked to pickups with real PDF paths (or placeholder)
-- Realistic signature data
+## Technical Notes
 
-**Vehicles & Drivers:**
-- 2-3 demo vehicles
-- 2 demo driver accounts
+- All UUIDs will be pre-generated to ensure proper foreign key relationships
+- All organization_id values will reference the demo organization
+- No schema changes required
+- No RLS policy changes required
+- Existing viewer role security applies automatically
 
-**Trailers:**
-- 4 trailers with varied statuses
+## Next Steps
 
-### Step 4: Existing Security Already Handles It
-
-The `viewer` role already:
-- Has read access to all major features (via TopNav.tsx roles)
-- Is blocked from write operations (via useCanWrite.ts)
-- Shows "Demo Mode" badge (via ViewerModeBadge.tsx)
-
-### Step 5: Clean Up Previous Demo Code
-
-Remove the isolated demo implementation:
-- Delete `src/pages/demo/*` (7 files)
-- Delete `src/components/demo/*` (3 files)
-- Delete `src/lib/demo/*` (4 files)
-- Delete `src/hooks/demo/*` (1 file)
-- Remove demo routes from App.tsx
-- Update DemoModeContext to only detect viewer role
-- Update useCanWrite to only check viewer role
-
-## Demo Access Flow
-
-**For Trade Shows / Sales Demos:**
-1. Open app in browser
-2. Log in with demo@treadset.com credentials
-3. App loads with TreadSet Demo organization
-4. "Demo Mode" badge appears in header
-5. All navigation works, all data is real (but sample)
-6. Write operations blocked with friendly message
-
-**For Quick Preview Link:**
-- Optionally create a magic link or remember-me flow
-- Could also add `/demo-login` page that auto-logs into demo account
-
-## Data Isolation Guarantee
-
-| Your Real Data | Demo Data |
-|----------------|-----------|
-| organization_id: `ba2e9dc3-...` (BSG) | organization_id: `[new demo UUID]` |
-| Completely separate | Completely separate |
-| Not visible to demo user | Not visible to real users |
-
-The existing RLS policies already filter all data by organization_id, so demo users CANNOT see real business data, and real users CANNOT see demo data.
-
-## What Needs to Be Done
-
-### Phase 1: Clean Up Previous Implementation
-- Remove all `/demo` route files and components
-- Simplify DemoModeContext to just check viewer role
-- Update useCanWrite.ts to remove demo mode checks
-
-### Phase 2: Database Setup (SQL Migrations)
-- Create demo organization record
-- Create demo user in auth.users
-- Link demo user to demo org with viewer role
-
-### Phase 3: Seed Sample Data (SQL Inserts)
-- Insert 10-15 demo clients
-- Insert locations with coordinates
-- Insert historical pickups
-- Insert completed manifests
-- Insert trailers
-- Insert sample employees
-
-### Phase 4: Polish
-- Ensure ViewerModeBadge shows prominently
-- Test all navigation paths work for viewer
-- Verify no write actions are possible
-- Add demo login credentials to sales team documentation
-
-## Timeline Estimate
-
-| Phase | Effort |
-|-------|--------|
-| Cleanup demo code | 1 message |
-| Database migrations | 1 message |
-| Seed data inserts | 1 message |
-| Testing & polish | 1 message |
-
-**Total: ~4 messages**
-
-## End Result
-
-Sales team and trade show attendees log into the **real TreadSet app** with a demo account, see realistic sample data that looks just like a thriving tire recycling operation, can explore all features, but cannot modify anything. This gives the most authentic and impressive demo experience possible.
+When you approve, I will:
+1. Create the demo organization via SQL insert
+2. Guide you to create the auth user in Supabase Dashboard
+3. Insert the public.users record and link to demo org with viewer role
+4. Seed all sample data (clients, locations, trailers, vehicles, employees, pickups, manifests)
