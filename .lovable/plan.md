@@ -1,140 +1,146 @@
 
 
-# Fix and Populate Demo Trailers Page
+# Domain-Based Routing Implementation
 
-## Current State
+## Overview
 
-**Trailers exist but have issues:**
-- 4 trailers in demo org: `DEMO-T01`, `DEMO-T02`, `DEMO-T03`, `DEMO-T04`
-- One trailer (`DEMO-T03`) has status `waiting_unload` which isn't displayed in the UI (only `empty`, `full`, `staged` are shown as columns)
-- No `trailer_events` records exist, so "last event" info is blank on trailer cards
-
-**Missing demo data:**
-- No trailer events to show activity history
-- No driver with a name associated for trailer events
-- Demo user has no `first_name`/`last_name` set
+Add domain detection logic to show different content based on where users access the app:
+- **BSG domains** (bsgtires.com, www.bsgtires.com) → BSG Marketing Site
+- **TreadSet domains** (treadset.lovable.app, app.treadset.com, localhost) → TreadSet App Landing
 
 ---
 
-## Solution
+## Files to Create
 
-Run SQL to:
-1. Update the demo user to have a driver name
-2. Create a dedicated demo driver user
-3. Fix trailer statuses to only use UI-supported values (`empty`, `full`, `staged`)
-4. Add realistic trailer events with timestamps spread across recent days
+### 1. `src/pages/AppLanding.tsx` - TreadSet SaaS Landing Page
+
+A clean, professional landing page for TreadSet app access:
+
+**Content:**
+- TreadSet logo (using existing `TreadSetLogo` component)
+- Headline: "Tire Logistics, Simplified"
+- Subtext: "The complete platform for tire recycling operations"
+- Two CTA buttons:
+  - **Primary:** "Sign In" → links to `/auth`
+  - **Secondary:** "Request a Demo" → links to `/contact` or external form
+- Feature highlights (3 bullet points):
+  - Real-time route optimization
+  - Digital manifests & compliance
+  - Complete business analytics
+- Footer: "Powered by TreadSet" with copyright
+
+**Styling:**
+- Matches Auth.tsx aesthetic (clean, centered, professional)
+- Uses existing Tailwind classes and shadcn components
+- Subtle animations with Framer Motion
+- Dark/light mode compatible
 
 ---
 
-## SQL to Run in Supabase SQL Editor
+## Files to Modify
 
-```sql
--- STEP 1: Update demo user with a name (for audit purposes)
-UPDATE users 
-SET first_name = 'Demo', last_name = 'User'
-WHERE id = '1fd28e38-9a86-4b04-aff3-51fe28e795bc';
+### 2. `src/App.tsx` - Add Domain Routing Logic
 
--- STEP 2: Create a demo driver user for trailer events
-INSERT INTO users (id, email, first_name, last_name, auth_user_id)
-VALUES ('de30e000-0000-4000-8000-000000000001', 'driver@treadset-demo.com', 'Marcus', 'Johnson', NULL)
-ON CONFLICT (id) DO UPDATE SET first_name = 'Marcus', last_name = 'Johnson';
+**Changes:**
+1. Create a `RootRoute` component that detects the hostname
+2. Replace the static `<PublicLanding />` route with conditional rendering
 
--- Add driver to demo org
-INSERT INTO user_organization_roles (user_id, organization_id, role)
-VALUES ('de30e000-0000-4000-8000-000000000001', 'de300000-0000-4000-8000-000000000001', 'driver')
-ON CONFLICT (user_id, organization_id) DO NOTHING;
+**Logic:**
+```text
+hostname detection:
+├── Contains "bsg" or "bsgtires" → <PublicLanding /> (BSG Marketing)
+├── Contains "treadset" or "lovable" or "localhost" → <AppLanding /> (TreadSet App)
+└── Default fallback → <AppLanding /> (TreadSet App)
+```
 
--- STEP 3: Fix trailer statuses (use only empty, full, staged)
-UPDATE trailers SET current_status = 'staged' 
-WHERE id = 'de30d000-0000-4000-8000-000000000003' 
-AND organization_id = 'de300000-0000-4000-8000-000000000001';
-
--- STEP 4: Create trailer events for activity history
--- Event 1: T01 was dropped empty at yard 2 days ago
-INSERT INTO trailer_events (id, organization_id, trailer_id, event_type, location_name, driver_id, timestamp, notes)
-VALUES (
-  'de30c000-0000-4000-8000-000000000001',
-  'de300000-0000-4000-8000-000000000001',
-  'de30d000-0000-4000-8000-000000000001',
-  'drop_empty',
-  'TreadSet Yard',
-  'de30e000-0000-4000-8000-000000000001',
-  CURRENT_TIMESTAMP - interval '2 days',
-  'Returned empty from Great Lakes Rubber'
-);
-
--- Event 2: T02 picked up full at Great Lakes yesterday
-INSERT INTO trailer_events (id, organization_id, trailer_id, event_type, location_name, driver_id, timestamp, notes)
-VALUES (
-  'de30c000-0000-4000-8000-000000000002',
-  'de300000-0000-4000-8000-000000000001',
-  'de30d000-0000-4000-8000-000000000002',
-  'pickup_full',
-  'Great Lakes Rubber Co',
-  'de30e000-0000-4000-8000-000000000001',
-  CURRENT_TIMESTAMP - interval '1 day',
-  'Full load - 450 PTEs'
-);
-
--- Event 3: T03 staged for unload today
-INSERT INTO trailer_events (id, organization_id, trailer_id, event_type, location_name, driver_id, timestamp, notes)
-VALUES (
-  'de30c000-0000-4000-8000-000000000003',
-  'de300000-0000-4000-8000-000000000001',
-  'de30d000-0000-4000-8000-000000000003',
-  'stage_empty',
-  'Processing Facility',
-  'de30e000-0000-4000-8000-000000000001',
-  CURRENT_TIMESTAMP - interval '4 hours',
-  'Staged for unload - processing queue'
-);
-
--- Event 4: T04 dropped empty at Motor City today
-INSERT INTO trailer_events (id, organization_id, trailer_id, event_type, location_name, driver_id, timestamp, notes)
-VALUES (
-  'de30c000-0000-4000-8000-000000000004',
-  'de300000-0000-4000-8000-000000000001',
-  'de30d000-0000-4000-8000-000000000004',
-  'drop_empty',
-  'Motor City Tire',
-  'de30e000-0000-4000-8000-000000000001',
-  CURRENT_TIMESTAMP - interval '6 hours',
-  'Swapped for pickup tomorrow'
-);
-
--- STEP 5: Update trailers with last_event_id references
-UPDATE trailers SET last_event_id = 'de30c000-0000-4000-8000-000000000001' WHERE id = 'de30d000-0000-4000-8000-000000000001';
-UPDATE trailers SET last_event_id = 'de30c000-0000-4000-8000-000000000002' WHERE id = 'de30d000-0000-4000-8000-000000000002';
-UPDATE trailers SET last_event_id = 'de30c000-0000-4000-8000-000000000003' WHERE id = 'de30d000-0000-4000-8000-000000000003';
-UPDATE trailers SET last_event_id = 'de30c000-0000-4000-8000-000000000004' WHERE id = 'de30d000-0000-4000-8000-000000000004';
-
--- STEP 6: Update vehicles with driver assignment
-UPDATE vehicles SET assigned_driver_id = 'de30e000-0000-4000-8000-000000000001' 
-WHERE id = 'de30a000-0000-4000-8000-000000000001';
+**Code structure:**
+```typescript
+function RootRoute() {
+  const hostname = window.location.hostname;
+  
+  // BSG-specific domains show BSG marketing
+  if (hostname.includes('bsg') || hostname.includes('bsgtires')) {
+    return <PublicLanding />;
+  }
+  
+  // All other domains (treadset, lovable, localhost) show app landing
+  return <AppLanding />;
+}
 ```
 
 ---
 
-## Expected Results After Running SQL
+## Technical Details
 
-| Column | Trailers |
-|--------|----------|
-| Empty | 2 trailers (T01 at Yard, T04 at Motor City) |
-| Full | 1 trailer (T02 at Great Lakes) |
-| Staged | 1 trailer (T03 at Processing Facility) |
+### Domain Mapping After Implementation
 
-Each trailer card will show:
-- Last event type (e.g., "Drop Empty")
-- Location name
-- Timestamp (relative, e.g., "2 days ago")
-- Driver name: "Marcus Johnson"
+| Domain | Component Rendered | Content |
+|--------|-------------------|---------|
+| bsgtires.com | `<PublicLanding />` | BSG marketing site with truck images, tire counter |
+| www.bsgtires.com | `<PublicLanding />` | BSG marketing site |
+| treadset.lovable.app | `<AppLanding />` | Clean TreadSet login/demo page |
+| app.treadset.com | `<AppLanding />` | Clean TreadSet login/demo page |
+| localhost:8080 | `<AppLanding />` | Clean TreadSet login/demo page (for development) |
+
+### Component Structure
+
+```text
+src/pages/
+├── AppLanding.tsx          (NEW - TreadSet SaaS landing)
+├── PublicLanding.tsx       (UNCHANGED - BSG marketing)
+└── Auth.tsx                (UNCHANGED - login/signup)
+
+src/App.tsx
+└── RootRoute component     (NEW - domain detection)
+    ├── → PublicLanding     (if BSG domain)
+    └── → AppLanding        (if TreadSet domain)
+```
+
+### AppLanding.tsx Design
+
+```text
+┌─────────────────────────────────────────┐
+│                                         │
+│          [TreadSet Logo]                │
+│                                         │
+│     Tire Logistics, Simplified          │
+│                                         │
+│  The complete platform for tire         │
+│  recycling operations management        │
+│                                         │
+│  ┌─────────────┐  ┌──────────────┐     │
+│  │   Sign In   │  │ Request Demo │     │
+│  └─────────────┘  └──────────────┘     │
+│                                         │
+│  ✓ Real-time route optimization         │
+│  ✓ Digital manifests & compliance       │
+│  ✓ Complete business analytics          │
+│                                         │
+│         © 2025 TreadSet                 │
+└─────────────────────────────────────────┘
+```
 
 ---
 
-## Steps to Execute
+## Implementation Steps
 
-1. Go to [Supabase SQL Editor](https://supabase.com/dashboard/project/wvjehbozyxhmgdljwsiz/sql/new)
-2. Paste and run the SQL above
-3. Refresh the Trailer Inventory page (`/trailers/inventory`)
-4. The board should now show 4 trailers across 3 status columns with activity history
+1. **Create `src/pages/AppLanding.tsx`**
+   - Import TreadSetLogo, Button, framer-motion
+   - Build clean SaaS landing with Sign In + Demo CTAs
+   - Style to match existing Auth.tsx aesthetic
+
+2. **Update `src/App.tsx`**
+   - Add import for AppLanding
+   - Create RootRoute component with hostname detection
+   - Replace `<Route path="/" element={<PublicLanding />} />` with `<Route path="/" element={<RootRoute />} />`
+
+3. **Test locally**
+   - Verify localhost shows AppLanding
+   - App will show BSG content only when accessed via bsgtires.com
+
+---
+
+## No Database Changes Required
+
+This is a frontend-only change. No migrations, RLS policies, or Supabase modifications needed.
 
