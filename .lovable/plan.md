@@ -1,146 +1,71 @@
 
+## What’s happening (confirmed)
+- When you go to **https://treadset.lovable.app**, it **redirects to bsgtires.com** (you confirmed this).
+- Lovable’s domain behavior: **if a project has a “Primary” custom domain set, the `*.lovable.app` URL will automatically redirect to that primary domain**. There is **no supported way to disable that redirect** and keep different domains showing different “homepages” in one project.
 
-# Domain-Based Routing Implementation
+That means: as long as **bsgtires.com** is attached as the primary domain on this same project, **treadset.lovable.app can’t be used as a separate TreadSet entry URL** because it will keep redirecting to BSG.
 
-## Overview
+## Goal
+- **treadset.lovable.app** must stay on treadset and show the **TreadSet landing** (AppLanding).
+- **bsgtires.com** must stay on BSG and show the **BSG marketing site** (PublicLanding).
 
-Add domain detection logic to show different content based on where users access the app:
-- **BSG domains** (bsgtires.com, www.bsgtires.com) → BSG Marketing Site
-- **TreadSet domains** (treadset.lovable.app, app.treadset.com, localhost) → TreadSet App Landing
+## Recommended solution (no-risk to operations): split domains across 2 Lovable projects
+Because Lovable forces redirect-to-primary, the only stable way is:
+- **Project A (this project): TreadSet App**
+  - Published URL: `https://treadset.lovable.app`
+  - No BSG custom domains attached (so no redirect away from treadset)
+- **Project B: BSG Marketing**
+  - Custom domains: `bsgtires.com` and `www.bsgtires.com`
+  - Primary domain: `bsgtires.com`
 
----
+### Step-by-step (what we’ll do / you’ll do)
+#### 1) Create the BSG Marketing project (safe staging first)
+You (in Lovable UI):
+- Create a **Remix** of the current project and name it something like **“BSG Marketing”**.
+- In the BSG project, we’ll keep routing such that `/` always shows **PublicLanding** (so even the BSG project’s own `*.lovable.app` URL looks correct).
 
-## Files to Create
+Me (after you approve and we switch to Default mode):
+- Make a minimal routing adjustment in the *BSG project* so its `/` is always BSG marketing (no TreadSet landing on that project).
 
-### 1. `src/pages/AppLanding.tsx` - TreadSet SaaS Landing Page
+#### 2) Publish the BSG Marketing project
+You:
+- Click **Publish → Update** (Desktop: top-right. Mobile: Preview mode → “…” → Publish).
 
-A clean, professional landing page for TreadSet app access:
+#### 3) Move the bsgtires.com domain to the BSG Marketing project
+You (in Lovable UI → Project Settings → Domains):
+- On the **current (TreadSet) project**: **remove/disconnect** `bsgtires.com` and `www.bsgtires.com`.
+- On the **BSG Marketing project**: **connect** `bsgtires.com` and `www.bsgtires.com`, and set `bsgtires.com` as **Primary**.
+  - DNS should usually stay the same (still pointing to Lovable), but Lovable will guide you if anything needs re-verification.
 
-**Content:**
-- TreadSet logo (using existing `TreadSetLogo` component)
-- Headline: "Tire Logistics, Simplified"
-- Subtext: "The complete platform for tire recycling operations"
-- Two CTA buttons:
-  - **Primary:** "Sign In" → links to `/auth`
-  - **Secondary:** "Request a Demo" → links to `/contact` or external form
-- Feature highlights (3 bullet points):
-  - Real-time route optimization
-  - Digital manifests & compliance
-  - Complete business analytics
-- Footer: "Powered by TreadSet" with copyright
+This step is what stops `treadset.lovable.app` from redirecting to BSG.
 
-**Styling:**
-- Matches Auth.tsx aesthetic (clean, centered, professional)
-- Uses existing Tailwind classes and shadcn components
-- Subtle animations with Framer Motion
-- Dark/light mode compatible
+#### 4) Verify treadset.lovable.app no longer redirects
+Validation checks (we will verify before calling it “fixed”):
+- Open `https://treadset.lovable.app`:
+  - It should **NOT** redirect to bsgtires.com
+  - It should show **“Tire Logistics, Simplified”**
+- Open `https://bsgtires.com` and `https://www.bsgtires.com`:
+  - They should show the BSG marketing site
+  - They should NOT redirect to treadset
 
----
+#### 5) Update your beta tester email link (post-fix)
+- Use **exactly**: `https://treadset.lovable.app` (no `www.`)
+- I’ll also add a short “don’t add www” note in the template.
 
-## Files to Modify
+## Alternative “fast but disruptive” option (not recommended)
+- Remove `bsgtires.com` from this project immediately so `treadset.lovable.app` stops redirecting.
+- Downside: BSG site will go offline until it’s connected to another project.
 
-### 2. `src/App.tsx` - Add Domain Routing Logic
+## Implementation notes (technical)
+- Your current code for `RootRoute()` is fine; the reason you can’t see it at treadset is **not code**, it’s the **forced domain redirect-to-primary** behavior.
+- After the domain split, the TreadSet landing will work as intended at `treadset.lovable.app` without fighting redirects.
 
-**Changes:**
-1. Create a `RootRoute` component that detects the hostname
-2. Replace the static `<PublicLanding />` route with conditional rendering
+## Acceptance criteria (what “done” means)
+1. `https://treadset.lovable.app` loads TreadSet landing and **does not redirect**.
+2. `https://bsgtires.com` and `https://www.bsgtires.com` load BSG marketing and **do not redirect** to treadset.
+3. `/auth` works normally from the TreadSet side.
+4. No disruption to existing driver/admin app routes.
 
-**Logic:**
-```text
-hostname detection:
-├── Contains "bsg" or "bsgtires" → <PublicLanding /> (BSG Marketing)
-├── Contains "treadset" or "lovable" or "localhost" → <AppLanding /> (TreadSet App)
-└── Default fallback → <AppLanding /> (TreadSet App)
-```
-
-**Code structure:**
-```typescript
-function RootRoute() {
-  const hostname = window.location.hostname;
-  
-  // BSG-specific domains show BSG marketing
-  if (hostname.includes('bsg') || hostname.includes('bsgtires')) {
-    return <PublicLanding />;
-  }
-  
-  // All other domains (treadset, lovable, localhost) show app landing
-  return <AppLanding />;
-}
-```
-
----
-
-## Technical Details
-
-### Domain Mapping After Implementation
-
-| Domain | Component Rendered | Content |
-|--------|-------------------|---------|
-| bsgtires.com | `<PublicLanding />` | BSG marketing site with truck images, tire counter |
-| www.bsgtires.com | `<PublicLanding />` | BSG marketing site |
-| treadset.lovable.app | `<AppLanding />` | Clean TreadSet login/demo page |
-| app.treadset.com | `<AppLanding />` | Clean TreadSet login/demo page |
-| localhost:8080 | `<AppLanding />` | Clean TreadSet login/demo page (for development) |
-
-### Component Structure
-
-```text
-src/pages/
-├── AppLanding.tsx          (NEW - TreadSet SaaS landing)
-├── PublicLanding.tsx       (UNCHANGED - BSG marketing)
-└── Auth.tsx                (UNCHANGED - login/signup)
-
-src/App.tsx
-└── RootRoute component     (NEW - domain detection)
-    ├── → PublicLanding     (if BSG domain)
-    └── → AppLanding        (if TreadSet domain)
-```
-
-### AppLanding.tsx Design
-
-```text
-┌─────────────────────────────────────────┐
-│                                         │
-│          [TreadSet Logo]                │
-│                                         │
-│     Tire Logistics, Simplified          │
-│                                         │
-│  The complete platform for tire         │
-│  recycling operations management        │
-│                                         │
-│  ┌─────────────┐  ┌──────────────┐     │
-│  │   Sign In   │  │ Request Demo │     │
-│  └─────────────┘  └──────────────┘     │
-│                                         │
-│  ✓ Real-time route optimization         │
-│  ✓ Digital manifests & compliance       │
-│  ✓ Complete business analytics          │
-│                                         │
-│         © 2025 TreadSet                 │
-└─────────────────────────────────────────┘
-```
-
----
-
-## Implementation Steps
-
-1. **Create `src/pages/AppLanding.tsx`**
-   - Import TreadSetLogo, Button, framer-motion
-   - Build clean SaaS landing with Sign In + Demo CTAs
-   - Style to match existing Auth.tsx aesthetic
-
-2. **Update `src/App.tsx`**
-   - Add import for AppLanding
-   - Create RootRoute component with hostname detection
-   - Replace `<Route path="/" element={<PublicLanding />} />` with `<Route path="/" element={<RootRoute />} />`
-
-3. **Test locally**
-   - Verify localhost shows AppLanding
-   - App will show BSG content only when accessed via bsgtires.com
-
----
-
-## No Database Changes Required
-
-This is a frontend-only change. No migrations, RLS policies, or Supabase modifications needed.
-
+## Rollback plan
+- If anything goes wrong during the domain move, reconnect `bsgtires.com` back to the original project to restore the current state.
+- If needed, use Lovable **History** to restore the last known-good version of routing/UI on either project.
