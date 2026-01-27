@@ -75,6 +75,20 @@ import ClientPortal from "./pages/ClientPortal";
 import PortalUnsubscribe from "./pages/PortalUnsubscribe";
 import PortalInvites from "./pages/PortalInvites";
 import PublicLanding from "./pages/PublicLanding";
+import AppLanding from "./pages/AppLanding";
+
+// Domain-based routing: show BSG marketing on bsgtires domains, TreadSet app landing elsewhere
+function RootRoute() {
+  const hostname = window.location.hostname;
+  
+  // BSG-specific domains show BSG marketing
+  if (hostname.includes('bsg') || hostname.includes('bsgtires')) {
+    return <PublicLanding />;
+  }
+  
+  // All other domains (treadset, lovable, localhost) show TreadSet app landing
+  return <AppLanding />;
+}
 import PublicDropoff from "./pages/PublicDropoff";
 import PublicServices from "./pages/PublicServices";
 import PublicPartners from "./pages/PublicPartners";
@@ -98,7 +112,7 @@ const App = () => (
             <DemoModeProvider>
             <Routes>
 {/* Public Marketing Routes - No Authentication Required */}
-              <Route path="/" element={<PublicLanding />} />
+              <Route path="/" element={<RootRoute />} />
               <Route path="/services" element={<PublicServices />} />
               <Route path="/products" element={<PublicProducts />} />
               <Route path="/drop-off" element={<PublicDropoff />} />
