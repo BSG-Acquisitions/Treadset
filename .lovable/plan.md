@@ -1,71 +1,108 @@
 
-## What’s happening (confirmed)
-- When you go to **https://treadset.lovable.app**, it **redirects to bsgtires.com** (you confirmed this).
-- Lovable’s domain behavior: **if a project has a “Primary” custom domain set, the `*.lovable.app` URL will automatically redirect to that primary domain**. There is **no supported way to disable that redirect** and keep different domains showing different “homepages” in one project.
 
-That means: as long as **bsgtires.com** is attached as the primary domain on this same project, **treadset.lovable.app can’t be used as a separate TreadSet entry URL** because it will keep redirecting to BSG.
+# Fix Password Reset Email Delivery
 
-## Goal
-- **treadset.lovable.app** must stay on treadset and show the **TreadSet landing** (AppLanding).
-- **bsgtires.com** must stay on BSG and show the **BSG marketing site** (PublicLanding).
+## Problem Identified
+The password reset functionality is using Supabase's built-in `resetPasswordForEmail()` method, which relies on Supabase's default email system. This isn't working because:
+1. Supabase's built-in emails may not be configured with a custom SMTP provider
+2. The custom `send-password-reset` edge function (which uses Resend) is never called
 
-## Recommended solution (no-risk to operations): split domains across 2 Lovable projects
-Because Lovable forces redirect-to-primary, the only stable way is:
-- **Project A (this project): TreadSet App**
-  - Published URL: `https://treadset.lovable.app`
-  - No BSG custom domains attached (so no redirect away from treadset)
-- **Project B: BSG Marketing**
-  - Custom domains: `bsgtires.com` and `www.bsgtires.com`
-  - Primary domain: `bsgtires.com`
+The edge function logs are empty because the code completely bypasses it.
 
-### Step-by-step (what we’ll do / you’ll do)
-#### 1) Create the BSG Marketing project (safe staging first)
-You (in Lovable UI):
-- Create a **Remix** of the current project and name it something like **“BSG Marketing”**.
-- In the BSG project, we’ll keep routing such that `/` always shows **PublicLanding** (so even the BSG project’s own `*.lovable.app` URL looks correct).
+## Solution
+Modify the `resetPassword` function in `AuthContext.tsx` to call your custom `send-password-reset` edge function instead of using Supabase's built-in method. This will route password reset emails through Resend where you can track deliverability.
 
-Me (after you approve and we switch to Default mode):
-- Make a minimal routing adjustment in the *BSG project* so its `/` is always BSG marketing (no TreadSet landing on that project).
+## Implementation Steps
 
-#### 2) Publish the BSG Marketing project
-You:
-- Click **Publish → Update** (Desktop: top-right. Mobile: Preview mode → “…” → Publish).
+### Step 1: Update AuthContext.tsx - resetPassword Function
+Replace the current implementation that uses `supabase.auth.resetPasswordForEmail()` with a call to the `send-password-reset` edge function.
 
-#### 3) Move the bsgtires.com domain to the BSG Marketing project
-You (in Lovable UI → Project Settings → Domains):
-- On the **current (TreadSet) project**: **remove/disconnect** `bsgtires.com` and `www.bsgtires.com`.
-- On the **BSG Marketing project**: **connect** `bsgtires.com` and `www.bsgtires.com`, and set `bsgtires.com` as **Primary**.
-  - DNS should usually stay the same (still pointing to Lovable), but Lovable will guide you if anything needs re-verification.
+**Current code (lines 421-432):**
+```typescript
+const resetPassword = async (email: string) => {
+  const currentUrl = window.location.origin;
+  const redirectUrl = `${currentUrl}/reset-password`;
+  
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: redirectUrl
+  });
+  return { error };
+};
+```
 
-This step is what stops `treadset.lovable.app` from redirecting to BSG.
+**New code:**
+```typescript
+const resetPassword = async (email: string) => {
+  const currentUrl = window.location.origin;
+  const resetUrl = `${currentUrl}/reset-password`;
+  
+  try {
+    // First, trigger Supabase's password reset to generate the token
+    const { error: supabaseError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: resetUrl
+    });
+    
+    if (supabaseError) {
+      return { error: supabaseError };
+    }
+    
+    // Then call our custom edge function to send the branded email via Resend
+    const { error: emailError } = await supabase.functions.invoke('send-password-reset', {
+      body: {
+        email,
+        resetUrl,
+        companyName: 'TreadSet'
+      }
+    });
+    
+    if (emailError) {
+      console.error('Error sending password reset email:', emailError);
+      // Still return success since Supabase sent its email as backup
+    }
+    
+    return { error: null };
+  } catch (err) {
+    console.error('Password reset error:', err);
+    return { error: err };
+  }
+};
+```
 
-#### 4) Verify treadset.lovable.app no longer redirects
-Validation checks (we will verify before calling it “fixed”):
-- Open `https://treadset.lovable.app`:
-  - It should **NOT** redirect to bsgtires.com
-  - It should show **“Tire Logistics, Simplified”**
-- Open `https://bsgtires.com` and `https://www.bsgtires.com`:
-  - They should show the BSG marketing site
-  - They should NOT redirect to treadset
+### Step 2: Update the Edge Function
+The current edge function expects a `resetUrl` but doesn't include the actual token from Supabase. We need to update it to work as a custom email hook or modify the approach.
 
-#### 5) Update your beta tester email link (post-fix)
-- Use **exactly**: `https://treadset.lovable.app` (no `www.`)
-- I’ll also add a short “don’t add www” note in the template.
+**Better approach:** Configure Supabase to use a custom email hook that calls your edge function. This ensures the token is properly included.
 
-## Alternative “fast but disruptive” option (not recommended)
-- Remove `bsgtires.com` from this project immediately so `treadset.lovable.app` stops redirecting.
-- Downside: BSG site will go offline until it’s connected to another project.
+**File:** `supabase/functions/send-password-reset/index.ts`
 
-## Implementation notes (technical)
-- Your current code for `RootRoute()` is fine; the reason you can’t see it at treadset is **not code**, it’s the **forced domain redirect-to-primary** behavior.
-- After the domain split, the TreadSet landing will work as intended at `treadset.lovable.app` without fighting redirects.
+Update the edge function to handle the Supabase auth webhook format:
+- Add support for both direct calls and Supabase auth hook calls
+- Update the email template branding from "BSG Tire Recycling" to "TreadSet"
+- Ensure proper error handling and logging
 
-## Acceptance criteria (what “done” means)
-1. `https://treadset.lovable.app` loads TreadSet landing and **does not redirect**.
-2. `https://bsgtires.com` and `https://www.bsgtires.com` load BSG marketing and **do not redirect** to treadset.
-3. `/auth` works normally from the TreadSet side.
-4. No disruption to existing driver/admin app routes.
+### Step 3: Update Email Branding
+The current edge function references "BSG Tire Recycling" - this needs to be updated to "TreadSet" branding for consistency.
 
-## Rollback plan
-- If anything goes wrong during the domain move, reconnect `bsgtires.com` back to the original project to restore the current state.
-- If needed, use Lovable **History** to restore the last known-good version of routing/UI on either project.
+## Technical Details
+
+### Why Two Approaches?
+1. **Hybrid approach** (recommended): Keep Supabase's `resetPasswordForEmail` to generate the secure token, then send a custom email via Resend. Supabase will still send its default email as a backup.
+
+2. **Full custom hook** (more complex): Configure Supabase Auth to use a custom email hook that intercepts all auth emails. This requires configuring the hook in Supabase dashboard under Authentication → Hooks.
+
+### Resend Configuration Check
+The `RESEND_API_KEY` secret is already configured, which is good. Ensure:
+- The sending domain is verified in Resend
+- The `from` email address uses a verified domain
+
+## Files to Modify
+1. `src/contexts/AuthContext.tsx` - Update `resetPassword` function to call edge function
+2. `supabase/functions/send-password-reset/index.ts` - Update branding and improve error handling
+
+## Testing Plan
+After implementation:
+1. Attempt password reset for a test email
+2. Check Resend dashboard for email delivery
+3. Check edge function logs for any errors
+4. Verify the reset link works correctly
+
