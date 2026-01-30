@@ -23,12 +23,15 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { email, resetUrl, companyName = "BSG Tire Recycling" }: PasswordResetEmailRequest = await req.json();
+    const { email, resetUrl, companyName = "TreadSet" }: PasswordResetEmailRequest = await req.json();
+
+    console.log("Sending password reset email to:", email);
+    console.log("Reset URL:", resetUrl);
 
     const emailResponse = await resend.emails.send({
-      from: `BSG Tire Recycling <noreply@bsgtires.com>`,
+      from: `TreadSet <noreply@treadset.com>`,
       to: [email],
-      subject: `Reset Your BSG Tire Recycling Password`,
+      subject: `Reset Your TreadSet Password`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -39,7 +42,7 @@ const handler = async (req: Request): Promise<Response> => {
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa; }
             .container { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
-            .header { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; padding: 30px; text-align: center; }
+            .header { background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 30px; text-align: center; }
             .header h1 { margin: 0; font-size: 28px; font-weight: bold; }
             .header p { margin: 5px 0 0 0; opacity: 0.9; }
             .content { padding: 30px; }
@@ -52,14 +55,14 @@ const handler = async (req: Request): Promise<Response> => {
         <body>
           <div class="container">
             <div class="header">
-              <h1>BSG Tire Recycling</h1>
-              <p>Sustainable Tire Solutions</p>
+              <h1>TreadSet</h1>
+              <p>Tire Management Solutions</p>
             </div>
             
             <div class="content">
             <h2>Reset Your Password</h2>
             <p>Hello,</p>
-            <p>We received a request to reset your password for your BSG Tire Recycling account associated with <strong>${email}</strong>.</p>
+            <p>We received a request to reset your password for your TreadSet account associated with <strong>${email}</strong>.</p>
             
             <p>Click the button below to reset your password:</p>
             
@@ -75,8 +78,8 @@ const handler = async (req: Request): Promise<Response> => {
             <p>If you didn't request this password reset, you can safely ignore this email. Your password will remain unchanged.</p>
             
             <div class="footer">
-              <p><strong>BSG Tire Recycling Team</strong><br>
-              Committed to environmental responsibility and sustainable practices.</p>
+              <p><strong>TreadSet Team</strong><br>
+              Streamlining tire recycling operations.</p>
               <p style="font-size: 12px; margin-top: 15px;">This is an automated message. Please do not reply to this email.</p>
             </div>
             </div>
