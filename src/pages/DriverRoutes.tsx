@@ -2,12 +2,12 @@ import { useEffect, useState, useMemo } from "react";
 import { useDriverAssignments } from "@/hooks/useDriverAssignments";
 import { useDriverWeeklyAssignments } from "@/hooks/useDriverWeeklyAssignments";
 import { useClientPickupStats } from "@/hooks/useClientPickupStats";
-import { useNearbySuggestions } from "@/hooks/useNearbySuggestions";
+import { useDriverRouteSuggestions, type StopLocation, type RouteSuggestion } from "@/hooks/useDriverRouteSuggestions";
 import { useAuth } from "@/contexts/AuthContext";
 import { DriverAssignmentInterface } from "@/components/driver/DriverAssignmentInterface";
 import { DriverSchedulePickupDialog } from "@/components/driver/DriverSchedulePickupDialog";
 import { MovePickupDialog } from "@/components/MovePickupDialog";
-import { NearbyClientSuggestions } from "@/components/NearbyClientSuggestions";
+import { RouteOptimizationSuggestions } from "@/components/driver/RouteOptimizationSuggestions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,19 +16,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
-import { Building, MapPin, Calendar, CheckCircle2, Clock, AlertCircle, Package, Truck, MoreVertical, Move, Phone, Plus, TrendingUp, DollarSign, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { Building, MapPin, Calendar, CheckCircle2, Clock, AlertCircle, Package, Truck, MoreVertical, Move, Phone, Plus, TrendingUp, DollarSign, ChevronLeft, ChevronRight, Search, Route } from "lucide-react";
 import { format, addWeeks, startOfWeek } from "date-fns";
 import { toast } from "sonner";
-
-interface NearbySuggestion {
-  client_id: string;
-  company_name: string;
-  distance: number;
-  last_pickup_at: string | null;
-  address: string;
-  priority: 'high' | 'medium' | 'low';
-  reasoning: string;
-}
 
 type ViewMode = 'day' | 'week';
 
@@ -40,15 +30,17 @@ export default function DriverRoutes() {
   const [movePickupOpen, setMovePickupOpen] = useState(false);
   const [selectedPickupToMove, setSelectedPickupToMove] = useState<any>(null);
   
-  // Nearby suggestions state
+  // Route suggestions state
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
-  const [nearbySuggestions, setNearbySuggestions] = useState<NearbySuggestion[]>([]);
-  const [referenceClientName, setReferenceClientName] = useState("");
+  const [alongRouteSuggestions, setAlongRouteSuggestions] = useState<RouteSuggestion[]>([]);
+  const [overdueSuggestions, setOverdueSuggestions] = useState<RouteSuggestion[]>([]);
+  const [suggestionDate, setSuggestionDate] = useState<string>("");
+  const [suggestionStopCount, setSuggestionStopCount] = useState<number>(0);
   const [isFindingNearby, setIsFindingNearby] = useState(false);
   
   const { user } = useAuth();
   const organizationId = user?.currentOrganization?.id;
-  const { suggestNearby } = useNearbySuggestions();
+  const { getRouteSuggestions, isLoading: routeSuggestionsLoading } = useDriverRouteSuggestions();
   
   // Day view data
   const { data: dayAssignments = [], isLoading: isDayLoading } = useDriverAssignments(selectedDate);
@@ -71,48 +63,63 @@ export default function DriverRoutes() {
 
   const { data: clientStats = {} } = useClientPickupStats(clientIds);
   
-  // Find nearby shops based on any scheduled stop
-  const handleFindNearbyShops = async () => {
+  // Find nearby shops based on ALL scheduled stops for a specific date
+  const handleFindNearbyShops = async (forDate?: string, assignmentsForDate?: typeof dayAssignments) => {
     if (!organizationId) {
       toast.error("Organization not found");
       return;
     }
     
-    const currentAssignments = viewMode === 'day' ? dayAssignments : weekAssignments;
+    // Determine which assignments to analyze
+    const targetDate = forDate || (viewMode === 'day' ? selectedDate : null);
+    let stopsToAnalyze = assignmentsForDate;
     
-    if (currentAssignments.length === 0) {
-      toast.info("No scheduled stops to find nearby shops for");
+    if (!stopsToAnalyze) {
+      stopsToAnalyze = viewMode === 'day' ? dayAssignments : weekAssignments;
+    }
+    
+    if (stopsToAnalyze.length === 0) {
+      toast.info("No scheduled stops to analyze");
       return;
     }
     
-    // Use the first assignment's client as the reference point
-    const firstAssignment = currentAssignments[0];
-    const clientId = firstAssignment.pickup?.client?.id;
-    const clientName = firstAssignment.pickup?.client?.company_name || "your scheduled stop";
+    // Extract location data from all stops
+    const scheduledStops: StopLocation[] = stopsToAnalyze
+      .filter(a => a.pickup?.location?.latitude && a.pickup?.location?.longitude)
+      .map(a => ({
+        client_id: a.pickup?.client?.id || '',
+        company_name: a.pickup?.client?.company_name || 'Unknown',
+        latitude: a.pickup?.location?.latitude || 0,
+        longitude: a.pickup?.location?.longitude || 0,
+        address: a.pickup?.location?.address || '',
+      }));
     
-    if (!clientId) {
-      toast.error("Could not find client information");
+    if (scheduledStops.length === 0) {
+      toast.info("No geocoded stops available for route analysis");
       return;
     }
     
     setIsFindingNearby(true);
+    setSuggestionDate(targetDate || selectedDate);
+    setSuggestionStopCount(stopsToAnalyze.length);
+    setSuggestionsOpen(true);
     
     try {
-      const result = await suggestNearby({
-        scheduledClientId: clientId,
+      const result = await getRouteSuggestions({
+        scheduledStops,
         organizationId,
+        routeDate: targetDate || selectedDate,
       });
       
-      if (result?.suggestions && result.suggestions.length > 0) {
-        setNearbySuggestions(result.suggestions);
-        setReferenceClientName(clientName);
-        setSuggestionsOpen(true);
-      } else {
-        toast.info(result?.message || "No nearby clients found within 5 miles");
+      setAlongRouteSuggestions(result.along_route || []);
+      setOverdueSuggestions(result.overdue || []);
+      
+      if ((result.along_route?.length || 0) === 0 && (result.overdue?.length || 0) === 0) {
+        toast.info(result.message || "No additional clients found near your route");
       }
     } catch (error) {
       console.error("Error finding nearby shops:", error);
-      toast.error("Failed to find nearby shops");
+      toast.error("Failed to analyze route for suggestions");
     } finally {
       setIsFindingNearby(false);
     }
@@ -218,7 +225,7 @@ export default function DriverRoutes() {
               <Button 
                 size="sm" 
                 variant="outline"
-                onClick={handleFindNearbyShops}
+                onClick={() => handleFindNearbyShops()}
                 disabled={isFindingNearby || assignments.length === 0}
               >
                 <Search className="h-4 w-4 mr-2" />
@@ -606,6 +613,20 @@ export default function DriverRoutes() {
                             </div>
                           );
                         })}
+                        
+                        {/* Per-day Find Nearby button */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full mt-2"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleFindNearbyShops(day.date, dayStops);
+                          }}
+                        >
+                          <Route className="h-4 w-4 mr-2" />
+                          Find Shops Along This Route
+                        </Button>
                       </div>
                     )}
                   </CardContent>
@@ -628,12 +649,15 @@ export default function DriverRoutes() {
           />
         )}
         
-        {/* Nearby Client Suggestions Modal */}
-        <NearbyClientSuggestions
+        {/* Route Optimization Suggestions Modal */}
+        <RouteOptimizationSuggestions
           open={suggestionsOpen}
           onOpenChange={setSuggestionsOpen}
-          suggestions={nearbySuggestions}
-          scheduledClientName={referenceClientName}
+          alongRoute={alongRouteSuggestions}
+          overdue={overdueSuggestions}
+          selectedDate={suggestionDate}
+          stopCount={suggestionStopCount}
+          isLoading={isFindingNearby}
         />
       </main>
     </div>

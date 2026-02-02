@@ -3,22 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Lightbulb, MapPin, Clock, ChevronRight, Loader2 } from 'lucide-react';
+import { MapPin, Clock, ChevronRight, Loader2, Route as RouteIcon } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDriverAssignments } from '@/hooks/useDriverAssignments';
-import { useNearbySuggestions } from '@/hooks/useNearbySuggestions';
-import { NearbyClientSuggestions } from '@/components/NearbyClientSuggestions';
+import { useDriverRouteSuggestions, type StopLocation, type RouteSuggestion } from '@/hooks/useDriverRouteSuggestions';
+import { RouteOptimizationSuggestions } from './RouteOptimizationSuggestions';
 import { format } from 'date-fns';
-
-interface NearbySuggestion {
-  client_id: string;
-  company_name: string;
-  distance: number;
-  last_pickup_at: string | null;
-  address: string;
-  priority: 'high' | 'medium' | 'low';
-  reasoning: string;
-}
 
 interface RouteOptimizationTipsProps {
   className?: string;
@@ -31,10 +21,10 @@ export function RouteOptimizationTips({ className }: RouteOptimizationTipsProps)
   
   const today = format(new Date(), 'yyyy-MM-dd');
   const { data: assignments = [], isLoading: assignmentsLoading } = useDriverAssignments(today);
-  const { suggestNearby, isLoading: suggestionsLoading } = useNearbySuggestions();
+  const { getRouteSuggestions, isLoading: suggestionsLoading } = useDriverRouteSuggestions();
   
-  const [suggestions, setSuggestions] = useState<NearbySuggestion[]>([]);
-  const [referenceClient, setReferenceClient] = useState('');
+  const [alongRoute, setAlongRoute] = useState<RouteSuggestion[]>([]);
+  const [overdue, setOverdue] = useState<RouteSuggestion[]>([]);
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [hasFetched, setHasFetched] = useState(false);
 
@@ -43,45 +33,40 @@ export function RouteOptimizationTips({ className }: RouteOptimizationTipsProps)
     const fetchSuggestions = async () => {
       if (hasFetched || !organizationId || assignments.length === 0) return;
       
-      const firstAssignment = assignments[0];
-      const clientId = firstAssignment.pickup?.client?.id;
-      const clientName = firstAssignment.pickup?.client?.company_name || '';
+      // Extract location data from all today's stops
+      const scheduledStops: StopLocation[] = assignments
+        .filter(a => a.pickup?.location?.latitude && a.pickup?.location?.longitude)
+        .map(a => ({
+          client_id: a.pickup?.client?.id || '',
+          company_name: a.pickup?.client?.company_name || 'Unknown',
+          latitude: a.pickup?.location?.latitude || 0,
+          longitude: a.pickup?.location?.longitude || 0,
+          address: a.pickup?.location?.address || '',
+        }));
       
-      if (!clientId) return;
+      if (scheduledStops.length === 0) return;
       
       setHasFetched(true);
       
       try {
-        const result = await suggestNearby({
-          scheduledClientId: clientId,
+        const result = await getRouteSuggestions({
+          scheduledStops,
           organizationId,
+          routeDate: today,
         });
         
-        if (result?.suggestions && result.suggestions.length > 0) {
-          // Filter to only show high priority or clients not serviced in 30+ days
-          const prioritySuggestions = result.suggestions.filter(s => {
-            if (s.priority === 'high') return true;
-            if (s.last_pickup_at) {
-              const daysSince = Math.floor(
-                (new Date().getTime() - new Date(s.last_pickup_at).getTime()) / (1000 * 60 * 60 * 24)
-              );
-              return daysSince >= 30;
-            }
-            return true; // Include clients with no pickup history
-          }).slice(0, 3);
-          
-          setSuggestions(prioritySuggestions);
-          setReferenceClient(clientName);
-        }
+        setAlongRoute(result.along_route || []);
+        setOverdue(result.overdue || []);
       } catch (error) {
         console.error('Error fetching suggestions:', error);
       }
     };
     
     fetchSuggestions();
-  }, [assignments, organizationId, hasFetched, suggestNearby]);
+  }, [assignments, organizationId, hasFetched, getRouteSuggestions, today]);
 
   const isLoading = assignmentsLoading || suggestionsLoading;
+  const allSuggestions = [...alongRoute, ...overdue].slice(0, 3);
   
   // Don't show if no assignments today
   if (!assignmentsLoading && assignments.length === 0) {
@@ -89,7 +74,7 @@ export function RouteOptimizationTips({ className }: RouteOptimizationTipsProps)
   }
   
   // Don't show if no suggestions
-  if (!isLoading && suggestions.length === 0) {
+  if (!isLoading && allSuggestions.length === 0) {
     return null;
   }
 
@@ -113,13 +98,13 @@ export function RouteOptimizationTips({ className }: RouteOptimizationTipsProps)
       <Card className={className}>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-lg">
-            <Lightbulb className="h-5 w-5 text-yellow-500" />
+            <RouteIcon className="h-5 w-5 text-brand-primary" />
             Route Optimization Tips
           </CardTitle>
           <CardDescription>
             {isLoading 
-              ? 'Finding nearby clients...'
-              : `${suggestions.length} clients near today's stops haven't been picked up recently`
+              ? 'Analyzing your route...'
+              : `${alongRoute.length + overdue.length} clients near today's ${assignments.length} stops`
             }
           </CardDescription>
         </CardHeader>
@@ -130,7 +115,7 @@ export function RouteOptimizationTips({ className }: RouteOptimizationTipsProps)
             </div>
           ) : (
             <div className="space-y-3">
-              {suggestions.map((suggestion) => {
+              {allSuggestions.map((suggestion) => {
                 const daysSince = getDaysSince(suggestion.last_pickup_at);
                 return (
                   <div 
@@ -147,7 +132,7 @@ export function RouteOptimizationTips({ className }: RouteOptimizationTipsProps)
                       <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1 flex-wrap">
                         <span className="flex items-center gap-1">
                           <MapPin className="h-3 w-3" />
-                          {suggestion.distance.toFixed(1)} mi away
+                          {suggestion.distance_from_route_miles.toFixed(1)} mi detour
                         </span>
                         {daysSince !== null && (
                           <span className="flex items-center gap-1">
@@ -184,11 +169,13 @@ export function RouteOptimizationTips({ className }: RouteOptimizationTipsProps)
         </CardContent>
       </Card>
       
-      <NearbyClientSuggestions
+      <RouteOptimizationSuggestions
         open={suggestionsOpen}
         onOpenChange={setSuggestionsOpen}
-        suggestions={suggestions}
-        scheduledClientName={referenceClient}
+        alongRoute={alongRoute}
+        overdue={overdue}
+        selectedDate={today}
+        stopCount={assignments.length}
       />
     </>
   );
