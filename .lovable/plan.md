@@ -1,108 +1,214 @@
 
 
-# Fix Password Reset Email Delivery
+# Driver Route Building Assistant
 
-## Problem Identified
-The password reset functionality is using Supabase's built-in `resetPasswordForEmail()` method, which relies on Supabase's default email system. This isn't working because:
-1. Supabase's built-in emails may not be configured with a custom SMTP provider
-2. The custom `send-password-reset` edge function (which uses Resend) is never called
+## Summary
 
-The edge function logs are empty because the code completely bypasses it.
+Your driver wants the app to help him build smarter routes by suggesting nearby clients when he schedules pickups. You already have excellent building blocks in place - now we need to enhance them specifically for the driver's workflow.
 
-## Solution
-Modify the `resetPassword` function in `AuthContext.tsx` to call your custom `send-password-reset` edge function instead of using Supabase's built-in method. This will route password reset emails through Resend where you can track deliverability.
+## What Already Exists
 
-## Implementation Steps
+| Component | Status | Location |
+|-----------|--------|----------|
+| Nearby suggestions hook | Built | `useNearbySuggestions.ts` |
+| Nearby suggestions UI | Built | `NearbyClientSuggestions.tsx` |
+| Suggest nearby clients edge function | Built | `suggest-nearby-clients/index.ts` |
+| Route optimization edge function | Built | `enhanced-route-optimizer/index.ts` |
+| Driver schedule pickup dialog | Built | `DriverSchedulePickupDialog.tsx` |
+| Driver routes page | Built | `DriverRoutes.tsx` |
 
-### Step 1: Update AuthContext.tsx - resetPassword Function
-Replace the current implementation that uses `supabase.auth.resetPasswordForEmail()` with a call to the `send-password-reset` edge function.
+**The issue**: The nearby suggestions feature is only integrated into the dispatcher/admin scheduling dialogs (`SchedulePickupDialog`, `SchedulePickupWithDriverDialog`), but NOT into the driver's `DriverSchedulePickupDialog`.
 
-**Current code (lines 421-432):**
-```typescript
-const resetPassword = async (email: string) => {
-  const currentUrl = window.location.origin;
-  const redirectUrl = `${currentUrl}/reset-password`;
-  
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: redirectUrl
-  });
-  return { error };
-};
+---
+
+## Implementation Plan
+
+### Phase 1: Add Nearby Suggestions to Driver Pickup Scheduling
+
+**What happens**: After the driver schedules a pickup, show them a popup with nearby clients they could also call/schedule.
+
+**Files to modify**:
+- `src/components/driver/DriverSchedulePickupDialog.tsx`
+  - Import `useNearbySuggestions` hook
+  - Import `NearbyClientSuggestions` component
+  - After successful pickup creation, call `suggestNearby()` with the scheduled client
+  - Show the suggestions dialog with nearby shops
+
+**Changes**:
+1. Add state for tracking the scheduled client and suggestions dialog
+2. On pickup success, trigger the nearby suggestions lookup
+3. Display the `NearbyClientSuggestions` modal with action buttons
+
+---
+
+### Phase 2: Add "Find Nearby Clients" Button on Driver Routes Page
+
+**What happens**: Add a prominent button on the driver's route view that lets them proactively find clients near their current scheduled stops.
+
+**Files to modify**:
+- `src/pages/DriverRoutes.tsx`
+  - Add a "Find Nearby Shops" button in the header area
+  - When clicked, show clients near any of the driver's scheduled stops for the day
+  - Allow the driver to quickly add them to their route
+
+**UI Addition**:
+```text
+┌─────────────────────────────────────────────────┐
+│  My Assignments                                 │
+│  Monday, February 3, 2026 • 3 stops scheduled   │
+│                                                 │
+│  [Add Pickup]  [🗺️ Find Nearby Shops]           │
+└─────────────────────────────────────────────────┘
 ```
 
-**New code:**
-```typescript
-const resetPassword = async (email: string) => {
-  const currentUrl = window.location.origin;
-  const resetUrl = `${currentUrl}/reset-password`;
-  
-  try {
-    // First, trigger Supabase's password reset to generate the token
-    const { error: supabaseError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: resetUrl
-    });
-    
-    if (supabaseError) {
-      return { error: supabaseError };
+---
+
+### Phase 3: Create Enhanced "Route Builder Suggestions" Edge Function
+
+**What happens**: Create a smarter suggestion system that considers the driver's entire route, not just one client.
+
+**New file**: `supabase/functions/driver-route-suggestions/index.ts`
+
+**Logic**:
+1. Accept the driver's current scheduled stops for the day
+2. Find all clients within a radius of ANY stop on the route
+3. Calculate which clients are "on the way" between stops (minimal detour)
+4. Use AI to prioritize based on:
+   - Distance from route (prefer <2 miles from existing path)
+   - Time since last pickup (prioritize overdue clients)
+   - Historical pickup frequency
+   - Estimated tire count (value vs time tradeoff)
+5. Return suggestions grouped by:
+   - "Along your route" (minimal detour)
+   - "Nearby clusters" (multiple clients in same area)
+   - "Overdue for pickup"
+
+**Response structure**:
+```json
+{
+  "along_route": [
+    {
+      "client_id": "...",
+      "company_name": "Metro Tires",
+      "distance_from_route_miles": 0.8,
+      "best_insert_after": "stop_2",
+      "added_time_minutes": 12,
+      "priority": "high",
+      "reasoning": "Only 0.8 miles off route, hasn't had pickup in 45 days"
     }
-    
-    // Then call our custom edge function to send the branded email via Resend
-    const { error: emailError } = await supabase.functions.invoke('send-password-reset', {
-      body: {
-        email,
-        resetUrl,
-        companyName: 'TreadSet'
-      }
-    });
-    
-    if (emailError) {
-      console.error('Error sending password reset email:', emailError);
-      // Still return success since Supabase sent its email as backup
+  ],
+  "nearby_clusters": [
+    {
+      "center": { "lat": 42.33, "lng": -83.04 },
+      "clients": [...],
+      "total_estimated_ptes": 150
     }
-    
-    return { error: null };
-  } catch (err) {
-    console.error('Password reset error:', err);
-    return { error: err };
-  }
-};
+  ],
+  "overdue": [...]
+}
 ```
 
-### Step 2: Update the Edge Function
-The current edge function expects a `resetUrl` but doesn't include the actual token from Supabase. We need to update it to work as a custom email hook or modify the approach.
+---
 
-**Better approach:** Configure Supabase to use a custom email hook that calls your edge function. This ensures the token is properly included.
+### Phase 4: Create Driver Route Builder UI Component
 
-**File:** `supabase/functions/send-password-reset/index.ts`
+**What happens**: A dedicated "Route Builder" interface where the driver can visualize their route and see suggestions.
 
-Update the edge function to handle the Supabase auth webhook format:
-- Add support for both direct calls and Supabase auth hook calls
-- Update the email template branding from "BSG Tire Recycling" to "TreadSet"
-- Ensure proper error handling and logging
+**New file**: `src/components/driver/DriverRouteBuilder.tsx`
 
-### Step 3: Update Email Branding
-The current edge function references "BSG Tire Recycling" - this needs to be updated to "TreadSet" branding for consistency.
+**Features**:
+1. Map view showing current scheduled stops with numbered pins
+2. Highlighted "suggested" clients near the route
+3. One-tap "Add to Route" button for each suggestion
+4. Real-time route preview when hovering over a suggestion
+5. Total route time/distance estimate as stops are added
 
-## Technical Details
+**UI Flow**:
+```text
+┌──────────────────────────────────────────────────────────────┐
+│  Route Builder                           [Save Route] [Done] │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  📍 Your Route (3 stops)          │  Suggested Additions     │
+│  ─────────────────────────────    │  ───────────────────     │
+│  1. Green Loop Tire    ✓          │  🔴 Metro Tires          │
+│     8:30 AM                       │     0.8 mi from route    │
+│                                   │     45 days overdue      │
+│  2. Riverside Auto     ○          │     [+ Add to Route]     │
+│     9:45 AM                       │                          │
+│                                   │  🟡 Quick Lube Plus      │
+│  3. Eco Tire Co        ○          │     1.2 mi from route    │
+│     11:00 AM                      │     [+ Add to Route]     │
+│                                   │                          │
+│  ─────────────────────────────    │  🟢 Highway Tire         │
+│  Est. finish: 12:30 PM            │     2.1 mi from route    │
+│  Total distance: 28 miles         │     [+ Add to Route]     │
+│                                   │                          │
+└──────────────────────────────────────────────────────────────┘
+```
 
-### Why Two Approaches?
-1. **Hybrid approach** (recommended): Keep Supabase's `resetPasswordForEmail` to generate the secure token, then send a custom email via Resend. Supabase will still send its default email as a backup.
+---
 
-2. **Full custom hook** (more complex): Configure Supabase Auth to use a custom email hook that intercepts all auth emails. This requires configuring the hook in Supabase dashboard under Authentication → Hooks.
+### Phase 5: Add Route Suggestions to Driver Dashboard
 
-### Resend Configuration Check
-The `RESEND_API_KEY` secret is already configured, which is good. Ensure:
-- The sending domain is verified in Resend
-- The `from` email address uses a verified domain
+**What happens**: Show proactive suggestions on the driver's dashboard before they even start building routes.
 
-## Files to Modify
-1. `src/contexts/AuthContext.tsx` - Update `resetPassword` function to call edge function
-2. `supabase/functions/send-password-reset/index.ts` - Update branding and improve error handling
+**Files to modify**:
+- `src/pages/DriverDashboard.tsx`
 
-## Testing Plan
-After implementation:
-1. Attempt password reset for a test email
-2. Check Resend dashboard for email delivery
-3. Check edge function logs for any errors
-4. Verify the reset link works correctly
+**Addition**:
+```text
+┌─────────────────────────────────────────────────┐
+│  💡 Route Optimization Tips                     │
+│                                                 │
+│  3 clients near today's stops haven't been      │
+│  picked up in 30+ days:                         │
+│                                                 │
+│  • Metro Tires (0.5 mi from Stop 2)             │
+│  • Quick Lube (1.2 mi from Stop 3)              │
+│  • Highway Tire (1.8 mi from Stop 1)            │
+│                                                 │
+│  [View All Suggestions]  [Open Route Builder]   │
+└─────────────────────────────────────────────────┘
+```
+
+---
+
+## Implementation Sequence
+
+| Order | Task | Priority | Effort |
+|-------|------|----------|--------|
+| 1 | Integrate existing `NearbyClientSuggestions` into `DriverSchedulePickupDialog` | High | Small |
+| 2 | Add "Find Nearby Shops" button to `DriverRoutes.tsx` | High | Small |
+| 3 | Create `driver-route-suggestions` edge function | High | Medium |
+| 4 | Create `DriverRouteBuilder.tsx` component | Medium | Large |
+| 5 | Add suggestions widget to `DriverDashboard.tsx` | Medium | Small |
+
+---
+
+## Technical Considerations
+
+### Database Usage
+- Uses existing `locations` table with geocoded coordinates
+- Uses existing `clients` table with `last_pickup_at` field
+- Uses existing `assignments` and `pickups` tables
+
+### API Keys Required
+- `LOVABLE_API_KEY` - Already configured (for AI prioritization)
+- `MAPBOX_ACCESS_TOKEN` - Already configured (for route visualization)
+
+### Performance
+- Suggestions are calculated on-demand when driver requests them
+- Edge function limits results to top 10 suggestions
+- Uses Haversine distance for fast geo calculations
+
+---
+
+## Benefits for Your Driver
+
+1. **Saves Time**: No more manually checking which clients are nearby
+2. **Increases Revenue**: Picks up more clients per route
+3. **Reduces Driving**: Optimized routes mean less fuel and time
+4. **Proactive Outreach**: Reminds about clients who haven't been serviced recently
+5. **Self-Sufficient**: Driver can build efficient routes without dispatcher help
 
