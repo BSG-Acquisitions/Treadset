@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -39,6 +39,19 @@ export function RouteOptimizationSuggestions({
   isLoading = false,
 }: RouteOptimizationSuggestionsProps) {
   const [activeTab, setActiveTab] = useState<string>('along-route');
+
+  // Auto-select the tab that has results
+  const defaultTab = useMemo(() => {
+    if (alongRoute.length > 0) return 'along-route';
+    if (overdue.length > 0) return 'overdue';
+    return 'along-route';
+  }, [alongRoute.length, overdue.length]);
+
+  useEffect(() => {
+    if (open) {
+      setActiveTab(defaultTab);
+    }
+  }, [open, defaultTab]);
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [selectedSuggestion, setSelectedSuggestion] = useState<RouteSuggestion | null>(null);
 
@@ -142,7 +155,7 @@ export function RouteOptimizationSuggestions({
             <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="font-medium mb-2">No Suggestions Found</h3>
             <p className="text-sm text-muted-foreground">
-              No additional clients found within 5 miles of your route
+              No additional clients found within 10 miles of your route
             </p>
           </div>
         ) : (
