@@ -4,9 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MapPin, Clock, Calendar, Route, AlertCircle, Loader2, ExternalLink } from 'lucide-react';
+import { MapPin, Clock, Calendar, Route, AlertCircle, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
+import { QuickScheduleDialog } from './QuickScheduleDialog';
 
 interface RouteSuggestion {
   client_id: string;
@@ -39,11 +39,15 @@ export function RouteOptimizationSuggestions({
   isLoading = false,
 }: RouteOptimizationSuggestionsProps) {
   const [activeTab, setActiveTab] = useState<string>('along-route');
-  const navigate = useNavigate();
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [selectedSuggestion, setSelectedSuggestion] = useState<RouteSuggestion | null>(null);
 
   const formattedDate = selectedDate 
     ? format(new Date(selectedDate + 'T00:00:00'), 'EEEE, MMM d')
     : 'Selected Day';
+
+  // Parse selectedDate to use as default date for scheduling
+  const defaultPickupDate = selectedDate ? new Date(selectedDate + 'T00:00:00') : new Date();
 
   const getPriorityColor = (priority: 'high' | 'medium' | 'low') => {
     switch (priority) {
@@ -59,9 +63,9 @@ export function RouteOptimizationSuggestions({
     return '🟢';
   };
 
-  const handleViewClient = (clientId: string) => {
-    onOpenChange(false);
-    navigate(`/clients/${clientId}`);
+  const handleScheduleClient = (suggestion: RouteSuggestion) => {
+    setSelectedSuggestion(suggestion);
+    setScheduleDialogOpen(true);
   };
 
   const SuggestionCard = ({ suggestion }: { suggestion: RouteSuggestion }) => (
@@ -102,12 +106,12 @@ export function RouteOptimizationSuggestions({
       <div className="flex gap-2">
         <Button 
           size="sm" 
-          variant="outline" 
+          variant="default" 
           className="flex-1 text-xs"
-          onClick={() => handleViewClient(suggestion.client_id)}
+          onClick={() => handleScheduleClient(suggestion)}
         >
-          <ExternalLink className="h-3 w-3 mr-1" />
-          View & Schedule
+          <Calendar className="h-3 w-3 mr-1" />
+          Quick Schedule
         </Button>
       </div>
     </div>
@@ -194,6 +198,21 @@ export function RouteOptimizationSuggestions({
           </Button>
         </div>
       </DialogContent>
+
+      {/* Quick Schedule Dialog for selected suggestion */}
+      {selectedSuggestion && (
+        <QuickScheduleDialog
+          open={scheduleDialogOpen}
+          onOpenChange={setScheduleDialogOpen}
+          clientId={selectedSuggestion.client_id}
+          clientName={selectedSuggestion.company_name}
+          clientAddress={selectedSuggestion.address}
+          defaultDate={defaultPickupDate}
+          onSuccess={() => {
+            setSelectedSuggestion(null);
+          }}
+        />
+      )}
     </Dialog>
   );
 }
