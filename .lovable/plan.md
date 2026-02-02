@@ -1,214 +1,84 @@
 
 
-# Driver Route Building Assistant
+# Fix "Find Nearby Shops" - No Results Bug
 
-## Summary
+## Problem Identified
 
-Your driver wants the app to help him build smarter routes by suggesting nearby clients when he schedules pickups. You already have excellent building blocks in place - now we need to enhance them specifically for the driver's workflow.
+The "Find Nearby Shops" feature returns "No nearby clients found within 5 miles" even though your database clearly shows **20+ clients** within that radius.
 
-## What Already Exists
+**Root cause**: The `suggest-nearby-clients` edge function has a bug where client IDs are not passed to the AI, so the AI can't return valid IDs back.
 
-| Component | Status | Location |
-|-----------|--------|----------|
-| Nearby suggestions hook | Built | `useNearbySuggestions.ts` |
-| Nearby suggestions UI | Built | `NearbyClientSuggestions.tsx` |
-| Suggest nearby clients edge function | Built | `suggest-nearby-clients/index.ts` |
-| Route optimization edge function | Built | `enhanced-route-optimizer/index.ts` |
-| Driver schedule pickup dialog | Built | `DriverSchedulePickupDialog.tsx` |
-| Driver routes page | Built | `DriverRoutes.tsx` |
+### How the Bug Works
 
-**The issue**: The nearby suggestions feature is only integrated into the dispatcher/admin scheduling dialogs (`SchedulePickupDialog`, `SchedulePickupWithDriverDialog`), but NOT into the driver's `DriverSchedulePickupDialog`.
+1. The function finds ~20 nearby clients (this part works correctly)
+2. It sends a prompt to the AI with client names and addresses **but NOT client_ids**
+3. The AI is asked to return suggestions with `client_id` field
+4. The AI makes up IDs (or returns empty strings) because it doesn't know the real IDs
+5. The enrichment step tries to match AI's `client_id` against real clients: `nearbyClients.find(c => c.id === suggestion.client_id)`
+6. None match, so all suggestions get filtered out
+7. Result: empty array returned
 
----
+### Evidence
 
-## Implementation Plan
-
-### Phase 1: Add Nearby Suggestions to Driver Pickup Scheduling
-
-**What happens**: After the driver schedules a pickup, show them a popup with nearby clients they could also call/schedule.
-
-**Files to modify**:
-- `src/components/driver/DriverSchedulePickupDialog.tsx`
-  - Import `useNearbySuggestions` hook
-  - Import `NearbyClientSuggestions` component
-  - After successful pickup creation, call `suggestNearby()` with the scheduled client
-  - Show the suggestions dialog with nearby shops
-
-**Changes**:
-1. Add state for tracking the scheduled client and suggestions dialog
-2. On pickup success, trigger the nearby suggestions lookup
-3. Display the `NearbyClientSuggestions` modal with action buttons
+- Database query shows 197 out of 207 clients have geocoded coordinates
+- Direct SQL query finds 20+ clients within 5 miles of One Stop Tire
+- Edge function logs show no errors (it's silently returning empty results)
+- The AI prompt at line 159-163 never includes the client `id` field
 
 ---
 
-### Phase 2: Add "Find Nearby Clients" Button on Driver Routes Page
+## Solution
 
-**What happens**: Add a prominent button on the driver's route view that lets them proactively find clients near their current scheduled stops.
+Update the `suggest-nearby-clients` edge function to include client IDs in the prompt so the AI can return them correctly.
 
-**Files to modify**:
-- `src/pages/DriverRoutes.tsx`
-  - Add a "Find Nearby Shops" button in the header area
-  - When clicked, show clients near any of the driver's scheduled stops for the day
-  - Allow the driver to quickly add them to their route
+### Changes to `supabase/functions/suggest-nearby-clients/index.ts`
 
-**UI Addition**:
-```text
-┌─────────────────────────────────────────────────┐
-│  My Assignments                                 │
-│  Monday, February 3, 2026 • 3 stops scheduled   │
-│                                                 │
-│  [Add Pickup]  [🗺️ Find Nearby Shops]           │
-└─────────────────────────────────────────────────┘
+**Line 159-163 - Add client_id to the prompt:**
+
+```typescript
+// BEFORE (broken):
+${nearbyClients.map(c => `
+- ${c.company_name} (${c.distance.toFixed(1)} miles away)
+  Location: ${c.location?.address || 'Address not available'}
+  Last pickup: ${c.last_pickup_at ? new Date(c.last_pickup_at).toLocaleDateString() : 'Never'}
+`).join('\n')}
+
+// AFTER (fixed):
+${nearbyClients.map(c => `
+- ID: ${c.id} | ${c.company_name} (${c.distance.toFixed(1)} miles away)
+  Location: ${c.location?.address || 'Address not available'}
+  Last pickup: ${c.last_pickup_at ? new Date(c.last_pickup_at).toLocaleDateString() : 'Never'}
+`).join('\n')}
 ```
 
----
+**Update system prompt to instruct AI to use exact IDs:**
 
-### Phase 3: Create Enhanced "Route Builder Suggestions" Edge Function
+Add to the system prompt: "When returning suggestions, use the exact client ID provided (the UUID after 'ID:'). Do not modify or abbreviate the IDs."
 
-**What happens**: Create a smarter suggestion system that considers the driver's entire route, not just one client.
+### Additional Safety: Fallback Enhancement
 
-**New file**: `supabase/functions/driver-route-suggestions/index.ts`
-
-**Logic**:
-1. Accept the driver's current scheduled stops for the day
-2. Find all clients within a radius of ANY stop on the route
-3. Calculate which clients are "on the way" between stops (minimal detour)
-4. Use AI to prioritize based on:
-   - Distance from route (prefer <2 miles from existing path)
-   - Time since last pickup (prioritize overdue clients)
-   - Historical pickup frequency
-   - Estimated tire count (value vs time tradeoff)
-5. Return suggestions grouped by:
-   - "Along your route" (minimal detour)
-   - "Nearby clusters" (multiple clients in same area)
-   - "Overdue for pickup"
-
-**Response structure**:
-```json
-{
-  "along_route": [
-    {
-      "client_id": "...",
-      "company_name": "Metro Tires",
-      "distance_from_route_miles": 0.8,
-      "best_insert_after": "stop_2",
-      "added_time_minutes": 12,
-      "priority": "high",
-      "reasoning": "Only 0.8 miles off route, hasn't had pickup in 45 days"
-    }
-  ],
-  "nearby_clusters": [
-    {
-      "center": { "lat": 42.33, "lng": -83.04 },
-      "clients": [...],
-      "total_estimated_ptes": 150
-    }
-  ],
-  "overdue": [...]
-}
-```
+If the AI still fails, the fallback (lines 211-224) should be returned. But currently, the fallback only triggers on HTTP errors (line 208), not on empty AI results. Add a fallback for when the AI returns no valid suggestions.
 
 ---
 
-### Phase 4: Create Driver Route Builder UI Component
+## Files to Modify
 
-**What happens**: A dedicated "Route Builder" interface where the driver can visualize their route and see suggestions.
-
-**New file**: `src/components/driver/DriverRouteBuilder.tsx`
-
-**Features**:
-1. Map view showing current scheduled stops with numbered pins
-2. Highlighted "suggested" clients near the route
-3. One-tap "Add to Route" button for each suggestion
-4. Real-time route preview when hovering over a suggestion
-5. Total route time/distance estimate as stops are added
-
-**UI Flow**:
-```text
-┌──────────────────────────────────────────────────────────────┐
-│  Route Builder                           [Save Route] [Done] │
-├──────────────────────────────────────────────────────────────┤
-│                                                              │
-│  📍 Your Route (3 stops)          │  Suggested Additions     │
-│  ─────────────────────────────    │  ───────────────────     │
-│  1. Green Loop Tire    ✓          │  🔴 Metro Tires          │
-│     8:30 AM                       │     0.8 mi from route    │
-│                                   │     45 days overdue      │
-│  2. Riverside Auto     ○          │     [+ Add to Route]     │
-│     9:45 AM                       │                          │
-│                                   │  🟡 Quick Lube Plus      │
-│  3. Eco Tire Co        ○          │     1.2 mi from route    │
-│     11:00 AM                      │     [+ Add to Route]     │
-│                                   │                          │
-│  ─────────────────────────────    │  🟢 Highway Tire         │
-│  Est. finish: 12:30 PM            │     2.1 mi from route    │
-│  Total distance: 28 miles         │     [+ Add to Route]     │
-│                                   │                          │
-└──────────────────────────────────────────────────────────────┘
-```
+| File | Change |
+|------|--------|
+| `supabase/functions/suggest-nearby-clients/index.ts` | Add client_id to AI prompt, improve fallback logic |
 
 ---
 
-### Phase 5: Add Route Suggestions to Driver Dashboard
+## Verification After Fix
 
-**What happens**: Show proactive suggestions on the driver's dashboard before they even start building routes.
-
-**Files to modify**:
-- `src/pages/DriverDashboard.tsx`
-
-**Addition**:
-```text
-┌─────────────────────────────────────────────────┐
-│  💡 Route Optimization Tips                     │
-│                                                 │
-│  3 clients near today's stops haven't been      │
-│  picked up in 30+ days:                         │
-│                                                 │
-│  • Metro Tires (0.5 mi from Stop 2)             │
-│  • Quick Lube (1.2 mi from Stop 3)              │
-│  • Highway Tire (1.8 mi from Stop 1)            │
-│                                                 │
-│  [View All Suggestions]  [Open Route Builder]   │
-└─────────────────────────────────────────────────┘
-```
+1. The edge function will include IDs in the prompt: `ID: 00382bf1-88f4-4755-8797-6c391d240380 | 247 Tire Repair...`
+2. The AI will return valid IDs in its response
+3. The enrichment step will find matching clients
+4. Driver will see nearby shop suggestions
 
 ---
 
-## Implementation Sequence
+## Optional Enhancement
 
-| Order | Task | Priority | Effort |
-|-------|------|----------|--------|
-| 1 | Integrate existing `NearbyClientSuggestions` into `DriverSchedulePickupDialog` | High | Small |
-| 2 | Add "Find Nearby Shops" button to `DriverRoutes.tsx` | High | Small |
-| 3 | Create `driver-route-suggestions` edge function | High | Medium |
-| 4 | Create `DriverRouteBuilder.tsx` component | Medium | Large |
-| 5 | Add suggestions widget to `DriverDashboard.tsx` | Medium | Small |
-
----
-
-## Technical Considerations
-
-### Database Usage
-- Uses existing `locations` table with geocoded coordinates
-- Uses existing `clients` table with `last_pickup_at` field
-- Uses existing `assignments` and `pickups` tables
-
-### API Keys Required
-- `LOVABLE_API_KEY` - Already configured (for AI prioritization)
-- `MAPBOX_ACCESS_TOKEN` - Already configured (for route visualization)
-
-### Performance
-- Suggestions are calculated on-demand when driver requests them
-- Edge function limits results to top 10 suggestions
-- Uses Haversine distance for fast geo calculations
-
----
-
-## Benefits for Your Driver
-
-1. **Saves Time**: No more manually checking which clients are nearby
-2. **Increases Revenue**: Picks up more clients per route
-3. **Reduces Driving**: Optimized routes mean less fuel and time
-4. **Proactive Outreach**: Reminds about clients who haven't been serviced recently
-5. **Self-Sufficient**: Driver can build efficient routes without dispatcher help
+Also wire up the new `driver-route-suggestions` edge function (which was created earlier but not connected) to the "Find Nearby Shops" button. This function considers ALL scheduled stops, not just the first one, providing better route-wide suggestions.
 
