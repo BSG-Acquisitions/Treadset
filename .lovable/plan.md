@@ -1,84 +1,190 @@
 
+# Full Route Suggestions for Each Day of the Week
 
-# Fix "Find Nearby Shops" - No Results Bug
+## Problem Statement
 
-## Problem Identified
+Currently, the "Find Nearby Shops" feature only considers **one stop** when finding suggestions. Brenner wants to:
+1. Select any day of the week (e.g., Wednesday)
+2. See ALL scheduled stops for that day
+3. Get suggestions that consider the **entire route** - clients near any stop or along the path between stops
+4. Use this to proactively call shops and build a complete route for that day
 
-The "Find Nearby Shops" feature returns "No nearby clients found within 5 miles" even though your database clearly shows **20+ clients** within that radius.
+## Current Architecture vs Required
 
-**Root cause**: The `suggest-nearby-clients` edge function has a bug where client IDs are not passed to the AI, so the AI can't return valid IDs back.
+| Current Behavior | Required Behavior |
+|------------------|-------------------|
+| Uses `suggest-nearby-clients` | Uses `driver-route-suggestions` |
+| Single reference point (first stop) | All stops for the selected day |
+| Only shows distance from one client | Shows "Along Route" + "Overdue" groupings |
+| Same suggestions for day/week view | Per-day suggestions in week view |
+| Hook: `useNearbySuggestions` | Hook: `useDriverRouteSuggestions` |
 
-### How the Bug Works
+## Implementation Plan
 
-1. The function finds ~20 nearby clients (this part works correctly)
-2. It sends a prompt to the AI with client names and addresses **but NOT client_ids**
-3. The AI is asked to return suggestions with `client_id` field
-4. The AI makes up IDs (or returns empty strings) because it doesn't know the real IDs
-5. The enrichment step tries to match AI's `client_id` against real clients: `nearbyClients.find(c => c.id === suggestion.client_id)`
-6. None match, so all suggestions get filtered out
-7. Result: empty array returned
+### Phase 1: Wire Up the Full Route Suggestions
 
-### Evidence
+**File: `src/pages/DriverRoutes.tsx`**
 
-- Database query shows 197 out of 207 clients have geocoded coordinates
-- Direct SQL query finds 20+ clients within 5 miles of One Stop Tire
-- Edge function logs show no errors (it's silently returning empty results)
-- The AI prompt at line 159-163 never includes the client `id` field
+1. **Replace the suggestion hook**: Import `useDriverRouteSuggestions` instead of `useNearbySuggestions`
 
----
+2. **Update `handleFindNearbyShops` function** to:
+   - Collect ALL assignments for the current view (day or specific date in week view)
+   - Extract location coordinates from each stop
+   - Pass the full list of stops to `driver-route-suggestions` edge function
+   - Display the enhanced results (along_route + overdue groupings)
 
-## Solution
+3. **Add a `selectedDayForSuggestions` state** to track which day the driver wants suggestions for in week view
 
-Update the `suggest-nearby-clients` edge function to include client IDs in the prompt so the AI can return them correctly.
+### Phase 2: Add Per-Day Suggestion Buttons in Week View
 
-### Changes to `supabase/functions/suggest-nearby-clients/index.ts`
+**File: `src/pages/DriverRoutes.tsx`**
 
-**Line 159-163 - Add client_id to the prompt:**
+In the week view day cards (lines 539-614), add a "Find Nearby" button for each day that has stops:
+
+```text
+┌─────────────────────────────────────────────────┐
+│  Wed                                            │
+│  Feb 5, 2026                       3 stops      │
+│                                                 │
+│  1. Metro Tire                                  │
+│  2. Quick Lube                                  │
+│  3. Highway Auto                                │
+│                                                 │
+│  [🔍 Find Shops Along This Route]               │
+└─────────────────────────────────────────────────┘
+```
+
+When clicked:
+- Use all stops for that specific day
+- Call `driver-route-suggestions` with those stops
+- Show enhanced suggestions dialog
+
+### Phase 3: Create Enhanced Route Suggestions Dialog
+
+**New File: `src/components/driver/RouteOptimizationSuggestions.tsx`**
+
+A new dialog component that displays suggestions in two categories:
+
+```text
+┌─────────────────────────────────────────────────────────┐
+│  Route Building Suggestions for Wednesday, Feb 5       │
+│  Analyzing 3 scheduled stops                           │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  📍 ALONG YOUR ROUTE (4 clients)                        │
+│  ───────────────────────────────────────────────────    │
+│  🔴 Bob's Tire Shop - 0.8 mi from Metro Tire            │
+│     "Only 0.8 miles detour, 45 days since pickup"       │
+│     [Call] [Schedule] [View]                            │
+│                                                         │
+│  🟡 Green Loop Auto - 1.2 mi from Quick Lube            │
+│     "Near existing stop, monthly customer"              │
+│     [Call] [Schedule] [View]                            │
+│                                                         │
+│  ⏰ OVERDUE CLIENTS (3 clients)                         │
+│  ───────────────────────────────────────────────────    │
+│  🔴 Thompson's Garage - 2.1 mi from Highway Auto        │
+│     "78 days since last pickup - overdue!"              │
+│     [Call] [Schedule] [View]                            │
+│                                                         │
+│  [Close]  [Schedule All Selected]                       │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Features:**
+- Two sections: "Along Your Route" and "Overdue Clients"
+- Priority badges (high/medium/low)
+- Distance from nearest scheduled stop
+- Days since last pickup
+- Quick actions: Call, Schedule, View Client
+
+### Phase 4: Fix Edge Function ID Handling
+
+**File: `supabase/functions/driver-route-suggestions/index.ts`**
+
+Apply the same fix as `suggest-nearby-clients`:
+- Include client IDs in the AI prompt
+- Add fallback logic if AI fails to return valid IDs
+- Ensure all suggestions have valid client references
+
+Update the user prompt (lines 200-206) to include IDs:
 
 ```typescript
-// BEFORE (broken):
-${nearbyClients.map(c => `
-- ${c.company_name} (${c.distance.toFixed(1)} miles away)
-  Location: ${c.location?.address || 'Address not available'}
-  Last pickup: ${c.last_pickup_at ? new Date(c.last_pickup_at).toLocaleDateString() : 'Never'}
-`).join('\n')}
-
-// AFTER (fixed):
-${nearbyClients.map(c => `
-- ID: ${c.id} | ${c.company_name} (${c.distance.toFixed(1)} miles away)
-  Location: ${c.location?.address || 'Address not available'}
-  Last pickup: ${c.last_pickup_at ? new Date(c.last_pickup_at).toLocaleDateString() : 'Never'}
+${clientsWithMetrics.slice(0, 15).map(c => `
+- ID: ${c.id} | ${c.company_name} (${c.minDistanceFromRoute.toFixed(1)} mi from ${c.nearestStopName})
+  Location: ${c.locations?.[0]?.address || buildAddress(c)}
+  Last pickup: ${c.daysSincePickup !== null ? `${c.daysSincePickup} days ago` : 'Never'}
 `).join('\n')}
 ```
 
-**Update system prompt to instruct AI to use exact IDs:**
+### Phase 5: Update Dashboard Tips Component
 
-Add to the system prompt: "When returning suggestions, use the exact client ID provided (the UUID after 'ID:'). Do not modify or abbreviate the IDs."
+**File: `src/components/driver/RouteOptimizationTips.tsx`**
 
-### Additional Safety: Fallback Enhancement
-
-If the AI still fails, the fallback (lines 211-224) should be returned. But currently, the fallback only triggers on HTTP errors (line 208), not on empty AI results. Add a fallback for when the AI returns no valid suggestions.
-
----
-
-## Files to Modify
-
-| File | Change |
-|------|--------|
-| `supabase/functions/suggest-nearby-clients/index.ts` | Add client_id to AI prompt, improve fallback logic |
+Update to use the new `useDriverRouteSuggestions` hook instead of `useNearbySuggestions`:
+- Pass all of today's stops to get comprehensive suggestions
+- Show both "along route" and "overdue" suggestions on dashboard
 
 ---
 
-## Verification After Fix
+## Files to Create/Modify
 
-1. The edge function will include IDs in the prompt: `ID: 00382bf1-88f4-4755-8797-6c391d240380 | 247 Tire Repair...`
-2. The AI will return valid IDs in its response
-3. The enrichment step will find matching clients
-4. Driver will see nearby shop suggestions
+| File | Action | Purpose |
+|------|--------|---------|
+| `src/components/driver/RouteOptimizationSuggestions.tsx` | Create | New dialog with grouped suggestions display |
+| `src/pages/DriverRoutes.tsx` | Modify | Wire up new hook, add per-day buttons in week view |
+| `src/components/driver/RouteOptimizationTips.tsx` | Modify | Use full route analysis |
+| `supabase/functions/driver-route-suggestions/index.ts` | Modify | Add client IDs to AI prompt, add fallback logic |
 
 ---
 
-## Optional Enhancement
+## Data Flow
 
-Also wire up the new `driver-route-suggestions` edge function (which was created earlier but not connected) to the "Find Nearby Shops" button. This function considers ALL scheduled stops, not just the first one, providing better route-wide suggestions.
+```text
+Driver clicks "Find Shops for Wednesday"
+           │
+           ▼
+┌──────────────────────────────┐
+│ Extract Wednesday's stops:   │
+│ - Stop 1: {lat, lng, name}   │
+│ - Stop 2: {lat, lng, name}   │
+│ - Stop 3: {lat, lng, name}   │
+└──────────────────────────────┘
+           │
+           ▼
+┌──────────────────────────────┐
+│ Call driver-route-suggestions│
+│ edge function with all stops │
+└──────────────────────────────┘
+           │
+           ▼
+┌──────────────────────────────┐
+│ Edge function:               │
+│ 1. Finds all clients within  │
+│    5 miles of ANY stop       │
+│ 2. Calculates min distance   │
+│    from route for each       │
+│ 3. Groups by "along route"   │
+│    (<2 mi) and "overdue"     │
+│    (30+ days)                │
+│ 4. AI prioritizes results    │
+└──────────────────────────────┘
+           │
+           ▼
+┌──────────────────────────────┐
+│ Display in new dialog:       │
+│ - Along Route section        │
+│ - Overdue section            │
+│ - Quick action buttons       │
+└──────────────────────────────┘
+```
 
+---
+
+## Benefits
+
+1. **Smarter suggestions**: Considers entire route, not just first stop
+2. **Per-day planning**: Brenner can look at Wednesday and build that day's route
+3. **Prioritized outreach**: Overdue clients highlighted separately
+4. **Week planning**: Can plan routes for entire week in advance
+5. **Efficient route building**: See clients "along the way" to minimize detours
