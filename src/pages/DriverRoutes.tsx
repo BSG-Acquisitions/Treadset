@@ -2,9 +2,12 @@ import { useEffect, useState, useMemo } from "react";
 import { useDriverAssignments } from "@/hooks/useDriverAssignments";
 import { useDriverWeeklyAssignments } from "@/hooks/useDriverWeeklyAssignments";
 import { useClientPickupStats } from "@/hooks/useClientPickupStats";
+import { useNearbySuggestions } from "@/hooks/useNearbySuggestions";
+import { useAuth } from "@/contexts/AuthContext";
 import { DriverAssignmentInterface } from "@/components/driver/DriverAssignmentInterface";
 import { DriverSchedulePickupDialog } from "@/components/driver/DriverSchedulePickupDialog";
 import { MovePickupDialog } from "@/components/MovePickupDialog";
+import { NearbyClientSuggestions } from "@/components/NearbyClientSuggestions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,8 +16,19 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
-import { Building, MapPin, Calendar, CheckCircle2, Clock, AlertCircle, Package, Truck, MoreVertical, Move, Phone, Plus, TrendingUp, DollarSign, ChevronLeft, ChevronRight } from "lucide-react";
+import { Building, MapPin, Calendar, CheckCircle2, Clock, AlertCircle, Package, Truck, MoreVertical, Move, Phone, Plus, TrendingUp, DollarSign, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { format, addWeeks, startOfWeek } from "date-fns";
+import { toast } from "sonner";
+
+interface NearbySuggestion {
+  client_id: string;
+  company_name: string;
+  distance: number;
+  last_pickup_at: string | null;
+  address: string;
+  priority: 'high' | 'medium' | 'low';
+  reasoning: string;
+}
 
 type ViewMode = 'day' | 'week';
 
@@ -25,6 +39,16 @@ export default function DriverRoutes() {
   const [selectedAssignment, setSelectedAssignment] = useState<string | null>(null);
   const [movePickupOpen, setMovePickupOpen] = useState(false);
   const [selectedPickupToMove, setSelectedPickupToMove] = useState<any>(null);
+  
+  // Nearby suggestions state
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const [nearbySuggestions, setNearbySuggestions] = useState<NearbySuggestion[]>([]);
+  const [referenceClientName, setReferenceClientName] = useState("");
+  const [isFindingNearby, setIsFindingNearby] = useState(false);
+  
+  const { user } = useAuth();
+  const organizationId = user?.currentOrganization?.id;
+  const { suggestNearby } = useNearbySuggestions();
   
   // Day view data
   const { data: dayAssignments = [], isLoading: isDayLoading } = useDriverAssignments(selectedDate);
@@ -46,6 +70,53 @@ export default function DriverRoutes() {
   }, [assignments]);
 
   const { data: clientStats = {} } = useClientPickupStats(clientIds);
+  
+  // Find nearby shops based on any scheduled stop
+  const handleFindNearbyShops = async () => {
+    if (!organizationId) {
+      toast.error("Organization not found");
+      return;
+    }
+    
+    const currentAssignments = viewMode === 'day' ? dayAssignments : weekAssignments;
+    
+    if (currentAssignments.length === 0) {
+      toast.info("No scheduled stops to find nearby shops for");
+      return;
+    }
+    
+    // Use the first assignment's client as the reference point
+    const firstAssignment = currentAssignments[0];
+    const clientId = firstAssignment.pickup?.client?.id;
+    const clientName = firstAssignment.pickup?.client?.company_name || "your scheduled stop";
+    
+    if (!clientId) {
+      toast.error("Could not find client information");
+      return;
+    }
+    
+    setIsFindingNearby(true);
+    
+    try {
+      const result = await suggestNearby({
+        scheduledClientId: clientId,
+        organizationId,
+      });
+      
+      if (result?.suggestions && result.suggestions.length > 0) {
+        setNearbySuggestions(result.suggestions);
+        setReferenceClientName(clientName);
+        setSuggestionsOpen(true);
+      } else {
+        toast.info(result?.message || "No nearby clients found within 5 miles");
+      }
+    } catch (error) {
+      console.error("Error finding nearby shops:", error);
+      toast.error("Failed to find nearby shops");
+    } finally {
+      setIsFindingNearby(false);
+    }
+  };
 
   // Group assignments by date for week view - MUST be before any conditional returns
   const assignmentsByDate = useMemo(() => {
@@ -135,7 +206,7 @@ export default function DriverRoutes() {
                 }
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 flex-wrap">
               <DriverSchedulePickupDialog
                 trigger={
                   <Button size="sm" className="!bg-brand-primary hover:!bg-brand-primary-hover text-white">
@@ -144,6 +215,15 @@ export default function DriverRoutes() {
                   </Button>
                 }
               />
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={handleFindNearbyShops}
+                disabled={isFindingNearby || assignments.length === 0}
+              >
+                <Search className="h-4 w-4 mr-2" />
+                {isFindingNearby ? "Finding..." : "Find Nearby Shops"}
+              </Button>
             </div>
           </div>
 
@@ -547,6 +627,14 @@ export default function DriverRoutes() {
             pickup={selectedPickupToMove}
           />
         )}
+        
+        {/* Nearby Client Suggestions Modal */}
+        <NearbyClientSuggestions
+          open={suggestionsOpen}
+          onOpenChange={setSuggestionsOpen}
+          suggestions={nearbySuggestions}
+          scheduledClientName={referenceClientName}
+        />
       </main>
     </div>
   );

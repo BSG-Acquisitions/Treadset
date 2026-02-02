@@ -17,6 +17,12 @@ interface SuggestNearbySuggestion {
   organizationId: string;
 }
 
+interface SuggestNearbyResponse {
+  suggestions: NearbySuggestion[];
+  message?: string;
+  client_name?: string;
+}
+
 export function useNearbySuggestions() {
   const suggestNearby = useMutation({
     mutationFn: async ({ scheduledClientId, organizationId }: SuggestNearbySuggestion) => {
@@ -25,7 +31,7 @@ export function useNearbySuggestions() {
       });
 
       if (error) throw error;
-      return data as { suggestions: NearbySuggestion[] };
+      return data as SuggestNearbyResponse;
     },
     onError: (error: Error) => {
       console.error('Error getting nearby suggestions:', error);

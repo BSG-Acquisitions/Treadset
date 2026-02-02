@@ -6,6 +6,9 @@ import { useDriverSchedulePickup } from "@/hooks/useDriverSchedulePickup";
 import { useClients } from "@/hooks/useClients";
 import { useLocations } from "@/hooks/useLocations";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNearbySuggestions } from "@/hooks/useNearbySuggestions";
+import { NearbyClientSuggestions } from "@/components/NearbyClientSuggestions";
 import {
   Dialog,
   DialogContent,
@@ -38,6 +41,16 @@ import { CalendarIcon, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
+interface NearbySuggestion {
+  client_id: string;
+  company_name: string;
+  distance: number;
+  last_pickup_at: string | null;
+  address: string;
+  priority: 'high' | 'medium' | 'low';
+  reasoning: string;
+}
+
 const driverPickupSchema = z.object({
   client_id: z.string().min(1, "Please select a client"),
   location_id: z.string().optional(),
@@ -61,9 +74,18 @@ export function DriverSchedulePickupDialog({ trigger }: DriverSchedulePickupDial
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [showResults, setShowResults] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState("");
+  
+  // Nearby suggestions state
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const [nearbySuggestions, setNearbySuggestions] = useState<NearbySuggestion[]>([]);
+  const [scheduledClientName, setScheduledClientName] = useState("");
 
   const { toast } = useToast();
+  const { user } = useAuth();
   const schedulePickup = useDriverSchedulePickup();
+  const { suggestNearby, isLoading: suggestionsLoading } = useNearbySuggestions();
+  
+  const organizationId = user?.currentOrganization?.id;
   
   // Debounce search to avoid excessive database queries
   useEffect(() => {
@@ -121,6 +143,10 @@ export function DriverSchedulePickupDialog({ trigger }: DriverSchedulePickupDial
         return 'Any';
       };
 
+      // Get client name before scheduling for the suggestions dialog
+      const scheduledClient = clients.find(c => c.id === data.client_id);
+      const clientName = scheduledClient?.company_name || 'Unknown Client';
+
       await schedulePickup.mutateAsync({
         clientId: data.client_id,
         locationId: data.location_id || undefined,
@@ -132,10 +158,46 @@ export function DriverSchedulePickupDialog({ trigger }: DriverSchedulePickupDial
         notes: data.notes,
       });
 
+      // Close the schedule dialog
       setOpen(false);
       form.reset();
-      setSelectedClientId("");
       setClientSearch("");
+      
+      // Fetch nearby suggestions after successful scheduling
+      if (organizationId) {
+        try {
+          const result = await suggestNearby({
+            scheduledClientId: data.client_id,
+            organizationId,
+          });
+          
+          if (result?.suggestions && result.suggestions.length > 0) {
+            setNearbySuggestions(result.suggestions);
+            setScheduledClientName(clientName);
+            setSuggestionsOpen(true);
+          } else {
+            // Show success toast if no suggestions
+            toast({
+              title: "Pickup Scheduled",
+              description: `Pickup scheduled for ${clientName}`,
+            });
+          }
+        } catch (suggestionError) {
+          console.error('Error fetching nearby suggestions:', suggestionError);
+          // Still show success since the pickup was scheduled
+          toast({
+            title: "Pickup Scheduled",
+            description: `Pickup scheduled for ${clientName}`,
+          });
+        }
+      } else {
+        toast({
+          title: "Pickup Scheduled",
+          description: `Pickup scheduled for ${clientName}`,
+        });
+      }
+      
+      setSelectedClientId("");
     } catch (error) {
       console.error('Error scheduling pickup:', error);
       toast({
@@ -468,6 +530,14 @@ export function DriverSchedulePickupDialog({ trigger }: DriverSchedulePickupDial
           </form>
         </Form>
       </DialogContent>
+      
+      {/* Nearby Client Suggestions Modal */}
+      <NearbyClientSuggestions
+        open={suggestionsOpen}
+        onOpenChange={setSuggestionsOpen}
+        suggestions={nearbySuggestions}
+        scheduledClientName={scheduledClientName}
+      />
     </Dialog>
   );
 }

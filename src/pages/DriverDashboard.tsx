@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { RouteOptimizationTips } from '@/components/driver/RouteOptimizationTips';
 import { 
   Truck, 
   FileText, 
@@ -157,6 +158,9 @@ export default function DriverDashboard() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Route Optimization Tips */}
+        <RouteOptimizationTips />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Today's Assignments */}
