@@ -151,18 +151,20 @@ Deno.serve(async (req) => {
 2. Time since last pickup (longer = higher priority)
 3. Pickup patterns (if they typically get pickups regularly)
 
+CRITICAL: When returning suggestions, you MUST use the exact client ID (UUID) provided after 'ID:' in the client list. Do not modify, abbreviate, or make up IDs. Copy them exactly as shown.
+
 Return 3-5 prioritized suggestions with brief reasoning.`;
 
     const userPrompt = `The receptionist just scheduled a pickup for "${scheduledClient.company_name}" at ${scheduledAddress}.
 
 Here are nearby clients within 5 miles:
 ${nearbyClients.map(c => `
-- ${c.company_name} (${c.distance.toFixed(1)} miles away)
+- ID: ${c.id} | ${c.company_name} (${c.distance.toFixed(1)} miles away)
   Location: ${c.location?.address || 'Address not available'}
   Last pickup: ${c.last_pickup_at ? new Date(c.last_pickup_at).toLocaleDateString() : 'Never'}
 `).join('\n')}
 
-Which 3-5 clients should we prioritize calling to schedule in the same area? Provide brief reasoning for each.`;
+Which 3-5 clients should we prioritize calling to schedule in the same area? Use the exact client IDs provided above in your response.`;
 
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -237,7 +239,10 @@ Which 3-5 clients should we prioritize calling to schedule in the same area? Pro
     const enrichedSuggestions = aiSuggestions
       .map((suggestion: any) => {
         const client = nearbyClients.find(c => c.id === suggestion.client_id);
-        if (!client) return null;
+        if (!client) {
+          console.log('Could not find client for AI suggestion:', suggestion.client_id);
+          return null;
+        }
         return {
           client_id: client.id,
           company_name: client.company_name,
@@ -249,6 +254,25 @@ Which 3-5 clients should we prioritize calling to schedule in the same area? Pro
         };
       })
       .filter(Boolean);
+
+    // If AI suggestions all failed to match, fall back to distance-based suggestions
+    if (enrichedSuggestions.length === 0 && nearbyClients.length > 0) {
+      console.log('AI suggestions did not match any clients, falling back to distance-based');
+      const fallbackSuggestions = nearbyClients.slice(0, 5).map(client => ({
+        client_id: client.id,
+        company_name: client.company_name,
+        distance: client.distance,
+        last_pickup_at: client.last_pickup_at,
+        address: client.location?.address || 'Address not available',
+        priority: 'medium' as const,
+        reasoning: `Located ${client.distance.toFixed(1)} miles from scheduled client`
+      }));
+
+      return new Response(
+        JSON.stringify({ suggestions: fallbackSuggestions }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     return new Response(
       JSON.stringify({ suggestions: enrichedSuggestions }),
