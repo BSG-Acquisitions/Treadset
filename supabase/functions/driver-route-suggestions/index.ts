@@ -189,6 +189,8 @@ Deno.serve(async (req) => {
 3. Potential pickup value
 4. Clustering opportunities (multiple nearby clients)
 
+IMPORTANT: When returning suggestions, use the EXACT client ID provided (the UUID after 'ID:'). Do not modify, abbreviate, or fabricate IDs. Only include clients from the list provided.
+
 Return prioritized suggestions grouped into:
 - along_route: Clients that are very close to the existing route (<2 miles detour)
 - overdue: Clients who haven't been serviced in 30+ days, regardless of distance`;
@@ -198,12 +200,12 @@ ${stopLocations.map((s, i) => `${i + 1}. ${s.company_name}`).join('\n')}
 
 Here are potential additional stops near the route:
 ${clientsWithMetrics.slice(0, 15).map(c => `
-- ${c.company_name} (${c.minDistanceFromRoute.toFixed(1)} mi from ${c.nearestStopName})
+- ID: ${c.id} | ${c.company_name} (${c.minDistanceFromRoute.toFixed(1)} mi from ${c.nearestStopName})
   Location: ${c.locations?.[0]?.address || buildAddress(c)}
   Last pickup: ${c.daysSincePickup !== null ? `${c.daysSincePickup} days ago` : 'Never'}
 `).join('\n')}
 
-Suggest the best 5-8 clients to add, with reasoning for each.`;
+Suggest the best 5-8 clients to add, with reasoning for each. Use the exact client IDs provided above.`;
 
     try {
       const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -307,10 +309,26 @@ Suggest the best 5-8 clients to add, with reasoning for each.`;
           .filter(Boolean) as RouteSuggestion[];
       };
 
+      const enrichedAlongRoute = enrichSuggestions(aiSuggestions.along_route || [], clientsWithMetrics);
+      const enrichedOverdue = enrichSuggestions(aiSuggestions.overdue || [], clientsWithMetrics);
+
+      // Fallback: if AI returned no valid suggestions, use the simple prioritization
+      if (enrichedAlongRoute.length === 0 && enrichedOverdue.length === 0) {
+        console.log('AI returned no valid matches, using fallback prioritization');
+        const suggestions = prioritizeWithoutAI(clientsWithMetrics);
+        return new Response(
+          JSON.stringify({ 
+            along_route: suggestions.alongRoute,
+            overdue: suggestions.overdue,
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       return new Response(
         JSON.stringify({ 
-          along_route: enrichSuggestions(aiSuggestions.along_route || [], clientsWithMetrics),
-          overdue: enrichSuggestions(aiSuggestions.overdue || [], clientsWithMetrics),
+          along_route: enrichedAlongRoute,
+          overdue: enrichedOverdue,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
