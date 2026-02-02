@@ -1,53 +1,63 @@
 
-# Increase Route Suggestions Radius to 10 Miles
+# Fix: "No Stops" Display Issue in Route Suggestions
 
-## Current Configuration
+## Problem Identified
 
-The `driver-route-suggestions` edge function currently uses a **5-mile radius** for finding clients near scheduled stops.
+After investigating, I found that the route suggestions feature IS working correctly:
 
-## Changes Required
+1. **The edge function successfully returns suggestions** - When called with Tuesday's route data (1 stop at Special Way Car Center), it returned 6 overdue clients within 10 miles
+2. **The "Along Route" tab is empty** - This is correct because no clients are within 2 miles of Tuesday's single stop
+3. **The "Overdue" tab HAS suggestions** - 6 clients were found but you may have only looked at the default "Along Route" tab
 
-### File: `supabase/functions/driver-route-suggestions/index.ts`
+## Root Cause
 
-| Line | Change | Before | After |
-|------|--------|--------|-------|
-| 137 | Initial search radius | `if (minDistance <= 5)` | `if (minDistance <= 10)` |
-| 151 | User message | `"within 5 miles"` | `"within 10 miles"` |
+The user experience is confusing because:
+1. The default tab ("Along Route") showed "No clients found within 2 miles" 
+2. The user didn't realize suggestions existed in the "Overdue" tab
+3. The frontend message still says "5 miles" but the backend now searches within 10 miles (inconsistent)
 
-### Code Changes
+## Proposed Fix
 
-**Line 137** - Expand the initial search filter:
+Update the frontend to improve discoverability and fix the inconsistent messaging:
+
+### File: `src/components/driver/RouteOptimizationSuggestions.tsx`
+
+| Line | Current | Change To |
+|------|---------|-----------|
+| 145 | "No additional clients found within 5 miles" | "No additional clients found within 10 miles" |
+| 41 | Default tab: `along-route` | Auto-select whichever tab has results first |
+
+### Changes:
+
+1. **Update the "no suggestions" message** to say "10 miles" to match the backend
+
+2. **Auto-select the tab with results** - If "Along Route" is empty but "Overdue" has results, default to the "Overdue" tab
+
+3. **(Optional) Add visual indicator** - Show a badge or highlight on the tab that has results
+
+### Code Change for Auto-Tab Selection:
+
 ```typescript
-// Before:
-if (minDistance <= 5) {
+// Before line 41:
+const [activeTab, setActiveTab] = useState<string>('along-route');
 
-// After:
-if (minDistance <= 10) {
+// After (add logic to auto-select):
+const defaultTab = useMemo(() => {
+  if (alongRoute.length > 0) return 'along-route';
+  if (overdue.length > 0) return 'overdue';
+  return 'along-route';
+}, [alongRoute.length, overdue.length]);
+
+useEffect(() => {
+  if (open) {
+    setActiveTab(defaultTab);
+  }
+}, [open, defaultTab]);
 ```
 
-**Lines 147-154** - Update the "no clients found" message:
-```typescript
-// Before:
-message: 'No additional clients found within 5 miles of your route'
+## Expected Result
 
-// After:
-message: 'No additional clients found within 10 miles of your route'
-```
-
-## What Stays the Same
-
-- **"Along Route" grouping threshold**: Still 2 miles (line 365) - clients within 2 miles are marked as "along route"
-- **"Overdue" threshold**: Still 30+ days since last pickup
-- **Priority logic**: High priority for < 1 mile, medium for 1-2 miles
-
-## Result
-
-After this change:
-- Drivers will see clients up to **10 miles** from any scheduled stop
-- "Along Your Route" section: Clients within **2 miles** (minimal detour)
-- All other nearby clients (2-10 miles): Still shown in suggestions
-- "Overdue Clients" section: Clients 30+ days overdue within the 10-mile radius
-
-## Deployment
-
-After modifying the edge function, it will need to be redeployed for the changes to take effect.
+After this fix:
+- If no clients are within 2 miles ("Along Route" empty) but there ARE overdue clients, the dialog will automatically show the "Overdue" tab
+- The "no suggestions" message will correctly state "10 miles" to match the backend
+- Users won't miss available suggestions
