@@ -133,8 +133,8 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Only include clients within 5 miles of any stop
-      if (minDistance <= 5) {
+      // Only include clients within 10 miles of any stop
+      if (minDistance <= 10) {
         nearbyClients.push({
           ...client,
           minDistanceFromRoute: minDistance,
@@ -148,7 +148,7 @@ Deno.serve(async (req) => {
         JSON.stringify({ 
           along_route: [],
           overdue: [],
-          message: 'No additional clients found within 5 miles of your route'
+          message: 'No additional clients found within 10 miles of your route'
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
