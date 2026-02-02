@@ -1,101 +1,53 @@
 
-# Fix: "View & Schedule" Button Access Denied for Drivers
+# Increase Route Suggestions Radius to 10 Miles
 
-## Problem
-When Brenner (driver role) clicks "View & Schedule" in the Route Optimization Suggestions dialog, he gets an "Access Denied" page because the button navigates to `/clients/{id}`, which requires admin, ops_manager, dispatcher, or sales roles.
+## Current Configuration
 
-**Console logs confirm this:**
-```
-Access denied - User roles: ["driver"] Required roles: ["admin", "ops_manager", "dispatcher", "sales"]
-```
+The `driver-route-suggestions` edge function currently uses a **5-mile radius** for finding clients near scheduled stops.
 
-## Solution
-Change the "View & Schedule" button to open the `DriverSchedulePickupDialog` with the client pre-selected, instead of navigating to the restricted client detail page.
+## Changes Required
 
----
+### File: `supabase/functions/driver-route-suggestions/index.ts`
 
-## Technical Implementation
+| Line | Change | Before | After |
+|------|--------|--------|-------|
+| 137 | Initial search radius | `if (minDistance <= 5)` | `if (minDistance <= 10)` |
+| 151 | User message | `"within 5 miles"` | `"within 10 miles"` |
 
-### File: `src/components/driver/RouteOptimizationSuggestions.tsx`
+### Code Changes
 
-**Changes needed:**
-
-1. **Import the DriverSchedulePickupDialog** (or create a quick-schedule version)
-2. **Replace the navigation** with opening a scheduling dialog pre-populated with the suggested client
-3. **Add state** to track which client should be pre-selected in the dialog
-
-**Before (line 62-65):**
-```typescript
-const handleViewClient = (clientId: string) => {
-  onOpenChange(false);
-  navigate(`/clients/${clientId}`);
-};
-```
-
-**After:**
-```typescript
-const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
-const [selectedSuggestion, setSelectedSuggestion] = useState<RouteSuggestion | null>(null);
-
-const handleScheduleClient = (suggestion: RouteSuggestion) => {
-  setSelectedSuggestion(suggestion);
-  setScheduleDialogOpen(true);
-};
-```
-
-**Button change (line 103-111):**
+**Line 137** - Expand the initial search filter:
 ```typescript
 // Before:
-<Button onClick={() => handleViewClient(suggestion.client_id)}>
-  <ExternalLink className="h-3 w-3 mr-1" />
-  View & Schedule
-</Button>
+if (minDistance <= 5) {
 
 // After:
-<Button onClick={() => handleScheduleClient(suggestion)}>
-  <Calendar className="h-3 w-3 mr-1" />
-  Quick Schedule
-</Button>
+if (minDistance <= 10) {
 ```
 
-### New Sub-Component: Quick Schedule Dialog
-
-Add a simplified inline scheduling flow within the suggestions dialog:
-- Pre-fill client name and ID
-- Show pickup date selector (default to the selected route day)
-- Basic tire count inputs
-- Submit schedules the pickup via `useDriverSchedulePickup` hook
-
----
-
-## Alternative Approach (Simpler)
-
-If adding inline scheduling is too complex, we can:
-1. Navigate to `/book` (the DriverSchedulePickup page) with query params
-2. Pre-select the client based on URL params
-
-**Example:**
+**Lines 147-154** - Update the "no clients found" message:
 ```typescript
-navigate(`/book?clientId=${suggestion.client_id}`);
+// Before:
+message: 'No additional clients found within 5 miles of your route'
+
+// After:
+message: 'No additional clients found within 10 miles of your route'
 ```
 
-Then update `DriverSchedulePickup.tsx` to read the `clientId` param and pre-select that client in the dialog.
+## What Stays the Same
 
----
+- **"Along Route" grouping threshold**: Still 2 miles (line 365) - clients within 2 miles are marked as "along route"
+- **"Overdue" threshold**: Still 30+ days since last pickup
+- **Priority logic**: High priority for < 1 mile, medium for 1-2 miles
 
-## Files to Modify
+## Result
 
-| File | Change |
-|------|--------|
-| `src/components/driver/RouteOptimizationSuggestions.tsx` | Replace navigation with driver-friendly scheduling flow |
-| `src/components/driver/DriverSchedulePickupDialog.tsx` | (Optional) Accept `preSelectedClientId` prop for pre-fill |
-| `src/pages/DriverSchedulePickup.tsx` | (Optional) Read clientId from URL params |
+After this change:
+- Drivers will see clients up to **10 miles** from any scheduled stop
+- "Along Your Route" section: Clients within **2 miles** (minimal detour)
+- All other nearby clients (2-10 miles): Still shown in suggestions
+- "Overdue Clients" section: Clients 30+ days overdue within the 10-mile radius
 
----
+## Deployment
 
-## Benefits
-
-1. **No Access Denied**: Drivers stay within their permitted routes
-2. **Faster Workflow**: Schedule directly from suggestions without extra navigation
-3. **Consistent UX**: Uses existing driver scheduling flow
-4. **Pre-filled Data**: Client and date are already known from the suggestion context
+After modifying the edge function, it will need to be redeployed for the changes to take effect.
