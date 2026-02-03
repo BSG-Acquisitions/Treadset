@@ -23,7 +23,7 @@ export default function ClientAnalytics() {
                   Client Analytics Dashboard
                 </h1>
                 <p className="text-muted-foreground mt-2 text-sm sm:text-base lg:text-lg">
-                  Comprehensive insights into your 2025 tire recycling operations and client performance
+                  Comprehensive insights into your tire recycling operations and client performance
                 </p>
               </div>
             </div>
