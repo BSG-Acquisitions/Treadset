@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Package, Plus, ArrowDownToLine, ArrowUpFromLine, RefreshCw, History, Boxes, BarChart3 } from 'lucide-react';
+import { Package, Plus, ArrowDownToLine, ArrowUpFromLine, RefreshCw, History, Boxes, BarChart3, Scale } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +12,8 @@ import { PRODUCT_CATEGORIES } from '@/hooks/useInventoryProducts';
 import { TransactionDialog } from '@/components/inventory/TransactionDialog';
 import { TransactionsList } from '@/components/inventory/TransactionsList';
 import { StockLevelIndicator } from '@/components/inventory/StockLevelIndicator';
+import { RawMaterialCard } from '@/components/inventory/RawMaterialCard';
+import { ProjectionsTab } from '@/components/inventory/ProjectionsTab';
 
 export default function Inventory() {
   const { data: stockLevels, isLoading } = useInventoryStock();
@@ -38,7 +40,7 @@ export default function Inventory() {
       />
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -72,6 +74,7 @@ export default function Inventory() {
             <div className="text-2xl font-bold text-destructive">{stats.outOfStockProducts}</div>
           </CardContent>
         </Card>
+        <RawMaterialCard />
         <Card className="bg-primary/5 border-primary/20">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Quick Actions</CardTitle>
@@ -119,6 +122,10 @@ export default function Inventory() {
           <TabsTrigger value="transactions" className="gap-2">
             <History className="h-4 w-4" />
             Transaction History
+          </TabsTrigger>
+          <TabsTrigger value="projections" className="gap-2">
+            <Scale className="h-4 w-4" />
+            Raw Material Projections
           </TabsTrigger>
         </TabsList>
 
@@ -244,6 +251,10 @@ export default function Inventory() {
             </div>
           </div>
           <TransactionsList limit={100} />
+        </TabsContent>
+
+        <TabsContent value="projections" className="space-y-4">
+          <ProjectionsTab />
         </TabsContent>
       </Tabs>
 
