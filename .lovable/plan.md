@@ -1,40 +1,44 @@
 
+# Fix Raw Material Projections Update + Add Rubber Mulch Conversion
 
-# Clear Test Inventory Data
+## Problem Identified
 
-## What Will Be Removed
+The Raw Materials tile still shows 930.44 tons because the React Query cache is not being invalidated when products and transactions are deleted. The hook has a 5-minute stale time, so it's showing old cached data even though the database is now empty.
 
-### All Transactions (8 records)
-All inventory transactions you created for testing will be deleted:
-- 1" Shred: 150 + 50 + 23 - 25 = 198 tons (4 transactions)
-- Black Rubber Mulch: 15 cubic yards (1 transaction)
-- Red Rubber Mulch: 10 cubic yards (1 transaction)
-- Brown Rubber Mulch: 10 cubic yards (2 transactions)
+## What Will Be Fixed
 
-### All Products (4 records)
-All test products will be removed from the catalog:
-- 1" Shred
-- Black Rubber Mulch
-- Red Rubber Mulch
-- Brown Rubber Mulch
+### 1. Cache Invalidation
 
-## After Cleanup
+When products or transactions are deleted/created/updated, the `raw-material-projections` query needs to be invalidated so it refetches fresh data.
 
-Once cleared:
-- **Raw Material Projections** will show only the tire intake data (manifests + dropoffs)
-- **Stock Levels** tab will be empty until you add real products
-- **Transaction History** will be empty until you record real production/sales
-- The 930.44 tons raw material figure will update to reflect **only** tire intake minus zero processed products
+| Hook | Change |
+|------|--------|
+| `useDeleteInventoryProduct` | Add invalidation of `raw-material-projections` |
+| `useCreateInventoryProduct` | Add invalidation of `raw-material-projections` |
+| `useCreateInventoryTransaction` | Add invalidation of `raw-material-projections` |
+| `useDeleteInventoryTransaction` | Add invalidation of `raw-material-projections` |
 
-## Implementation
+### 2. Rubber Mulch Conversion
 
-I'll delete the data in the correct order (transactions first, then products) to respect foreign key constraints.
+You provided valuable conversion data:
+- **1,000 lbs = 1.2 cubic yards** for rubber mulch
+- This means: **1 cubic yard ≈ 833.33 lbs ≈ 0.417 tons**
 
-## Ready for Fresh Start
+I'll update the conversion logic to use the correct rubber mulch conversion factor instead of the generic 0.25 tons/cubic yard.
 
-After this cleanup, you can:
-1. Add your real product catalog (your actual shred sizes, mulch colors, TDA grades, etc.)
-2. Start recording actual production runs as inbound transactions
-3. Record real sales as outbound transactions
-4. Get accurate projections based on real data
+## Files to Modify
 
+| File | Change |
+|------|--------|
+| `src/hooks/useInventoryProducts.ts` | Add `raw-material-projections` invalidation on create/delete |
+| `src/hooks/useInventoryTransactions.ts` | Add `raw-material-projections` invalidation on create/delete |
+| `src/hooks/useRawMaterialProjections.ts` | Update cubic yard conversion to use 0.417 tons/CY for mulch |
+| `src/lib/michigan-conversions.ts` | Add rubber mulch conversion constant |
+
+## After This Fix
+
+Once implemented:
+- Deleting products/transactions will immediately update the Raw Materials tile
+- The raw material weight will now correctly show only tire intake (with zero processed)
+- Future cubic yard calculations for mulch will use the accurate 1,000 lbs = 1.2 CY conversion
+- All projections will stay in sync with inventory changes
