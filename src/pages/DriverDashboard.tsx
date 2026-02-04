@@ -17,15 +17,18 @@ import {
   Plus,
   Eye,
   Navigation,
-  Package
+  Package,
+  ArrowUpRight
 } from 'lucide-react';
 import { useManifests } from '@/hooks/useManifests';
 import { useDriverAssignments } from '@/hooks/useDriverAssignments';
 import { useAuth } from '@/contexts/AuthContext';
+import { useHasOutboundHaulerCapability } from '@/hooks/useDriverCapabilities';
 import { format } from 'date-fns';
 
 export default function DriverDashboard() {
   const { user } = useAuth();
+  const { hasOutboundHauler } = useHasOutboundHaulerCapability();
   
   const { data: manifests = [], isLoading: manifestsLoading } = useManifests(undefined, user?.id);
   
@@ -141,6 +144,15 @@ export default function DriverDashboard() {
                   <span>New Manifest</span>
                 </Link>
               </Button>
+              
+              {hasOutboundHauler && (
+                <Button asChild variant="outline" className="h-20 flex-col gap-2 border-primary/50 bg-primary/5">
+                  <Link to="/driver/outbound/new">
+                    <ArrowUpRight className="h-6 w-6" />
+                    <span>Outbound Manifest</span>
+                  </Link>
+                </Button>
+              )}
               
               <Button asChild variant="outline" className="h-20 flex-col gap-2">
                 <Link to="/driver/manifests">

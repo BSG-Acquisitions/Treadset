@@ -54,6 +54,8 @@ import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCancelled from "./pages/PaymentCancelled";
 import DriverPaymentSuccess from "./pages/driver/PaymentSuccess";
 import DriverPaymentCancelled from "./pages/driver/PaymentCancelled";
+import DriverOutboundCreate from "./pages/driver/DriverOutboundCreate";
+import DriverOutboundManifests from "./pages/driver/DriverOutboundManifests";
 import Manifests from "./pages/Manifests";
 import BackfillManifestPdfs from "./pages/BackfillManifestPdfs";
 import DeploymentDashboard from "./pages/DeploymentDashboard";
@@ -306,6 +308,20 @@ const App = () => (
               <Route path="/driver/payment-cancelled" element={
                 <ProtectedRoute roles={['driver', 'admin']}>
                   <DriverPaymentCancelled />
+                </ProtectedRoute>
+              } />
+              <Route path="/driver/outbound/new" element={
+                <ProtectedRoute roles={['driver', 'admin']}>
+                  <AppLayout>
+                    <DriverOutboundCreate />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/driver/outbound" element={
+                <ProtectedRoute roles={['driver', 'admin']}>
+                  <AppLayout>
+                    <DriverOutboundManifests />
+                  </AppLayout>
                 </ProtectedRoute>
               } />
               <Route path="/receiver-signatures" element={

@@ -66,6 +66,14 @@ export const useHasSemiHaulerCapability = () => {
   return { hasSemiHauler, isLoading };
 };
 
+export const useHasOutboundHaulerCapability = () => {
+  const { data: capabilities, isLoading } = useCurrentUserCapabilities();
+  
+  const hasOutboundHauler = capabilities?.some(c => c.capability === 'outbound_hauler') ?? false;
+  
+  return { hasOutboundHauler, isLoading };
+};
+
 export const useSemiHaulerDrivers = () => {
   const { user } = useAuth();
   const orgId = user?.currentOrganization?.id;
