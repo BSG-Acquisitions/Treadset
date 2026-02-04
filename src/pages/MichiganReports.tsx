@@ -16,17 +16,21 @@ import {
   Home,
   Recycle,
   Building2,
-  MapPin
+  MapPin,
+  Truck
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useMichiganReport, useExportMichiganReport, useSubmitMichiganReport } from "@/hooks/useMichiganReporting";
+import { useOutboundSummary } from "@/hooks/useShipments";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatNumber } from "@/lib/formatters";
 import { MichiganSystemStatus } from "@/components/diagnostics/MichiganSystemStatus";
+import { OutboundTab } from "@/components/reports/OutboundTab";
 
 const MichiganReports = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const { data: reportData, isLoading, error } = useMichiganReport(selectedYear);
+  const { data: outboundSummary } = useOutboundSummary(selectedYear);
   const exportReport = useExportMichiganReport();
   const submitReport = useSubmitMichiganReport();
 
@@ -131,10 +135,10 @@ const MichiganReports = () => {
       </div>
 
       {/* Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total PTEs</CardTitle>
+            <CardTitle className="text-sm font-medium">Total PTEs In</CardTitle>
             <Recycle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -147,13 +151,26 @@ const MichiganReports = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Tons</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Tons In</CardTitle>
             <Scale className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatNumber(reportData?.totalTons || 0, { maximumFractionDigits: 2 })}</div>
             <p className="text-xs text-muted-foreground">
               MI Rule: 89 PTE = 1 ton
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Tons Out</CardTitle>
+            <Truck className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">{formatNumber(outboundSummary?.totalTons || 0, { maximumFractionDigits: 2 })}</div>
+            <p className="text-xs text-muted-foreground">
+              Outbound shipments
             </p>
           </CardContent>
         </Card>
@@ -211,10 +228,11 @@ const MichiganReports = () => {
 
       {/* Report Tabs */}
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="inbound">Inbound</TabsTrigger>
-          <TabsTrigger value="destinations">Destinations</TabsTrigger>
+          <TabsTrigger value="outbound">Outbound</TabsTrigger>
+          <TabsTrigger value="destinations">Counties</TabsTrigger>
           <TabsTrigger value="processing">Processing</TabsTrigger>
           <TabsTrigger value="sites">Sites</TabsTrigger>
           <TabsTrigger value="totals">MI Totals</TabsTrigger>
@@ -294,6 +312,10 @@ const MichiganReports = () => {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="outbound">
+          <OutboundTab year={selectedYear} />
         </TabsContent>
 
         <TabsContent value="destinations">
