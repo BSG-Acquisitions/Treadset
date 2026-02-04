@@ -121,11 +121,9 @@ export function AppSidebar() {
     administration: [
       { id: 'settings', label: 'Settings', icon: Settings, path: '/settings', roles: ['admin', 'ops_manager'] as const },
       { id: 'intelligence', label: 'Intelligence', icon: Brain, path: '/intelligence', roles: ['admin', 'ops_manager'] as const },
-      { id: 'data-quality', label: 'Data Quality', icon: AlertTriangle, path: '/data-quality', roles: ['admin'] as const },
       { id: 'integrations', label: 'Integrations', icon: CreditCard, path: '/integrations', roles: ['admin'] as const },
       { id: 'signatures', label: 'Signatures', icon: PenTool, path: '/receiver-signatures', roles: ['admin', 'ops_manager'] as const },
       { id: 'receivers', label: 'Receivers', icon: Building, path: '/receivers', roles: ['admin', 'ops_manager'] as const },
-      { id: 'deployment', label: 'Deployment', icon: Rocket, path: '/deployment', roles: ['admin'] as const },
     ],
   };
 
@@ -164,12 +162,10 @@ export function AppSidebar() {
 
   const adminItems = [
     { id: 'settings', label: 'Settings', icon: Settings, path: '/settings', roles: ['admin', 'ops_manager'] as const },
-    { id: 'data-quality', label: 'Data Quality', icon: AlertTriangle, path: '/data-quality', roles: ['admin'] as const },
     { id: 'integrations', label: 'Integrations', icon: CreditCard, path: '/integrations', roles: ['admin'] as const },
     { id: 'signatures', label: 'Signatures', icon: PenTool, path: '/receiver-signatures', roles: ['admin', 'ops_manager'] as const },
     { id: 'receivers', label: 'Receivers', icon: Building, path: '/receivers', roles: ['admin', 'ops_manager'] as const },
     { id: 'sandbox', label: 'Sandbox Testing', icon: TestTube, path: '/sandbox', roles: ['admin'] as const },
-    { id: 'deployment', label: 'Deployment', icon: Rocket, path: '/deployment', roles: ['admin'] as const },
   ];
 
   // Super admin (creator) sees everything - no other user has this privilege

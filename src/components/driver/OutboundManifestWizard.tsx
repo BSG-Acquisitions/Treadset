@@ -26,6 +26,7 @@ import { useDestinationEntities, useOwnEntity } from '@/hooks/useEntities';
 import { useCreateOutboundManifest, useUpdateOutboundManifestSignatures } from '@/hooks/useOutboundManifests';
 import { useCompleteOutboundDelivery } from '@/hooks/useOutboundAssignments';
 import { useManifestIntegration } from '@/hooks/useManifestIntegration';
+import { useCreateShipmentFromManifest } from '@/hooks/useCreateShipmentFromManifest';
 import { convertToTons, pteToTons } from '@/lib/michigan-conversions';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Database } from '@/integrations/supabase/types';
@@ -78,6 +79,7 @@ export const OutboundManifestWizard: React.FC<OutboundManifestWizardProps> = ({
   const updateSignatures = useUpdateOutboundManifestSignatures();
   const manifestIntegration = useManifestIntegration();
   const completeDelivery = useCompleteOutboundDelivery();
+  const createShipment = useCreateShipmentFromManifest();
 
   // Form state
   const [data, setData] = useState({
@@ -330,6 +332,23 @@ export const OutboundManifestWizard: React.FC<OutboundManifestWizardProps> = ({
           assignmentId,
           manifestId: manifest.id,
         });
+      }
+
+      // Auto-create shipment record for Michigan Reports outbound tracking
+      try {
+        await createShipment.mutateAsync({
+          manifestId: manifest.id,
+          originEntityId: ownEntity.id,
+          destinationEntityId: data.destinationId,
+          materialForm: data.materialForm,
+          quantityPte: pte,
+          departedAt: new Date().toISOString(),
+          arrivedAt: new Date().toISOString(),
+        });
+        console.log('Shipment record created for outbound manifest:', manifest.id);
+      } catch (shipmentError) {
+        // Don't fail the manifest creation if shipment fails
+        console.error('Failed to create shipment record:', shipmentError);
       }
 
       setCreatedManifestId(manifest.id);
