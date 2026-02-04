@@ -1,8 +1,10 @@
 import { useMemo } from 'react';
 import { format } from 'date-fns';
-import { Scale, TrendingUp, TrendingDown, Clock, Truck, ArrowDownToLine, Factory, AlertTriangle } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Scale, TrendingUp, TrendingDown, Clock, Truck, ArrowDownToLine, Factory, AlertTriangle, ArrowUpFromLine } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRawMaterialProjections } from '@/hooks/useRawMaterialProjections';
@@ -351,6 +353,29 @@ export function ProjectionsTab() {
       
       {/* Historical Intake Averages */}
       <HistoricalIntakeCard />
+      
+      {/* Outbound Shipments Link */}
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent className="py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-start gap-3">
+              <ArrowUpFromLine className="h-5 w-5 text-primary mt-0.5" />
+              <div>
+                <h4 className="font-semibold">Track Outbound Material</h4>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Record outbound shipments to complete your material flow tracking for state compliance.
+                </p>
+              </div>
+            </div>
+            <Button asChild>
+              <Link to="/shipments">
+                <Truck className="h-4 w-4 mr-2" />
+                View Shipments
+              </Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

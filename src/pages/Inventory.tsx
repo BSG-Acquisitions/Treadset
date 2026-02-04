@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Package, Plus, ArrowDownToLine, ArrowUpFromLine, RefreshCw, History, Boxes, BarChart3, Scale } from 'lucide-react';
+import { Package, Plus, ArrowDownToLine, ArrowUpFromLine, RefreshCw, History, Boxes, BarChart3, Scale, Truck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -106,6 +106,17 @@ export default function Inventory() {
               <Link to="/inventory/reports">
                 <BarChart3 className="h-3 w-3" />
                 Reports
+              </Link>
+            </Button>
+            <Button 
+              asChild
+              size="sm" 
+              variant="secondary"
+              className="gap-1"
+            >
+              <Link to="/shipments">
+                <Truck className="h-3 w-3" />
+                Shipments
               </Link>
             </Button>
           </CardContent>
