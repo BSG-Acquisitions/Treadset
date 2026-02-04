@@ -1,143 +1,107 @@
 
-# Comprehensive Bidirectional Unit Conversion System for State Compliance Reporting
+# Historical Intake Averages for Production Capacity Planning
 
-## Problem Statement
+## The Business Need
 
-State compliance requires reporting **all material movement in weight (tons)**. Currently:
-- Rubber mulch is sold by cubic yards but must be reported in tons
-- Shred may be tracked in cubic yards or tons
-- The system only has forward conversions (CY → tons) but not reverse
-- End-of-year reports need to aggregate everything into tonnage regardless of how it was originally measured
+You need to know your average monthly intake capacity to confidently commit to buyer orders. For example:
+- Buyer wants 100-200 tons of shredded material per month
+- You need to know: "On average, how much raw material am I bringing in?"
+- This helps you determine if you can fulfill that order consistently
+
+## Your Historical Data (What I Found)
+
+Based on your database, here's your intake by month:
+
+| Month | Manifests | Dropoffs | Total PTE | Approx Tons |
+|-------|-----------|----------|-----------|-------------|
+| Feb 2026 | 7 loads | 2 | 3,652 PTE | ~41 tons |
+| Jan 2026 | 116 loads | 21 | 25,704 PTE | ~289 tons |
+| Dec 2025 | 146 loads | 43 | 46,826 PTE | ~526 tons |
+| Nov 2025 | 99 loads | 26 | 20,793 PTE | ~234 tons |
+| Oct 2025 | 23 loads | 9 | 6,111 PTE | ~69 tons |
+| Sep 2025 | 2 loads | 1 | 192 PTE | ~2 tons |
+
+**3-Month Average (Nov-Jan):** ~350 tons/month
+**6-Month Average:** ~193 tons/month (includes ramp-up months)
 
 ## What Will Be Built
 
-### 1. Complete Bidirectional Conversion Library
+### 1. Historical Averages Section in Projections Tab
 
-A centralized conversion utility that handles ALL unit conversions for processed tire products:
+A new card showing:
+- **3-Month Rolling Average** (most relevant for capacity planning)
+- **6-Month Rolling Average** (longer trend view)
+- **Monthly breakdown bar chart** (visual history)
+- **Capacity indicator**: "Can you fulfill X tons/month?"
 
-| From | To | Conversion Factor |
-|------|-----|-------------------|
-| **Rubber Mulch (your data)** | | |
-| cubic_yards | tons | 0.41667 (1,000 lbs / 1.2 CY / 2,000) |
-| cubic_yards | lbs | 833.33 |
-| tons | cubic_yards | 2.4 (1 ton = 1.2 CY × 2) |
-| tons | lbs | 2,000 |
-| lbs | cubic_yards | 0.0012 (1.2 / 1,000) |
-| lbs | tons | 0.0005 (1 / 2,000) |
-| **Raw Tires (Michigan rule)** | | |
-| PTE | tons | 0.01124 (1 / 89) |
-| tons | PTE | 89 |
-| PTE | cubic_yards | 0.1 |
-| cubic_yards | PTE | 10 |
+### 2. Capacity Planning Helper
 
-### 2. Material-Aware Conversion Function
+Simple visualization showing:
+- Your average intake vs a target order size
+- Color-coded indicator (green = safe, yellow = tight, red = insufficient)
 
-Different materials have different densities. The system will support:
-
-| Material Category | Density (lbs/CY) | Tons/CY |
-|-------------------|-----------------|---------|
-| Rubber Mulch | 833.33 | 0.417 |
-| Shred (1-2") | ~500-600 | ~0.25-0.30 |
-| Crumb Rubber | ~800-900 | ~0.40-0.45 |
-| TDA (3-12") | ~400-500 | ~0.20-0.25 |
-
-Default to rubber mulch density unless specified.
-
-### 3. Updated Conversion Kernel (Edge Function)
-
-Add all bidirectional conversions for processed materials:
+## UI Preview
 
 ```text
-New Conversion Paths:
-- tons_to_cubic_yards (rubber mulch)
-- tons_to_lbs
-- lbs_to_tons
-- lbs_to_cubic_yards
-- cubic_yards_to_lbs
-```
-
-### 4. Helper Functions for Reporting
-
-Easy-to-use functions for state reporting:
-
-```
-convertToTons(quantity, fromUnit, materialType?) → tons
-convertFromTons(tons, toUnit, materialType?) → quantity
-getAnnualTonnage(transactions[]) → total tons for reporting
+┌─────────────────────────────────────────────────────────────┐
+│ Historical Intake Averages                                  │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
+│  │ 3-Month Avg │  │ 6-Month Avg │  │ Peak Month  │         │
+│  │  350 tons   │  │  193 tons   │  │  526 tons   │         │
+│  │   /month    │  │   /month    │  │  (Dec 2025) │         │
+│  └─────────────┘  └─────────────┘  └─────────────┘         │
+│                                                             │
+│  Monthly Intake Trend                                       │
+│  ────────────────────                                       │
+│  Dec ████████████████████████ 526t                         │
+│  Jan ████████████████ 289t                                 │
+│  Nov ████████████ 234t                                     │
+│  Oct ████ 69t                                              │
+│  Feb ██ 41t (partial)                                      │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/lib/michigan-conversions.ts` | Add bidirectional conversion functions, material density constants |
-| `supabase/functions/conversion-kernel/index.ts` | Add reverse conversions (tons→CY, lbs→tons, etc.) |
-| `src/hooks/useRawMaterialProjections.ts` | Use centralized conversion functions |
-| `src/hooks/useMichiganReporting.ts` | Import from centralized conversion lib |
+| `src/hooks/useRawMaterialProjections.ts` | Add new hook or extend to fetch multi-month historical data |
+| `src/components/inventory/ProjectionsTab.tsx` | Add Historical Averages card with monthly bar chart |
 
-## Technical Details
+## Technical Approach
 
-### New Constants (michigan-conversions.ts)
+### New Hook: `useHistoricalIntakeAverages`
 
 ```typescript
-// Processed material densities (lbs per cubic yard)
-MATERIAL_DENSITIES: {
-  rubber_mulch: 833.33,   // 1,000 lbs = 1.2 CY
-  shred_1_inch: 550,      // ~1,100 lbs = 1 CY (denser)
-  shred_2_inch: 500,      // ~1,000 lbs = 1 CY
-  tda: 450,               // lighter, more air pockets
-  crumb: 850,             // fine particles, denser
-  default: 833.33         // use rubber mulch as default
+// Returns:
+{
+  monthlyData: Array<{
+    month: Date;
+    manifests: { count: number; pte: number; tons: number };
+    dropoffs: { count: number; pte: number; tons: number };
+    totalPTE: number;
+    totalTons: number;
+  }>;
+  threeMonthAvgTons: number;
+  sixMonthAvgTons: number;
+  peakMonth: { month: Date; tons: number };
+  averageLoadsPerMonth: number;
 }
-
-// Bidirectional conversion functions
-cubicYardsToTons(cy, material?)
-tonsToCubicYards(tons, material?)
-lbsToTons(lbs)
-tonsToLbs(tons)
-cubicYardsToLbs(cy, material?)
-lbsToCubicYards(lbs, material?)
 ```
 
-### Conversion Kernel Updates
+### UI Components
 
-```typescript
-// Add reverse conversions
-'tons_to_cubic_yards_mulch': 2.4,     // 1 ton = 2.4 CY rubber mulch
-'tons_to_lbs': 2000,
-'lbs_to_tons': 0.0005,
-'lbs_to_cubic_yards_mulch': 0.0012,
-'cubic_yards_to_lbs_mulch': 833.33,
-```
-
-## Compliance Reporting Flow
-
-```text
-                        ┌──────────────────────┐
-                        │   Inventory Record   │
-                        │   (any unit)         │
-                        └──────────┬───────────┘
-                                   │
-                    ┌──────────────┴──────────────┐
-                    ▼                              ▼
-            ┌───────────────┐              ┌───────────────┐
-            │ Cubic Yards   │              │ Tons/Lbs      │
-            │ (sales unit)  │              │ (weight unit) │
-            └───────┬───────┘              └───────┬───────┘
-                    │                              │
-                    │   convertToTons()            │
-                    └──────────────┬───────────────┘
-                                   ▼
-                        ┌──────────────────────┐
-                        │   State Report       │
-                        │   (always in TONS)   │
-                        └──────────────────────┘
-```
+1. **Summary Cards Row**: 3-month avg, 6-month avg, peak month
+2. **Bar Chart**: Monthly intake over time (using existing Recharts)
+3. **Trend Indicator**: Are you trending up or down vs historical average?
 
 ## After Implementation
 
-- **All inventory** can be tracked in any unit (CY, tons, lbs)
-- **State reports** automatically aggregate everything to tonnage
-- **Accurate compliance**: The state gets precise weight data regardless of sales unit
-- **Flexible product tracking**: Sell mulch by the yard, report by the ton
-- **Future-proof**: Easy to add new material densities as needed
+You'll be able to:
+- See at a glance your average monthly intake (~350 tons based on recent data)
+- Confidently tell a buyer: "Yes, I can fulfill 100-200 tons/month"
+- Identify seasonal patterns (e.g., December was your highest month)
+- Track whether your capacity is growing or shrinking over time
