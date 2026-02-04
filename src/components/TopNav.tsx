@@ -1,8 +1,6 @@
-import { useState } from 'react';
-import { Search, Bell, Menu, User, Settings, Package, BarChart3, UserCheck, Home, Users, MapPin, DollarSign, CreditCard, PenTool, Truck, Building, FileText, PackageOpen, Container, CalendarCheck, Map, Brain, Boxes } from 'lucide-react';
+import { Search, Bell, Menu, User, Settings, Package, BarChart3, UserCheck, Home, Users, MapPin, DollarSign, CreditCard, PenTool, Truck, Building, FileText, PackageOpen, Container, CalendarCheck, Map, Brain, Boxes, ChevronDown, MoreHorizontal, Shield, Wrench, Database, Send } from 'lucide-react';
 import { FEATURE_FLAGS } from '@/lib/featureFlags';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,7 +16,6 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { Link, useLocation } from 'react-router-dom';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { TreadSetLogo } from '@/components/TreadSetLogo';
 import { OrganizationSwitcher } from '@/components/auth/OrganizationSwitcher';
@@ -28,7 +25,6 @@ import { useManifestReminders } from '@/hooks/useManifestReminders';
 import { usePendingBookingCount } from '@/hooks/useBookingRequests';
 import { ViewerModeBadge } from '@/components/ViewerModeBadge';
 
-import { formatDistanceToNow } from 'date-fns';
 import { LiveSearch } from '@/components/LiveSearch';
 import { EnhancedNotificationCenter } from '@/components/notifications/EnhancedNotificationCenter';
 
@@ -42,35 +38,34 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
   const location = useLocation();
   const { unreadCount } = useEnhancedNotifications();
   const { data: pendingBookingCount } = usePendingBookingCount();
-  useContextualNotifications(); // Enable background checks
-  useManifestReminders(); // Enable manifest reminder checks
-  
+  useContextualNotifications();
+  useManifestReminders();
 
-  const getCurrentTab = () => {
+  // Determine which dropdown/tab is active
+  const getActiveSection = () => {
     if (location.pathname === '/dashboard') return 'dashboard';
     if (location.pathname.startsWith('/clients')) return 'clients';
-    if (location.pathname.startsWith('/routes')) return 'routes';
-    if (location.pathname.startsWith('/inventory')) return 'inventory';
+    if (location.pathname.startsWith('/routes') || location.pathname === '/outbound-schedule') return 'routes';
+    if (location.pathname.startsWith('/inventory') || location.pathname === '/shipments') return 'inventory';
     if (location.pathname.startsWith('/trailers')) return 'trailers';
-    if (location.pathname === '/haulers') return 'haulers';
-    if (location.pathname === '/analytics') return 'analytics';
-    if (location.pathname === '/reports') return 'reports';
-    if (location.pathname === '/dropoffs') return 'dropoffs';
+    if (location.pathname === '/analytics' || location.pathname === '/reports' || location.pathname === '/michigan-reports') return 'reports';
+    // More section items
+    if (['/dropoffs', '/employees', '/haulers', '/receivers', '/data-quality', '/intelligence', '/integrations', '/settings', '/deployment', '/receiver-signatures', '/manifests'].includes(location.pathname)) return 'more';
     return 'dashboard';
   };
 
-  const navigationTabs = [
-    { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/dashboard', roles: [] as const, featureFlag: null },
-    { id: 'clients', label: 'Clients', icon: Users, path: '/clients', roles: ['admin', 'ops_manager', 'sales', 'viewer'] as const, featureFlag: null },
-    { id: 'routes', label: 'Routes', icon: MapPin, path: '/routes/today', roles: ['admin', 'ops_manager', 'dispatcher', 'viewer'] as const, featureFlag: null },
-    { id: 'inventory', label: 'Inventory', icon: Boxes, path: '/inventory', roles: ['admin', 'ops_manager', 'dispatcher', 'viewer'] as const, featureFlag: 'INVENTORY' as const },
-    { id: 'trailers', label: 'Trailers', icon: Container, path: '/trailers/inventory', roles: ['admin', 'ops_manager', 'dispatcher', 'viewer'] as const, featureFlag: 'TRAILERS' as const },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics', roles: ['admin', 'ops_manager', 'viewer'] as const, featureFlag: null },
-    { id: 'reports', label: 'Reports', icon: FileText, path: '/reports', roles: ['admin', 'ops_manager', 'viewer'] as const, featureFlag: null },
-    { id: 'dropoffs', label: 'Drop-offs', icon: PackageOpen, path: '/dropoffs', roles: ['admin', 'ops_manager', 'sales', 'viewer'] as const, featureFlag: null },
-  ];
+  const activeSection = getActiveSection();
 
+  // Common styles for nav items
+  const navItemClass = (isActive: boolean) => 
+    `flex items-center justify-center gap-1 sm:gap-2 h-10 sm:h-12 px-2 sm:px-3 lg:px-4 cursor-pointer border-b-2 transition-colors text-xs sm:text-sm ${
+      isActive 
+        ? 'bg-brand-primary/10 text-brand-primary border-brand-primary font-medium' 
+        : 'border-transparent hover:bg-muted/50 text-muted-foreground hover:text-foreground'
+    }`;
 
+  const dropdownItemClass = (isActive: boolean) =>
+    `flex items-center gap-2 ${isActive ? 'bg-accent' : ''}`;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60 shadow-elevation-md">
@@ -129,8 +124,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
             </PopoverContent>
           </Popover>
 
-
-          {/* User menu */}
+          {/* User menu - Streamlined to personal/account items only */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="relative">
@@ -148,49 +142,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                 </p>
               </div>
               <DropdownMenuSeparator />
-              {/* Most frequently used - top */}
-              {hasAnyRole(['admin', 'ops_manager', 'viewer']) && (
-                <DropdownMenuItem asChild>
-                  <Link to="/receiver-signatures" className="flex items-center gap-2">
-                    <PenTool className="h-4 w-4" />
-                    Receiver Signatures
-                  </Link>
-                </DropdownMenuItem>
-              )}
-              {hasAnyRole(['admin', 'ops_manager', 'dispatcher', 'viewer']) && (
-                <DropdownMenuItem asChild>
-                  <Link to="/manifests" className="flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    Manifests
-                  </Link>
-                </DropdownMenuItem>
-              )}
-              {hasAnyRole(['admin','ops_manager', 'viewer']) && (
-                <DropdownMenuItem asChild>
-                  <Link to="/settings" className="flex items-center gap-2">
-                    <Settings className="h-4 w-4" />
-                    Settings
-                  </Link>
-                </DropdownMenuItem>
-              )}
-              {/* Occasional use - middle */}
-              {hasAnyRole(['admin', 'viewer']) && (
-                <DropdownMenuItem asChild>
-                  <Link to="/employees" className="flex items-center gap-2">
-                    <UserCheck className="h-4 w-4" />
-                    Employees
-                  </Link>
-                </DropdownMenuItem>
-              )}
-              {hasAnyRole(['admin', 'viewer']) && (
-                <DropdownMenuItem asChild>
-                  <Link to="/integrations" className="flex items-center gap-2">
-                    <CreditCard className="h-4 w-4" />
-                    Integrations
-                  </Link>
-                </DropdownMenuItem>
-              )}
-              {/* Booking Management */}
+              {/* Booking Requests with badge - important action */}
               {hasAnyRole(['admin', 'ops_manager', 'viewer']) && (
                 <DropdownMenuItem asChild>
                   <Link to="/booking-requests" className="flex items-center gap-2">
@@ -212,31 +164,6 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                   </Link>
                 </DropdownMenuItem>
               )}
-              {hasAnyRole(['admin', 'ops_manager', 'viewer']) && (
-                <DropdownMenuItem asChild>
-                  <Link to="/intelligence" className="flex items-center gap-2">
-                    <Brain className="h-4 w-4" />
-                    Intelligence
-                  </Link>
-                </DropdownMenuItem>
-              )}
-              {/* Rarely used - bottom */}
-              {hasAnyRole(['admin', 'ops_manager', 'viewer']) && (
-                <DropdownMenuItem asChild>
-                  <Link to="/haulers" className="flex items-center gap-2">
-                    <Truck className="h-4 w-4" />
-                    Haulers
-                  </Link>
-                </DropdownMenuItem>
-              )}
-              {hasAnyRole(['admin', 'ops_manager', 'viewer']) && (
-                <DropdownMenuItem asChild>
-                  <Link to="/receivers" className="flex items-center gap-2">
-                    <Building className="h-4 w-4" />
-                    Receivers
-                  </Link>
-                </DropdownMenuItem>
-              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem 
                 onClick={signOut}
@@ -250,83 +177,276 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
       </div>
       
       {/* Navigation Tabs - Only shown on desktop xl+ screens */}
-      <div className="hidden xl:block border-t border-border/20 bg-card/50 overflow-x-auto">
+      <div className="hidden xl:block border-t border-border/20 bg-card/50">
         <div className="px-3 sm:px-6">
-          <Tabs value={getCurrentTab()} className="w-full">
-            <TabsList className="grid w-full bg-transparent h-auto p-0 overflow-x-auto" style={{ gridTemplateColumns: `repeat(${navigationTabs.filter(tab => (tab.roles.length === 0 || hasAnyRole([...tab.roles])) && (!tab.featureFlag || FEATURE_FLAGS[tab.featureFlag])).length}, minmax(0, 1fr))` }}>
-              {navigationTabs
-                .filter(tab => (tab.roles.length === 0 || hasAnyRole([...tab.roles])) && (!tab.featureFlag || FEATURE_FLAGS[tab.featureFlag]))
-                .map((tab) => {
-                  const Icon = tab.icon;
-                  
-                  // Special handling for Trailers tab - show dropdown
-                  if (tab.id === 'trailers') {
-                    return (
-                      <DropdownMenu key={tab.id}>
-                        <DropdownMenuTrigger asChild>
-                          <div 
-                            className={`flex items-center justify-center gap-1 sm:gap-2 h-10 sm:h-12 px-1 sm:px-2 lg:px-4 cursor-pointer border-b-2 transition-colors ${
-                              getCurrentTab() === 'trailers' 
-                                ? 'bg-brand-primary/10 text-brand-primary border-brand-primary' 
-                                : 'border-transparent hover:bg-muted/50'
-                            }`}
-                          >
-                            <Icon className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                            <span className="text-xs sm:text-sm truncate">{tab.label}</span>
-                          </div>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="center" className="w-48">
-                          <DropdownMenuItem asChild>
-                            <Link to="/trailers/inventory" className="flex items-center gap-2">
-                              <Container className="h-4 w-4" />
-                              Inventory
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link to="/trailers/routes" className="flex items-center gap-2">
-                              <MapPin className="h-4 w-4" />
-                              Routes
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link to="/trailers/vehicles" className="flex items-center gap-2">
-                              <Truck className="h-4 w-4" />
-                              Vehicles
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link to="/trailers/drivers" className="flex items-center gap-2">
-                              <UserCheck className="h-4 w-4" />
-                              Driver Management
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link to="/trailers/reports" className="flex items-center gap-2">
-                              <BarChart3 className="h-4 w-4" />
-                              Reports
-                            </Link>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    );
-                  }
-                  
-                  return (
-                    <TabsTrigger 
-                      key={tab.id} 
-                      value={tab.id} 
-                      asChild
-                      className="data-[state=active]:bg-brand-primary/10 data-[state=active]:text-brand-primary border-b-2 border-transparent data-[state=active]:border-brand-primary rounded-none h-10 sm:h-12 px-1 sm:px-2 lg:px-4 whitespace-nowrap min-w-0"
-                    >
-                      <Link to={tab.path} className="flex items-center gap-1 sm:gap-2 w-full min-w-0">
-                        <Icon className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                        <span className="text-xs sm:text-sm truncate">{tab.label}</span>
+          <nav className="flex items-center gap-0">
+            {/* Dashboard - Simple link */}
+            <Link to="/dashboard" className={navItemClass(activeSection === 'dashboard')}>
+              <Home className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span>Dashboard</span>
+            </Link>
+
+            {/* Clients - Simple link */}
+            {hasAnyRole(['admin', 'ops_manager', 'sales', 'viewer']) && (
+              <Link to="/clients" className={navItemClass(activeSection === 'clients')}>
+                <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span>Clients</span>
+              </Link>
+            )}
+
+            {/* Routes Dropdown */}
+            {hasAnyRole(['admin', 'ops_manager', 'dispatcher', 'viewer']) && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <div className={navItemClass(activeSection === 'routes')}>
+                    <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    <span>Routes</span>
+                    <ChevronDown className="h-3 w-3 opacity-60" />
+                  </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-48">
+                  <DropdownMenuItem asChild>
+                    <Link to="/routes/today" className={dropdownItemClass(location.pathname.startsWith('/routes'))}>
+                      <MapPin className="h-4 w-4" />
+                      Today's Routes
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/outbound-schedule" className={dropdownItemClass(location.pathname === '/outbound-schedule')}>
+                      <Send className="h-4 w-4" />
+                      Outbound Schedule
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
+            {/* Inventory Dropdown */}
+            {FEATURE_FLAGS.INVENTORY && hasAnyRole(['admin', 'ops_manager', 'dispatcher', 'viewer']) && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <div className={navItemClass(activeSection === 'inventory')}>
+                    <Boxes className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    <span>Inventory</span>
+                    <ChevronDown className="h-3 w-3 opacity-60" />
+                  </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-48">
+                  <DropdownMenuItem asChild>
+                    <Link to="/inventory" className={dropdownItemClass(location.pathname === '/inventory')}>
+                      <Package className="h-4 w-4" />
+                      Stock Levels
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/inventory/products" className={dropdownItemClass(location.pathname === '/inventory/products')}>
+                      <Boxes className="h-4 w-4" />
+                      Products
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/shipments" className={dropdownItemClass(location.pathname === '/shipments')}>
+                      <Truck className="h-4 w-4" />
+                      Shipments
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
+            {/* Trailers Dropdown - Already exists, keeping same structure */}
+            {FEATURE_FLAGS.TRAILERS && hasAnyRole(['admin', 'ops_manager', 'dispatcher', 'viewer']) && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <div className={navItemClass(activeSection === 'trailers')}>
+                    <Container className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    <span>Trailers</span>
+                    <ChevronDown className="h-3 w-3 opacity-60" />
+                  </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-48">
+                  <DropdownMenuItem asChild>
+                    <Link to="/trailers/inventory" className={dropdownItemClass(location.pathname === '/trailers/inventory')}>
+                      <Container className="h-4 w-4" />
+                      Inventory
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/trailers/routes" className={dropdownItemClass(location.pathname === '/trailers/routes')}>
+                      <MapPin className="h-4 w-4" />
+                      Routes
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/trailers/vehicles" className={dropdownItemClass(location.pathname === '/trailers/vehicles')}>
+                      <Truck className="h-4 w-4" />
+                      Vehicles
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/trailers/drivers" className={dropdownItemClass(location.pathname === '/trailers/drivers')}>
+                      <UserCheck className="h-4 w-4" />
+                      Driver Management
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/trailers/reports" className={dropdownItemClass(location.pathname === '/trailers/reports')}>
+                      <BarChart3 className="h-4 w-4" />
+                      Reports
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
+            {/* Reports Dropdown */}
+            {hasAnyRole(['admin', 'ops_manager', 'viewer']) && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <div className={navItemClass(activeSection === 'reports')}>
+                    <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    <span>Reports</span>
+                    <ChevronDown className="h-3 w-3 opacity-60" />
+                  </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-48">
+                  <DropdownMenuItem asChild>
+                    <Link to="/reports" className={dropdownItemClass(location.pathname === '/reports')}>
+                      <FileText className="h-4 w-4" />
+                      Reports
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/analytics" className={dropdownItemClass(location.pathname === '/analytics')}>
+                      <BarChart3 className="h-4 w-4" />
+                      Analytics
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/michigan-reports" className={dropdownItemClass(location.pathname === '/michigan-reports')}>
+                      <Shield className="h-4 w-4" />
+                      Michigan Reports
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
+            {/* More Dropdown - Catch-all for administrative/infrequent items */}
+            {hasAnyRole(['admin', 'ops_manager', 'dispatcher', 'viewer']) && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <div className={navItemClass(activeSection === 'more')}>
+                    <MoreHorizontal className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    <span>More</span>
+                    <ChevronDown className="h-3 w-3 opacity-60" />
+                  </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56">
+                  {/* Operations */}
+                  {hasAnyRole(['admin', 'ops_manager', 'sales', 'viewer']) && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/dropoffs" className={dropdownItemClass(location.pathname === '/dropoffs')}>
+                        <PackageOpen className="h-4 w-4" />
+                        Drop-offs
                       </Link>
-                    </TabsTrigger>
-                  );
-                })}
-            </TabsList>
-          </Tabs>
+                    </DropdownMenuItem>
+                  )}
+                  {hasAnyRole(['admin', 'ops_manager', 'dispatcher', 'viewer']) && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/manifests" className={dropdownItemClass(location.pathname === '/manifests')}>
+                        <FileText className="h-4 w-4" />
+                        Manifests
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  {hasAnyRole(['admin', 'ops_manager', 'viewer']) && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/receiver-signatures" className={dropdownItemClass(location.pathname === '/receiver-signatures')}>
+                        <PenTool className="h-4 w-4" />
+                        Receiver Signatures
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  
+                  <DropdownMenuSeparator />
+                  
+                  {/* Entities */}
+                  {hasAnyRole(['admin', 'viewer']) && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/employees" className={dropdownItemClass(location.pathname === '/employees')}>
+                        <UserCheck className="h-4 w-4" />
+                        Employees
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  {hasAnyRole(['admin', 'ops_manager', 'viewer']) && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/haulers" className={dropdownItemClass(location.pathname === '/haulers')}>
+                        <Truck className="h-4 w-4" />
+                        Haulers
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  {hasAnyRole(['admin', 'ops_manager', 'viewer']) && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/receivers" className={dropdownItemClass(location.pathname === '/receivers')}>
+                        <Building className="h-4 w-4" />
+                        Receivers
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  
+                  <DropdownMenuSeparator />
+                  
+                  {/* Administration */}
+                  {hasAnyRole(['admin', 'ops_manager', 'viewer']) && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/data-quality" className={dropdownItemClass(location.pathname === '/data-quality')}>
+                        <Database className="h-4 w-4" />
+                        Data Quality
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  {hasAnyRole(['admin', 'ops_manager', 'viewer']) && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/intelligence" className={dropdownItemClass(location.pathname === '/intelligence')}>
+                        <Brain className="h-4 w-4" />
+                        Intelligence
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  {hasAnyRole(['admin', 'viewer']) && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/integrations" className={dropdownItemClass(location.pathname === '/integrations')}>
+                        <CreditCard className="h-4 w-4" />
+                        Integrations
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  {hasAnyRole(['admin', 'ops_manager', 'viewer']) && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/settings" className={dropdownItemClass(location.pathname === '/settings')}>
+                        <Settings className="h-4 w-4" />
+                        Settings
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  {hasAnyRole(['admin']) && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link to="/deployment" className={dropdownItemClass(location.pathname === '/deployment')}>
+                          <Wrench className="h-4 w-4" />
+                          Deployment
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </nav>
         </div>
       </div>
     </header>
