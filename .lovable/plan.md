@@ -1,56 +1,63 @@
 
+# Fix RLS Policy Error for Inventory Products
 
-# Replace "My Routes" with Inventory in Top Nav Tabs
+## Root Cause
 
-## Problem Identified
+The error **"new row violates row-level security policy for table inventory_products"** is caused by a **user ID mismatch** in the database:
 
-The current navigation tabs configuration shows:
-- **"My Routes"** is restricted to users with **only** the `driver` role (line 66)
-- **Inventory** was placed in the **user dropdown menu**, not in the main navigation tabs
+| Table | User ID | Email |
+|-------|---------|-------|
+| `auth.users` | `70c2f0d6-d1db-40ad-98fa-1def1c314b0d` | zachdevon@bsgtires.com |
+| `users` | `1c39d6ae-c319-47a8-96ed-a58de61d13ee` | zachdevon@bsgtires.com |
+| `user_organization_roles` | `1c39d6ae-c319-47a8-96ed-a58de61d13ee` | (linked to wrong user) |
 
-Since you have admin access, you see "Routes" (for dispatchers/managers) but not "My Routes" (driver-only). And the new Inventory feature is buried in the user menu.
+The RLS policy checks `auth.uid()` (which returns `70c2f0d6...`) against `user_organization_roles.user_id` (which has `1c39d6ae...`), resulting in **no matching roles** being found.
 
-## Changes Required
+## Solution
 
-### File: `src/components/TopNav.tsx`
+Update the `user_organization_roles` records to use the correct auth user ID. This requires a database migration.
 
-| Lines | Action | Description |
-|-------|--------|-------------|
-| 66 | Replace | Change the "My Routes" tab entry to become the "Inventory" tab |
-| 49-60 | Update | Add `inventory` to `getCurrentTab()` function |
-| 215-222 | Remove | Delete the Inventory link from the user dropdown menu (it will now be in main nav) |
+## Migration Details
 
-### Specific Changes
+**File:** New migration
 
-**1. Update `getCurrentTab()` function** (around line 49):
-```typescript
-if (location.pathname.startsWith('/inventory')) return 'inventory';
+```sql
+-- Fix user ID mismatch for zachdevon@bsgtires.com
+-- The auth.users ID (70c2f0d6-d1db-40ad-98fa-1def1c314b0d) doesn't match
+-- the user_organization_roles user_id (1c39d6ae-c319-47a8-96ed-a58de61d13ee)
+
+-- First, ensure the correct auth user exists in the users table
+INSERT INTO public.users (id, email, first_name, last_name, phone)
+SELECT 
+  '70c2f0d6-d1db-40ad-98fa-1def1c314b0d',
+  'zachdevon@bsgtires.com',
+  'Zachariah',
+  'Devon',
+  '7344156528'
+WHERE NOT EXISTS (
+  SELECT 1 FROM public.users WHERE id = '70c2f0d6-d1db-40ad-98fa-1def1c314b0d'
+);
+
+-- Copy the organization roles from the old user ID to the new auth user ID
+INSERT INTO public.user_organization_roles (user_id, organization_id, role)
+SELECT 
+  '70c2f0d6-d1db-40ad-98fa-1def1c314b0d',
+  organization_id,
+  role
+FROM public.user_organization_roles
+WHERE user_id = '1c39d6ae-c319-47a8-96ed-a58de61d13ee'
+ON CONFLICT (user_id, organization_id, role) DO NOTHING;
 ```
 
-**2. Replace the "driver" tab with "inventory" tab** (line 66):
-```typescript
-// Before:
-{ id: 'driver', label: 'My Routes', icon: UserCheck, path: '/routes/driver', roles: ['driver'] as const, featureFlag: null },
+## What This Fixes
 
-// After:
-{ id: 'inventory', label: 'Inventory', icon: Boxes, path: '/inventory', roles: ['admin', 'ops_manager', 'dispatcher', 'viewer'] as const, featureFlag: 'INVENTORY' as const },
-```
+After running this migration:
+- Your auth session ID will match entries in `user_organization_roles`
+- RLS policies will correctly identify you as an `admin`
+- You'll be able to create, edit, and delete inventory products
 
-**3. Remove Inventory from user dropdown menu** (lines 215-222):
-Delete the `FEATURE_FLAGS.INVENTORY` menu item since it will now be in the main nav.
+## Technical Notes
 
-## Result
-
-- **Inventory** will appear as a main navigation tab (alongside Dashboard, Clients, Routes, etc.)
-- Users with admin, ops_manager, dispatcher, or viewer roles will see it
-- It respects the `INVENTORY` feature flag
-- Cleaner user menu with one less item
-- Drivers will still access their routes via the sidebar on mobile, or the `/routes/driver` URL directly
-
-## Note on "My Routes"
-
-The "My Routes" tab was driver-specific and won't affect your view since you have admin access. Drivers will still be able to access their routes through:
-- The mobile sidebar navigation
-- Direct URL `/routes/driver`
-- The main "Routes" section if they also have dispatcher access
-
+- The migration adds your roles to the correct user ID without removing the old entries (safe approach)
+- Uses `ON CONFLICT DO NOTHING` to prevent duplicate key errors if partially run before
+- This is a one-time data fix for the existing mismatch
