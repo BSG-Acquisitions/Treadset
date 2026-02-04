@@ -25,6 +25,11 @@ export const MICHIGAN_CONVERSIONS = {
   // Processed material (shredded/crumb)
   SHREDDED_PTE_PER_CUBIC_YARD: 40, // 40 shredded PTE = 1 cubic yard
   CRUMBED_PTE_PER_CUBIC_YARD: 63, // 63 crumbed PTE = 1 cubic yard
+  
+  // Rubber mulch density conversion (user-provided: 1,000 lbs = 1.2 cubic yards)
+  // 1 CY = 833.33 lbs = 0.41667 tons
+  RUBBER_MULCH_TONS_PER_CUBIC_YARD: 0.41667,
+  RUBBER_MULCH_LBS_PER_CUBIC_YARD: 833.33,
 } as const;
 
 export type TireUnit = 

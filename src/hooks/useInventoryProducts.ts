@@ -99,6 +99,7 @@ export const useCreateInventoryProduct = () => {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['inventory-products'] });
+      queryClient.invalidateQueries({ queryKey: ['raw-material-projections'] });
       toast({
         title: "Product Created",
         description: `${data.name} has been added to your inventory catalog.`,
@@ -164,6 +165,7 @@ export const useDeleteInventoryProduct = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory-products'] });
       queryClient.invalidateQueries({ queryKey: ['inventory-stock'] });
+      queryClient.invalidateQueries({ queryKey: ['raw-material-projections'] });
       toast({
         title: "Product Deleted",
         description: "The product has been removed from your catalog.",

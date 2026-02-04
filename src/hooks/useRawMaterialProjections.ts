@@ -220,8 +220,8 @@ export const useRawMaterialProjections = (periodStart?: Date, periodEnd?: Date) 
         } else if (t.unit_of_measure === 'lbs') {
           periodProcessedTons += t.quantity / 2000;
         } else if (t.unit_of_measure === 'cubic_yards') {
-          // Approximate: 1 cubic yard of shred ≈ 0.25 tons
-          periodProcessedTons += t.quantity * 0.25;
+          // Rubber mulch: 1,000 lbs = 1.2 CY, so 1 CY = 833.33 lbs = 0.417 tons
+          periodProcessedTons += t.quantity * MICHIGAN_CONVERSIONS.RUBBER_MULCH_TONS_PER_CUBIC_YARD;
         } else {
           // Default assumption for other units
           periodProcessedTons += t.quantity;
@@ -242,7 +242,8 @@ export const useRawMaterialProjections = (periodStart?: Date, periodEnd?: Date) 
         } else if (t.unit_of_measure === 'lbs') {
           totalProcessedTons += t.quantity / 2000;
         } else if (t.unit_of_measure === 'cubic_yards') {
-          totalProcessedTons += t.quantity * 0.25;
+          // Rubber mulch: 1 CY = 0.417 tons
+          totalProcessedTons += t.quantity * MICHIGAN_CONVERSIONS.RUBBER_MULCH_TONS_PER_CUBIC_YARD;
         } else {
           totalProcessedTons += t.quantity;
         }
