@@ -2765,7 +2765,7 @@ export type Database = {
       manifests: {
         Row: {
           acroform_pdf_path: string | null
-          client_id: string
+          client_id: string | null
           commercial_17_5_19_5_off: number | null
           commercial_17_5_19_5_on: number | null
           commercial_22_5_off: number | null
@@ -2773,7 +2773,10 @@ export type Database = {
           created_at: string
           customer_sig_path: string | null
           customer_signature_png_path: string | null
+          destination_entity_id: string | null
+          direction: string | null
           driver_id: string | null
+          driver_name: string | null
           driver_sig_path: string | null
           driver_signature_png_path: string | null
           dropoff_id: string | null
@@ -2792,8 +2795,11 @@ export type Database = {
           initial_pdf_path: string | null
           location_id: string | null
           manifest_number: string
+          material_form: string | null
           net_weight_lbs: number | null
+          notes: string | null
           organization_id: string
+          origin_entity_id: string | null
           otr_count: number | null
           paid_amount: number | null
           payment_method: string | null
@@ -2805,6 +2811,7 @@ export type Database = {
           pte_off_rim: number | null
           pte_on_rim: number | null
           receipt_url: string | null
+          receiver_name: string | null
           receiver_sig_path: string | null
           receiver_signed_at: string | null
           receiver_signed_by: string | null
@@ -2821,6 +2828,7 @@ export type Database = {
           surcharges: number | null
           tare_weight_lbs: number | null
           total: number | null
+          total_pte: number | null
           tractor_count: number | null
           updated_at: string
           vehicle_id: string | null
@@ -2829,7 +2837,7 @@ export type Database = {
         }
         Insert: {
           acroform_pdf_path?: string | null
-          client_id: string
+          client_id?: string | null
           commercial_17_5_19_5_off?: number | null
           commercial_17_5_19_5_on?: number | null
           commercial_22_5_off?: number | null
@@ -2837,7 +2845,10 @@ export type Database = {
           created_at?: string
           customer_sig_path?: string | null
           customer_signature_png_path?: string | null
+          destination_entity_id?: string | null
+          direction?: string | null
           driver_id?: string | null
+          driver_name?: string | null
           driver_sig_path?: string | null
           driver_signature_png_path?: string | null
           dropoff_id?: string | null
@@ -2856,8 +2867,11 @@ export type Database = {
           initial_pdf_path?: string | null
           location_id?: string | null
           manifest_number: string
+          material_form?: string | null
           net_weight_lbs?: number | null
+          notes?: string | null
           organization_id: string
+          origin_entity_id?: string | null
           otr_count?: number | null
           paid_amount?: number | null
           payment_method?: string | null
@@ -2869,6 +2883,7 @@ export type Database = {
           pte_off_rim?: number | null
           pte_on_rim?: number | null
           receipt_url?: string | null
+          receiver_name?: string | null
           receiver_sig_path?: string | null
           receiver_signed_at?: string | null
           receiver_signed_by?: string | null
@@ -2885,6 +2900,7 @@ export type Database = {
           surcharges?: number | null
           tare_weight_lbs?: number | null
           total?: number | null
+          total_pte?: number | null
           tractor_count?: number | null
           updated_at?: string
           vehicle_id?: string | null
@@ -2893,7 +2909,7 @@ export type Database = {
         }
         Update: {
           acroform_pdf_path?: string | null
-          client_id?: string
+          client_id?: string | null
           commercial_17_5_19_5_off?: number | null
           commercial_17_5_19_5_on?: number | null
           commercial_22_5_off?: number | null
@@ -2901,7 +2917,10 @@ export type Database = {
           created_at?: string
           customer_sig_path?: string | null
           customer_signature_png_path?: string | null
+          destination_entity_id?: string | null
+          direction?: string | null
           driver_id?: string | null
+          driver_name?: string | null
           driver_sig_path?: string | null
           driver_signature_png_path?: string | null
           dropoff_id?: string | null
@@ -2920,8 +2939,11 @@ export type Database = {
           initial_pdf_path?: string | null
           location_id?: string | null
           manifest_number?: string
+          material_form?: string | null
           net_weight_lbs?: number | null
+          notes?: string | null
           organization_id?: string
+          origin_entity_id?: string | null
           otr_count?: number | null
           paid_amount?: number | null
           payment_method?: string | null
@@ -2933,6 +2955,7 @@ export type Database = {
           pte_off_rim?: number | null
           pte_on_rim?: number | null
           receipt_url?: string | null
+          receiver_name?: string | null
           receiver_sig_path?: string | null
           receiver_signed_at?: string | null
           receiver_signed_by?: string | null
@@ -2949,6 +2972,7 @@ export type Database = {
           surcharges?: number | null
           tare_weight_lbs?: number | null
           total?: number | null
+          total_pte?: number | null
           tractor_count?: number | null
           updated_at?: string
           vehicle_id?: string | null
@@ -2985,6 +3009,13 @@ export type Database = {
             referencedColumns: ["entity_id"]
           },
           {
+            foreignKeyName: "manifests_destination_entity_id_fkey"
+            columns: ["destination_entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "manifests_driver_id_fkey"
             columns: ["driver_id"]
             isOneToOne: false
@@ -3017,6 +3048,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manifests_origin_entity_id_fkey"
+            columns: ["origin_entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
             referencedColumns: ["id"]
           },
           {
