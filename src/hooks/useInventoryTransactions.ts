@@ -127,6 +127,7 @@ export const useCreateInventoryTransaction = () => {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['inventory-transactions'] });
       queryClient.invalidateQueries({ queryKey: ['inventory-stock'] });
+      queryClient.invalidateQueries({ queryKey: ['raw-material-projections'] });
       
       const typeLabel = data.transaction_type === 'inbound' 
         ? 'received' 
@@ -165,6 +166,7 @@ export const useDeleteInventoryTransaction = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory-transactions'] });
       queryClient.invalidateQueries({ queryKey: ['inventory-stock'] });
+      queryClient.invalidateQueries({ queryKey: ['raw-material-projections'] });
       toast({
         title: "Transaction Deleted",
         description: "The transaction has been removed.",
