@@ -1,13 +1,13 @@
 import { useMemo } from 'react';
 import { format } from 'date-fns';
-import { Scale, TrendingUp, TrendingDown, Clock, Truck, ArrowDownToLine, Factory, AlertTriangle, Loader2 } from 'lucide-react';
+import { Scale, TrendingUp, TrendingDown, Clock, Truck, ArrowDownToLine, Factory, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRawMaterialProjections } from '@/hooks/useRawMaterialProjections';
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar, Legend, PieChart, Pie, Cell } from 'recharts';
-
+import { HistoricalIntakeCard } from './HistoricalIntakeCard';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell } from 'recharts';
 export function ProjectionsTab() {
   const { data: projections, isLoading, error } = useRawMaterialProjections();
   
@@ -348,6 +348,9 @@ export function ProjectionsTab() {
           </div>
         </CardContent>
       </Card>
+      
+      {/* Historical Intake Averages */}
+      <HistoricalIntakeCard />
     </div>
   );
 }
