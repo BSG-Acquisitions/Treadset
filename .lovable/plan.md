@@ -1,63 +1,63 @@
 
-# Fix RLS Policy Error for Inventory Products
+
+# Fix: Edit Product Form Not Populating Existing Data
+
+## Problem
+
+When clicking "Edit" on a product, the form opens **empty** instead of showing the product's existing information (name, description, category, etc.).
 
 ## Root Cause
 
-The error **"new row violates row-level security policy for table inventory_products"** is caused by a **user ID mismatch** in the database:
+In `ProductDialog.tsx`, lines 77-89 use `useState` incorrectly as an effect:
 
-| Table | User ID | Email |
-|-------|---------|-------|
-| `auth.users` | `70c2f0d6-d1db-40ad-98fa-1def1c314b0d` | zachdevon@bsgtires.com |
-| `users` | `1c39d6ae-c319-47a8-96ed-a58de61d13ee` | zachdevon@bsgtires.com |
-| `user_organization_roles` | `1c39d6ae-c319-47a8-96ed-a58de61d13ee` | (linked to wrong user) |
-
-The RLS policy checks `auth.uid()` (which returns `70c2f0d6...`) against `user_organization_roles.user_id` (which has `1c39d6ae...`), resulting in **no matching roles** being found.
-
-## Solution
-
-Update the `user_organization_roles` records to use the correct auth user ID. This requires a database migration.
-
-## Migration Details
-
-**File:** New migration
-
-```sql
--- Fix user ID mismatch for zachdevon@bsgtires.com
--- The auth.users ID (70c2f0d6-d1db-40ad-98fa-1def1c314b0d) doesn't match
--- the user_organization_roles user_id (1c39d6ae-c319-47a8-96ed-a58de61d13ee)
-
--- First, ensure the correct auth user exists in the users table
-INSERT INTO public.users (id, email, first_name, last_name, phone)
-SELECT 
-  '70c2f0d6-d1db-40ad-98fa-1def1c314b0d',
-  'zachdevon@bsgtires.com',
-  'Zachariah',
-  'Devon',
-  '7344156528'
-WHERE NOT EXISTS (
-  SELECT 1 FROM public.users WHERE id = '70c2f0d6-d1db-40ad-98fa-1def1c314b0d'
-);
-
--- Copy the organization roles from the old user ID to the new auth user ID
-INSERT INTO public.user_organization_roles (user_id, organization_id, role)
-SELECT 
-  '70c2f0d6-d1db-40ad-98fa-1def1c314b0d',
-  organization_id,
-  role
-FROM public.user_organization_roles
-WHERE user_id = '1c39d6ae-c319-47a8-96ed-a58de61d13ee'
-ON CONFLICT (user_id, organization_id, role) DO NOTHING;
+```typescript
+// WRONG - useState callback only runs ONCE on initial mount
+useState(() => {
+  if (open) {
+    form.reset({ ... });
+  }
+});
 ```
 
-## What This Fixes
+This should be `useEffect` with proper dependencies, so it runs **every time** the `product` or `open` props change.
 
-After running this migration:
-- Your auth session ID will match entries in `user_organization_roles`
-- RLS policies will correctly identify you as an `admin`
-- You'll be able to create, edit, and delete inventory products
+## Fix
 
-## Technical Notes
+**File:** `src/components/inventory/ProductDialog.tsx`
 
-- The migration adds your roles to the correct user ID without removing the old entries (safe approach)
-- Uses `ON CONFLICT DO NOTHING` to prevent duplicate key errors if partially run before
-- This is a one-time data fix for the existing mismatch
+| Lines | Change |
+|-------|--------|
+| 1 | Import `useEffect` instead of just `useState` |
+| 77-89 | Replace `useState` with `useEffect` and proper dependency array |
+
+### Updated Code
+
+```typescript
+// Line 1: Update import
+import { useEffect } from 'react';
+
+// Lines 77-89: Replace useState with useEffect
+useEffect(() => {
+  if (open) {
+    form.reset({
+      name: product?.name ?? '',
+      description: product?.description ?? '',
+      category: product?.category ?? 'other',
+      unit_of_measure: product?.unit_of_measure ?? 'tons',
+      sku: product?.sku ?? '',
+      low_stock_threshold: product?.low_stock_threshold ?? undefined,
+      is_active: product?.is_active ?? true,
+    });
+  }
+}, [open, product, form]);
+```
+
+## Result
+
+- When you click "Edit" on any product, the form will now correctly populate with:
+  - Product name (e.g., "Brown Rubber Mulch")
+  - Description (e.g., "Wire-free rubber mulch, brown")
+  - Category, unit of measure, SKU, low stock threshold, and active status
+- You can then clear or modify any field, including removing the description
+- The form will still be empty when clicking "Add Product" (since `product` will be `null`)
+
