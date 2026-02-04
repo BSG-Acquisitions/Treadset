@@ -56,7 +56,7 @@ export function SimplifiedVehicleManagement() {
             name: vehicleName,
             license_plate: formData.license_plate || undefined,
             capacity: formData.capacity,
-            assigned_driver_id: formData.assigned_driver_id || null,
+            assigned_driver_id: formData.assigned_driver_id && formData.assigned_driver_id !== 'none' ? formData.assigned_driver_id : null,
             driver_email: driverEmail || null,
           }
         });
@@ -71,7 +71,7 @@ export function SimplifiedVehicleManagement() {
           capacity: formData.capacity,
           is_active: true,
           organization_id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
-          assigned_driver_id: formData.assigned_driver_id || null,
+          assigned_driver_id: formData.assigned_driver_id && formData.assigned_driver_id !== 'none' ? formData.assigned_driver_id : null,
           driver_email: driverEmail || null,
         });
         toast({
@@ -183,7 +183,7 @@ export function SimplifiedVehicleManagement() {
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent className="z-50 bg-popover">
-                        <SelectItem value="">No Driver (Unassigned)</SelectItem>
+                        <SelectItem value="none">No Driver (Unassigned)</SelectItem>
                         {drivers.map((driver) => (
                           <SelectItem key={driver.id} value={driver.id}>
                             <div className="flex items-center gap-2">

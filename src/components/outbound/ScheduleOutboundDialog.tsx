@@ -85,7 +85,7 @@ export function ScheduleOutboundDialog({
     await createAssignment.mutateAsync({
       driver_id: driverId,
       destination_entity_id: destinationId,
-      vehicle_id: vehicleId || undefined,
+      vehicle_id: vehicleId && vehicleId !== 'none' ? vehicleId : undefined,
       scheduled_date: format(scheduledDate, 'yyyy-MM-dd'),
       material_form: materialForm || undefined,
       estimated_quantity: quantity ? parseFloat(quantity) : undefined,
@@ -195,7 +195,7 @@ export function ScheduleOutboundDialog({
                 <SelectValue placeholder="Select vehicle..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No specific vehicle</SelectItem>
+                <SelectItem value="none">No specific vehicle</SelectItem>
                 {vehicles.map((vehicle) => (
                   <SelectItem key={vehicle.id} value={vehicle.id}>
                     {vehicle.name}
