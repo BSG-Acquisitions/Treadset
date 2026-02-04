@@ -419,8 +419,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const resetPassword = async (email: string) => {
-    const currentUrl = window.location.origin;
-    const resetUrl = `${currentUrl}/reset-password`;
+    // Hardcode production URL to prevent preview/dev environment issues
+    const productionUrl = 'https://treadset.lovable.app';
+    const resetUrl = `${productionUrl}/reset-password`;
     
     console.log('Password reset redirect URL:', resetUrl);
     
