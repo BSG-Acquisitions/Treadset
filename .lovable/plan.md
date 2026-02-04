@@ -1,46 +1,123 @@
 
 
-# Add Inventory Sales Reports & Export
+# Raw Material Projections System
 
 ## Overview
 
-I'll create a comprehensive Inventory Reports system so you can track sales, view trends, and export data. This will let you answer questions like "How much black rubber mulch did we sell this month?" and export the data to a CSV.
+Build a system that connects tire intake data to projected inventory weight, showing you how much potential product (in tons) you have in your yard based on tires coming through the door. This uses Michigan's 89 PTE/ton conversion rule to project raw material weight from tire counts.
 
 ---
 
 ## What You'll Get
 
-### 1. New "Inventory Reports" Page
+### 1. New "Raw Material Projections" Card on Inventory Page
 
-A dedicated reports page at `/inventory/reports` with:
+A prominent card showing:
+- **Unprocessed Tire Weight**: Total tons of tires in the yard awaiting processing
+- **This Month's Intake**: PTE and tons received this month
+- **Daily Average**: Average daily intake rate
+- **Projected Monthly Total**: Based on current pace
+
+### 2. New "Projections" Tab on Inventory Page
+
+A dedicated tab showing:
 
 | Section | Description |
 |---------|-------------|
-| **Summary Cards** | Total sales volume, # of transactions, top products sold |
-| **Sales by Product** | Breakdown of outbound quantities per product (e.g., "Black Rubber Mulch: 45 yd³") |
-| **Monthly Trend Chart** | Visual chart showing sales volume over time |
-| **Sales Table** | Filterable list of all outbound transactions with customer names, dates, quantities |
-| **CSV Export** | Button to download all sales data for the selected date range |
+| **Raw Material Summary** | Current unprocessed tire weight (tons), total PTE in yard |
+| **Intake vs Output Chart** | Visual comparison of tires coming in vs processed materials going out |
+| **Conversion Potential** | How many tons of shred, mulch, TDA could be made from current raw materials |
+| **Trend Analysis** | Weekly/monthly intake trends with forecasting |
 
-### 2. Date Range Filters
+### 3. Intake Tracking
 
-- Quick filters: This Week, This Month, This Quarter, Year to Date
-- Custom date range picker
-- Filter by specific product
-
-### 3. CSV Export
-
-One-click export of filtered inventory transaction data including:
-- Date, Product, Quantity, Unit, Customer Name, Notes
-- Useful for accounting, end-of-month reports, or sharing with partners
+Track tire intake from multiple sources:
+- **Manifests**: Pickup tires brought in (using all tire fields)
+- **Drop-offs**: Walk-in customer tires
+- Both converted to PTE then to tons using Michigan's 89 PTE = 1 ton rule
 
 ---
 
-## Navigation
+## How Projections Work
 
-- Add a **"View Reports"** button on the main Inventory page
-- Add breadcrumb navigation on the reports page (← Back to Inventory)
-- Keep consistent styling with existing Reports page
+### Conversion Formula
+
+```text
+Tires In → PTE → Tons → Potential Product
+
+Example:
+- 890 passenger tires (PTE) = 890 PTE
+- 18 semi tires = 90 PTE
+- Total: 980 PTE = 11.01 tons raw material
+```
+
+### Tracking Flow
+
+```text
+┌─────────────────────────────────────────────────────────────────────┐
+│                        TIRE INTAKE                                   │
+│  ┌─────────────┐    ┌─────────────┐                                 │
+│  │  Manifests  │    │  Drop-offs  │                                 │
+│  │  (Pickups)  │    │  (Walk-ins) │                                 │
+│  └──────┬──────┘    └──────┬──────┘                                 │
+│         │                  │                                        │
+│         └────────┬─────────┘                                        │
+│                  ▼                                                  │
+│         ┌───────────────┐                                           │
+│         │ Calculate PTE │  (1 PTE, 5 semi, 15 OTR)                  │
+│         └───────┬───────┘                                           │
+│                 ▼                                                   │
+│         ┌───────────────┐                                           │
+│         │ Convert Tons  │  (÷ 89 PTE/ton)                           │
+│         └───────┬───────┘                                           │
+│                 ▼                                                   │
+│         ┌───────────────┐                                           │
+│         │ Raw Material  │ ◄─── Unprocessed tire weight              │
+│         │   Inventory   │                                           │
+│         └───────────────┘                                           │
+└─────────────────────────────────────────────────────────────────────┘
+                  │
+                  ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                      PROCESSING                                      │
+│         ┌───────────────┐                                           │
+│         │  Shred/Grind  │                                           │
+│         └───────┬───────┘                                           │
+│                 ▼                                                   │
+│         ┌───────────────┐                                           │
+│         │   Finished    │ ◄─── Inventory products                   │
+│         │   Products    │      (shred, mulch, TDA, etc.)            │
+│         └───────────────┘                                           │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## User Experience
+
+### Inventory Page Updates
+
+The existing stats row will be enhanced with a new "Raw Materials" card:
+
+| Card | Description |
+|------|-------------|
+| Total Products | (existing) Count of product types |
+| Low Stock | (existing) Products below threshold |
+| Out of Stock | (existing) Products at zero |
+| **Raw Materials** | **NEW**: Unprocessed tire weight in tons |
+
+### New Projections Tab
+
+Add a third tab to the inventory page:
+- Stock Levels (existing)
+- Transaction History (existing)  
+- **Raw Material Projections** (new)
+
+This tab will show:
+1. Current raw material weight (tons in yard)
+2. This period's intake (tires → PTE → tons)
+3. Processing rate (how fast you're converting to product)
+4. Projection charts
 
 ---
 
@@ -50,98 +127,79 @@ One-click export of filtered inventory transaction data including:
 
 | File | Purpose |
 |------|---------|
-| `src/pages/InventoryReports.tsx` | Main reports page with tabs, charts, and export |
-| `src/hooks/useInventoryReports.ts` | Hook to aggregate transaction data for reports |
-| `supabase/functions/inventory-csv-export/index.ts` | Edge function to generate CSV exports |
+| `src/hooks/useRawMaterialProjections.ts` | Hook to aggregate tire intake and calculate projections |
+| `src/components/inventory/RawMaterialCard.tsx` | Summary card for raw material weight |
+| `src/components/inventory/ProjectionsTab.tsx` | Full projections view with charts |
 
 ### Modified Files
 
 | File | Change |
 |------|--------|
-| `src/App.tsx` | Add route for `/inventory/reports` |
-| `src/pages/Inventory.tsx` | Add "View Reports" button linking to reports page |
-| `src/hooks/useCSVExport.ts` | Add `inventory-transactions` export type |
+| `src/pages/Inventory.tsx` | Add Raw Materials card and Projections tab |
+| `src/lib/michigan-conversions.ts` | Add helper for aggregating intake to tons |
 
-### Database Query for Reports
+### Data Sources
 
-The reports will aggregate from `inventory_transactions` table:
-- Filter by `transaction_type = 'outbound'` for sales reports
-- Group by product for product breakdown
-- Group by month for trend charts
+The projections hook will query:
+1. **Manifests table**: `pte_on_rim`, `pte_off_rim`, `commercial_*`, `otr_count`, `tractor_count`
+2. **Dropoffs table**: `pte_count`, `otr_count`, `tractor_count`
+3. **Inventory transactions**: To calculate processing output
 
-### Report Data Structure
+### Key Calculations
 
 ```typescript
-interface InventorySalesReport {
-  summary: {
-    totalOutbound: number;        // Total quantity sold
-    transactionCount: number;     // Number of sales
-    uniqueProducts: number;       // Different products sold
-    uniqueCustomers: number;      // Different customers
+// Raw Material Projections Hook
+interface RawMaterialProjections {
+  // Current state
+  totalUnprocessedPTE: number;
+  totalUnprocessedTons: number;
+  
+  // This period intake
+  periodIntakePTE: number;
+  periodIntakeTons: number;
+  dailyAveragePTE: number;
+  dailyAverageTons: number;
+  
+  // Processing output (from inventory inbound transactions)
+  periodProcessedTons: number;
+  processingRate: number; // tons processed per day
+  
+  // Projections
+  projectedMonthEndTons: number;
+  daysOfSupplyRemaining: number; // at current processing rate
+  
+  // Breakdown
+  intakeBySource: {
+    manifests: { pte: number; tons: number };
+    dropoffs: { pte: number; tons: number };
   };
-  byProduct: {
-    productId: string;
-    productName: string;
-    totalQuantity: number;
-    unitOfMeasure: string;
-    transactionCount: number;
-  }[];
-  monthlyTrend: {
-    month: string;
-    totalQuantity: number;
-    transactionCount: number;
-  }[];
-  transactions: InventoryTransaction[];
 }
 ```
 
----
+### Conversion Logic
 
-## How Sales Recording Works
-
-For reference, here's the current flow for recording a sale:
-
-1. Go to **Inventory** page
-2. Find your product (e.g., Black Rubber Mulch) 
-3. Click **"Out"** button on the product card
-4. Fill in the dialog:
-   - Quantity sold (e.g., 5 yards)
-   - Date of sale
-   - Customer Name (optional but recommended for reports)
-   - Reference Type: **Sale**
-   - Notes (optional)
-5. Click **"Record Outbound"**
-
-The transaction is saved and stock levels update automatically. The new reports page will aggregate all these "outbound" transactions.
+Using existing Michigan utilities:
+- `calculateManifestPTE()` for manifest tire counts
+- `calculateTotalPTE()` for dropoff tire counts
+- `pteToTons()` for final conversion (÷ 89)
 
 ---
 
-## User Experience Flow
+## Reports Integration
 
-```text
-Inventory Page
-    │
-    ├─► Record Outbound (sale) ──► Transaction saved
-    │
-    └─► View Reports button
-            │
-            ▼
-    Inventory Reports Page
-        ├─► Summary cards (totals)
-        ├─► Sales by product (pie/bar chart)
-        ├─► Monthly trend (line chart)  
-        ├─► Transaction table (filterable)
-        └─► Export CSV button
-```
+The projections data will also be available in the Inventory Reports page:
+- Add "Raw Materials" section to reports
+- Show intake vs output trends over time
+- Include in CSV exports
 
 ---
 
 ## Result
 
 After implementation:
-- Navigate to **Inventory → View Reports** to see sales summaries
-- Filter by date range (e.g., "February 2026")
-- See which products are selling most
-- Export filtered data to CSV for accounting or analysis
-- Track trends over time with visual charts
+- See **real-time raw material weight** in tons on the Inventory page
+- Track **intake trends** from all tire sources (pickups + walk-ins)
+- Understand **processing velocity** (how fast you're converting tires to product)
+- Project **future inventory levels** based on current rates
+- Make informed decisions about processing schedules and sales
 
