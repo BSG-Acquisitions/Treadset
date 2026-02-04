@@ -83,7 +83,7 @@ export default function OutboundSchedule() {
   });
 
   useEffect(() => {
-    document.title = "Outbound Schedule – TreadSet";
+    document.title = "Outbound – TreadSet";
   }, []);
 
   const handleCancel = async (id: string) => {
@@ -209,7 +209,7 @@ export default function OutboundSchedule() {
       <main className="container mx-auto px-4 py-6 space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <BrandHeader 
-            title="Outbound Schedule"
+            title="Outbound"
             subtitle="Manage outbound delivery assignments"
           />
           <Button onClick={() => setScheduleDialogOpen(true)}>

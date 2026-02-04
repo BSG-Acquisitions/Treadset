@@ -214,7 +214,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                   <DropdownMenuItem asChild>
                     <Link to="/outbound-schedule" className={dropdownItemClass(location.pathname === '/outbound-schedule')}>
                       <Send className="h-4 w-4" />
-                      Outbound Schedule
+                      Outbound
                     </Link>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
