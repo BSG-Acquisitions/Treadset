@@ -1,63 +1,94 @@
 
 
-# Fix: Edit Product Form Not Populating Existing Data
+# Add Back Navigation to Product Catalog Page
 
-## Problem
+## Overview
 
-When clicking "Edit" on a product, the form opens **empty** instead of showing the product's existing information (name, description, category, etc.).
+Add a breadcrumb-style back navigation to the Product Catalog page so you can easily return to the main Inventory page without clicking the top nav button again.
 
-## Root Cause
+## Design Approach
 
-In `ProductDialog.tsx`, lines 77-89 use `useState` incorrectly as an effect:
+I'll add a clean back navigation row above the page title that includes:
+- A clickable arrow/link that says "Inventory" to go back to `/inventory`
+- Uses the existing breadcrumb components for consistent styling
+- Shows the navigation hierarchy: **Inventory** > **Product Catalog**
 
-```typescript
-// WRONG - useState callback only runs ONCE on initial mount
-useState(() => {
-  if (open) {
-    form.reset({ ... });
-  }
-});
-```
+This matches modern UX patterns and provides a smooth, intuitive navigation experience.
 
-This should be `useEffect` with proper dependencies, so it runs **every time** the `product` or `open` props change.
+---
 
-## Fix
+## Technical Changes
 
-**File:** `src/components/inventory/ProductDialog.tsx`
+### File: `src/pages/InventoryProducts.tsx`
 
 | Lines | Change |
 |-------|--------|
-| 1 | Import `useEffect` instead of just `useState` |
-| 77-89 | Replace `useState` with `useEffect` and proper dependency array |
+| 2 | Add `ArrowLeft` to lucide-react imports |
+| 3 | Add `Link` import from `react-router-dom` |
+| 3 | Add breadcrumb component imports |
+| 70-74 | Add breadcrumb navigation above the PageHeader |
 
-### Updated Code
+### Updated Code Structure
+
+```text
++----------------------------------------------------------+
+|  ← Inventory  /  Product Catalog                          |  <- NEW breadcrumb row
++----------------------------------------------------------+
+|  Product Catalog                                          |  <- existing PageHeader
+|  Define and manage the products you track in inventory.   |
++----------------------------------------------------------+
+|  [Show inactive toggle]               [Add Product btn]   |
++----------------------------------------------------------+
+```
+
+### New Imports (line 2-3)
 
 ```typescript
-// Line 1: Update import
-import { useEffect } from 'react';
+import { Plus, Pencil, Trash2, Package, ArrowLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
+```
 
-// Lines 77-89: Replace useState with useEffect
-useEffect(() => {
-  if (open) {
-    form.reset({
-      name: product?.name ?? '',
-      description: product?.description ?? '',
-      category: product?.category ?? 'other',
-      unit_of_measure: product?.unit_of_measure ?? 'tons',
-      sku: product?.sku ?? '',
-      low_stock_threshold: product?.low_stock_threshold ?? undefined,
-      is_active: product?.is_active ?? true,
-    });
-  }
-}, [open, product, form]);
+### New Breadcrumb Section (before PageHeader, around line 70)
+
+```typescript
+<div className="container mx-auto py-6 space-y-6">
+  {/* Breadcrumb Navigation */}
+  <Breadcrumb>
+    <BreadcrumbList>
+      <BreadcrumbItem>
+        <BreadcrumbLink asChild>
+          <Link to="/inventory" className="flex items-center gap-1 hover:text-primary">
+            <ArrowLeft className="h-4 w-4" />
+            Inventory
+          </Link>
+        </BreadcrumbLink>
+      </BreadcrumbItem>
+      <BreadcrumbSeparator />
+      <BreadcrumbItem>
+        <BreadcrumbPage>Product Catalog</BreadcrumbPage>
+      </BreadcrumbItem>
+    </BreadcrumbList>
+  </Breadcrumb>
+
+  <PageHeader
+    title="Product Catalog"
+    description="Define and manage the products you track in inventory."
+  />
+  ...
 ```
 
 ## Result
 
-- When you click "Edit" on any product, the form will now correctly populate with:
-  - Product name (e.g., "Brown Rubber Mulch")
-  - Description (e.g., "Wire-free rubber mulch, brown")
-  - Category, unit of measure, SKU, low stock threshold, and active status
-- You can then clear or modify any field, including removing the description
-- The form will still be empty when clicking "Add Product" (since `product` will be `null`)
+- Clear visual hierarchy showing you're in **Inventory > Product Catalog**
+- Clickable "Inventory" link with a left arrow takes you back to `/inventory`
+- Matches the styling of other navigation patterns in the app
+- Works on both desktop and mobile
 
