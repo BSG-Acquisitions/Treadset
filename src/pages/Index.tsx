@@ -27,7 +27,7 @@ import { useRealtimeUpdates } from "@/hooks/useRealtimeUpdates";
 import { SchedulePickupWithDriverDialog } from "@/components/SchedulePickupWithDriverDialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-// Intelligence components moved to /intelligence page
+import { useDashboardData } from "@/hooks/useDashboardData";
 
 export default function Index() {
   const navigate = useNavigate();
