@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -74,7 +74,7 @@ export function ProductDialog({ open, onOpenChange, product }: ProductDialogProp
   });
 
   // Reset form when product changes
-  useState(() => {
+  useEffect(() => {
     if (open) {
       form.reset({
         name: product?.name ?? '',
@@ -86,7 +86,7 @@ export function ProductDialog({ open, onOpenChange, product }: ProductDialogProp
         is_active: product?.is_active ?? true,
       });
     }
-  });
+  }, [open, product, form]);
 
   const onSubmit = async (values: ProductFormValues) => {
     try {
