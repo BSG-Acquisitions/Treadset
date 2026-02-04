@@ -1,205 +1,40 @@
 
 
-# Raw Material Projections System
+# Clear Test Inventory Data
 
-## Overview
+## What Will Be Removed
 
-Build a system that connects tire intake data to projected inventory weight, showing you how much potential product (in tons) you have in your yard based on tires coming through the door. This uses Michigan's 89 PTE/ton conversion rule to project raw material weight from tire counts.
+### All Transactions (8 records)
+All inventory transactions you created for testing will be deleted:
+- 1" Shred: 150 + 50 + 23 - 25 = 198 tons (4 transactions)
+- Black Rubber Mulch: 15 cubic yards (1 transaction)
+- Red Rubber Mulch: 10 cubic yards (1 transaction)
+- Brown Rubber Mulch: 10 cubic yards (2 transactions)
 
----
+### All Products (4 records)
+All test products will be removed from the catalog:
+- 1" Shred
+- Black Rubber Mulch
+- Red Rubber Mulch
+- Brown Rubber Mulch
 
-## What You'll Get
+## After Cleanup
 
-### 1. New "Raw Material Projections" Card on Inventory Page
+Once cleared:
+- **Raw Material Projections** will show only the tire intake data (manifests + dropoffs)
+- **Stock Levels** tab will be empty until you add real products
+- **Transaction History** will be empty until you record real production/sales
+- The 930.44 tons raw material figure will update to reflect **only** tire intake minus zero processed products
 
-A prominent card showing:
-- **Unprocessed Tire Weight**: Total tons of tires in the yard awaiting processing
-- **This Month's Intake**: PTE and tons received this month
-- **Daily Average**: Average daily intake rate
-- **Projected Monthly Total**: Based on current pace
+## Implementation
 
-### 2. New "Projections" Tab on Inventory Page
+I'll delete the data in the correct order (transactions first, then products) to respect foreign key constraints.
 
-A dedicated tab showing:
+## Ready for Fresh Start
 
-| Section | Description |
-|---------|-------------|
-| **Raw Material Summary** | Current unprocessed tire weight (tons), total PTE in yard |
-| **Intake vs Output Chart** | Visual comparison of tires coming in vs processed materials going out |
-| **Conversion Potential** | How many tons of shred, mulch, TDA could be made from current raw materials |
-| **Trend Analysis** | Weekly/monthly intake trends with forecasting |
-
-### 3. Intake Tracking
-
-Track tire intake from multiple sources:
-- **Manifests**: Pickup tires brought in (using all tire fields)
-- **Drop-offs**: Walk-in customer tires
-- Both converted to PTE then to tons using Michigan's 89 PTE = 1 ton rule
-
----
-
-## How Projections Work
-
-### Conversion Formula
-
-```text
-Tires In → PTE → Tons → Potential Product
-
-Example:
-- 890 passenger tires (PTE) = 890 PTE
-- 18 semi tires = 90 PTE
-- Total: 980 PTE = 11.01 tons raw material
-```
-
-### Tracking Flow
-
-```text
-┌─────────────────────────────────────────────────────────────────────┐
-│                        TIRE INTAKE                                   │
-│  ┌─────────────┐    ┌─────────────┐                                 │
-│  │  Manifests  │    │  Drop-offs  │                                 │
-│  │  (Pickups)  │    │  (Walk-ins) │                                 │
-│  └──────┬──────┘    └──────┬──────┘                                 │
-│         │                  │                                        │
-│         └────────┬─────────┘                                        │
-│                  ▼                                                  │
-│         ┌───────────────┐                                           │
-│         │ Calculate PTE │  (1 PTE, 5 semi, 15 OTR)                  │
-│         └───────┬───────┘                                           │
-│                 ▼                                                   │
-│         ┌───────────────┐                                           │
-│         │ Convert Tons  │  (÷ 89 PTE/ton)                           │
-│         └───────┬───────┘                                           │
-│                 ▼                                                   │
-│         ┌───────────────┐                                           │
-│         │ Raw Material  │ ◄─── Unprocessed tire weight              │
-│         │   Inventory   │                                           │
-│         └───────────────┘                                           │
-└─────────────────────────────────────────────────────────────────────┘
-                  │
-                  ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                      PROCESSING                                      │
-│         ┌───────────────┐                                           │
-│         │  Shred/Grind  │                                           │
-│         └───────┬───────┘                                           │
-│                 ▼                                                   │
-│         ┌───────────────┐                                           │
-│         │   Finished    │ ◄─── Inventory products                   │
-│         │   Products    │      (shred, mulch, TDA, etc.)            │
-│         └───────────────┘                                           │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## User Experience
-
-### Inventory Page Updates
-
-The existing stats row will be enhanced with a new "Raw Materials" card:
-
-| Card | Description |
-|------|-------------|
-| Total Products | (existing) Count of product types |
-| Low Stock | (existing) Products below threshold |
-| Out of Stock | (existing) Products at zero |
-| **Raw Materials** | **NEW**: Unprocessed tire weight in tons |
-
-### New Projections Tab
-
-Add a third tab to the inventory page:
-- Stock Levels (existing)
-- Transaction History (existing)  
-- **Raw Material Projections** (new)
-
-This tab will show:
-1. Current raw material weight (tons in yard)
-2. This period's intake (tires → PTE → tons)
-3. Processing rate (how fast you're converting to product)
-4. Projection charts
-
----
-
-## Technical Implementation
-
-### New Files
-
-| File | Purpose |
-|------|---------|
-| `src/hooks/useRawMaterialProjections.ts` | Hook to aggregate tire intake and calculate projections |
-| `src/components/inventory/RawMaterialCard.tsx` | Summary card for raw material weight |
-| `src/components/inventory/ProjectionsTab.tsx` | Full projections view with charts |
-
-### Modified Files
-
-| File | Change |
-|------|--------|
-| `src/pages/Inventory.tsx` | Add Raw Materials card and Projections tab |
-| `src/lib/michigan-conversions.ts` | Add helper for aggregating intake to tons |
-
-### Data Sources
-
-The projections hook will query:
-1. **Manifests table**: `pte_on_rim`, `pte_off_rim`, `commercial_*`, `otr_count`, `tractor_count`
-2. **Dropoffs table**: `pte_count`, `otr_count`, `tractor_count`
-3. **Inventory transactions**: To calculate processing output
-
-### Key Calculations
-
-```typescript
-// Raw Material Projections Hook
-interface RawMaterialProjections {
-  // Current state
-  totalUnprocessedPTE: number;
-  totalUnprocessedTons: number;
-  
-  // This period intake
-  periodIntakePTE: number;
-  periodIntakeTons: number;
-  dailyAveragePTE: number;
-  dailyAverageTons: number;
-  
-  // Processing output (from inventory inbound transactions)
-  periodProcessedTons: number;
-  processingRate: number; // tons processed per day
-  
-  // Projections
-  projectedMonthEndTons: number;
-  daysOfSupplyRemaining: number; // at current processing rate
-  
-  // Breakdown
-  intakeBySource: {
-    manifests: { pte: number; tons: number };
-    dropoffs: { pte: number; tons: number };
-  };
-}
-```
-
-### Conversion Logic
-
-Using existing Michigan utilities:
-- `calculateManifestPTE()` for manifest tire counts
-- `calculateTotalPTE()` for dropoff tire counts
-- `pteToTons()` for final conversion (÷ 89)
-
----
-
-## Reports Integration
-
-The projections data will also be available in the Inventory Reports page:
-- Add "Raw Materials" section to reports
-- Show intake vs output trends over time
-- Include in CSV exports
-
----
-
-## Result
-
-After implementation:
-- See **real-time raw material weight** in tons on the Inventory page
-- Track **intake trends** from all tire sources (pickups + walk-ins)
-- Understand **processing velocity** (how fast you're converting tires to product)
-- Project **future inventory levels** based on current rates
-- Make informed decisions about processing schedules and sales
+After this cleanup, you can:
+1. Add your real product catalog (your actual shred sizes, mulch colors, TDA grades, etc.)
+2. Start recording actual production runs as inbound transactions
+3. Record real sales as outbound transactions
+4. Get accurate projections based on real data
 
