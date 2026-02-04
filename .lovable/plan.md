@@ -1,130 +1,160 @@
 
-# Dashboard Performance Optimization Plan
+# Fix Outbound Schedule Labeling, Password Reset Emails, and Driver Access
 
-## The Problem
+## Issues Identified
 
-The dashboard is slow to load because it's making **too many database queries**. Here's what's happening:
+### Issue 1: "Outbound Schedule" Label Truncation
+The navigation displays "Outbound Schedule" which is being cut off on smaller screens. The user wants it shortened to just "Outbound" for better display.
 
-| Issue | Impact |
-|-------|--------|
-| Dashboard has 17+ separate queries | Each query = round trip to database |
-| Many queries fetch overlapping data | Same manifests/dropoffs fetched multiple times |
-| Clients page has N+1 problem | 10+ extra location queries per page load |
-| 30-second refresh intervals | Queries multiply over time |
+**Affected Files:**
+- `src/pages/OutboundSchedule.tsx` (line 86, 212) - Page title and header
+- `src/components/TopNav.tsx` (line 217) - Navigation dropdown menu
+- `src/components/AppSidebar.tsx` (lines 84, 135) - Sidebar navigation
 
-## Identified Issues
+### Issue 2: Password Reset Email Not Branded
+When users (like Jody) request a password reset, they're being directed to the Lovable website instead of the TreadSet branded experience. This is a critical UX issue.
 
-### Issue 1: Clients Page - N+1 Location Queries
+**Root Cause Analysis:**
 
-The Edit button for each client row triggers a location query **even when the dialog is closed**:
-
-```text
-Row 1: EditClientDialog mounts → useLocations(client1.id) → API call
-Row 2: EditClientDialog mounts → useLocations(client2.id) → API call
-Row 3: EditClientDialog mounts → useLocations(client3.id) → API call
-... (10 rows = 10 extra queries!)
+Looking at `src/contexts/AuthContext.tsx` lines 421-456:
+```typescript
+const resetPassword = async (email: string) => {
+  const currentUrl = window.location.origin;  // ← Problem!
+  const resetUrl = `${currentUrl}/reset-password`;
 ```
 
-**Fix**: Only fetch locations when the dialog opens.
+The issue is that `window.location.origin` returns different URLs depending on where the reset is triggered from:
+- **Production**: `https://treadset.lovable.app` ✅ Correct
+- **Preview/Editor**: `https://id-preview--9afe9a8a-...lovable.app` ❌ Wrong (editor URL)
+- **Localhost**: `http://localhost:5173` ❌ Wrong (dev URL)
 
-### Issue 2: Dashboard - Redundant PTE Queries
+The existing memory states that the production URL should be hardcoded:
+> **Memory: constraints/auth-email-production-url** - To prevent broken authentication links when triggered from Lovable preview environments, the 'AuthContext.tsx' must hardcode the production URL (e.g., https://treadset.lovable.app) for redirect targets.
 
-The dashboard fetches the same data multiple times for different displays:
+**Current Implementation:**
+The code uses Supabase's built-in `resetPasswordForEmail()` which is correct (per memory: auth/password-reset-hybrid-flow), but the `redirectTo` URL is dynamic based on `window.location.origin`.
 
-| Query | What It Fetches |
-|-------|-----------------|
-| `todaysManifests` | Today's manifests |
-| `thisMonthRevenue` | This month's manifests + dropoffs |
-| `currentMonthDailyData` | This month's manifests + dropoffs (again!) |
-| `weeklyData` | This week's manifests + dropoffs |
-| `dayBeforeYesterdayPTEs` | Manifests + dropoffs for 2 days ago |
-| `lastWeekPTEs` | Last week's manifests + dropoffs |
-| `lastMonthPTEs` | Last month's manifests + dropoffs |
+**Impact:**
+- Emails sent from preview environments contain preview URLs
+- Users clicking reset links are taken to Lovable editor login instead of TreadSet
 
-**Fix**: Consolidate into a single "dashboard data" query that fetches once and derives all stats.
+### Issue 3: Driver Access for Jody
+The user needs to know what role to assign Jody so he can log in and use the system, specifically for outbound deliveries.
 
-### Issue 3: Duplicate RPC Calls
+**Access Requirements Analysis:**
 
-Multiple queries call similar RPCs:
-- `weeklyTireStats` calls `get_weekly_pte_totals`
-- `weeklyPTEStats` also calls `get_weekly_pte_totals` (duplicate!)
-- `yesterdayTireStats` calls `get_yesterday_pte_totals`
-- `yesterdayPTEStats` also calls `get_yesterday_pte_totals` (duplicate!)
+From the codebase investigation:
+
+1. **Outbound Schedule Page Access** (`src/App.tsx` line 328-334):
+   ```typescript
+   <Route path="/outbound-schedule" element={
+     <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
+   ```
+   Requires: `admin`, `ops_manager`, or `dispatcher`
+
+2. **Driver Outbound Creation** (`src/App.tsx` line 314-320):
+   ```typescript
+   <Route path="/driver/outbound/new" element={
+     <ProtectedRoute roles={['driver', 'admin']}>
+   ```
+   Requires: `driver` or `admin`
+
+3. **Outbound Hauler Capability** (`src/hooks/useDriverCapabilities.ts` lines 69-75):
+   ```typescript
+   export const useHasOutboundHaulerCapability = () => {
+     const { data: capabilities, isLoading } = useCurrentUserCapabilities();
+     const hasOutboundHauler = capabilities?.some(c => c.capability === 'outbound_hauler') ?? false;
+     return { hasOutboundHauler, isLoading };
+   };
+   ```
+
+**Access Flow for Drivers:**
+- **Role**: `driver` (in `user_organization_roles` table)
+- **Capability**: `outbound_hauler` (in `driver_capabilities` table)
+
+The `driver` role gives access to driver routes, but the `outbound_hauler` **capability** specifically grants permission to create outbound manifests (per memory: features/outbound-manifest-three-signature-workflow).
+
+**Where to Grant Capabilities:**
+From `src/pages/TrailerDriverManagement.tsx`, there's a UI for managing driver capabilities including `outbound_hauler` using the `useGrantCapability` hook.
 
 ---
 
 ## Implementation Plan
 
-### Phase 1: Fix N+1 on Clients Page (Quick Win)
+### Phase 1: Shorten "Outbound Schedule" to "Outbound"
 
-**File: `src/components/EditClientDialog.tsx`**
+**Files to Update:**
 
-Change the useLocations hook to only run when dialog is open:
+1. **`src/pages/OutboundSchedule.tsx`**
+   - Line 86: `document.title = "Outbound – TreadSet";`
+   - Line 212: `title="Outbound"`
 
-```tsx
-// Before (always fetches):
-const { data: locations = [] } = useLocations(client.id);
+2. **`src/components/TopNav.tsx`**
+   - Line 217: `Outbound Schedule` → `Outbound`
 
-// After (only fetches when open):
-const { data: locations = [] } = useLocations(isOpen ? client.id : undefined);
-```
-
-This single change eliminates 10+ queries per page load on the Clients page.
-
----
-
-### Phase 2: Consolidate Dashboard Queries
-
-**File: `src/pages/Index.tsx`**
-
-Replace 17+ separate queries with 3-4 consolidated queries:
-
-1. **Single Dashboard Data Hook**: Create `useDashboardData()` that fetches:
-   - This month's manifests (once)
-   - This month's dropoffs (once)
-   - This month's pickups (once)
-   
-2. **Derive All Stats Client-Side**: Calculate today/yesterday/week/month stats from the single dataset
-
-3. **Use RPC for Time-Sensitive Stats**: Keep the optimized RPC calls for today/yesterday (they're timezone-aware)
-
-**New structure:**
-
-```text
-Before: 17+ queries → 17+ round trips
-After:  4 queries → 4 round trips
-
-Query 1: get_today_pte_totals (RPC - timezone aligned)
-Query 2: get_yesterday_pte_totals (RPC - timezone aligned)  
-Query 3: get_dashboard_summary (new RPC - week/month stats)
-Query 4: This month's manifests for charts (single query)
-```
+3. **`src/components/AppSidebar.tsx`**
+   - Line 84: `label: 'Outbound Schedule'` → `label: 'Outbound'`
+   - Line 135: `label: 'Outbound Schedule'` → `label: 'Outbound'`
 
 ---
 
-### Phase 3: Create Consolidated Dashboard RPC (Optional)
+### Phase 2: Fix Password Reset Email URL
 
-**New Database Function: `get_dashboard_summary`**
+**File: `src/contexts/AuthContext.tsx`**
 
-Create a single RPC that returns all dashboard stats in one call:
-
-```sql
-CREATE OR REPLACE FUNCTION get_dashboard_summary(org_id uuid)
-RETURNS TABLE(
-  today_ptes integer,
-  yesterday_ptes integer,
-  week_ptes integer,
-  month_ptes integer,
-  today_revenue numeric,
-  month_revenue numeric,
-  active_clients integer,
-  completed_pickups integer
-) AS $$
-  -- Single query with date-based aggregation
-$$
+**Current Code (lines 421-424):**
+```typescript
+const resetPassword = async (email: string) => {
+  const currentUrl = window.location.origin;
+  const resetUrl = `${currentUrl}/reset-password`;
 ```
 
-This reduces ~12 queries to 1.
+**Updated Code:**
+```typescript
+const resetPassword = async (email: string) => {
+  // Hardcode production URL to prevent preview/dev environment issues
+  const productionUrl = 'https://treadset.lovable.app';
+  const resetUrl = `${productionUrl}/reset-password`;
+```
+
+**Why This Works:**
+- Password reset emails will always contain `https://treadset.lovable.app/reset-password`
+- Users clicking the link are taken to the branded production site
+- Works correctly even when triggered from preview environments
+- Follows existing memory constraint: `auth-email-production-url`
+
+**Note:** The `signUp` function on line 384 also uses `window.location.origin` but this is acceptable for signup flows as users typically register on the production site, not preview.
+
+---
+
+### Phase 3: Document Driver Access Requirements
+
+**No Code Changes Required** - This is documentation/user guidance.
+
+To grant Jody access to the outbound delivery system:
+
+1. **Assign Driver Role:**
+   - Go to `/employees` page
+   - Find Jody in the employee list
+   - Click the Settings icon to edit
+   - In the "Roles" section, check the **"Driver"** checkbox
+   - Click "Update Employee"
+
+2. **Grant Outbound Hauler Capability:**
+   - Go to `/trailers/drivers` (Trailers → Driver Management)
+   - Find Jody in the driver list
+   - Click "Grant Capability"
+   - Select **"outbound_hauler"** from the dropdown
+   - Confirm
+
+**Access Granted:**
+- Jody can log in at `https://treadset.lovable.app/auth/sign-in`
+- He'll see the Driver Dashboard (`/driver/dashboard`)
+- He can create outbound manifests (`/driver/outbound/new`)
+- He can view his assigned outbound deliveries on the dashboard
+
+**If Jody Can't Log In:**
+After assigning the role, use the "Reset Password" button in the Edit Employee dialog to send him a password reset email. The email will now correctly point to `https://treadset.lovable.app/reset-password` (after Phase 2 fix).
 
 ---
 
@@ -132,48 +162,61 @@ This reduces ~12 queries to 1.
 
 | File | Changes |
 |------|---------|
-| `src/components/EditClientDialog.tsx` | Lazy-load locations (only when dialog opens) |
-| `src/pages/Index.tsx` | Consolidate redundant queries |
-| `src/hooks/useDashboardData.ts` | New: consolidated dashboard data hook |
-| Supabase functions (optional) | New: `get_dashboard_summary` RPC |
+| `src/pages/OutboundSchedule.tsx` | Change "Outbound Schedule" → "Outbound" (2 locations) |
+| `src/components/TopNav.tsx` | Change "Outbound Schedule" → "Outbound" (1 location) |
+| `src/components/AppSidebar.tsx` | Change "Outbound Schedule" → "Outbound" (2 locations) |
+| `src/contexts/AuthContext.tsx` | Hardcode production URL for password reset redirects |
 
 ---
 
 ## Expected Results
 
-| Metric | Before | After |
-|--------|--------|-------|
-| Clients page queries | ~15 per load | ~5 per load |
-| Dashboard queries | ~17 per load | ~4 per load |
-| Total API calls on login | ~35+ | ~10 |
-| Page load time | Slow | 3x faster |
-
----
-
-## Implementation Priority
-
-1. **Phase 1 first** - EditClientDialog fix is a 1-line change with big impact
-2. **Phase 2 next** - Dashboard consolidation requires refactoring but no database changes
-3. **Phase 3 optional** - RPC consolidation is most impactful but requires database migration
+| Issue | Before | After |
+|-------|--------|-------|
+| Navigation label | "Outbound Schedule" (truncated on mobile) | "Outbound" (fits on all screens) |
+| Password reset email | Links to preview URLs (broken) | Links to `treadset.lovable.app` (works) |
+| Jody's access | Can't log in or use outbound | Can log in, create outbound manifests |
 
 ---
 
 ## Technical Notes
 
-### Why the N+1 happens
+### Password Reset Flow
 
-React Query's `useQuery` executes immediately when the component mounts. The EditClientDialog mounts for every table row (inside the Actions cell), so even though the dialogs are all closed, each one triggers its `useLocations` call.
+Per memory `auth/password-reset-hybrid-flow`, the current implementation correctly uses:
+1. **Supabase's built-in `resetPasswordForEmail()`** - Generates secure token
+2. **Custom Resend edge function** - Sends branded email (optional/backup)
 
-### Why consolidation helps
+The only fix needed is ensuring the `redirectTo` URL is always the production domain.
 
-Each database query has overhead:
-- Network round trip (~50-200ms)
-- Connection pooling
-- RLS policy evaluation
-- Query parsing
+### Why Not Use Environment Variables?
 
-By fetching once and computing client-side, we eliminate this overhead for redundant data.
+The `VITE_*` pattern is not supported in Lovable (per limitations in useful context). Hardcoding the production URL is the recommended pattern for this use case.
 
-### Cache strategy
+### Driver Capabilities vs Roles
 
-The existing React Query cache already helps - queries with the same key reuse cached data. But the dashboard queries have slightly different date ranges in their keys, preventing cache hits.
+- **Roles** (`user_organization_roles` table): Broad access levels (admin, driver, etc.)
+- **Capabilities** (`driver_capabilities` table): Granular permissions (semi_hauler, outbound_hauler)
+
+Jody needs both:
+- `driver` role → Access to driver routes and dashboard
+- `outbound_hauler` capability → Permission to create outbound manifests
+
+### Email Template Branding
+
+Password reset email templates are managed in Supabase Dashboard under Authentication > Email Templates (per memory `auth/password-reset-hybrid-flow`). The custom Resend function provides additional branding but relies on Supabase's token generation.
+
+---
+
+## User Action Required After Implementation
+
+1. **Verify Password Reset:**
+   - Test password reset from `/auth/sign-in`
+   - Confirm email contains `https://treadset.lovable.app/reset-password` link
+   - Verify link redirects correctly (not to Lovable)
+
+2. **Grant Jody Access:**
+   - Go to `/employees` → Edit Jody → Check "Driver" role
+   - Go to `/trailers/drivers` → Grant "outbound_hauler" capability
+   - Send password reset email to Jody
+   - Confirm he can log in and access outbound features
