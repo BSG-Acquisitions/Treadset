@@ -24,6 +24,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
 import { useDestinationEntities, useOwnEntity } from '@/hooks/useEntities';
 import { useCreateOutboundManifest, useUpdateOutboundManifestSignatures } from '@/hooks/useOutboundManifests';
+import { useCompleteOutboundDelivery } from '@/hooks/useOutboundAssignments';
 import { useManifestIntegration } from '@/hooks/useManifestIntegration';
 import { convertToTons, pteToTons } from '@/lib/michigan-conversions';
 import { useAuth } from '@/contexts/AuthContext';
@@ -35,6 +36,7 @@ type UnitBasis = Database['public']['Enums']['unit_basis'];
 interface OutboundManifestWizardProps {
   onComplete: (manifestId: string) => void;
   onCancel: () => void;
+  assignmentId?: string; // If provided, pre-fills from the assignment
 }
 
 type WizardStep = 'destination' | 'material' | 'signatures' | 'review' | 'complete';
@@ -55,7 +57,8 @@ const UNIT_OPTIONS: { value: UnitBasis; label: string }[] = [
 
 export const OutboundManifestWizard: React.FC<OutboundManifestWizardProps> = ({ 
   onComplete, 
-  onCancel 
+  onCancel,
+  assignmentId
 }) => {
   const [step, setStep] = useState<WizardStep>('destination');
   const [loading, setLoading] = useState(false);
@@ -74,6 +77,7 @@ export const OutboundManifestWizard: React.FC<OutboundManifestWizardProps> = ({
   const createManifest = useCreateOutboundManifest();
   const updateSignatures = useUpdateOutboundManifestSignatures();
   const manifestIntegration = useManifestIntegration();
+  const completeDelivery = useCompleteOutboundDelivery();
 
   // Form state
   const [data, setData] = useState({
@@ -90,6 +94,39 @@ export const OutboundManifestWizard: React.FC<OutboundManifestWizardProps> = ({
     haulerSigPath: '',
     haulerSigned: false,
   });
+
+  // Load assignment data if assignmentId is provided
+  useEffect(() => {
+    const loadAssignment = async () => {
+      if (!assignmentId) return;
+
+      const { data: assignment, error } = await supabase
+        .from('outbound_assignments')
+        .select('*')
+        .eq('id', assignmentId)
+        .single();
+
+      if (error || !assignment) return;
+
+      // Pre-fill form data from assignment
+      setData(prev => ({
+        ...prev,
+        destinationId: assignment.destination_entity_id || '',
+        materialForm: (assignment.material_form as MaterialForm) || 'whole_off_rim',
+        quantity: assignment.estimated_quantity || 0,
+        unitBasis: (assignment.estimated_unit as UnitBasis) || 'tons',
+        notes: assignment.notes || '',
+      }));
+
+      // Update assignment status to in_progress
+      await supabase
+        .from('outbound_assignments')
+        .update({ status: 'in_progress' })
+        .eq('id', assignmentId);
+    };
+
+    loadAssignment();
+  }, [assignmentId]);
 
   // Get driver name for hauler signature
   const haulerName = user?.firstName && user?.lastName 
@@ -286,6 +323,14 @@ export const OutboundManifestWizard: React.FC<OutboundManifestWizardProps> = ({
           hauler_time: currentTime,
         }
       });
+
+      // If this was from an assignment, complete it and link the manifest
+      if (assignmentId) {
+        await completeDelivery.mutateAsync({
+          assignmentId,
+          manifestId: manifest.id,
+        });
+      }
 
       setCreatedManifestId(manifest.id);
       setStep('complete');

@@ -56,6 +56,7 @@ import DriverPaymentSuccess from "./pages/driver/PaymentSuccess";
 import DriverPaymentCancelled from "./pages/driver/PaymentCancelled";
 import DriverOutboundCreate from "./pages/driver/DriverOutboundCreate";
 import DriverOutboundManifests from "./pages/driver/DriverOutboundManifests";
+import OutboundSchedule from "./pages/OutboundSchedule";
 import Manifests from "./pages/Manifests";
 import BackfillManifestPdfs from "./pages/BackfillManifestPdfs";
 import DeploymentDashboard from "./pages/DeploymentDashboard";
@@ -321,6 +322,13 @@ const App = () => (
                 <ProtectedRoute roles={['driver', 'admin']}>
                   <AppLayout>
                     <DriverOutboundManifests />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/outbound-schedule" element={
+                <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
+                  <AppLayout>
+                    <OutboundSchedule />
                   </AppLayout>
                 </ProtectedRoute>
               } />

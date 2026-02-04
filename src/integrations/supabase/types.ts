@@ -3355,6 +3355,93 @@ export type Database = {
         }
         Relationships: []
       }
+      outbound_assignments: {
+        Row: {
+          created_at: string
+          destination_entity_id: string
+          driver_id: string | null
+          estimated_quantity: number | null
+          estimated_unit: Database["public"]["Enums"]["unit_basis"] | null
+          id: string
+          manifest_id: string | null
+          material_form: Database["public"]["Enums"]["material_form"] | null
+          notes: string | null
+          organization_id: string
+          scheduled_date: string
+          status: string
+          updated_at: string
+          vehicle_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          destination_entity_id: string
+          driver_id?: string | null
+          estimated_quantity?: number | null
+          estimated_unit?: Database["public"]["Enums"]["unit_basis"] | null
+          id?: string
+          manifest_id?: string | null
+          material_form?: Database["public"]["Enums"]["material_form"] | null
+          notes?: string | null
+          organization_id: string
+          scheduled_date: string
+          status?: string
+          updated_at?: string
+          vehicle_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          destination_entity_id?: string
+          driver_id?: string | null
+          estimated_quantity?: number | null
+          estimated_unit?: Database["public"]["Enums"]["unit_basis"] | null
+          id?: string
+          manifest_id?: string | null
+          material_form?: Database["public"]["Enums"]["material_form"] | null
+          notes?: string | null
+          organization_id?: string
+          scheduled_date?: string
+          status?: string
+          updated_at?: string
+          vehicle_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outbound_assignments_destination_entity_id_fkey"
+            columns: ["destination_entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outbound_assignments_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outbound_assignments_manifest_id_fkey"
+            columns: ["manifest_id"]
+            isOneToOne: false
+            referencedRelation: "manifests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outbound_assignments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outbound_assignments_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           amount: number
