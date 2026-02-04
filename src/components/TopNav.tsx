@@ -50,7 +50,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
     if (location.pathname === '/dashboard') return 'dashboard';
     if (location.pathname.startsWith('/clients')) return 'clients';
     if (location.pathname.startsWith('/routes')) return 'routes';
-    if (location.pathname.startsWith('/driver')) return 'driver';
+    if (location.pathname.startsWith('/inventory')) return 'inventory';
     if (location.pathname.startsWith('/trailers')) return 'trailers';
     if (location.pathname === '/haulers') return 'haulers';
     if (location.pathname === '/analytics') return 'analytics';
@@ -63,7 +63,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
     { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/dashboard', roles: [] as const, featureFlag: null },
     { id: 'clients', label: 'Clients', icon: Users, path: '/clients', roles: ['admin', 'ops_manager', 'sales', 'viewer'] as const, featureFlag: null },
     { id: 'routes', label: 'Routes', icon: MapPin, path: '/routes/today', roles: ['admin', 'ops_manager', 'dispatcher', 'viewer'] as const, featureFlag: null },
-    { id: 'driver', label: 'My Routes', icon: UserCheck, path: '/routes/driver', roles: ['driver'] as const, featureFlag: null },
+    { id: 'inventory', label: 'Inventory', icon: Boxes, path: '/inventory', roles: ['admin', 'ops_manager', 'dispatcher', 'viewer'] as const, featureFlag: 'INVENTORY' as const },
     { id: 'trailers', label: 'Trailers', icon: Container, path: '/trailers/inventory', roles: ['admin', 'ops_manager', 'dispatcher', 'viewer'] as const, featureFlag: 'TRAILERS' as const },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics', roles: ['admin', 'ops_manager', 'viewer'] as const, featureFlag: null },
     { id: 'reports', label: 'Reports', icon: FileText, path: '/reports', roles: ['admin', 'ops_manager', 'viewer'] as const, featureFlag: null },
@@ -209,14 +209,6 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                   <Link to="/service-zones" className="flex items-center gap-2">
                     <Map className="h-4 w-4" />
                     Service Zones
-                  </Link>
-                </DropdownMenuItem>
-              )}
-              {hasAnyRole(['admin', 'ops_manager', 'dispatcher', 'viewer']) && FEATURE_FLAGS.INVENTORY && (
-                <DropdownMenuItem asChild>
-                  <Link to="/inventory" className="flex items-center gap-2">
-                    <Boxes className="h-4 w-4" />
-                    Inventory
                   </Link>
                 </DropdownMenuItem>
               )}
