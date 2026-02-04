@@ -3,7 +3,7 @@
  * Implements server-side rate limiting with Supabase storage
  */
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
+import { createClient } from 'npm:@supabase/supabase-js@2.49.4';
 
 interface RateLimitConfig {
   maxRequests: number;
