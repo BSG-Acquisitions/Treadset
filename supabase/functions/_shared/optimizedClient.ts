@@ -3,7 +3,7 @@
  * Reduces cold-start delays by reusing connections
  */
 
-import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient, SupabaseClient } from 'npm:@supabase/supabase-js@2.49.4';
 
 // Connection pool to reuse across invocations
 let clientPool: SupabaseClient | null = null;
