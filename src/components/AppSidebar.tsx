@@ -103,6 +103,7 @@ export function AppSidebar() {
     inventory: [
       { id: 'inventory', label: 'Stock Levels', icon: Package, path: '/inventory', roles: ['admin', 'ops_manager', 'dispatcher'] as const },
       { id: 'inventory-products', label: 'Products', icon: PackageOpen, path: '/inventory/products', roles: ['admin', 'ops_manager'] as const },
+      { id: 'shipments', label: 'Shipments', icon: Truck, path: '/shipments', roles: ['admin', 'ops_manager', 'dispatcher'] as const },
     ],
     reporting: [
       { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics', roles: ['admin', 'ops_manager'] as const },
