@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { RouteOptimizationTips } from '@/components/driver/RouteOptimizationTips';
+import { DriverOutboundAssignments } from '@/components/driver/DriverOutboundAssignments';
 import { 
   Truck, 
   FileText, 
@@ -173,6 +174,11 @@ export default function DriverDashboard() {
 
         {/* Route Optimization Tips */}
         <RouteOptimizationTips />
+
+        {/* Outbound Assignments for drivers with capability */}
+        {hasOutboundHauler && (
+          <DriverOutboundAssignments date={todayStr} />
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Today's Assignments */}

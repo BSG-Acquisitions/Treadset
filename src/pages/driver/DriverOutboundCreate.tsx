@@ -1,10 +1,12 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { BrandHeader } from '@/components/BrandHeader';
 import { OutboundManifestWizard } from '@/components/driver/OutboundManifestWizard';
 
 export default function DriverOutboundCreate() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const assignmentId = searchParams.get('assignmentId');
 
   useEffect(() => {
     document.title = "New Outbound Manifest – TreadSet";
@@ -29,6 +31,7 @@ export default function DriverOutboundCreate() {
         <OutboundManifestWizard 
           onComplete={handleComplete}
           onCancel={handleCancel}
+          assignmentId={assignmentId || undefined}
         />
       </main>
     </div>
