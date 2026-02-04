@@ -76,6 +76,8 @@ import PortalUnsubscribe from "./pages/PortalUnsubscribe";
 import PortalInvites from "./pages/PortalInvites";
 import PublicLanding from "./pages/PublicLanding";
 import AppLanding from "./pages/AppLanding";
+import Inventory from "./pages/Inventory";
+import InventoryProducts from "./pages/InventoryProducts";
 
 // Domain-based routing: show BSG marketing on bsgtires domains, TreadSet app landing elsewhere
 function RootRoute() {
@@ -496,6 +498,26 @@ const App = () => (
                     <ServiceZones />
                   </AppLayout>
                 </ProtectedRoute>
+              } />
+              
+              {/* Inventory Management Routes - Feature Flag Protected */}
+              <Route path="/inventory" element={
+                FEATURE_FLAGS.INVENTORY ? (
+                  <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
+                    <AppLayout>
+                      <Inventory />
+                    </AppLayout>
+                  </ProtectedRoute>
+                ) : <NotFound />
+              } />
+              <Route path="/inventory/products" element={
+                FEATURE_FLAGS.INVENTORY ? (
+                  <ProtectedRoute roles={['admin', 'ops_manager']}>
+                    <AppLayout>
+                      <InventoryProducts />
+                    </AppLayout>
+                  </ProtectedRoute>
+                ) : <NotFound />
               } />
               
               {/* Client Portal - For external clients to view their manifests, admins can preview */}

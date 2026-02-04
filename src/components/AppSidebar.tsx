@@ -26,7 +26,8 @@ import {
   Car,
   ArrowRightLeft,
   UserCog,
-  Clock
+  Clock,
+  Package
 } from "lucide-react";
 import { useHasSemiHaulerCapability } from "@/hooks/useDriverCapabilities";
 import { NavLink, useLocation } from "react-router-dom";
@@ -99,6 +100,10 @@ export function AppSidebar() {
     financial: [
       { id: 'dropoffs', label: 'Drop-offs', icon: PackageOpen, path: '/dropoffs', roles: ['admin', 'ops_manager', 'sales'] as const },
     ],
+    inventory: [
+      { id: 'inventory', label: 'Stock Levels', icon: Package, path: '/inventory', roles: ['admin', 'ops_manager', 'dispatcher'] as const },
+      { id: 'inventory-products', label: 'Products', icon: PackageOpen, path: '/inventory/products', roles: ['admin', 'ops_manager'] as const },
+    ],
     reporting: [
       { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics', roles: ['admin', 'ops_manager'] as const },
       { id: 'reports', label: 'Reports', icon: FileText, path: '/reports', roles: ['admin', 'ops_manager'] as const },
@@ -142,6 +147,7 @@ export function AppSidebar() {
     { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics', roles: ['admin', 'ops_manager'] as const },
     { id: 'reports', label: 'Reports', icon: FileText, path: '/reports', roles: ['admin', 'ops_manager'] as const },
     { id: 'michigan-reports', label: 'Michigan Reports', icon: Recycle, path: '/michigan-reports', roles: ['admin', 'ops_manager'] as const },
+    { id: 'inventory', label: 'Inventory', icon: Package, path: '/inventory', roles: ['admin', 'ops_manager', 'dispatcher'] as const },
   ];
 
   // Trailer management items - only for admin, ops_manager, dispatcher
@@ -333,6 +339,30 @@ export function AppSidebar() {
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
+
+            {FEATURE_FLAGS.INVENTORY && (
+              <SidebarGroup>
+                <SidebarGroupLabel className={isCollapsed ? "sr-only" : ""}>Inventory</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu className="space-y-1">
+                    {superAdminNavigation.inventory.map((item) => (
+                      <SidebarMenuItem key={item.id}>
+                        <SidebarMenuButton asChild className="h-12">
+                          <NavLink 
+                            to={item.path} 
+                            onClick={handleNavClick}
+                            className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${getNavClass(item.path)}`}
+                          >
+                            <item.icon className={`h-5 w-5 flex-shrink-0 ${isCollapsed ? 'mx-auto' : ''}`} />
+                            {!isCollapsed && <span className="text-sm font-medium truncate">{item.label}</span>}
+                          </NavLink>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            )}
 
             {FEATURE_FLAGS.TRAILERS && (
               <SidebarGroup>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Bell, Menu, User, Settings, Package, BarChart3, UserCheck, Home, Users, MapPin, DollarSign, CreditCard, PenTool, Truck, Building, FileText, PackageOpen, Container, CalendarCheck, Map, Brain } from 'lucide-react';
+import { Search, Bell, Menu, User, Settings, Package, BarChart3, UserCheck, Home, Users, MapPin, DollarSign, CreditCard, PenTool, Truck, Building, FileText, PackageOpen, Container, CalendarCheck, Map, Brain, Boxes } from 'lucide-react';
 import { FEATURE_FLAGS } from '@/lib/featureFlags';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -209,6 +209,14 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                   <Link to="/service-zones" className="flex items-center gap-2">
                     <Map className="h-4 w-4" />
                     Service Zones
+                  </Link>
+                </DropdownMenuItem>
+              )}
+              {hasAnyRole(['admin', 'ops_manager', 'dispatcher', 'viewer']) && FEATURE_FLAGS.INVENTORY && (
+                <DropdownMenuItem asChild>
+                  <Link to="/inventory" className="flex items-center gap-2">
+                    <Boxes className="h-4 w-4" />
+                    Inventory
                   </Link>
                 </DropdownMenuItem>
               )}

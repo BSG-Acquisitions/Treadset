@@ -12,6 +12,13 @@ export const FEATURE_FLAGS = {
    * This allows the trailer subsystem to be completely disabled without errors.
    */
   TRAILERS: import.meta.env.VITE_FEATURE_TRAILERS !== 'false',
+  
+  /**
+   * INVENTORY - Product Inventory Tracking System
+   * When false, all inventory-related navigation, routes, and components are hidden.
+   * This allows the inventory subsystem to be completely disabled without errors.
+   */
+  INVENTORY: import.meta.env.VITE_FEATURE_INVENTORY !== 'false',
 } as const;
 
 export type FeatureFlag = keyof typeof FEATURE_FLAGS;
