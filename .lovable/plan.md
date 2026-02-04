@@ -1,107 +1,184 @@
 
-# Historical Intake Averages for Production Capacity Planning
+# Outbound Manifest & Shipment Tracking System for State Compliance
 
-## The Business Need
+## The Gap You Identified
 
-You need to know your average monthly intake capacity to confidently commit to buyer orders. For example:
-- Buyer wants 100-200 tons of shredded material per month
-- You need to know: "On average, how much raw material am I bringing in?"
-- This helps you determine if you can fulfill that order consistently
+Your compliance tracking currently only covers material **coming IN**. But the state requires tracking the full lifecycle:
 
-## Your Historical Data (What I Found)
+| Movement Type | Current Status | What's Needed |
+|--------------|----------------|---------------|
+| Tires IN (from generators) | Fully tracked with manifests | None |
+| Processed material OUT (sales) | Inventory transactions only | Manifests + destination tracking |
+| Raw tires OUT (to other processors) | Not tracked | Full outbound manifests |
 
-Based on your database, here's your intake by month:
+The state needs to know:
+- Where material came from (you have this)
+- What happened to it (processing - partially tracked)
+- Where it went when it left (missing)
 
-| Month | Manifests | Dropoffs | Total PTE | Approx Tons |
-|-------|-----------|----------|-----------|-------------|
-| Feb 2026 | 7 loads | 2 | 3,652 PTE | ~41 tons |
-| Jan 2026 | 116 loads | 21 | 25,704 PTE | ~289 tons |
-| Dec 2025 | 146 loads | 43 | 46,826 PTE | ~526 tons |
-| Nov 2025 | 99 loads | 26 | 20,793 PTE | ~234 tons |
-| Oct 2025 | 23 loads | 9 | 6,111 PTE | ~69 tons |
-| Sep 2025 | 2 loads | 1 | 192 PTE | ~2 tons |
+## Good News: Database Structure Exists
 
-**3-Month Average (Nov-Jan):** ~350 tons/month
-**6-Month Average:** ~193 tons/month (includes ramp-up months)
+Your database already has the `shipments` table designed for exactly this, with fields for:
+- Origin and destination entities
+- Material form (whole tires, shreds, crumb, etc.)
+- Direction (outbound)
+- End use (processing, TDF, civil construction, etc.)
+- Manifest reference
+- BOL number and carrier
+
+The entities table can track destination processors like the one Jody takes material to.
 
 ## What Will Be Built
 
-### 1. Historical Averages Section in Projections Tab
+### Phase 1: Outbound Shipment Management
 
-A new card showing:
-- **3-Month Rolling Average** (most relevant for capacity planning)
-- **6-Month Rolling Average** (longer trend view)
-- **Monthly breakdown bar chart** (visual history)
-- **Capacity indicator**: "Can you fulfill X tons/month?"
+**New Page: Material Shipments (/shipments)**
+- List all outbound shipments with date, destination, material type, quantity, tonnage
+- Filter by date range, destination, material type
+- Link to associated manifests
+- Historical data entry with backdating support
 
-### 2. Capacity Planning Helper
+**New Hook: `useShipments`**
+- CRUD operations for the shipments table
+- Automatic tonnage calculation using conversion kernel
+- Integration with entities (destinations)
 
-Simple visualization showing:
-- Your average intake vs a target order size
-- Color-coded indicator (green = safe, yellow = tight, red = insufficient)
+### Phase 2: Destination Processor Management
 
-## UI Preview
+**New Section in Entities or Dedicated Page**
+- Add/edit destination processors (like the facility Jody takes tires to)
+- Store MI registration numbers for compliance
+- Contact information for documentation
+
+### Phase 3: Driver Outbound Manifest Workflow
+
+**New Driver Flow: Outbound Manifest Creation**
+- Jody (or any driver) can create manifests when taking material OUT
+- Capture: destination, material type, quantity, signatures
+- Generate PDF manifest for outbound loads
+- Same two-stage workflow (driver signature at origin, receiver signature at destination)
+
+### Phase 4: Historical Data Entry
+
+**Backfill Interface for Paper Manifests**
+- Form to enter historical outbound manifests
+- Date picker for actual shipment date
+- All tire counts and tonnage
+- Destination and end use
+- Notes for any paper manifest reference numbers
+
+### Phase 5: Reporting Integration
+
+**Update Michigan Reports**
+- Add "Outbound" tab showing material destinations
+- Summary of material sent to each destination
+- Tonnage by end use (processing, TDF, etc.)
+- Net material balance (in - out = on site)
+
+## Data Flow
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│ Historical Intake Averages                                  │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
-│  │ 3-Month Avg │  │ 6-Month Avg │  │ Peak Month  │         │
-│  │  350 tons   │  │  193 tons   │  │  526 tons   │         │
-│  │   /month    │  │   /month    │  │  (Dec 2025) │         │
-│  └─────────────┘  └─────────────┘  └─────────────┘         │
-│                                                             │
-│  Monthly Intake Trend                                       │
-│  ────────────────────                                       │
-│  Dec ████████████████████████ 526t                         │
-│  Jan ████████████████ 289t                                 │
-│  Nov ████████████ 234t                                     │
-│  Oct ████ 69t                                              │
-│  Feb ██ 41t (partial)                                      │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
+                     YOUR FACILITY
+                          │
+    ┌─────────────────────┼─────────────────────┐
+    │                     │                     │
+    ▼                     │                     ▼
+ INBOUND                  │               OUTBOUND
+ (generators)             │            (processors/buyers)
+    │                     │                     │
+    ├─ Manifests          │              ├─ Shipments table
+    ├─ Dropoffs           │              ├─ Outbound manifests  
+    └─ PTE counts         │              └─ Tonnage/PTE
+                          │
+              ┌───────────┴───────────┐
+              │   INVENTORY STATUS    │
+              │  (what's on site)     │
+              │                       │
+              │  In - Out = Current   │
+              └───────────────────────┘
+                          │
+                          ▼
+              ┌───────────────────────┐
+              │   STATE REPORTS       │
+              │  - Inbound summary    │
+              │  - Outbound summary   │
+              │  - End use breakdown  │
+              │  - Net balance        │
+              └───────────────────────┘
 ```
+
+## Files to Create
+
+| File | Purpose |
+|------|---------|
+| `src/hooks/useShipments.ts` | CRUD operations for outbound shipments |
+| `src/hooks/useEntities.ts` | Manage destination processors |
+| `src/pages/Shipments.tsx` | Main shipments management page |
+| `src/components/shipments/ShipmentDialog.tsx` | Create/edit shipment form |
+| `src/components/shipments/ShipmentsList.tsx` | Filterable shipments list |
+| `src/components/driver/DriverOutboundManifestWizard.tsx` | Driver workflow for outbound |
+| `src/pages/driver/DriverOutboundCreate.tsx` | Driver outbound manifest page |
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/hooks/useRawMaterialProjections.ts` | Add new hook or extend to fetch multi-month historical data |
-| `src/components/inventory/ProjectionsTab.tsx` | Add Historical Averages card with monthly bar chart |
+| `src/pages/MichiganReports.tsx` | Add Outbound tab with destination summary |
+| `src/hooks/useMichiganReporting.ts` | Include outbound shipments in report data |
+| `src/hooks/useRawMaterialProjections.ts` | Deduct outbound from on-site inventory |
+| `src/App.tsx` | Add routes for new pages |
 
-## Technical Approach
+## UI Preview: Shipments Page
 
-### New Hook: `useHistoricalIntakeAverages`
-
-```typescript
-// Returns:
-{
-  monthlyData: Array<{
-    month: Date;
-    manifests: { count: number; pte: number; tons: number };
-    dropoffs: { count: number; pte: number; tons: number };
-    totalPTE: number;
-    totalTons: number;
-  }>;
-  threeMonthAvgTons: number;
-  sixMonthAvgTons: number;
-  peakMonth: { month: Date; tons: number };
-  averageLoadsPerMonth: number;
-}
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│ Material Shipments                           + Record Shipment  │
+├─────────────────────────────────────────────────────────────────┤
+│ Filters: [Date Range ▼] [Destination ▼] [Material ▼] [Search]  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │ Feb 3, 2026          XYZ Processing LLC                     │ │
+│ │ 42 tons shredded     Driver: Jody Green                     │ │
+│ │ BOL: BOL-2026-0042   End Use: Processing                    │ │
+│ │ [View Manifest]      Status: Delivered ✓                    │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+│                                                                 │
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │ Jan 28, 2026         ABC Tire Recyclers                     │ │
+│ │ 85 PTE whole tires   Driver: Jody Green                     │ │
+│ │ BOL: BOL-2026-0038   End Use: Further Processing            │ │
+│ │ [View Manifest]      Status: Delivered ✓                    │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### UI Components
+## Driver Outbound Workflow
 
-1. **Summary Cards Row**: 3-month avg, 6-month avg, peak month
-2. **Bar Chart**: Monthly intake over time (using existing Recharts)
-3. **Trend Indicator**: Are you trending up or down vs historical average?
+Jody's workflow when taking a load to another processor:
+
+1. **Select destination** - Pick from saved processors or add new
+2. **Enter material** - Type (whole tires, shreds, etc.), quantity
+3. **Capture signatures** - Driver signs at origin before departure
+4. **Generate manifest PDF** - Print/email for driver to carry
+5. **Complete at destination** - Receiver signs upon arrival
+6. **Auto-sync to reports** - Tonnage flows to Michigan reports
+
+## Backfill Historical Data
+
+For the paper manifests Jody has been doing:
+
+- Dedicated "Historical Entry" mode
+- Pick shipment date in the past
+- Enter all counts from paper manifest
+- Reference original paper manifest number in notes
+- Links to reporting immediately
 
 ## After Implementation
 
-You'll be able to:
-- See at a glance your average monthly intake (~350 tons based on recent data)
-- Confidently tell a buyer: "Yes, I can fulfill 100-200 tons/month"
-- Identify seasonal patterns (e.g., December was your highest month)
-- Track whether your capacity is growing or shrinking over time
+- **Complete audit trail**: Every tire in, every tire out
+- **State-ready reports**: Accurate tonnage in AND out
+- **Net inventory**: Real-time view of what's actually on site
+- **Driver efficiency**: Jody can do digital manifests in the field
+- **Historical catch-up**: All paper manifests can be entered with correct dates
