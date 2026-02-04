@@ -179,7 +179,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
       {/* Navigation Tabs - Only shown on desktop xl+ screens */}
       <div className="hidden xl:block border-t border-border/20 bg-card/50">
         <div className="px-3 sm:px-6">
-          <nav className="flex items-center gap-0">
+          <nav className="flex items-center gap-1 sm:gap-2">
             {/* Dashboard - Simple link */}
             <Link to="/dashboard" className={navItemClass(activeSection === 'dashboard')}>
               <Home className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -402,14 +402,6 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                   {/* Administration */}
                   {hasAnyRole(['admin', 'ops_manager', 'viewer']) && (
                     <DropdownMenuItem asChild>
-                      <Link to="/data-quality" className={dropdownItemClass(location.pathname === '/data-quality')}>
-                        <Database className="h-4 w-4" />
-                        Data Quality
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
-                  {hasAnyRole(['admin', 'ops_manager', 'viewer']) && (
-                    <DropdownMenuItem asChild>
                       <Link to="/intelligence" className={dropdownItemClass(location.pathname === '/intelligence')}>
                         <Brain className="h-4 w-4" />
                         Intelligence
@@ -431,17 +423,6 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                         Settings
                       </Link>
                     </DropdownMenuItem>
-                  )}
-                  {hasAnyRole(['admin']) && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link to="/deployment" className={dropdownItemClass(location.pathname === '/deployment')}>
-                          <Wrench className="h-4 w-4" />
-                          Deployment
-                        </Link>
-                      </DropdownMenuItem>
-                    </>
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>

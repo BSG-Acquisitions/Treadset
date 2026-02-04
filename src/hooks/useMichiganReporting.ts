@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { 
-  calculateTotalPTE, 
+  calculateManifestPTE, 
   pteToTons, 
   pteToCubicYards,
   MICHIGAN_CONVERSIONS 
@@ -45,16 +45,16 @@ export interface MichiganReportData {
   }>;
 }
 
-// Generate Michigan annual report from pickup data
+// Generate Michigan annual report from manifest data (inbound)
 export const useMichiganReport = (year: number) => {
   return useQuery({
     queryKey: ['michigan-report', year],
     queryFn: async (): Promise<MichiganReportData> => {
       console.log(`Generating Michigan report for year ${year}`);
       
-      // Get all completed pickups for the year
-      const { data: pickups, error: pickupsError } = await supabase
-        .from('pickups')
+      // Get all inbound manifests for the year
+      const { data: manifests, error: manifestsError } = await supabase
+        .from('manifests')
         .select(`
           *,
           clients!inner(
@@ -63,25 +63,20 @@ export const useMichiganReport = (year: number) => {
             county,
             city,
             state
-          ),
-          locations(
-            id,
-            name,
-            address
           )
         `)
-        .eq('status', 'completed')
-        .gte('pickup_date', `${year}-01-01`)
-        .lte('pickup_date', `${year}-12-31`);
+        .eq('direction', 'inbound')
+        .gte('created_at', `${year}-01-01`)
+        .lte('created_at', `${year}-12-31T23:59:59`);
 
-      if (pickupsError) {
-        console.error('Error fetching pickups:', pickupsError);
-        throw pickupsError;
+      if (manifestsError) {
+        console.error('Error fetching manifests:', manifestsError);
+        throw manifestsError;
       }
 
-      console.log(`Found ${pickups?.length || 0} completed pickups for ${year}`);
+      console.log(`Found ${manifests?.length || 0} inbound manifests for ${year}`);
 
-      if (!pickups || pickups.length === 0) {
+      if (!manifests || manifests.length === 0) {
         return {
           year,
           totalPTE: 0,
@@ -90,42 +85,56 @@ export const useMichiganReport = (year: number) => {
           byMaterialForm: { whole_off_rim: 0, semi: 0, otr: 0 },
           byCounty: {},
           byEndUse: {},
-          monthlyBreakdown: [],
+          monthlyBreakdown: generateEmptyMonthlyBreakdown(),
           portableShredding: [],
           collectionSites: []
         };
       }
 
-      // Calculate totals using Michigan conversion rules
+      // Calculate totals using Michigan conversion rules from manifest data
       let totalPTE = 0;
       const byMaterialForm = { whole_off_rim: 0, semi: 0, otr: 0 };
       const byCounty: Record<string, number> = {};
       const monthlyData: Record<number, { pte: number; pickups: number }> = {};
 
-      pickups.forEach(pickup => {
-        const pickupPTE = calculateTotalPTE({
-          pte_count: pickup.pte_count || 0,
-          otr_count: pickup.otr_count || 0,
-          tractor_count: pickup.tractor_count || 0
+      manifests.forEach(manifest => {
+        // Calculate PTE using the comprehensive manifest calculation
+        const manifestPTE = calculateManifestPTE({
+          pte_on_rim: manifest.pte_on_rim || 0,
+          pte_off_rim: manifest.pte_off_rim || 0,
+          commercial_17_5_19_5_off: manifest.commercial_17_5_19_5_off || 0,
+          commercial_17_5_19_5_on: manifest.commercial_17_5_19_5_on || 0,
+          commercial_22_5_off: manifest.commercial_22_5_off || 0,
+          commercial_22_5_on: manifest.commercial_22_5_on || 0,
+          otr_count: manifest.otr_count || 0,
+          tractor_count: manifest.tractor_count || 0,
         });
 
-        totalPTE += pickupPTE;
+        totalPTE += manifestPTE;
 
-        // By material form
-        byMaterialForm.whole_off_rim += pickup.pte_count || 0;
-        byMaterialForm.semi += pickup.tractor_count || 0;
-        byMaterialForm.otr += pickup.otr_count || 0;
+        // By material form - passenger tires count as whole_off_rim
+        const passengerTires = (manifest.pte_on_rim || 0) + (manifest.pte_off_rim || 0);
+        byMaterialForm.whole_off_rim += passengerTires;
+        
+        // Commercial 22.5 and tractor count as semi tires (5 PTE each)
+        const semiTires = (manifest.commercial_22_5_off || 0) + 
+                          (manifest.commercial_22_5_on || 0) + 
+                          (manifest.tractor_count || 0);
+        byMaterialForm.semi += semiTires;
+        
+        // OTR tires
+        byMaterialForm.otr += manifest.otr_count || 0;
 
-        // By county (use client county - locations don't have county field yet)
-        const county = pickup.clients?.county || 'Unknown';
-        byCounty[county] = (byCounty[county] || 0) + pickupPTE;
+        // By county
+        const county = manifest.clients?.county || 'Unknown';
+        byCounty[county] = (byCounty[county] || 0) + manifestPTE;
 
         // Monthly breakdown
-        const month = new Date(pickup.pickup_date).getMonth() + 1;
+        const month = new Date(manifest.created_at).getMonth() + 1;
         if (!monthlyData[month]) {
           monthlyData[month] = { pte: 0, pickups: 0 };
         }
-        monthlyData[month].pte += pickupPTE;
+        monthlyData[month].pte += manifestPTE;
         monthlyData[month].pickups += 1;
       });
 
@@ -134,22 +143,7 @@ export const useMichiganReport = (year: number) => {
       const totalCubicYards = pteToCubicYards(totalPTE);
 
       // Generate monthly breakdown
-      const monthNames = [
-        'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'
-      ];
-
-      const monthlyBreakdown = Array.from({ length: 12 }, (_, i) => {
-        const month = i + 1;
-        const data = monthlyData[month] || { pte: 0, pickups: 0 };
-        return {
-          month,
-          monthName: monthNames[i],
-          pte: data.pte,
-          tons: pteToTons(data.pte),
-          pickups: data.pickups
-        };
-      });
+      const monthlyBreakdown = generateMonthlyBreakdown(monthlyData);
 
       // Get collection sites data
       const { data: clients } = await supabase
@@ -160,8 +154,8 @@ export const useMichiganReport = (year: number) => {
       const collectionSites = clients?.map(client => ({
         name: client.company_name,
         county: client.county || 'Unknown',
-        storageCapacity: 0, // To be enhanced with actual storage data
-        onSiteProcessing: false, // To be enhanced with processing flags
+        storageCapacity: 0,
+        onSiteProcessing: false,
         annualPTE: byCounty[client.county || 'Unknown'] || 0,
         annualTons: pteToTons(byCounty[client.county || 'Unknown'] || 0)
       })) || [];
@@ -173,15 +167,51 @@ export const useMichiganReport = (year: number) => {
         totalCubicYards: Math.round(totalCubicYards * 10) / 10,
         byMaterialForm,
         byCounty,
-        byEndUse: { 'Processing': totalPTE }, // Simplified - all goes to processing
+        byEndUse: { 'Processing': totalPTE },
         monthlyBreakdown,
-        portableShredding: [], // To be enhanced with processing events
+        portableShredding: [],
         collectionSites
       };
     },
     enabled: !!year
   });
 };
+
+// Helper to generate monthly breakdown
+function generateMonthlyBreakdown(monthlyData: Record<number, { pte: number; pickups: number }>) {
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  return Array.from({ length: 12 }, (_, i) => {
+    const month = i + 1;
+    const data = monthlyData[month] || { pte: 0, pickups: 0 };
+    return {
+      month,
+      monthName: monthNames[i],
+      pte: data.pte,
+      tons: pteToTons(data.pte),
+      pickups: data.pickups
+    };
+  });
+}
+
+// Helper to generate empty monthly breakdown
+function generateEmptyMonthlyBreakdown() {
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  return Array.from({ length: 12 }, (_, i) => ({
+    month: i + 1,
+    monthName: monthNames[i],
+    pte: 0,
+    tons: 0,
+    pickups: 0
+  }));
+}
 
 // Export report data
 export const useExportMichiganReport = () => {
@@ -203,7 +233,6 @@ export const useExportMichiganReport = () => {
       return data;
     },
     onSuccess: (data, variables) => {
-      // Create download link
       const blob = new Blob([data.content], { 
         type: variables.format === 'csv' ? 'text/csv' : 'application/pdf' 
       });
@@ -238,7 +267,6 @@ export const useSubmitMichiganReport = () => {
   
   return useMutation({
     mutationFn: async ({ year }: { year: number }) => {
-      // For now, just mark as submitted in a simple way
       console.log(`Submitting Michigan report for year ${year}`);
       return { success: true };
     },
