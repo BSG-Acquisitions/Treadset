@@ -1,229 +1,188 @@
 
-# Driver Outbound Manifest Workflow with Three Signatures
 
-## What You Need
+# Outbound Delivery Assignment System
 
-Jody needs to create digital manifests when taking material OUT of BSG to another processor (like NTech), with **three signatures** just like inbound manifests:
+## What You're Asking For
 
-| Role | Inbound (Brenner's pickups) | Outbound (Jody's deliveries) |
-|------|----------------------------|------------------------------|
-| Generator | Client (tire shop) | BSG (your facility) |
-| Hauler | BSG driver (Brenner) | Jody (outbound driver) |
-| Receiver/Processor | BSG front office | NTech (destination processor) |
+Right now, Jody has to manually create outbound manifests from scratch. You want the same workflow as Brenner's inbound pickups:
 
-## Three-Signature Flow (Mirrors Inbound)
+| Current Inbound (Brenner) | Desired Outbound (Jody) |
+|--------------------------|-------------------------|
+| Dispatcher schedules pickup | Dispatcher schedules outbound delivery |
+| Brenner sees assignment on dashboard | Jody sees assignment on dashboard |
+| Brenner taps assignment to start workflow | Jody taps assignment to start manifest workflow |
+| Creates manifest, collects signatures | Creates manifest, collects 3 signatures |
 
-### Stage 1: At BSG (Before Departure)
-Jody opens his phone and:
-1. Selects destination (NTech)
-2. Enters material type and quantity
-3. Gets **Generator signature** (BSG representative signs to confirm material left facility)
-4. Signs as **Hauler** (Jody signs as transporting driver)
-5. System generates 2-signature PDF and emails to NTech as advance notice
+## What Will Be Built
 
-### Stage 2: At NTech (Upon Arrival)
-Jody opens completed outbound manifest on his phone:
-1. NTech representative signs as **Receiver** on Jody's phone
-2. System regenerates 3-signature PDF
-3. Emails final manifest to NTech (and optionally back to BSG)
+### 1. Outbound Assignments Table
 
-This is exactly how your inbound receiver signatures work - but on the driver's mobile device instead of the front office desktop.
-
-## Database Changes Required
-
-Add columns to `manifests` table for outbound tracking:
+A new `outbound_assignments` table to track scheduled outbound deliveries:
 
 | Column | Type | Purpose |
 |--------|------|---------|
-| `direction` | enum ('inbound', 'outbound') | Distinguish manifest type (default: 'inbound') |
-| `destination_entity_id` | uuid (FK to entities) | Where material is going (NTech) |
-| `origin_entity_id` | uuid (FK to entities) | Where material came from (BSG) |
-| `material_form` | enum | Whole tires, shreds, etc. (already exists) |
+| `id` | uuid | Primary key |
+| `organization_id` | uuid | Organization scope |
+| `destination_entity_id` | uuid | Where material is going (NTech) |
+| `driver_id` | uuid | Assigned driver (Jody) |
+| `vehicle_id` | uuid | Optional vehicle assignment |
+| `scheduled_date` | date | When the delivery is scheduled |
+| `material_form` | enum | Optional estimate: shreds, whole tires, etc. |
+| `estimated_quantity` | numeric | Optional estimated quantity |
+| `estimated_unit` | enum | tons, pte, cubic_yards |
+| `notes` | text | Dispatcher notes for driver |
+| `status` | enum | scheduled, in_progress, completed, cancelled |
+| `manifest_id` | uuid | Links to manifest once created |
+| `created_at`, `updated_at` | timestamp | Audit fields |
 
-## Wizard Flow (Mobile-Optimized)
+### 2. Dispatcher Interface for Scheduling
 
-```text
-Step 1: Destination
-========================
-Where are you taking this load?
-
-┌─────────────────────────────────┐
-│ NTech Processing            [v] │
-└─────────────────────────────────┘
-
-[+ Add New Destination]
-
-Destination Details:
-123 Industrial Blvd, Detroit MI
-MI Processor Reg: PRO-12345
-
-                    [Next ->]
-
-
-Step 2: Material & Quantity
-============================
-What are you hauling?
-
-Material: [Shredded Material    v]
-Quantity: [  42  ] [Tons        v]
-
-= 3,738 PTE  |  42.00 tons
-
-             [<- Back]  [Next ->]
-
-
-Step 3: Signatures (At BSG)
-============================
-Collect Origin Signatures
-
-BSG Generator Signature:
-┌─────────────────────────────────┐
-│       [Signature Canvas]        │
-└─────────────────────────────────┘
-Print Name: [Facility Manager   ]
-
-Hauler (Driver) Signature:
-┌─────────────────────────────────┐
-│       [Signature Canvas]        │
-└─────────────────────────────────┘
-Print Name: Jody Green
-
-             [<- Back]  [Next ->]
-
-
-Step 4: Review & Submit
-========================
-Outbound Manifest Preview
-
-From: BSG Tire Recycling
-To:   NTech Processing
-Material: Shredded - 42 tons
-Date: Feb 4, 2026
-
-[Check] Generator signed (BSG)
-[Check] Hauler signed (Jody)
-[_____] Receiver pending (NTech)
-
-             [<- Back]  [Create Manifest]
-
-
-Step 5: Manifest Created!
-=========================
-Manifest #OUT-2026-0001 Created
-
-[View PDF]  [Share PDF]
-
-Receiver signature pending - complete
-this when you arrive at NTech
-
-              [Go to My Outbound Manifests]
-```
-
-## Receiver Completion (On Jody's Phone)
-
-When Jody arrives at NTech, he opens his outbound manifests and taps "Complete Delivery":
+New scheduling dialog for office staff to create outbound assignments:
 
 ```text
-Complete Delivery - OUT-2026-0001
-=================================
+Schedule Outbound Delivery
+==========================
 
-From: BSG Tire Recycling
-To:   NTech Processing
-Material: Shredded - 42 tons
+Driver: [Jody Green           v]
+Date:   [Feb 6, 2026         📅]
 
-Receiver Signature:
-┌─────────────────────────────────┐
-│       [Signature Canvas]        │
-└─────────────────────────────────┘
-Print Name: [NTech Rep          ]
+Destination: [NTech Processing v]
 
-              [Complete Manifest]
+---- Optional Pre-fill ----
+Material Type: [Shredded       v]
+Est. Quantity: [40] [tons      v]
+
+Notes for Driver:
+[Full trailer of shreds ready to go]
+
+         [Cancel]  [Schedule Delivery]
 ```
 
-This captures the third signature, regenerates the PDF with all three signatures, and auto-creates the shipment record for state reporting.
+### 3. Driver Dashboard Integration
 
-## Driver Capability Control
+Jody's dashboard will show scheduled outbound deliveries alongside his other work:
 
-New capability: `outbound_hauler`
-- Grant to Jody via existing driver capabilities system
-- Only drivers with this capability see the "Outbound Manifest" button
-- Uses the same pattern as `semi_hauler` capability
+```text
+┌──────────────────────────────────────────────────┐
+│ Today's Outbound Deliveries                      │
+├──────────────────────────────────────────────────┤
+│ ┌────────────────────────────────────────────┐   │
+│ │ 🚚  NTech Processing                       │   │
+│ │     Est: ~40 tons shredded                 │   │
+│ │     Notes: Full trailer ready              │   │
+│ │                                            │   │
+│ │     [Start Delivery]                       │   │
+│ └────────────────────────────────────────────┘   │
+└──────────────────────────────────────────────────┘
+```
 
-## Auto-Link to Shipments
+### 4. "Start Delivery" Flow
 
-When outbound manifest is completed (all 3 signatures):
-- Automatically insert row into `shipments` table
-- Links: `manifest_id` -> the outbound manifest
-- Origin: BSG entity
-- Destination: Selected processor (NTech)
-- Quantity: From manifest material entry
-- Flows directly into Michigan Reports "Outbound" tab
+When Jody taps "Start Delivery":
+1. Opens the existing OutboundManifestWizard
+2. Pre-fills destination from assignment
+3. Pre-fills estimated material (if dispatcher provided)
+4. Jody can adjust quantities based on actual load
+5. Collect signatures, create manifest
+6. Assignment marked complete, linked to manifest
+
+### 5. Outbound Assignments Page for Dispatchers
+
+New page to manage all outbound deliveries:
+- View scheduled, in-progress, completed deliveries
+- Filter by date, driver, destination
+- Quick-schedule new deliveries
+- See manifest links for completed deliveries
+
+## Database Migration
+
+```sql
+-- Create outbound_assignments table
+CREATE TABLE outbound_assignments (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id uuid NOT NULL REFERENCES organizations(id),
+  destination_entity_id uuid NOT NULL REFERENCES entities(id),
+  driver_id uuid REFERENCES users(id),
+  vehicle_id uuid REFERENCES vehicles(id),
+  scheduled_date date NOT NULL,
+  material_form material_form,
+  estimated_quantity numeric,
+  estimated_unit unit_basis,
+  notes text,
+  status text NOT NULL DEFAULT 'scheduled' 
+    CHECK (status IN ('scheduled', 'in_progress', 'completed', 'cancelled')),
+  manifest_id uuid REFERENCES manifests(id),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- RLS policies
+ALTER TABLE outbound_assignments ENABLE ROW LEVEL SECURITY;
+
+-- Drivers see their own assignments
+CREATE POLICY "Drivers see own outbound assignments"
+  ON outbound_assignments FOR SELECT
+  USING (driver_id = (SELECT id FROM users WHERE auth_user_id = auth.uid()));
+
+-- Drivers can update their own assignments (status, manifest_id)
+CREATE POLICY "Drivers update own outbound assignments"
+  ON outbound_assignments FOR UPDATE
+  USING (driver_id = (SELECT id FROM users WHERE auth_user_id = auth.uid()));
+
+-- Admins/dispatchers can manage all
+CREATE POLICY "Admins manage outbound assignments"
+  ON outbound_assignments FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM user_organizations uo
+      WHERE uo.user_id = (SELECT id FROM users WHERE auth_user_id = auth.uid())
+        AND uo.organization_id = outbound_assignments.organization_id
+        AND uo.role IN ('admin', 'ops_manager', 'dispatcher')
+    )
+  );
+```
 
 ## Files to Create
 
 | File | Purpose |
 |------|---------|
-| `src/components/driver/OutboundManifestWizard.tsx` | 5-step wizard for creating outbound manifests |
-| `src/components/driver/OutboundReceiverDialog.tsx` | Mobile dialog for capturing receiver signature at destination |
-| `src/pages/driver/DriverOutboundCreate.tsx` | Page wrapper for the wizard |
-| `src/pages/driver/DriverOutboundManifests.tsx` | List of driver's outbound manifests |
-| `src/hooks/useOutboundManifests.ts` | CRUD operations for outbound manifests |
+| `src/hooks/useOutboundAssignments.ts` | CRUD operations for outbound assignments |
+| `src/components/outbound/ScheduleOutboundDialog.tsx` | Dispatcher dialog to schedule deliveries |
+| `src/components/driver/DriverOutboundAssignments.tsx` | Driver view of their scheduled outbound deliveries |
+| `src/pages/OutboundSchedule.tsx` | Admin page for managing outbound schedule |
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/pages/DriverDashboard.tsx` | Add "Outbound Manifest" quick action button (capability-gated) |
-| `src/hooks/useDriverCapabilities.ts` | Add `useHasOutboundHaulerCapability` hook |
-| `src/App.tsx` | Add routes: `/driver/outbound/new`, `/driver/outbound`, `/driver/outbound/:id/complete` |
-| `src/hooks/useShipments.ts` | Add function to auto-create shipment from completed outbound manifest |
+| `src/pages/DriverDashboard.tsx` | Add "Today's Outbound" section |
+| `src/pages/driver/DriverOutboundManifests.tsx` | Add "Scheduled" tab alongside Pending/Completed |
+| `src/components/driver/OutboundManifestWizard.tsx` | Accept optional `assignmentId` prop to pre-fill data |
+| `src/components/AppSidebar.tsx` | Add "Outbound Schedule" nav for dispatchers |
+| `src/App.tsx` | Add route for outbound schedule page |
 
-## Database Migration
+## Driver Workflow After Implementation
 
-```sql
--- Add outbound tracking columns to manifests
-ALTER TABLE manifests 
-  ADD COLUMN direction text DEFAULT 'inbound' 
-    CHECK (direction IN ('inbound', 'outbound')),
-  ADD COLUMN destination_entity_id uuid REFERENCES entities(id),
-  ADD COLUMN origin_entity_id uuid REFERENCES entities(id);
+1. **Dispatcher schedules**: "Jody, take a load to NTech on Thursday"
+2. **Jody logs on** Thursday morning, sees the assignment on his dashboard
+3. **Jody taps "Start Delivery"**, wizard opens pre-filled with destination
+4. **Jody enters actual quantities** after loading (can adjust dispatcher's estimates)
+5. **Collects signatures** (Generator at BSG, Hauler self-sign, Receiver at NTech)
+6. **Manifest created** and linked to assignment
+7. **Assignment marked complete** with manifest reference
 
--- Index for fast outbound queries
-CREATE INDEX idx_manifests_direction ON manifests(direction) 
-  WHERE direction = 'outbound';
-```
+## What Stays the Same
 
-## Technical Notes
-
-### PDF Generation for Outbound
-
-The existing `useManifestIntegration` hook and PDF generation will work with outbound manifests. The overrides will flip the roles:
-- Generator fields -> BSG facility info (from `origin_entity_id`)
-- Receiver fields -> NTech info (from `destination_entity_id`)
-
-### Signature Fields Already Exist
-
-The current manifest table already has all needed signature fields:
-- `generator_signed_at`, `customer_signature_png_path` (Generator/BSG)
-- `hauler_signed_at`, `driver_signature_png_path` (Hauler/Jody)
-- `receiver_signed_at`, `receiver_sig_path` (Receiver/NTech)
-
-These work the same for outbound - we just use them in the mobile driver workflow instead of the front office.
-
-### Mobile-First Design
-
-The outbound wizard will be optimized for Jody's phone:
-- Large touch targets
-- Signature canvas with proper touch handling (like existing ManifestWizard)
-- Offline queue support (same pattern as inbound)
-- Auto-save signatures between steps
+- The existing "New Outbound" button still works for ad-hoc manifests
+- The OutboundManifestWizard remains the same, just gets an optional pre-fill
+- Three-signature workflow unchanged
+- PDF generation and shipment auto-creation unchanged
 
 ## Result
 
-After implementation:
-- Jody can create outbound manifests on his phone just like Brenner does for inbound
-- Three-signature workflow: BSG signs, Jody signs, NTech signs (on Jody's phone)
-- PDFs generate at both stages (2-sig advance notice, 3-sig final)
-- Completed manifests auto-create shipment records
-- All tonnage flows to Michigan Reports for state compliance
-- Same capability control system - admin grants `outbound_hauler` to Jody
+Jody's outbound workflow will work just like Brenner's inbound workflow:
+- Scheduled by dispatch
+- Visible on driver dashboard
+- Tap to start, complete the workflow
+- Full audit trail from schedule to manifest
+
