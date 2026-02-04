@@ -1,184 +1,81 @@
 
-# Outbound Manifest & Shipment Tracking System for State Compliance
 
-## The Gap You Identified
+# Add Navigation Links to Material Shipments Page
 
-Your compliance tracking currently only covers material **coming IN**. But the state requires tracking the full lifecycle:
+## Current Situation
 
-| Movement Type | Current Status | What's Needed |
-|--------------|----------------|---------------|
-| Tires IN (from generators) | Fully tracked with manifests | None |
-| Processed material OUT (sales) | Inventory transactions only | Manifests + destination tracking |
-| Raw tires OUT (to other processors) | Not tracked | Full outbound manifests |
+The Material Shipments page exists at `/shipments` with full functionality for:
+- Recording outbound shipments (including backdated historical entries)
+- Filtering and searching shipments
+- Auto-calculating tonnage for state compliance
+- Flowing data into Michigan Reports
 
-The state needs to know:
-- Where material came from (you have this)
-- What happened to it (processing - partially tracked)
-- Where it went when it left (missing)
+However, there's currently no easy way to navigate to it from the main app - you have to type the URL directly.
 
-## Good News: Database Structure Exists
+## What Will Be Added
 
-Your database already has the `shipments` table designed for exactly this, with fields for:
-- Origin and destination entities
-- Material form (whole tires, shreds, crumb, etc.)
-- Direction (outbound)
-- End use (processing, TDF, civil construction, etc.)
-- Manifest reference
-- BOL number and carrier
+### 1. Add Link from Inventory Page
 
-The entities table can track destination processors like the one Jody takes material to.
+Add a prominent button/card to the Inventory page since outbound shipments are closely related to inventory tracking:
 
-## What Will Be Built
+Location: In the Quick Actions card or as a new summary card
+Label: "Outbound Shipments" or "Material Shipments"
+Icon: Truck
 
-### Phase 1: Outbound Shipment Management
+### 2. Add to Navigation Sidebar
 
-**New Page: Material Shipments (/shipments)**
-- List all outbound shipments with date, destination, material type, quantity, tonnage
-- Filter by date range, destination, material type
-- Link to associated manifests
-- Historical data entry with backdating support
+Add "Shipments" to the sidebar navigation under the Inventory section:
 
-**New Hook: `useShipments`**
-- CRUD operations for the shipments table
-- Automatic tonnage calculation using conversion kernel
-- Integration with entities (destinations)
-
-### Phase 2: Destination Processor Management
-
-**New Section in Entities or Dedicated Page**
-- Add/edit destination processors (like the facility Jody takes tires to)
-- Store MI registration numbers for compliance
-- Contact information for documentation
-
-### Phase 3: Driver Outbound Manifest Workflow
-
-**New Driver Flow: Outbound Manifest Creation**
-- Jody (or any driver) can create manifests when taking material OUT
-- Capture: destination, material type, quantity, signatures
-- Generate PDF manifest for outbound loads
-- Same two-stage workflow (driver signature at origin, receiver signature at destination)
-
-### Phase 4: Historical Data Entry
-
-**Backfill Interface for Paper Manifests**
-- Form to enter historical outbound manifests
-- Date picker for actual shipment date
-- All tire counts and tonnage
-- Destination and end use
-- Notes for any paper manifest reference numbers
-
-### Phase 5: Reporting Integration
-
-**Update Michigan Reports**
-- Add "Outbound" tab showing material destinations
-- Summary of material sent to each destination
-- Tonnage by end use (processing, TDF, etc.)
-- Net material balance (in - out = on site)
-
-## Data Flow
-
-```text
-                     YOUR FACILITY
-                          │
-    ┌─────────────────────┼─────────────────────┐
-    │                     │                     │
-    ▼                     │                     ▼
- INBOUND                  │               OUTBOUND
- (generators)             │            (processors/buyers)
-    │                     │                     │
-    ├─ Manifests          │              ├─ Shipments table
-    ├─ Dropoffs           │              ├─ Outbound manifests  
-    └─ PTE counts         │              └─ Tonnage/PTE
-                          │
-              ┌───────────┴───────────┐
-              │   INVENTORY STATUS    │
-              │  (what's on site)     │
-              │                       │
-              │  In - Out = Current   │
-              └───────────────────────┘
-                          │
-                          ▼
-              ┌───────────────────────┐
-              │   STATE REPORTS       │
-              │  - Inbound summary    │
-              │  - Outbound summary   │
-              │  - End use breakdown  │
-              │  - Net balance        │
-              └───────────────────────┘
+```
+Inventory
+├── Stock Levels
+├── Products  
+└── Shipments (NEW)
 ```
 
-## Files to Create
+### 3. Add to Projections Tab
 
-| File | Purpose |
-|------|---------|
-| `src/hooks/useShipments.ts` | CRUD operations for outbound shipments |
-| `src/hooks/useEntities.ts` | Manage destination processors |
-| `src/pages/Shipments.tsx` | Main shipments management page |
-| `src/components/shipments/ShipmentDialog.tsx` | Create/edit shipment form |
-| `src/components/shipments/ShipmentsList.tsx` | Filterable shipments list |
-| `src/components/driver/DriverOutboundManifestWizard.tsx` | Driver workflow for outbound |
-| `src/pages/driver/DriverOutboundCreate.tsx` | Driver outbound manifest page |
+Since the Projections tab shows raw material data and historical averages, add a link there to record outbound shipments for complete material flow tracking.
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/pages/MichiganReports.tsx` | Add Outbound tab with destination summary |
-| `src/hooks/useMichiganReporting.ts` | Include outbound shipments in report data |
-| `src/hooks/useRawMaterialProjections.ts` | Deduct outbound from on-site inventory |
-| `src/App.tsx` | Add routes for new pages |
+| `src/pages/Inventory.tsx` | Add Shipments link in Quick Actions or as new card |
+| `src/components/AppSidebar.tsx` | Add Shipments nav item under inventory section |
+| `src/components/inventory/ProjectionsTab.tsx` | Add link to record outbound shipments |
 
-## UI Preview: Shipments Page
+## Quick Actions Card Enhancement (Inventory.tsx)
 
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│ Material Shipments                           + Record Shipment  │
-├─────────────────────────────────────────────────────────────────┤
-│ Filters: [Date Range ▼] [Destination ▼] [Material ▼] [Search]  │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│ ┌─────────────────────────────────────────────────────────────┐ │
-│ │ Feb 3, 2026          XYZ Processing LLC                     │ │
-│ │ 42 tons shredded     Driver: Jody Green                     │ │
-│ │ BOL: BOL-2026-0042   End Use: Processing                    │ │
-│ │ [View Manifest]      Status: Delivered ✓                    │ │
-│ └─────────────────────────────────────────────────────────────┘ │
-│                                                                 │
-│ ┌─────────────────────────────────────────────────────────────┐ │
-│ │ Jan 28, 2026         ABC Tire Recyclers                     │ │
-│ │ 85 PTE whole tires   Driver: Jody Green                     │ │
-│ │ BOL: BOL-2026-0038   End Use: Further Processing            │ │
-│ │ [View Manifest]      Status: Delivered ✓                    │ │
-│ └─────────────────────────────────────────────────────────────┘ │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+Add a new button in the Quick Actions section:
+
+```
+Quick Actions
+├── Inbound (existing)
+├── Outbound (existing)  
+├── Reports (existing)
+└── Shipments (NEW - links to /shipments)
 ```
 
-## Driver Outbound Workflow
+Or add a dedicated summary card showing outbound shipment stats with a link.
 
-Jody's workflow when taking a load to another processor:
+## Sidebar Navigation Update (AppSidebar.tsx)
 
-1. **Select destination** - Pick from saved processors or add new
-2. **Enter material** - Type (whole tires, shreds, etc.), quantity
-3. **Capture signatures** - Driver signs at origin before departure
-4. **Generate manifest PDF** - Print/email for driver to carry
-5. **Complete at destination** - Receiver signs upon arrival
-6. **Auto-sync to reports** - Tonnage flows to Michigan reports
+Add to the inventory section:
 
-## Backfill Historical Data
+```typescript
+inventory: [
+  { id: 'inventory', label: 'Stock Levels', icon: Package, path: '/inventory' },
+  { id: 'inventory-products', label: 'Products', icon: PackageOpen, path: '/inventory/products' },
+  { id: 'shipments', label: 'Shipments', icon: Truck, path: '/shipments' }, // NEW
+],
+```
 
-For the paper manifests Jody has been doing:
+## Result
 
-- Dedicated "Historical Entry" mode
-- Pick shipment date in the past
-- Enter all counts from paper manifest
-- Reference original paper manifest number in notes
-- Links to reporting immediately
+After this change:
+- You can easily navigate to `/shipments` from multiple places in the app
+- The outbound shipment tracking is discoverable and accessible
+- Historical paper manifests can be entered quickly by clicking through from Inventory
+- Complete material flow (in and out) is visible from one logical location
 
-## After Implementation
-
-- **Complete audit trail**: Every tire in, every tire out
-- **State-ready reports**: Accurate tonnage in AND out
-- **Net inventory**: Real-time view of what's actually on site
-- **Driver efficiency**: Jody can do digital manifests in the field
-- **Historical catch-up**: All paper manifests can be entered with correct dates
