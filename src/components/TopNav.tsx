@@ -179,7 +179,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
       {/* Navigation Tabs - Only shown on desktop xl+ screens */}
       <div className="hidden xl:block border-t border-border/20 bg-card/50">
         <div className="px-3 sm:px-6">
-          <nav className="flex items-center gap-1 sm:gap-2">
+          <nav className="flex items-center justify-evenly">
             {/* Dashboard - Simple link */}
             <Link to="/dashboard" className={navItemClass(activeSection === 'dashboard')}>
               <Home className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
