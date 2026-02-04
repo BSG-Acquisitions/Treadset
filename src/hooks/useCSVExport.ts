@@ -3,9 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 interface ExportData {
-  type: 'clients' | 'pickups' | 'invoices';
+  type: 'clients' | 'pickups' | 'invoices' | 'inventory-transactions';
   startDate?: string;
   endDate?: string;
+  productId?: string;
+  transactionType?: 'inbound' | 'outbound' | 'all';
 }
 
 export const useCSVExport = () => {
@@ -13,7 +15,12 @@ export const useCSVExport = () => {
 
   return useMutation({
     mutationFn: async (data: ExportData): Promise<Blob> => {
-      const { data: result, error } = await supabase.functions.invoke('csv-export', {
+      // Use inventory-csv-export for inventory transactions
+      const functionName = data.type === 'inventory-transactions' 
+        ? 'inventory-csv-export' 
+        : 'csv-export';
+      
+      const { data: result, error } = await supabase.functions.invoke(functionName, {
         body: data
       });
 
@@ -40,6 +47,9 @@ export const useCSVExport = () => {
           break;
         case 'invoices':
           filename = `invoices_export_${today}.csv`;
+          break;
+        case 'inventory-transactions':
+          filename = `inventory_sales_${variables.startDate}_to_${variables.endDate}.csv`;
           break;
       }
       

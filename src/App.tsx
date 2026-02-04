@@ -78,6 +78,7 @@ import PublicLanding from "./pages/PublicLanding";
 import AppLanding from "./pages/AppLanding";
 import Inventory from "./pages/Inventory";
 import InventoryProducts from "./pages/InventoryProducts";
+import InventoryReports from "./pages/InventoryReports";
 
 // Domain-based routing: show BSG marketing on bsgtires domains, TreadSet app landing elsewhere
 function RootRoute() {
@@ -515,6 +516,15 @@ const App = () => (
                   <ProtectedRoute roles={['admin', 'ops_manager']}>
                     <AppLayout>
                       <InventoryProducts />
+                    </AppLayout>
+                  </ProtectedRoute>
+                ) : <NotFound />
+              } />
+              <Route path="/inventory/reports" element={
+                FEATURE_FLAGS.INVENTORY ? (
+                  <ProtectedRoute roles={['admin', 'ops_manager']}>
+                    <AppLayout>
+                      <InventoryReports />
                     </AppLayout>
                   </ProtectedRoute>
                 ) : <NotFound />
