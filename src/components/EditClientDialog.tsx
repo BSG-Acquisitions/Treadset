@@ -26,7 +26,7 @@ interface EditClientDialogProps {
 export function EditClientDialog({ client, trigger }: EditClientDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const updateClient = useUpdateClient();
-  const { data: locations = [] } = useLocations(client.id);
+  const { data: locations = [] } = useLocations(isOpen ? client.id : undefined);
   const createLocation = useCreateLocation();
   const updateLocation = useUpdateLocation();
   const { geocodeLocation } = useGeocodeLocations();
