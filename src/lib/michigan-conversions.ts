@@ -1,11 +1,16 @@
 /**
  * Michigan Tire Conversion Utilities
  * Implements Michigan's authoritative conversion rules for scrap tire reporting
+ * 
+ * BIDIRECTIONAL: All conversions work both ways for state compliance reporting
  */
 
 import { supabase } from "@/integrations/supabase/client";
 
-// Michigan Conversion Constants (authoritative)
+// ============================================================================
+// MICHIGAN CONVERSION CONSTANTS (authoritative)
+// ============================================================================
+
 export const MICHIGAN_CONVERSIONS = {
   // Base conversions to PTE
   PASSENGER_TIRE_TO_PTE: 1,
@@ -18,11 +23,11 @@ export const MICHIGAN_CONVERSIONS = {
   TON_TO_PTE: 89,
   PTE_TO_TON: 1 / 89,
   
-  // Volume conversions
+  // Volume conversions (raw tires)
   CUBIC_YARD_TO_PTE: 10,
   PTE_TO_CUBIC_YARD: 0.1,
   
-  // Processed material (shredded/crumb)
+  // Processed material (shredded/crumb) - legacy values for raw tire estimates
   SHREDDED_PTE_PER_CUBIC_YARD: 40, // 40 shredded PTE = 1 cubic yard
   CRUMBED_PTE_PER_CUBIC_YARD: 63, // 63 crumbed PTE = 1 cubic yard
   
@@ -30,7 +35,197 @@ export const MICHIGAN_CONVERSIONS = {
   // 1 CY = 833.33 lbs = 0.41667 tons
   RUBBER_MULCH_TONS_PER_CUBIC_YARD: 0.41667,
   RUBBER_MULCH_LBS_PER_CUBIC_YARD: 833.33,
+  RUBBER_MULCH_CY_PER_TON: 2.4, // Inverse: 1 ton = 2.4 CY
+  
+  // Standard weight conversions
+  LBS_PER_TON: 2000,
+  TONS_PER_LB: 0.0005,
 } as const;
+
+// ============================================================================
+// MATERIAL DENSITIES (lbs per cubic yard)
+// Different processed materials have different densities
+// ============================================================================
+
+export const MATERIAL_DENSITIES = {
+  // Rubber mulch (user-provided: 1,000 lbs = 1.2 CY)
+  rubber_mulch: 833.33,
+  
+  // Shred variations (estimated based on industry data)
+  shred_1_inch: 550,    // 1" shred, more compact
+  shred_2_inch: 500,    // 2" shred, less dense
+  shred: 525,           // Generic shred average
+  
+  // TDA - Tire Derived Aggregate (larger pieces, more air)
+  tda: 450,
+  
+  // Crumb rubber (fine particles, denser)
+  crumb: 850,
+  crumb_rubber: 850,
+  
+  // TDF - Tire Derived Fuel (similar to shred)
+  tdf: 500,
+  
+  // Default to rubber mulch density
+  default: 833.33,
+} as const;
+
+export type MaterialType = keyof typeof MATERIAL_DENSITIES;
+
+// ============================================================================
+// BIDIRECTIONAL CONVERSION FUNCTIONS
+// ============================================================================
+
+/**
+ * Get material density (lbs/CY) by material type or product name
+ */
+export function getMaterialDensity(material?: string): number {
+  if (!material) return MATERIAL_DENSITIES.default;
+  
+  const key = material.toLowerCase().replace(/[\s-]/g, '_') as MaterialType;
+  return MATERIAL_DENSITIES[key] || MATERIAL_DENSITIES.default;
+}
+
+/**
+ * Convert cubic yards to tons (material-aware)
+ */
+export function cubicYardsToTons(cubicYards: number, material?: string): number {
+  const density = getMaterialDensity(material);
+  const lbs = cubicYards * density;
+  return lbs / MICHIGAN_CONVERSIONS.LBS_PER_TON;
+}
+
+/**
+ * Convert tons to cubic yards (material-aware)
+ */
+export function tonsToCubicYards(tons: number, material?: string): number {
+  const density = getMaterialDensity(material);
+  const lbs = tons * MICHIGAN_CONVERSIONS.LBS_PER_TON;
+  return lbs / density;
+}
+
+/**
+ * Convert cubic yards to pounds (material-aware)
+ */
+export function cubicYardsToLbs(cubicYards: number, material?: string): number {
+  const density = getMaterialDensity(material);
+  return cubicYards * density;
+}
+
+/**
+ * Convert pounds to cubic yards (material-aware)
+ */
+export function lbsToCubicYards(lbs: number, material?: string): number {
+  const density = getMaterialDensity(material);
+  return lbs / density;
+}
+
+/**
+ * Convert pounds to tons
+ */
+export function lbsToTons(lbs: number): number {
+  return lbs / MICHIGAN_CONVERSIONS.LBS_PER_TON;
+}
+
+/**
+ * Convert tons to pounds
+ */
+export function tonsToLbs(tons: number): number {
+  return tons * MICHIGAN_CONVERSIONS.LBS_PER_TON;
+}
+
+// ============================================================================
+// UNIVERSAL CONVERSION FUNCTION
+// Convert ANY unit to tons (for state compliance reporting)
+// ============================================================================
+
+export type ConvertibleUnit = 'pte' | 'tons' | 'lbs' | 'cubic_yards' | 'each';
+
+/**
+ * Convert any quantity to tons for state compliance reporting
+ * @param quantity The amount to convert
+ * @param fromUnit The unit of the quantity
+ * @param material Optional material type for density-aware conversions
+ */
+export function convertToTons(
+  quantity: number, 
+  fromUnit: ConvertibleUnit, 
+  material?: string
+): number {
+  switch (fromUnit) {
+    case 'tons':
+      return quantity;
+    
+    case 'lbs':
+      return lbsToTons(quantity);
+    
+    case 'cubic_yards':
+      return cubicYardsToTons(quantity, material);
+    
+    case 'pte':
+      return quantity * MICHIGAN_CONVERSIONS.PTE_TO_TON;
+    
+    case 'each':
+      // Assume "each" means individual tires = 1 PTE each
+      return quantity * MICHIGAN_CONVERSIONS.PTE_TO_TON;
+    
+    default:
+      console.warn(`Unknown unit "${fromUnit}", returning quantity as-is`);
+      return quantity;
+  }
+}
+
+/**
+ * Convert tons to any target unit
+ * @param tons The weight in tons
+ * @param toUnit The target unit
+ * @param material Optional material type for density-aware conversions
+ */
+export function convertFromTons(
+  tons: number, 
+  toUnit: ConvertibleUnit, 
+  material?: string
+): number {
+  switch (toUnit) {
+    case 'tons':
+      return tons;
+    
+    case 'lbs':
+      return tonsToLbs(tons);
+    
+    case 'cubic_yards':
+      return tonsToCubicYards(tons, material);
+    
+    case 'pte':
+      return tons * MICHIGAN_CONVERSIONS.TON_TO_PTE;
+    
+    case 'each':
+      // Assume "each" means individual tires = 1 PTE each
+      return tons * MICHIGAN_CONVERSIONS.TON_TO_PTE;
+    
+    default:
+      console.warn(`Unknown unit "${toUnit}", returning tons as-is`);
+      return tons;
+  }
+}
+
+/**
+ * Convert between any two units
+ */
+export function convertUnits(
+  quantity: number,
+  fromUnit: ConvertibleUnit,
+  toUnit: ConvertibleUnit,
+  material?: string
+): number {
+  // Convert to tons first, then to target unit
+  const tons = convertToTons(quantity, fromUnit, material);
+  return convertFromTons(tons, toUnit, material);
+}
+
+// ============================================================================
+// PTE CALCULATION FUNCTIONS (unchanged from original)
+// ============================================================================
 
 export type TireUnit = 
   | 'pte' 
@@ -89,7 +284,7 @@ export async function convertTireUnits(
     
   } catch (error) {
     console.error('Conversion failed:', error);
-    throw new Error(`Failed to convert ${value} ${fromUnit} to ${toUnit}: ${error.message}`);
+    throw new Error(`Failed to convert ${value} ${fromUnit} to ${toUnit}: ${(error as Error).message}`);
   }
 }
 
@@ -171,6 +366,32 @@ export function pteToCubicYards(pte: number, rounding: RoundingMode = 'report'):
   return cubicYards;
 }
 
+// ============================================================================
+// REPORTING HELPERS
+// ============================================================================
+
+/**
+ * Calculate total tonnage from an array of inventory transactions
+ * Used for state compliance reporting
+ */
+export function calculateTransactionTonnage(
+  transactions: Array<{
+    quantity: number;
+    unit_of_measure: string;
+    product_name?: string;
+  }>
+): number {
+  let totalTons = 0;
+  
+  for (const t of transactions) {
+    const unit = t.unit_of_measure as ConvertibleUnit;
+    const material = t.product_name;
+    totalTons += convertToTons(t.quantity, unit, material);
+  }
+  
+  return Math.round(totalTons * 100) / 100;
+}
+
 /**
  * Validate Michigan conversion rules (for testing)
  */
@@ -207,6 +428,24 @@ export function validateMichiganRules(): {
       description: '18 semi tires ≈ 1.01 tons (90 PTE / 89)',
       expected: 1.011,
       actual: Math.round((18 * 5 * MICHIGAN_CONVERSIONS.PTE_TO_TON) * 1000) / 1000,
+      passed: false
+    },
+    {
+      description: '1 CY rubber mulch = 0.417 tons',
+      expected: 0.417,
+      actual: Math.round(cubicYardsToTons(1, 'rubber_mulch') * 1000) / 1000,
+      passed: false
+    },
+    {
+      description: '1 ton rubber mulch = 2.4 CY',
+      expected: 2.4,
+      actual: Math.round(tonsToCubicYards(1, 'rubber_mulch') * 10) / 10,
+      passed: false
+    },
+    {
+      description: 'Bidirectional: CY→tons→CY = original',
+      expected: 10,
+      actual: Math.round(tonsToCubicYards(cubicYardsToTons(10, 'rubber_mulch'), 'rubber_mulch')),
       passed: false
     }
   ];

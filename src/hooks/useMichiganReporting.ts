@@ -1,20 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-// Michigan conversion constants (inline to avoid circular dependencies)
-const MICHIGAN_CONVERSIONS = {
-  PASSENGER_TIRE_TO_PTE: 1,
-  SEMI_TIRE_TO_PTE: 5,
-  OTR_TIRE_TO_PTE: 15,
-  PTE_TO_TON: 1 / 89,
-  PTE_TO_CUBIC_YARD: 0.1,
-} as const;
-
-const calculateTotalPTE = (tires: { pte_count?: number; otr_count?: number; tractor_count?: number; }): number => {
-  return (tires.pte_count || 0) + (tires.otr_count || 0) * 15 + (tires.tractor_count || 0) * 5;
-};
-
-const pteToTons = (pte: number): number => Math.round(pte * MICHIGAN_CONVERSIONS.PTE_TO_TON * 100) / 100;
-const pteToCubicYards = (pte: number): number => Math.round(pte * MICHIGAN_CONVERSIONS.PTE_TO_CUBIC_YARD * 10) / 10;
+import { 
+  calculateTotalPTE, 
+  pteToTons, 
+  pteToCubicYards,
+  MICHIGAN_CONVERSIONS 
+} from "@/lib/michigan-conversions";
 import { useToast } from "@/hooks/use-toast";
 
 export interface MichiganReportData {

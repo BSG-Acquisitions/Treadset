@@ -1,12 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { startOfMonth, endOfMonth, differenceInDays, addDays } from "date-fns";
+import { startOfMonth, endOfMonth, differenceInDays } from "date-fns";
 import { 
   calculateManifestPTE, 
   calculateTotalPTE, 
   pteToTons,
-  MICHIGAN_CONVERSIONS 
+  convertToTons,
+  MICHIGAN_CONVERSIONS,
+  type ConvertibleUnit
 } from "@/lib/michigan-conversions";
 
 export interface RawMaterialProjections {
@@ -211,21 +213,11 @@ export const useRawMaterialProjections = (periodStart?: Date, periodEnd?: Date) 
       
       const totalIntakePTE = allTimeManifestPTE + allTimeDropoffPTE;
       
-      // Calculate processing output (inventory inbound transactions = processed tires)
-      // Assuming tons as primary unit, convert other units if needed
+      // Calculate processing output using centralized conversion
       let periodProcessedTons = 0;
       for (const t of transactions) {
-        if (t.unit_of_measure === 'tons') {
-          periodProcessedTons += t.quantity;
-        } else if (t.unit_of_measure === 'lbs') {
-          periodProcessedTons += t.quantity / 2000;
-        } else if (t.unit_of_measure === 'cubic_yards') {
-          // Rubber mulch: 1,000 lbs = 1.2 CY, so 1 CY = 833.33 lbs = 0.417 tons
-          periodProcessedTons += t.quantity * MICHIGAN_CONVERSIONS.RUBBER_MULCH_TONS_PER_CUBIC_YARD;
-        } else {
-          // Default assumption for other units
-          periodProcessedTons += t.quantity;
-        }
+        const unit = t.unit_of_measure as ConvertibleUnit;
+        periodProcessedTons += convertToTons(t.quantity, unit);
       }
       
       // Calculate total processed all-time (for unprocessed calculation)
@@ -237,16 +229,8 @@ export const useRawMaterialProjections = (periodStart?: Date, periodEnd?: Date) 
       
       let totalProcessedTons = 0;
       for (const t of (allTimeTransactions.data || []) as { quantity: number; unit_of_measure: string }[]) {
-        if (t.unit_of_measure === 'tons') {
-          totalProcessedTons += t.quantity;
-        } else if (t.unit_of_measure === 'lbs') {
-          totalProcessedTons += t.quantity / 2000;
-        } else if (t.unit_of_measure === 'cubic_yards') {
-          // Rubber mulch: 1 CY = 0.417 tons
-          totalProcessedTons += t.quantity * MICHIGAN_CONVERSIONS.RUBBER_MULCH_TONS_PER_CUBIC_YARD;
-        } else {
-          totalProcessedTons += t.quantity;
-        }
+        const unit = t.unit_of_measure as ConvertibleUnit;
+        totalProcessedTons += convertToTons(t.quantity, unit);
       }
       
       // Unprocessed = Total intake (in tons) - Total processed
