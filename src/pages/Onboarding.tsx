@@ -6,9 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { TreadSetAnimatedLogo } from '@/components/TreadSetAnimatedLogo';
 import { Loader2 } from 'lucide-react';
+import { US_STATES } from '@/hooks/useStateCompliance';
 
 export default function Onboarding() {
   const navigate = useNavigate();
@@ -18,11 +20,15 @@ export default function Onboarding() {
     companyName: '',
     phone: '',
     city: '',
-    state: 'MI',
+    state: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.state) {
+      toast.error('Please select your state');
+      return;
+    }
     setLoading(true);
 
     try {
@@ -37,12 +43,12 @@ export default function Onboarding() {
         throw new Error('No organization found');
       }
 
-      // Update organization with company details
+      // Update organization with company details and state_code
       const { error: updateError } = await supabase
         .from('organizations')
         .update({
           name: formData.companyName,
-          // Keep TreadSet branding
+          state_code: formData.state,
           logo_url: '/treadset-logo.png',
           brand_primary_color: '#3b82f6',
           brand_secondary_color: '#64748b',
@@ -117,14 +123,22 @@ export default function Onboarding() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="state">State</Label>
-                <Input
-                  id="state"
+                <Label htmlFor="state">State *</Label>
+                <Select
                   value={formData.state}
-                  onChange={(e) => setFormData(prev => ({ ...prev, state: e.target.value }))}
-                  placeholder="MI"
-                  maxLength={2}
-                />
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, state: value }))}
+                >
+                  <SelectTrigger id="state">
+                    <SelectValue placeholder="Select state" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {US_STATES.map((s) => (
+                      <SelectItem key={s.code} value={s.code}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

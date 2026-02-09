@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -63,6 +64,7 @@ interface ConversionRequest {
   value: number;
   from_unit: string;
   to_unit: string;
+  state_code?: string; // Optional: use state-specific PTE ratio
   context?: {
     material_form?: string;
     material_type?: string;
@@ -228,7 +230,33 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { value, from_unit, to_unit, context = {} }: ConversionRequest = await req.json();
+    const { value, from_unit, to_unit, state_code, context = {} }: ConversionRequest = await req.json();
+    
+    // If state_code provided, look up state-specific PTE ratio and override
+    if (state_code && state_code !== 'MI') {
+      try {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        
+        const { data: stateConfig } = await supabase
+          .from('state_compliance_configs')
+          .select('pte_to_ton_ratio')
+          .eq('state_code', state_code)
+          .maybeSingle();
+        
+        if (stateConfig?.pte_to_ton_ratio && stateConfig.pte_to_ton_ratio !== 89) {
+          const ratio = Number(stateConfig.pte_to_ton_ratio);
+          MICHIGAN_CONVERSIONS['tons_to_pte'] = ratio;
+          MICHIGAN_CONVERSIONS['pte_to_tons'] = 1.0 / ratio;
+          MICHIGAN_CONVERSIONS['cubic_yards_to_tons'] = 10.0 / ratio;
+          MICHIGAN_CONVERSIONS['pte_to_lbs'] = 2000.0 / ratio;
+          console.log(`Using ${state_code} PTE ratio: ${ratio}`);
+        }
+      } catch (e) {
+        console.warn(`Failed to fetch state config for ${state_code}, using MI defaults:`, e);
+      }
+    }
     
     if (value === undefined || value === null || !from_unit || !to_unit) {
       throw new Error('Missing required parameters: value, from_unit, to_unit');
