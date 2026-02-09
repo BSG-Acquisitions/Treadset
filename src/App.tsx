@@ -83,6 +83,7 @@ import Inventory from "./pages/Inventory";
 import InventoryProducts from "./pages/InventoryProducts";
 import InventoryReports from "./pages/InventoryReports";
 import Shipments from "./pages/Shipments";
+import StateTemplateManager from "./pages/admin/StateTemplateManager";
 
 // Domain-based routing: show BSG marketing on bsgtires domains, TreadSet app landing elsewhere
 function RootRoute() {
@@ -428,6 +429,15 @@ const App = () => (
                 <ProtectedRoute roles={['admin']}>
                   <AppLayout>
                     <DataQuality />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              
+              {/* Admin State Template Manager */}
+              <Route path="/admin/state-templates" element={
+                <ProtectedRoute roles={['admin']}>
+                  <AppLayout>
+                    <StateTemplateManager />
                   </AppLayout>
                 </ProtectedRoute>
               } />

@@ -3314,6 +3314,7 @@ export type Database = {
           service_hours_end: string | null
           service_hours_start: string | null
           slug: string
+          state_code: string | null
           tax_rate: number | null
           updated_at: string
         }
@@ -3332,6 +3333,7 @@ export type Database = {
           service_hours_end?: string | null
           service_hours_start?: string | null
           slug: string
+          state_code?: string | null
           tax_rate?: number | null
           updated_at?: string
         }
@@ -3350,6 +3352,7 @@ export type Database = {
           service_hours_end?: string | null
           service_hours_start?: string | null
           slug?: string
+          state_code?: string | null
           tax_rate?: number | null
           updated_at?: string
         }
@@ -4594,6 +4597,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      state_compliance_configs: {
+        Row: {
+          created_at: string
+          field_mapping: Json | null
+          manifest_template_path: string | null
+          pte_to_ton_ratio: number
+          registration_label: string
+          report_format: string
+          requires_government_manifest: boolean
+          state_code: string
+          state_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          field_mapping?: Json | null
+          manifest_template_path?: string | null
+          pte_to_ton_ratio?: number
+          registration_label?: string
+          report_format?: string
+          requires_government_manifest?: boolean
+          state_code: string
+          state_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          field_mapping?: Json | null
+          manifest_template_path?: string | null
+          pte_to_ton_ratio?: number
+          registration_label?: string
+          report_format?: string
+          requires_government_manifest?: boolean
+          state_code?: string
+          state_name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       stops: {
         Row: {

@@ -153,7 +153,7 @@ export const TEMPLATE_CONFIGS: Record<string, PDFTemplateConfig> = {
 };
 
 /**
- * Get current template configuration
+ * Get current template configuration (hardcoded fallback)
  */
 export function getCurrentTemplateConfig(): PDFTemplateConfig {
   const config = TEMPLATE_CONFIGS[PDF_TEMPLATE_VERSION];
@@ -161,6 +161,38 @@ export function getCurrentTemplateConfig(): PDFTemplateConfig {
     throw new Error(`Unknown PDF template version: ${PDF_TEMPLATE_VERSION}`);
   }
   return config;
+}
+
+/**
+ * Get template configuration for a specific state from the database.
+ * Falls back to Michigan v4 hardcoded config if not found.
+ */
+export async function getTemplateConfigForState(stateCode: string): Promise<{
+  templatePath: string;
+  fieldMapping: Record<string, string>;
+}> {
+  // Try dynamic import to avoid circular deps in edge functions
+  const { supabase } = await import('@/integrations/supabase/client');
+
+  const { data } = await supabase
+    .from('state_compliance_configs')
+    .select('manifest_template_path, field_mapping')
+    .eq('state_code', stateCode)
+    .maybeSingle();
+
+  if (data?.manifest_template_path && data?.field_mapping) {
+    return {
+      templatePath: data.manifest_template_path,
+      fieldMapping: data.field_mapping as Record<string, string>,
+    };
+  }
+
+  // Fallback to Michigan v4
+  const miConfig = TEMPLATE_CONFIGS['4'];
+  return {
+    templatePath: miConfig.templatePath,
+    fieldMapping: miConfig.fieldMapping,
+  };
 }
 
 /**
