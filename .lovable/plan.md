@@ -1,92 +1,102 @@
 
+# Multi-State Foundation Implementation
 
-# Fix: "Something Went Wrong" Error on Schedule Delivery
+## Overview
+Add `state_code` to organizations, create `state_compliance_configs` table with per-state manifest template field mappings stored as JSONB, update the onboarding page with a state dropdown, build a State Template Manager admin page, and make the `ensure-manifest-pdf` edge function state-aware.
 
-## Root Cause Identified
+## Phase 1: Database Migration
 
-When you click "Schedule Delivery" on the Outbound page, the app crashes with "Something Went Wrong" because of an **invalid empty string value** in a Select component.
+**Add `state_code` column to `organizations`** (defaults to `'MI'` so existing orgs are unaffected).
 
-### The Error
+**Create `state_compliance_configs` table** with columns:
+- `state_code` (PK, text) -- e.g. `'MI'`, `'ID'`
+- `state_name` (text) -- full name
+- `pte_to_ton_ratio` (numeric, default 89)
+- `requires_government_manifest` (boolean, default false)
+- `manifest_template_path` (text, nullable) -- filename in storage
+- `registration_label` (text, default `'State Registration #'`)
+- `report_format` (text, default `'generic'`)
+- `field_mapping` (JSONB, nullable) -- maps domain keys to PDF field names
+- `created_at`, `updated_at` timestamps
 
-Radix UI's Select component explicitly throws an error when a `<SelectItem>` has `value=""`:
+**RLS**: Enable RLS, allow all authenticated users to read (reference data). Admin-only insert/update/delete.
 
-> **Error: A `<Select.Item />` must have a value prop that is not an empty string. This is because the Select value can be set to an empty string to clear the selection and show the placeholder.**
+**Seed data**: Michigan config with full v4 field mapping JSON; Idaho placeholder row with no template yet.
 
-### Where It Happens
+## Phase 2: Update Onboarding Page
 
-**File: `src/components/outbound/ScheduleOutboundDialog.tsx`** (Line 198)
+**File: `src/pages/Onboarding.tsx`**
 
-```tsx
-<SelectItem value="">No specific vehicle</SelectItem>  // ← CRASHES HERE
-```
+- Replace free-text state input with a `<Select>` dropdown of all 50 US states
+- Default to empty (user must choose)
+- On submit, save `state_code` to the organization record alongside the company name
+- Show a note if the selected state doesn't have a template configured yet
 
-The same issue exists in another file that could cause crashes elsewhere:
+## Phase 3: State Template Manager Admin Page
 
-**File: `src/components/SimplifiedVehicleManagement.tsx`** (Line 186)
+**New files:**
+- `src/pages/admin/StateTemplateManager.tsx` -- admin page with:
+  - List of all states from `state_compliance_configs`
+  - Upload PDF template for a state (stores to `manifests/templates/`)
+  - "Extract Fields" button that calls `extract-acroform-fields` edge function
+  - Visual field mapping builder: left column = standard domain fields, right column = extracted PDF field names as dropdowns
+  - Save mapping to `field_mapping` JSONB column
+  - "Test Fill" button to generate a sample PDF with dummy data
+- `src/hooks/useStateCompliance.ts` -- hook to fetch/update state configs
 
-```tsx
-<SelectItem value="">No Driver (Unassigned)</SelectItem>  // ← Also invalid
-```
+**Route: `/admin/state-templates`** (admin-only, added to `App.tsx`)
 
----
+## Phase 4: Make PDF Generation State-Aware
 
-## The Fix
+**File: `supabase/functions/ensure-manifest-pdf/index.ts`**
 
-Replace empty strings with a meaningful placeholder value like `"none"` and update the logic to handle it:
+Currently hardcodes `Michigan_Manifest_Acroform_V4.pdf` and Michigan v4 field names. Update to:
+1. Look up the pickup's organization -> get `state_code`
+2. Query `state_compliance_configs` for that state's `manifest_template_path` and `field_mapping`
+3. If `field_mapping` exists in DB, use it to translate domain fields to PDF field names dynamically
+4. If no state config or no mapping, fall back to current Michigan v4 hardcoded behavior (backward compatible)
 
-### File 1: `src/components/outbound/ScheduleOutboundDialog.tsx`
+**File: `src/lib/pdf/templateConfig.ts`**
 
-**Line 198** - Change:
-```tsx
-<SelectItem value="">No specific vehicle</SelectItem>
-```
+Add `getTemplateConfigForState(stateCode)` function that fetches config from the database. Keep hardcoded Michigan configs as fallback.
 
-To:
-```tsx
-<SelectItem value="none">No specific vehicle</SelectItem>
-```
+## Phase 5: State-Aware Conversion Kernel
 
-**Line 88** - Update the submit handler to convert `"none"` back to undefined:
-```tsx
-vehicle_id: vehicleId && vehicleId !== 'none' ? vehicleId : undefined,
-```
+**File: `supabase/functions/conversion-kernel/index.ts`**
 
-### File 2: `src/components/SimplifiedVehicleManagement.tsx`
+- Accept optional `state_code` parameter
+- Query `state_compliance_configs` for `pte_to_ton_ratio`
+- Use that ratio instead of hardcoded 89
+- Default to 89 if no state config found (backward compatible)
 
-**Line 186** - Change:
-```tsx
-<SelectItem value="">No Driver (Unassigned)</SelectItem>
-```
+## Files Summary
 
-To:
-```tsx
-<SelectItem value="none">No Driver (Unassigned)</SelectItem>
-```
+| Action | File |
+|--------|------|
+| **Create** | `src/pages/admin/StateTemplateManager.tsx` |
+| **Create** | `src/hooks/useStateCompliance.ts` |
+| **Modify** | `src/pages/Onboarding.tsx` -- state dropdown, save state_code |
+| **Modify** | `src/App.tsx` -- add `/admin/state-templates` route |
+| **Modify** | `src/lib/pdf/templateConfig.ts` -- add DB-backed state config lookup |
+| **Modify** | `supabase/functions/ensure-manifest-pdf/index.ts` -- state-aware template + field mapping |
+| **Modify** | `supabase/functions/conversion-kernel/index.ts` -- state-aware PTE ratio |
+| **DB Migration** | Add `state_code` to organizations, create `state_compliance_configs` table |
 
-Then update the corresponding handler to treat `"none"` as null/undefined.
+## What Does NOT Change
 
----
+- All existing Michigan functionality (protected by fallback logic)
+- Driver workflows, signature capture, receiver completion
+- `generate-acroform-manifest` edge function (already template-agnostic)
+- `extract-acroform-fields` edge function (already works with any PDF)
+- RLS policies on existing tables
+- Authentication flows
 
-## Files to Modify
+## Idaho Onboarding Workflow (After Build)
 
-| File | Line | Change |
-|------|------|--------|
-| `src/components/outbound/ScheduleOutboundDialog.tsx` | 198 | `value=""` → `value="none"` |
-| `src/components/outbound/ScheduleOutboundDialog.tsx` | 88 | Handle `"none"` as undefined |
-| `src/components/SimplifiedVehicleManagement.tsx` | 186 | `value=""` → `value="none"` |
-
----
-
-## Why This Wasn't Caught Before
-
-This error only occurs when the dialog opens and React tries to render the Select component. The crash happens immediately in the render cycle, which is why the ErrorBoundary catches it and shows "Something Went Wrong."
-
----
-
-## Expected Result
-
-After this fix:
-- The Schedule Delivery dialog will open without crashing
-- Selecting "No specific vehicle" will correctly set the vehicle_id to undefined/null
-- No more "Something Went Wrong" errors on this page
-
+1. Idaho company signs up and selects "Idaho" in onboarding dropdown
+2. You receive their state manifest PDF
+3. Go to `/admin/state-templates`, select Idaho
+4. Upload the PDF, click "Extract Fields"
+5. Map domain fields to Idaho's PDF field names using the visual builder
+6. Click "Test Fill" to verify, then "Save"
+7. Idaho manifests now generate using their state-specific form
