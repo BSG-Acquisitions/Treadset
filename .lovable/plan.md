@@ -1,38 +1,60 @@
 
 
-# Move Navigation Items from "More" to User Menu
+# Speed Up App Load Time
 
-## What Changes
+## Problems Found
 
-**User menu (upper-right person icon)** will contain:
-- User info (name/email) -- already there
-- Booking Requests (with badge) -- already there
-- Service Zones -- already there
-- Separator
-- Manifests -- moving from More
-- Receiver Signatures -- moving from More
-- Separator
-- Employees -- moving from More
-- Haulers -- moving from More
-- Receivers -- moving from More
-- Separator
-- Intelligence -- moving from More
-- Integrations -- moving from More
-- Settings -- moving from More
-- Separator
-- Sign out -- already there
+1. **Every single page is imported upfront** -- App.tsx eagerly imports 60+ page components. The browser downloads and parses ALL of them before showing anything, even though the user only visits one page at a time.
 
-**"More" dropdown in nav bar** will contain only:
-- Drop-offs (the only item remaining)
+2. **Assignments query polls every 5 seconds** -- `useAssignments` has `refetchInterval: 5000`, which hammers the database constantly and slows everything down, especially on initial load when multiple queries are already fighting for bandwidth.
 
-Since "More" will have just one item, we could either keep it as a dropdown with one item, or convert it to a simple direct link to `/dropoffs` labeled "Drop-offs". A direct link makes more sense with a single item.
+3. **Duplicate organization ID lookups** -- `usePickups` calls `supabase.rpc('get_current_user_organization')` every time it fetches data, even though the org ID is already available from `AuthContext.user.currentOrganization.id`. That's an extra database round-trip on every single query.
 
-## Technical Details
+4. **No caching configured** -- The `QueryClient` is created with zero configuration (`new QueryClient()`), so every query defaults to `staleTime: 0`. This means every time you navigate to a page you've already visited, it refetches everything from scratch instead of showing cached data instantly.
 
-**File:** `src/components/TopNav.tsx`
+5. **Vehicles query has no caching** -- Vehicle data rarely changes but is fetched fresh every time with no stale time.
 
-1. Move all items currently in the "More" dropdown (except Drop-offs) into the user menu dropdown, grouped with separators
-2. Replace the "More" dropdown with a simple `<Link>` to `/dropoffs` (since it's now a single item, no dropdown needed)
-3. Update the `getActiveSection()` function so `/dropoffs` gets its own active state instead of being under "more"
-4. Keep all existing role checks (`hasAnyRole`) for each item as they are today
+## What We'll Fix (Ordered by Impact)
+
+### 1. Lazy-load all route pages (biggest impact)
+
+Convert all 60+ page imports in `App.tsx` from eager imports to `React.lazy()`. This means the browser only downloads the code for the page you're actually visiting. First load will be dramatically faster.
+
+Before: Browser loads ~2MB of JavaScript upfront
+After: Browser loads ~200KB initially, then loads each page on demand
+
+### 2. Add smart caching defaults to QueryClient
+
+Configure the `QueryClient` with sensible defaults so data persists between page navigations:
+- 5 minute stale time (show cached data immediately, refresh in background)
+- 10 minute garbage collection time
+
+### 3. Use cached org ID instead of RPC call
+
+Update `usePickups` to get the organization ID from `AuthContext` instead of making a separate database call. Saves one round-trip per query.
+
+### 4. Reduce assignment polling from 5s to 30s
+
+Change `refetchInterval` from 5000ms to 30000ms. The real-time Supabase channel on the page already handles instant updates for location changes -- the polling is redundant backup.
+
+### 5. Add stale times to vehicle and pickup queries
+
+- Vehicles: 10 minute stale time (fleet data barely changes)
+- Pickups: 2 minute stale time (show cached, refresh in background)
+- Assignments: 30 second stale time (more dynamic but don't need to refetch on every render)
+
+## Files to Change
+
+| File | Change |
+|------|--------|
+| `src/App.tsx` | Convert all page imports to `React.lazy()`, wrap routes in `Suspense` |
+| `src/hooks/usePickups.ts` | Use org ID from auth context instead of RPC; add stale times; reduce polling |
+| `src/hooks/useVehicles.ts` | Add 10-minute stale time |
+
+## Expected Result
+
+- Initial page load: noticeably faster (only loads code for the current page)
+- Navigating between pages you've visited: instant (cached data shown immediately)
+- Less database load overall (fewer redundant queries)
+- Data still stays fresh via background refetching
 
