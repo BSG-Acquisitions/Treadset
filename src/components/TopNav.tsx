@@ -50,7 +50,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
     if (location.pathname.startsWith('/trailers')) return 'trailers';
     if (location.pathname === '/analytics' || location.pathname === '/reports' || location.pathname === '/michigan-reports') return 'reports';
     // More section items
-    if (['/dropoffs', '/employees', '/haulers', '/receivers', '/data-quality', '/intelligence', '/integrations', '/settings', '/deployment', '/receiver-signatures', '/manifests'].includes(location.pathname)) return 'more';
+    if (location.pathname === '/dropoffs') return 'dropoffs';
     return 'dashboard';
   };
 
@@ -161,6 +161,76 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                   <Link to="/service-zones" className="flex items-center gap-2">
                     <Map className="h-4 w-4" />
                     Service Zones
+                  </Link>
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              {/* Operations */}
+              {hasAnyRole(['admin', 'ops_manager', 'dispatcher', 'viewer']) && (
+                <DropdownMenuItem asChild>
+                  <Link to="/manifests" className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Manifests
+                  </Link>
+                </DropdownMenuItem>
+              )}
+              {hasAnyRole(['admin', 'ops_manager', 'viewer']) && (
+                <DropdownMenuItem asChild>
+                  <Link to="/receiver-signatures" className="flex items-center gap-2">
+                    <PenTool className="h-4 w-4" />
+                    Receiver Signatures
+                  </Link>
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              {/* Entities */}
+              {hasAnyRole(['admin', 'viewer']) && (
+                <DropdownMenuItem asChild>
+                  <Link to="/employees" className="flex items-center gap-2">
+                    <UserCheck className="h-4 w-4" />
+                    Employees
+                  </Link>
+                </DropdownMenuItem>
+              )}
+              {hasAnyRole(['admin', 'ops_manager', 'viewer']) && (
+                <DropdownMenuItem asChild>
+                  <Link to="/haulers" className="flex items-center gap-2">
+                    <Truck className="h-4 w-4" />
+                    Haulers
+                  </Link>
+                </DropdownMenuItem>
+              )}
+              {hasAnyRole(['admin', 'ops_manager', 'viewer']) && (
+                <DropdownMenuItem asChild>
+                  <Link to="/receivers" className="flex items-center gap-2">
+                    <Building className="h-4 w-4" />
+                    Receivers
+                  </Link>
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              {/* Administration */}
+              {hasAnyRole(['admin', 'ops_manager', 'viewer']) && (
+                <DropdownMenuItem asChild>
+                  <Link to="/intelligence" className="flex items-center gap-2">
+                    <Brain className="h-4 w-4" />
+                    Intelligence
+                  </Link>
+                </DropdownMenuItem>
+              )}
+              {hasAnyRole(['admin', 'viewer']) && (
+                <DropdownMenuItem asChild>
+                  <Link to="/integrations" className="flex items-center gap-2">
+                    <CreditCard className="h-4 w-4" />
+                    Integrations
+                  </Link>
+                </DropdownMenuItem>
+              )}
+              {hasAnyRole(['admin', 'ops_manager', 'viewer']) && (
+                <DropdownMenuItem asChild>
+                  <Link to="/settings" className="flex items-center gap-2">
+                    <Settings className="h-4 w-4" />
+                    Settings
                   </Link>
                 </DropdownMenuItem>
               )}
@@ -332,100 +402,12 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
               </DropdownMenu>
             )}
 
-            {/* More Dropdown - Catch-all for administrative/infrequent items */}
-            {hasAnyRole(['admin', 'ops_manager', 'dispatcher', 'viewer']) && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <div className={navItemClass(activeSection === 'more')}>
-                    <MoreHorizontal className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    <span>More</span>
-                    <ChevronDown className="h-3 w-3 opacity-60" />
-                  </div>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-56">
-                  {/* Operations */}
-                  {hasAnyRole(['admin', 'ops_manager', 'sales', 'viewer']) && (
-                    <DropdownMenuItem asChild>
-                      <Link to="/dropoffs" className={dropdownItemClass(location.pathname === '/dropoffs')}>
-                        <PackageOpen className="h-4 w-4" />
-                        Drop-offs
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
-                  {hasAnyRole(['admin', 'ops_manager', 'dispatcher', 'viewer']) && (
-                    <DropdownMenuItem asChild>
-                      <Link to="/manifests" className={dropdownItemClass(location.pathname === '/manifests')}>
-                        <FileText className="h-4 w-4" />
-                        Manifests
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
-                  {hasAnyRole(['admin', 'ops_manager', 'viewer']) && (
-                    <DropdownMenuItem asChild>
-                      <Link to="/receiver-signatures" className={dropdownItemClass(location.pathname === '/receiver-signatures')}>
-                        <PenTool className="h-4 w-4" />
-                        Receiver Signatures
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
-                  
-                  <DropdownMenuSeparator />
-                  
-                  {/* Entities */}
-                  {hasAnyRole(['admin', 'viewer']) && (
-                    <DropdownMenuItem asChild>
-                      <Link to="/employees" className={dropdownItemClass(location.pathname === '/employees')}>
-                        <UserCheck className="h-4 w-4" />
-                        Employees
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
-                  {hasAnyRole(['admin', 'ops_manager', 'viewer']) && (
-                    <DropdownMenuItem asChild>
-                      <Link to="/haulers" className={dropdownItemClass(location.pathname === '/haulers')}>
-                        <Truck className="h-4 w-4" />
-                        Haulers
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
-                  {hasAnyRole(['admin', 'ops_manager', 'viewer']) && (
-                    <DropdownMenuItem asChild>
-                      <Link to="/receivers" className={dropdownItemClass(location.pathname === '/receivers')}>
-                        <Building className="h-4 w-4" />
-                        Receivers
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
-                  
-                  <DropdownMenuSeparator />
-                  
-                  {/* Administration */}
-                  {hasAnyRole(['admin', 'ops_manager', 'viewer']) && (
-                    <DropdownMenuItem asChild>
-                      <Link to="/intelligence" className={dropdownItemClass(location.pathname === '/intelligence')}>
-                        <Brain className="h-4 w-4" />
-                        Intelligence
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
-                  {hasAnyRole(['admin', 'viewer']) && (
-                    <DropdownMenuItem asChild>
-                      <Link to="/integrations" className={dropdownItemClass(location.pathname === '/integrations')}>
-                        <CreditCard className="h-4 w-4" />
-                        Integrations
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
-                  {hasAnyRole(['admin', 'ops_manager', 'viewer']) && (
-                    <DropdownMenuItem asChild>
-                      <Link to="/settings" className={dropdownItemClass(location.pathname === '/settings')}>
-                        <Settings className="h-4 w-4" />
-                        Settings
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
+            {/* Drop-offs - Direct link (was "More" dropdown) */}
+            {hasAnyRole(['admin', 'ops_manager', 'sales', 'viewer']) && (
+              <Link to="/dropoffs" className={navItemClass(activeSection === 'dropoffs')}>
+                <PackageOpen className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span>Drop-offs</span>
+              </Link>
             )}
           </nav>
         </div>
