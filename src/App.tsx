@@ -1,8 +1,9 @@
 // App.tsx - Build timestamp: 2025-12-05T18:30:00Z
+import { lazy, Suspense } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DemoModeProvider } from "@/contexts/DemoModeContext";
@@ -10,80 +11,96 @@ import { ThemeProvider } from "@/providers/ThemeProvider";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/AppLayout";
 import { AIAssistant } from "@/components/AIAssistant";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
-import ClientDetail from "./pages/ClientDetail";
-import Clients from "./pages/Clients";
-import RoutesPrintToday from "./pages/RoutesPrintToday";
-import Book from "./pages/Book";
-import BookingConfirmation from "./pages/BookingConfirmation";
+import { createOptimizedQueryClient } from "@/lib/performance/queryCache";
+import { RouteFallback } from "@/lib/performance/lazyRoutes";
+import { FEATURE_FLAGS } from "./lib/featureFlags";
+
+// Only eagerly load pages that are entry points or always needed
 import Auth from "./pages/Auth";
-import ResetPassword from "./pages/ResetPassword";
-import Onboarding from "./pages/Onboarding";
-import Employees from "./pages/Employees";
-import ClientAnalytics from "./pages/ClientAnalytics";
-import Settings from "./pages/Settings";
-import EnhancedRoutesToday from "./pages/EnhancedRoutesToday";
-import Integrations from "./pages/Integrations";
-import DriverManifests from "./pages/DriverManifests";
-import DriverManifestCreate from "./pages/DriverManifestCreate";
-import DriverManifestView from "./pages/DriverManifestView";
-import DriverRoutes from "./pages/DriverRoutes";
-import DriverDashboard from "./pages/DriverDashboard";
-import DriverAssignmentHelper from "./pages/DriverAssignmentHelper";
-import DriverAssignmentView from "./pages/DriverAssignmentView";
-import PublicBook from "./pages/PublicBook";
-import PublicBookingConfirmation from "./pages/PublicBookingConfirmation";
-import ManifestViewer from './pages/ManifestViewer';
-import Invite from './pages/Invite';
-import ClientInvite from './pages/ClientInvite';
-import ClientTeamInvite from './pages/ClientTeamInvite';
-import ReceiverSignatures from './pages/ReceiverSignatures';
-import ReceiverManagement from './pages/ReceiverManagement';
-import Reports from './pages/Reports';
-import MichiganReports from './pages/MichiganReports';
-import Dropoffs from './pages/Dropoffs';
-import IndependentHaulers from './pages/IndependentHaulers';
-import HaulerDashboard from './pages/HaulerDashboard';
-import HaulerCustomers from './pages/HaulerCustomers';
-import HaulerRates from './pages/HaulerRates';
-import HaulerManifests from './pages/HaulerManifests';
-import HaulerManifestCreate from './pages/HaulerManifestCreate';
-import DriverSchedulePickup from "./pages/DriverSchedulePickup";
-import PaymentSuccess from "./pages/PaymentSuccess";
-import PaymentCancelled from "./pages/PaymentCancelled";
-import DriverPaymentSuccess from "./pages/driver/PaymentSuccess";
-import DriverPaymentCancelled from "./pages/driver/PaymentCancelled";
-import DriverOutboundCreate from "./pages/driver/DriverOutboundCreate";
-import DriverOutboundManifests from "./pages/driver/DriverOutboundManifests";
-import OutboundSchedule from "./pages/OutboundSchedule";
-import Manifests from "./pages/Manifests";
-import BackfillManifestPdfs from "./pages/BackfillManifestPdfs";
-import DeploymentDashboard from "./pages/DeploymentDashboard";
-import NotificationTest from "./pages/NotificationTest";
-import ManifestRemindersTest from "./pages/ManifestRemindersTest";
-import DataQuality from "./pages/DataQuality";
-import IntelligenceDashboard from "./pages/IntelligenceDashboard";
-import TrailerInventory from "./pages/TrailerInventory";
-import TrailerRoutes from "./pages/TrailerRoutes";
-import TrailerRouteDetail from "./pages/TrailerRouteDetail";
-import TrailerExternalMoves from "./pages/TrailerExternalMoves";
-import TrailerVehicles from "./pages/TrailerVehicles";
-import DriverTrailerAssignments from "./pages/DriverTrailerAssignments";
-import TrailerDriverManagement from "./pages/TrailerDriverManagement";
-import TrailerReports from "./pages/TrailerReports";
-import BookingRequests from "./pages/BookingRequests";
-import ServiceZones from "./pages/ServiceZones";
-import ClientPortal from "./pages/ClientPortal";
-import PortalUnsubscribe from "./pages/PortalUnsubscribe";
-import PortalInvites from "./pages/PortalInvites";
-import PublicLanding from "./pages/PublicLanding";
-import AppLanding from "./pages/AppLanding";
-import Inventory from "./pages/Inventory";
-import InventoryProducts from "./pages/InventoryProducts";
-import InventoryReports from "./pages/InventoryReports";
-import Shipments from "./pages/Shipments";
-import StateTemplateManager from "./pages/admin/StateTemplateManager";
+import NotFound from "./pages/NotFound";
+
+// Lazy-load all other pages
+const Index = lazy(() => import('./pages/Index'));
+const ClientDetail = lazy(() => import('./pages/ClientDetail'));
+const Clients = lazy(() => import('./pages/Clients'));
+const RoutesPrintToday = lazy(() => import('./pages/RoutesPrintToday'));
+const Book = lazy(() => import('./pages/Book'));
+const BookingConfirmation = lazy(() => import('./pages/BookingConfirmation'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const Onboarding = lazy(() => import('./pages/Onboarding'));
+const Employees = lazy(() => import('./pages/Employees'));
+const ClientAnalytics = lazy(() => import('./pages/ClientAnalytics'));
+const Settings = lazy(() => import('./pages/Settings'));
+const EnhancedRoutesToday = lazy(() => import('./pages/EnhancedRoutesToday'));
+const Integrations = lazy(() => import('./pages/Integrations'));
+const DriverManifests = lazy(() => import('./pages/DriverManifests'));
+const DriverManifestCreate = lazy(() => import('./pages/DriverManifestCreate'));
+const DriverManifestView = lazy(() => import('./pages/DriverManifestView'));
+const DriverRoutes = lazy(() => import('./pages/DriverRoutes'));
+const DriverDashboard = lazy(() => import('./pages/DriverDashboard'));
+const DriverAssignmentHelper = lazy(() => import('./pages/DriverAssignmentHelper'));
+const DriverAssignmentView = lazy(() => import('./pages/DriverAssignmentView'));
+const PublicBook = lazy(() => import('./pages/PublicBook'));
+const PublicBookingConfirmation = lazy(() => import('./pages/PublicBookingConfirmation'));
+const ManifestViewer = lazy(() => import('./pages/ManifestViewer'));
+const Invite = lazy(() => import('./pages/Invite'));
+const ClientInvite = lazy(() => import('./pages/ClientInvite'));
+const ClientTeamInvite = lazy(() => import('./pages/ClientTeamInvite'));
+const ReceiverSignatures = lazy(() => import('./pages/ReceiverSignatures'));
+const ReceiverManagement = lazy(() => import('./pages/ReceiverManagement'));
+const Reports = lazy(() => import('./pages/Reports'));
+const MichiganReports = lazy(() => import('./pages/MichiganReports'));
+const Dropoffs = lazy(() => import('./pages/Dropoffs'));
+const IndependentHaulers = lazy(() => import('./pages/IndependentHaulers'));
+const HaulerDashboard = lazy(() => import('./pages/HaulerDashboard'));
+const HaulerCustomers = lazy(() => import('./pages/HaulerCustomers'));
+const HaulerRates = lazy(() => import('./pages/HaulerRates'));
+const HaulerManifests = lazy(() => import('./pages/HaulerManifests'));
+const HaulerManifestCreate = lazy(() => import('./pages/HaulerManifestCreate'));
+const DriverSchedulePickup = lazy(() => import('./pages/DriverSchedulePickup'));
+const PaymentSuccess = lazy(() => import('./pages/PaymentSuccess'));
+const PaymentCancelled = lazy(() => import('./pages/PaymentCancelled'));
+const DriverPaymentSuccess = lazy(() => import('./pages/driver/PaymentSuccess'));
+const DriverPaymentCancelled = lazy(() => import('./pages/driver/PaymentCancelled'));
+const DriverOutboundCreate = lazy(() => import('./pages/driver/DriverOutboundCreate'));
+const DriverOutboundManifests = lazy(() => import('./pages/driver/DriverOutboundManifests'));
+const OutboundSchedule = lazy(() => import('./pages/OutboundSchedule'));
+const Manifests = lazy(() => import('./pages/Manifests'));
+const BackfillManifestPdfs = lazy(() => import('./pages/BackfillManifestPdfs'));
+const DeploymentDashboard = lazy(() => import('./pages/DeploymentDashboard'));
+const NotificationTest = lazy(() => import('./pages/NotificationTest'));
+const ManifestRemindersTest = lazy(() => import('./pages/ManifestRemindersTest'));
+const DataQuality = lazy(() => import('./pages/DataQuality'));
+const IntelligenceDashboard = lazy(() => import('./pages/IntelligenceDashboard'));
+const TrailerInventory = lazy(() => import('./pages/TrailerInventory'));
+const TrailerRoutes = lazy(() => import('./pages/TrailerRoutes'));
+const TrailerRouteDetail = lazy(() => import('./pages/TrailerRouteDetail'));
+const TrailerExternalMoves = lazy(() => import('./pages/TrailerExternalMoves'));
+const TrailerVehicles = lazy(() => import('./pages/TrailerVehicles'));
+const DriverTrailerAssignments = lazy(() => import('./pages/DriverTrailerAssignments'));
+const TrailerDriverManagement = lazy(() => import('./pages/TrailerDriverManagement'));
+const TrailerReports = lazy(() => import('./pages/TrailerReports'));
+const BookingRequests = lazy(() => import('./pages/BookingRequests'));
+const ServiceZones = lazy(() => import('./pages/ServiceZones'));
+const ClientPortal = lazy(() => import('./pages/ClientPortal'));
+const PortalUnsubscribe = lazy(() => import('./pages/PortalUnsubscribe'));
+const PortalInvites = lazy(() => import('./pages/PortalInvites'));
+const PublicLanding = lazy(() => import('./pages/PublicLanding'));
+const AppLanding = lazy(() => import('./pages/AppLanding'));
+const Inventory = lazy(() => import('./pages/Inventory'));
+const InventoryProducts = lazy(() => import('./pages/InventoryProducts'));
+const InventoryReports = lazy(() => import('./pages/InventoryReports'));
+const Shipments = lazy(() => import('./pages/Shipments'));
+const StateTemplateManager = lazy(() => import('./pages/admin/StateTemplateManager'));
+const PublicDropoff = lazy(() => import('./pages/PublicDropoff'));
+const PublicServices = lazy(() => import('./pages/PublicServices'));
+const PublicPartners = lazy(() => import('./pages/PublicPartners'));
+const PublicPartnerApply = lazy(() => import('./pages/PublicPartnerApply'));
+const PublicAbout = lazy(() => import('./pages/PublicAbout'));
+const PublicContact = lazy(() => import('./pages/PublicContact'));
+const PublicProducts = lazy(() => import('./pages/PublicProducts'));
+const PartnerApplications = lazy(() => import('./pages/PartnerApplications'));
+const ContactSubmissions = lazy(() => import('./pages/ContactSubmissions'));
 
 // Domain-based routing: show BSG marketing on bsgtires domains, TreadSet app landing elsewhere
 function RootRoute() {
@@ -97,17 +114,8 @@ function RootRoute() {
   // All other domains (treadset, lovable, localhost) show TreadSet app landing
   return <AppLanding />;
 }
-import PublicDropoff from "./pages/PublicDropoff";
-import PublicServices from "./pages/PublicServices";
-import PublicPartners from "./pages/PublicPartners";
-import PublicPartnerApply from "./pages/PublicPartnerApply";
-import PublicAbout from "./pages/PublicAbout";
-import PublicContact from "./pages/PublicContact";
-import PublicProducts from "./pages/PublicProducts";
-import PartnerApplications from "./pages/PartnerApplications";
-import ContactSubmissions from "./pages/ContactSubmissions";
-import { FEATURE_FLAGS } from "./lib/featureFlags";
-const queryClient = new QueryClient();
+
+const queryClient = createOptimizedQueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -118,6 +126,7 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <DemoModeProvider>
+            <Suspense fallback={<RouteFallback />}>
             <Routes>
 {/* Public Marketing Routes - No Authentication Required */}
               <Route path="/" element={<RootRoute />} />
@@ -582,6 +591,7 @@ const App = () => (
               {/* Catch-all 404 - Must be last */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+            </Suspense>
             </DemoModeProvider>
             <AIAssistant />
           </BrowserRouter>
