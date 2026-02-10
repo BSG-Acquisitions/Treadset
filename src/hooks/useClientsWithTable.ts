@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ClientTableState {
   page: number;
@@ -15,8 +16,11 @@ interface UseClientsWithTableOptions {
 }
 
 export const useClientsWithTable = ({ tableState }: UseClientsWithTableOptions) => {
+  const { user } = useAuth();
+  const orgId = user?.currentOrganization?.id;
+
   return useQuery({
-    queryKey: ['clients-table', JSON.stringify(tableState)],
+    queryKey: ['clients-table', orgId, JSON.stringify(tableState)],
     queryFn: async () => {
       // Build base query with count and include locations and risk scores
       let query = supabase
@@ -28,6 +32,9 @@ export const useClientsWithTable = ({ tableState }: UseClientsWithTableOptions) 
           pickups(count),
           risk_score:client_risk_scores(risk_score, risk_level, pickup_frequency_decline, avg_payment_delay_days, contact_gap_ratio)
         `, { count: 'exact' });
+
+      // Organization filter
+      query = query.eq('organization_id', orgId!);
 
       // Apply search across key fields
       const search = (tableState.search || '').trim();
@@ -56,6 +63,7 @@ export const useClientsWithTable = ({ tableState }: UseClientsWithTableOptions) 
         data: clients || [],
         totalCount: count || 0
       };
-    }
+    },
+    enabled: !!orgId
   });
 };

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { 
   calculateManifestPTE, 
   pteToTons, 
@@ -47,8 +48,11 @@ export interface MichiganReportData {
 
 // Generate Michigan annual report from manifest data (inbound)
 export const useMichiganReport = (year: number) => {
+  const { user } = useAuth();
+  const orgId = user?.currentOrganization?.id;
+
   return useQuery({
-    queryKey: ['michigan-report', year],
+    queryKey: ['michigan-report', orgId, year],
     queryFn: async (): Promise<MichiganReportData> => {
       console.log(`Generating Michigan report for year ${year}`);
       
@@ -65,6 +69,7 @@ export const useMichiganReport = (year: number) => {
             state
           )
         `)
+        .eq('organization_id', orgId!)
         .eq('direction', 'inbound')
         .gte('created_at', `${year}-01-01`)
         .lte('created_at', `${year}-12-31T23:59:59`);
@@ -149,6 +154,7 @@ export const useMichiganReport = (year: number) => {
       const { data: clients } = await supabase
         .from('clients')
         .select('*')
+        .eq('organization_id', orgId!)
         .eq('is_active', true);
 
       const collectionSites = clients?.map(client => ({
@@ -173,7 +179,7 @@ export const useMichiganReport = (year: number) => {
         collectionSites
       };
     },
-    enabled: !!year
+    enabled: !!year && !!orgId
   });
 };
 

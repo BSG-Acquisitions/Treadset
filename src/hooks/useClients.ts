@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useCanWrite } from "@/hooks/useCanWrite";
+import { useAuth } from "@/contexts/AuthContext";
 import type { Database } from "@/integrations/supabase/types";
 
 type Client = Database["public"]["Tables"]["clients"]["Row"];
@@ -19,6 +20,8 @@ interface ClientsQueryParams {
 }
 
 export const useClients = (params: ClientsQueryParams = {}) => {
+  const { user } = useAuth();
+  const orgId = user?.currentOrganization?.id;
   const { 
     search = '', 
     type, 
@@ -30,7 +33,7 @@ export const useClients = (params: ClientsQueryParams = {}) => {
   } = params;
 
   return useQuery({
-    queryKey: ['clients', search, type, tags, sortBy, sortOrder, page, limit],
+    queryKey: ['clients', orgId, search, type, tags, sortBy, sortOrder, page, limit],
     queryFn: async () => {
       let query = supabase
         .from('clients')
@@ -52,6 +55,9 @@ export const useClients = (params: ClientsQueryParams = {}) => {
         query = query.overlaps('tags', tags);
       }
 
+      // Organization filter
+      query = query.eq('organization_id', orgId!);
+
       // Only active clients
       query = query.eq('is_active', true);
 
@@ -72,7 +78,8 @@ export const useClients = (params: ClientsQueryParams = {}) => {
         count: count || 0,
         totalPages: Math.ceil((count || 0) / limit)
       };
-    }
+    },
+    enabled: !!orgId
   });
 };
 

@@ -25,6 +25,7 @@ export const useContextualNotifications = () => {
       const { data: manifests } = await supabase
         .from('manifests')
         .select('id, manifest_number, client_id, clients(company_name)')
+        .eq('organization_id', orgId)
         .eq('status', 'DRAFT')
         .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
 
@@ -81,6 +82,7 @@ export const useContextualNotifications = () => {
       const { data: clients } = await supabase
         .from('clients')
         .select('id, company_name, email, phone, physical_address')
+        .eq('organization_id', orgId)
         .eq('is_active', true)
         .or('email.is.null,phone.is.null,physical_address.is.null');
 
