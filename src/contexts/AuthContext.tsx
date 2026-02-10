@@ -381,7 +381,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signUp = async (email: string, password: string, firstName?: string, lastName?: string) => {
-    const redirectUrl = `${window.location.origin}/`;
+    const redirectUrl = 'https://treadset.lovable.app/';
     
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -425,35 +425,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     console.log('Password reset redirect URL:', resetUrl);
     
-    try {
-      // First, trigger Supabase's password reset to generate the token
-      const { error: supabaseError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: resetUrl
-      });
-      
-      if (supabaseError) {
-        return { error: supabaseError };
-      }
-      
-      // Then call our custom edge function to send the branded email via Resend
-      const { error: emailError } = await supabase.functions.invoke('send-password-reset', {
-        body: {
-          email,
-          resetUrl,
-          companyName: 'TreadSet'
-        }
-      });
-      
-      if (emailError) {
-        console.error('Error sending password reset email:', emailError);
-        // Still return success since Supabase sent its email as backup
-      }
-      
-      return { error: null };
-    } catch (err) {
-      console.error('Password reset error:', err);
-      return { error: err };
-    }
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: resetUrl
+    });
+    
+    return { error };
   };
 
   const updatePassword = async (password: string) => {

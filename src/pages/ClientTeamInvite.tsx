@@ -104,7 +104,7 @@ export default function ClientTeamInvite() {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/client-portal`,
+          emailRedirectTo: 'https://treadset.lovable.app/client-portal',
           data: {
             first_name: firstName,
             last_name: lastName,
