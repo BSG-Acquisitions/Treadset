@@ -6,7 +6,7 @@ import { CheckCircle, XCircle, AlertTriangle, RefreshCw } from "lucide-react";
 import { useMichiganReport } from "@/hooks/useMichiganReporting";
 import { supabase } from "@/integrations/supabase/client";
 
-export const MichiganSystemStatus = () => {
+export const ComplianceSystemStatus = () => {
   const [conversionTest, setConversionTest] = useState<{ status: 'idle' | 'testing' | 'success' | 'error', result?: any }>({ status: 'idle' });
   const currentYear = new Date().getFullYear();
   const { data: reportData, isLoading, error } = useMichiganReport(currentYear);
@@ -63,13 +63,13 @@ export const MichiganSystemStatus = () => {
     <Card className="mb-6">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          Michigan Reporting System Status
+          Compliance Reporting System Status
           <Badge variant={hasData ? 'default' : 'secondary'}>
             {hasData ? 'OPERATIONAL' : 'NEEDS ATTENTION'}
           </Badge>
         </CardTitle>
         <CardDescription>
-          Real-time health check of Michigan tire reporting components
+          Real-time health check of compliance reporting components
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -82,7 +82,7 @@ export const MichiganSystemStatus = () => {
           </div>
           
           <div className="space-y-3">
-            <h4 className="font-semibold">Michigan Conversions</h4>
+            <h4 className="font-semibold">Conversions</h4>
             <div className="flex items-center gap-2">
               {getStatusIcon(conversionWorks ? 'success' : conversionTest.status === 'error' ? 'error' : 'warning')}
               <span className="text-sm">89 PTE = 1 Ton Rule</span>

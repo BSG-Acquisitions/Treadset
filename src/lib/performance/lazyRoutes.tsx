@@ -8,7 +8,7 @@ import { lazy } from 'react';
 // Heavy dashboard pages
 export const LazyClientAnalytics = lazy(() => import('@/pages/ClientAnalytics'));
 export const LazyReports = lazy(() => import('@/pages/Reports'));
-export const LazyMichiganReports = lazy(() => import('@/pages/MichiganReports'));
+export const LazyStateComplianceReports = lazy(() => import('@/pages/StateComplianceReports'));
 
 // Route optimization pages
 export const LazyEnhancedRoutesToday = lazy(() => import('@/pages/EnhancedRoutesToday'));
