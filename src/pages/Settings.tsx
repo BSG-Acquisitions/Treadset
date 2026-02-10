@@ -653,78 +653,83 @@ if (preferencesLoading) {
               </CardContent>
             </Card>
 
-            {/* AcroForm Templates Upload */}
-            <TemplateUploadUtility />
+            {/* Developer tools - only visible to super admins */}
+            {user?.roles?.includes('admin') && (
+              <>
+                {/* AcroForm Templates Upload */}
+                <TemplateUploadUtility />
 
-            {/* State Manifest Template */}
-            <Card id="data-privacy-section">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Database className="h-5 w-5" />
-                  Legacy State Template (Overlay)
-                </CardTitle>
-                <CardDescription>
-                  Upload PDF template for legacy overlay system (deprecated).
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="manifestTemplate">Upload PDF Template</Label>
-                  <Input id="manifestTemplate" type="file" accept="application/pdf" onChange={handleTemplateUpload} disabled={uploadingTemplate} />
-                  <p className="text-xs text-muted-foreground">
-                    Expected path: manifests/templates/STATE_Manifest_v1.pdf
-                  </p>
-                  {templatePath && (
-                    <p className="text-xs text-brand-primary">Uploaded: {templatePath}</p>
-                  )}
-                </div>
-                
-                <div className="pt-4 border-t">
-                  <Button
-                    onClick={handleGenerateCalibration}
-                    disabled={generatingCalibration}
-                    className="w-full"
-                  >
-                    {generatingCalibration ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Generating Calibration PDF...
-                      </>
-                    ) : (
-                      <>
-                        <FileText className="mr-2 h-4 w-4" />
-                        Generate Calibration PDF
-                      </>
-                    )}
-                  </Button>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Creates a PDF with grid lines to help you measure coordinates for text and signature placement.
-                  </p>
-                </div>
-                <div className="pt-4">
-                  <Button
-                    onClick={handleGenerateTestOverlay}
-                    disabled={generatingTestOverlay}
-                    className="w-full"
-                  >
-                    {generatingTestOverlay ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Generating Test Overlay...
-                      </>
-                    ) : (
-                      <>
-                        <FileText className="mr-2 h-4 w-4" />
-                        Generate Test Overlay (Generator Name)
-                      </>
-                    )}
-                  </Button>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Overlays the generator/client name using current coordinates to verify placement.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+                {/* State Manifest Template */}
+                <Card id="data-privacy-section">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Database className="h-5 w-5" />
+                      Legacy State Template (Overlay)
+                    </CardTitle>
+                    <CardDescription>
+                      Upload PDF template for legacy overlay system (deprecated).
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="manifestTemplate">Upload PDF Template</Label>
+                      <Input id="manifestTemplate" type="file" accept="application/pdf" onChange={handleTemplateUpload} disabled={uploadingTemplate} />
+                      <p className="text-xs text-muted-foreground">
+                        Expected path: manifests/templates/STATE_Manifest_v1.pdf
+                      </p>
+                      {templatePath && (
+                        <p className="text-xs text-brand-primary">Uploaded: {templatePath}</p>
+                      )}
+                    </div>
+                    
+                    <div className="pt-4 border-t">
+                      <Button
+                        onClick={handleGenerateCalibration}
+                        disabled={generatingCalibration}
+                        className="w-full"
+                      >
+                        {generatingCalibration ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Generating Calibration PDF...
+                          </>
+                        ) : (
+                          <>
+                            <FileText className="mr-2 h-4 w-4" />
+                            Generate Calibration PDF
+                          </>
+                        )}
+                      </Button>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Creates a PDF with grid lines to help you measure coordinates for text and signature placement.
+                      </p>
+                    </div>
+                    <div className="pt-4">
+                      <Button
+                        onClick={handleGenerateTestOverlay}
+                        disabled={generatingTestOverlay}
+                        className="w-full"
+                      >
+                        {generatingTestOverlay ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Generating Test Overlay...
+                          </>
+                        ) : (
+                          <>
+                            <FileText className="mr-2 h-4 w-4" />
+                            Generate Test Overlay (Generator Name)
+                          </>
+                        )}
+                      </Button>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Overlays the generator/client name using current coordinates to verify placement.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            )}
 
             {/* Action Buttons - Only show if there are unsaved changes */}
 

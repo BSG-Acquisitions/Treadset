@@ -18,9 +18,9 @@ export default function PublicPartners() {
         <div className="container mx-auto px-4 relative">
           <SectionHeader
             eyebrow="Transport Partner Program"
-            title="Partner With BSG"
-            titleAccent="BSG"
-            subtitle="Join Michigan's premier tire recycling network. Special pricing for registered transport partners."
+            title="Partner With TreadSet"
+            titleAccent="TreadSet"
+            subtitle="Join our premier tire recycling network. Special pricing for registered transport partners."
             size="large"
             icon={Truck}
           />
@@ -55,7 +55,7 @@ export default function PublicPartners() {
               {
                 icon: DollarSign,
                 title: "Competitive Partner Rates",
-                description: "Special pricing available for registered transport partners with valid DOT numbers and Michigan registration."
+                description: "Special pricing available for registered transport partners with valid DOT numbers and state registration."
               },
               {
                 icon: Clock,
@@ -65,7 +65,7 @@ export default function PublicPartners() {
               {
                 icon: Shield,
                 title: "Reliable Network",
-                description: "Join a trusted network of professional haulers serving businesses across Michigan."
+                description: "Join a trusted network of professional haulers serving businesses nationwide."
               },
               {
                 icon: FileText,
@@ -75,7 +75,7 @@ export default function PublicPartners() {
               {
                 icon: Award,
                 title: "EPA Compliant",
-                description: "All recycling operations are fully compliant with EPA and Michigan DEQ regulations."
+                description: "All recycling operations are fully compliant with EPA and state environmental regulations."
               },
               {
                 icon: Truck,
@@ -110,7 +110,7 @@ export default function PublicPartners() {
               <SectionHeader
                 eyebrow="Requirements"
                 title="Partnership Requirements"
-                subtitle="To become a BSG Transport Partner, you'll need the following"
+                subtitle="To become a TreadSet Transport Partner, you'll need the following"
                 icon={ClipboardList}
               />
             </div>
@@ -124,10 +124,10 @@ export default function PublicPartners() {
               <div className="grid md:grid-cols-2 gap-6">
                 {[
                   "Valid DOT Number",
-                  "Michigan Registration",
+                  "State Registration",
                   "Current Business License",
                   "Proof of Insurance",
-                  "Michigan Tire Hauler License",
+                  "State Tire Hauler License",
                   "Fleet Information"
                 ].map((req, index) => (
                   <div key={req} className="flex items-center gap-3">
@@ -256,7 +256,7 @@ export default function PublicPartners() {
                   {
                     icon: Shield,
                     title: "Compliance Ready",
-                    description: "All documentation meets EPA and Michigan DEQ requirements automatically"
+                    description: "All documentation meets EPA and state environmental requirements automatically"
                   }
                 ].map((feature, index) => (
                   <motion.div

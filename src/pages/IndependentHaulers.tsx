@@ -179,7 +179,7 @@ const handleConfirmDeleteCascade = async () => {
                   <TableRow>
                     <TableHead>Company</TableHead>
                     <TableHead>Contact</TableHead>
-                    <TableHead>Michigan Registration</TableHead>
+                    <TableHead>State Registration</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
