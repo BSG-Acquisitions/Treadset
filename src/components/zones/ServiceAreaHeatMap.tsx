@@ -698,7 +698,7 @@ export function ServiceAreaHeatMap() {
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <Target className="h-5 w-5" />
-                  Michigan Service Coverage
+                  Service Coverage
                 </CardTitle>
                 <CardDescription>
                   Click markers to view client details. Marker size and color indicate activity level.
