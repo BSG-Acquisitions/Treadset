@@ -1,72 +1,99 @@
 
 
-# Next SaaS Readiness Batch: State-Aware Reports, Map Rename, and Integrations Cleanup
+# Next Batch: Remaining Michigan Cleanup, super_admin Role, and Public Page Polish
 
-## 1. Rename MichiganHeatMap to ServiceAreaHeatMap
+## What's Done So Far
+- Performance optimizations (lazy loading, caching, reduced polling)
+- BSG branding removed from PublicPartners, PublicProducts, PublicDropoff
+- Michigan language removed from IndependentHaulers, Clients, ServiceZones
+- MichiganHeatMap renamed to ServiceAreaHeatMap
+- MichiganReports renamed to StateComplianceReports
+- MichiganSystemStatus renamed to ComplianceSystemStatus
+- Developer tools in Settings hidden behind admin role
+- Integrations page cleaned up (Stripe key inputs removed)
+- Route updated from /reports/michigan to /reports/compliance
 
-The heat map component is already state-agnostic -- it queries locations by `organization_id` and auto-centers on the data. Only the file/component name says "Michigan."
+## What's Left (This Batch)
 
-**Changes:**
-- Rename `src/components/zones/MichiganHeatMap.tsx` to `ServiceAreaHeatMap.tsx`
-- Update the export name from `MichiganHeatMap` to `ServiceAreaHeatMap`
-- Update the import in `ServiceZones.tsx` (line 13)
-- Remove the hardcoded Michigan default center (`[-84.5, 44.0]` on line 433) and replace with a US-center fallback (`[-98.5, 39.8]`) so it works for any state
+### 1. Add `super_admin` to the database role enum
 
-## 2. Generalize MichiganReports into State Compliance Reports
+The `app_role` enum currently has: admin, ops_manager, dispatcher, driver, sales, client, hauler, receptionist, viewer. There is no `super_admin`. This is needed to gate internal debug routes so customer admins can't see them.
 
-The `MichiganReports.tsx` page has Michigan-specific text in 15+ places (titles, breadcrumbs, tab labels, conversion rule descriptions, EGLE references). This needs to become a generic "State Compliance Reports" page that can serve any state.
+**Database migration:**
+- `ALTER TYPE public.app_role ADD VALUE 'super_admin';`
+- Add `super_admin` to the TypeScript role union in `ProtectedRoute.tsx` and `AuthGuard.tsx`
 
-**Changes to `MichiganReports.tsx`:**
-- Rename file to `StateComplianceReports.tsx`
-- Change page title from "Michigan Tire Reports" to "State Compliance Reports"
-- Change breadcrumb from "Michigan Tire Reports" to "Compliance Reports"
-- Change subtitle from "Annual scrap tire reporting for Michigan EGLE compliance" to "Annual scrap tire reporting for state regulatory compliance"
-- Change "MI Rule: 89 PTE = 1 ton" caption to dynamically show the conversion (keep 89 as default since that's the current org's rate)
-- Change "Michigan EGLE Totals" tab label to "State Totals"
-- Change "Michigan Conversion Rules" heading to "Conversion Rules"
-- Change "Submit to Michigan EGLE" to "Submit for Compliance"
-- Update `MichiganSystemStatus` component reference (rename to `ComplianceSystemStatus`)
-- Update the route in `App.tsx` from `/reports/michigan` to `/reports/compliance`
-- Update any navigation links pointing to `/reports/michigan`
+### 2. Gate debug/test routes behind `super_admin`
 
-**Note:** The underlying data hooks (`useMichiganReporting.ts`) and conversion library (`michigan-conversions.ts`) will remain functional -- those are internal names that don't face the customer. The conversion rates are already configurable via `state_compliance_configs`. We rename only what the user sees.
+Once the role exists, change these routes in `App.tsx`:
+- `/backfill-manifest-pdfs`
+- `/deployment-dashboard` (or `/deployment`)
+- `/notification-test` (or `/test/notifications`)
+- `/manifest-reminders-test`
+- `/data-quality`
+- `/system-health`
 
-## 3. Clean Up Integrations Page
+From `roles={['admin']}` to `roles={['super_admin']}`.
 
-The Integrations page currently stores nothing to the database -- all state is lost on refresh. Rather than building full persistence right now (which is a larger project), we'll make it honest:
+### 3. Remaining Michigan text in components (customer-facing)
 
-**Changes to `Integrations.tsx`:**
-- Remove the Stripe key input fields (users should not paste secret keys into a web form -- Stripe is already connected via Supabase secrets/edge functions)
-- Replace Stripe section with a status display showing whether the Stripe edge function is configured
-- Keep QuickBooks as "Coming Soon" (unchanged)
-- For Zapier, save the webhook URL to the `organizations` table or a new `organization_settings` JSONB column so it persists
+These still say "Michigan" and are visible to customers:
 
-## 4. Gate Test/Debug Routes Behind super_admin
+| File | What to change |
+|------|---------------|
+| `ServiceAreaHeatMap.tsx` line 701 | "Michigan Service Coverage" -> "Service Coverage" |
+| `HaulerForm.tsx` line 174 | "Michigan Registration" label -> "State Registration" |
+| `DriverManifestCreationWizard.tsx` lines 182-203, 824-827, 1668 | Comments say "Michigan rule" and UI shows "Michigan conversions" -- update visible text to "state conversions", keep internal comments as-is |
+| `ServiceAreaPreview.tsx` lines 20-21, 73 | "Southeast Michigan" hardcoded defaults and subtitle -> generic defaults |
 
-The debug routes (`/backfill-manifest-pdfs`, `/deployment-dashboard`, `/notification-test`, `/manifest-reminders-test`, `/data-quality`, `/system-health`) are currently gated to `admin` role. This means any customer admin would see them. They should be gated to `super_admin` so only your team sees them.
+### 4. Remaining Michigan text on public pages
 
-**Changes to `App.tsx`:**
-- Change `ProtectedRoute roles={['admin']}` to `roles={['super_admin']}` for these 6 routes
+| File | What to change |
+|------|---------------|
+| `PublicAbout.tsx` | 15+ references to "Michigan", "BSG Tire Recycling", "Michigan DEQ" -- this is on the BSG marketing domain so it may be intentional. **Needs clarification.** |
+| `PublicServices.tsx` line 29 | "across Michigan" -> "across your region" |
+| `PublicDropoff.tsx` | Still imports and renders `MichiganMap` component -- the map shows a static Michigan image |
+| `TireRecyclingProcess.tsx` line 16 | "Michigan and Ohio" -> generic |
+
+### 5. Remove "Beta" badge from Intelligence Dashboard
+
+The Intelligence Dashboard at line 28 shows a "Beta" badge. For sales demos to prospects in Chicago and NJ, this should be removed to present the product confidently.
+
+### 6. Important question about PublicAbout.tsx
+
+The `PublicAbout.tsx` page is heavily BSG-branded ("About BSG Tire Recycling", "Michigan's trusted partner", BSG truck images, Detroit skyline). Based on the project architecture, public pages in this project are served on the TreadSet app domain. **If this page is only shown on BSG's domain via domain-based routing, the BSG branding is correct and should stay. If it's visible to all TreadSet users, it needs to be generalized.**
 
 ---
 
-## Files to Change
+## Technical Details
+
+### Database Migration
+```sql
+ALTER TYPE public.app_role ADD VALUE 'super_admin';
+```
+
+### Files to Modify
 
 | File | Change |
 |------|--------|
-| `src/components/zones/MichiganHeatMap.tsx` | Rename to `ServiceAreaHeatMap.tsx`, update component name and default center |
-| `src/pages/ServiceZones.tsx` | Update import from `MichiganHeatMap` to `ServiceAreaHeatMap` |
-| `src/pages/MichiganReports.tsx` | Rename to `StateComplianceReports.tsx`, replace all Michigan-specific text |
-| `src/components/diagnostics/MichiganSystemStatus.tsx` | Rename to `ComplianceSystemStatus.tsx` |
-| `src/hooks/useMichiganReporting.ts` | No changes (internal name, not customer-facing) |
-| `src/App.tsx` | Update route path, lazy import name, and gate debug routes to `super_admin` |
-| `src/pages/Integrations.tsx` | Replace Stripe key inputs with connection status; simplify |
-| Navigation links referencing `/reports/michigan` | Update to `/reports/compliance` |
+| `src/components/auth/ProtectedRoute.tsx` | Add `'super_admin'` to the roles type union |
+| `src/components/auth/AuthGuard.tsx` | Add `'super_admin'` to the roles type union |
+| `src/App.tsx` | Change 6 debug route guards from `['admin']` to `['super_admin']` |
+| `src/components/zones/ServiceAreaHeatMap.tsx` | "Michigan Service Coverage" -> "Service Coverage" |
+| `src/components/forms/HaulerForm.tsx` | "Michigan Registration" -> "State Registration" |
+| `src/components/driver/DriverManifestCreationWizard.tsx` | Update visible "Michigan conversions" text |
+| `src/components/public/ServiceAreaPreview.tsx` | Remove Michigan-specific defaults |
+| `src/pages/PublicServices.tsx` | "across Michigan" -> "across your region" |
+| `src/pages/IntelligenceDashboard.tsx` | Remove "Beta" badge |
+
+### Files NOT changed (intentional)
+- `src/lib/michigan-conversions.ts` -- internal library, not customer-facing
+- `src/hooks/useMichiganReporting.ts` -- internal hook name, not customer-facing
+- `src/components/public/MichiganMap.tsx` -- static BSG asset, only used on BSG domain pages
+- `src/pages/PublicAbout.tsx` -- BSG domain page, keeping BSG branding (pending your confirmation)
 
 ## What This Accomplishes
-
-- A customer in Chicago or New Jersey will never see "Michigan" anywhere in their app
-- The heat map works for any state (it already did, but the name was confusing)
-- Debug/dev tools are invisible to customer admins
-- The Integrations page no longer pretends to save data that it doesn't
-
+- Your internal team gets `super_admin` access to debug tools; customer admins cannot see them
+- Zero remaining customer-facing "Michigan" text across the app
+- Intelligence Dashboard presents confidently without "Beta" qualifier
+- Clean, professional, state-agnostic experience for Chicago and NJ prospects
