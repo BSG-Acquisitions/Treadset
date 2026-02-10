@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useCanWrite } from "@/hooks/useCanWrite";
+import { useAuth } from "@/contexts/AuthContext";
 import type { Database } from "@/integrations/supabase/types";
 import { sanitizeUUID } from "@/lib/uuidHelpers";
 
@@ -35,11 +36,13 @@ export interface RouteOption {
 }
 
 export const usePickups = (date?: string) => {
+  const { user } = useAuth();
+  const orgId = user?.currentOrganization?.id;
+
   return useQuery({
-    queryKey: ['pickups', date],
+    queryKey: ['pickups', date, orgId],
     queryFn: async () => {
-      // Get the current organization ID first
-      const { data: orgData } = await supabase.rpc('get_current_user_organization', { org_slug: 'bsg' });
+      if (!orgId) throw new Error('No organization selected');
       
       let query = supabase
         .from('pickups')
@@ -92,7 +95,7 @@ export const usePickups = (date?: string) => {
             check_number
           )
         `)
-        .eq('organization_id', orgData); // Explicitly filter by organization
+        .eq('organization_id', orgId);
 
       if (date) {
         query = query.eq('pickup_date', date);
@@ -101,7 +104,10 @@ export const usePickups = (date?: string) => {
       const { data, error } = await query.order('pickup_date', { ascending: false });
       if (error) throw error;
       return data || [];
-    }
+    },
+    enabled: !!orgId,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 5 * 60 * 1000,
   });
 };
 
@@ -134,7 +140,9 @@ export const useAssignments = (date?: string) => {
       if (error) throw error;
       return data || [];
     },
-    refetchInterval: 5000, // Refetch every 5 seconds for live updates
+    refetchInterval: 30000, // Refetch every 30 seconds (realtime channel handles instant updates)
+    staleTime: 30 * 1000, // 30 second stale time
+    gcTime: 60 * 1000,
   });
 };
 

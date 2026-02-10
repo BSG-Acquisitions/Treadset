@@ -18,7 +18,9 @@ export const useVehicles = () => {
 
       if (error) throw error;
       return data || [];
-    }
+    },
+    staleTime: 10 * 60 * 1000, // 10 minutes - fleet data rarely changes
+    gcTime: 20 * 60 * 1000,
   });
 };
 
