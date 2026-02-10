@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { MapPin, Plus, Wand2, Trash2, Edit, Loader2, Calendar, Info } from 'lucide-react';
 import { SlideUp } from '@/components/motion/SlideUp';
-import { MichiganHeatMap } from '@/components/zones/MichiganHeatMap';
+import { ServiceAreaHeatMap } from '@/components/zones/ServiceAreaHeatMap';
 import { ZonePerformanceTable } from '@/components/zones/ZonePerformanceTable';
 import { GrowthOpportunitiesPanel } from '@/components/zones/GrowthOpportunitiesPanel';
 import { DataQualityWidget } from '@/components/zones/DataQualityWidget';
@@ -218,7 +218,7 @@ export default function ServiceZones() {
 
       {/* Map Section */}
       <div className="grid grid-cols-1 gap-4">
-        <MichiganHeatMap />
+        <ServiceAreaHeatMap />
       </div>
 
       {/* Widgets Row */}

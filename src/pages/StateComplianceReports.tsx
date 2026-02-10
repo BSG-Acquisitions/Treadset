@@ -24,10 +24,10 @@ import { useMichiganReport, useExportMichiganReport, useSubmitMichiganReport } f
 import { useOutboundSummary } from "@/hooks/useShipments";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatNumber } from "@/lib/formatters";
-import { MichiganSystemStatus } from "@/components/diagnostics/MichiganSystemStatus";
+import { ComplianceSystemStatus } from "@/components/diagnostics/ComplianceSystemStatus";
 import { OutboundTab } from "@/components/reports/OutboundTab";
 
-const MichiganReports = () => {
+const StateComplianceReports = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const { data: reportData, isLoading, error } = useMichiganReport(selectedYear);
   const { data: outboundSummary } = useOutboundSummary(selectedYear);
@@ -108,15 +108,15 @@ const MichiganReports = () => {
           </Link>
         </Button>
         <span>/</span>
-        <span className="text-foreground">Michigan Tire Reports</span>
+        <span className="text-foreground">Compliance Reports</span>
       </div>
 
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Michigan Tire Reports</h1>
+          <h1 className="text-3xl font-bold tracking-tight">State Compliance Reports</h1>
           <p className="text-muted-foreground">
-            Annual scrap tire reporting for Michigan EGLE compliance
+            Annual scrap tire reporting for state regulatory compliance
           </p>
         </div>
         
@@ -157,7 +157,7 @@ const MichiganReports = () => {
           <CardContent>
             <div className="text-2xl font-bold">{formatNumber(reportData?.totalTons || 0, { maximumFractionDigits: 2 })}</div>
             <p className="text-xs text-muted-foreground">
-              MI Rule: 89 PTE = 1 ton
+              Conversion: 89 PTE = 1 ton
             </p>
           </CardContent>
         </Card>
@@ -202,7 +202,7 @@ const MichiganReports = () => {
       </div>
 
       {/* System Status */}
-      <MichiganSystemStatus />
+      <ComplianceSystemStatus />
 
       {/* Required Fields Alert */}
       {requiredFields.length > 0 && (
@@ -235,7 +235,7 @@ const MichiganReports = () => {
           <TabsTrigger value="destinations">Counties</TabsTrigger>
           <TabsTrigger value="processing">Processing</TabsTrigger>
           <TabsTrigger value="sites">Sites</TabsTrigger>
-          <TabsTrigger value="totals">MI Totals</TabsTrigger>
+          <TabsTrigger value="totals">State Totals</TabsTrigger>
           <TabsTrigger value="export">Export</TabsTrigger>
         </TabsList>
 
@@ -400,7 +400,7 @@ const MichiganReports = () => {
         <TabsContent value="totals">
           <Card>
             <CardHeader>
-              <CardTitle>Michigan EGLE Totals</CardTitle>
+              <CardTitle>State Compliance Totals</CardTitle>
               <CardDescription>Final totals for regulatory submission</CardDescription>
             </CardHeader>
             <CardContent>
@@ -424,12 +424,12 @@ const MichiganReports = () => {
                 </div>
 
                 <div className="space-y-4">
-                  <h3 className="font-semibold text-lg">Michigan Conversion Rules</h3>
+                  <h3 className="font-semibold text-lg">Conversion Rules</h3>
                   <div className="text-sm space-y-2 p-4 rounded bg-muted/50">
                     <div>• 1 Passenger Tire = 1 PTE</div>
                     <div>• 1 Semi Truck Tire = 5 PTE</div>
                     <div>• 1 OTR Tire = 15 PTE</div>
-                    <div className="font-semibold text-primary">• 89 PTE = 1 Ton (Michigan Rule)</div>
+                    <div className="font-semibold text-primary">• 89 PTE = 1 Ton</div>
                     <div>• 10 PTE = 1 Cubic Yard</div>
                   </div>
                 </div>
@@ -442,7 +442,7 @@ const MichiganReports = () => {
           <Card>
             <CardHeader>
               <CardTitle>Export & Submit</CardTitle>
-              <CardDescription>Generate reports and submit to Michigan EGLE</CardDescription>
+              <CardDescription>Generate reports and submit for compliance</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
@@ -470,7 +470,7 @@ const MichiganReports = () => {
                 <div className="border-t pt-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-semibold">Submit to Michigan EGLE</h3>
+                      <h3 className="font-semibold">Submit for Compliance</h3>
                       <p className="text-sm text-muted-foreground">
                         Lock and submit this report for regulatory compliance
                       </p>
@@ -494,4 +494,4 @@ const MichiganReports = () => {
   );
 };
 
-export default MichiganReports;
+export default StateComplianceReports;

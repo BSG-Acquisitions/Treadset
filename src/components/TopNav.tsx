@@ -48,7 +48,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
     if (location.pathname.startsWith('/routes') || location.pathname === '/outbound-schedule') return 'routes';
     if (location.pathname.startsWith('/inventory') || location.pathname === '/shipments') return 'inventory';
     if (location.pathname.startsWith('/trailers')) return 'trailers';
-    if (location.pathname === '/analytics' || location.pathname === '/reports' || location.pathname === '/michigan-reports') return 'reports';
+    if (location.pathname === '/analytics' || location.pathname === '/reports' || location.pathname === '/reports/compliance') return 'reports';
     // More section items
     if (location.pathname === '/dropoffs') return 'dropoffs';
     return 'dashboard';
@@ -393,9 +393,9 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/michigan-reports" className={dropdownItemClass(location.pathname === '/michigan-reports')}>
+                    <Link to="/reports/compliance" className={dropdownItemClass(location.pathname === '/reports/compliance')}>
                       <Shield className="h-4 w-4" />
-                      Michigan Reports
+                      Compliance Reports
                     </Link>
                   </DropdownMenuItem>
                 </DropdownMenuContent>

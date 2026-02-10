@@ -49,7 +49,7 @@ const ClientTeamInvite = lazy(() => import('./pages/ClientTeamInvite'));
 const ReceiverSignatures = lazy(() => import('./pages/ReceiverSignatures'));
 const ReceiverManagement = lazy(() => import('./pages/ReceiverManagement'));
 const Reports = lazy(() => import('./pages/Reports'));
-const MichiganReports = lazy(() => import('./pages/MichiganReports'));
+const StateComplianceReports = lazy(() => import('./pages/StateComplianceReports'));
 const Dropoffs = lazy(() => import('./pages/Dropoffs'));
 const IndependentHaulers = lazy(() => import('./pages/IndependentHaulers'));
 const HaulerDashboard = lazy(() => import('./pages/HaulerDashboard'));
@@ -378,10 +378,10 @@ const App = () => (
                   </AppLayout>
                 </ProtectedRoute>
               } />
-              <Route path="/michigan-reports" element={
+              <Route path="/reports/compliance" element={
                 <ProtectedRoute roles={['admin', 'ops_manager']}>
                   <AppLayout>
-                    <MichiganReports />
+                    <StateComplianceReports />
                   </AppLayout>
                 </ProtectedRoute>
               } />

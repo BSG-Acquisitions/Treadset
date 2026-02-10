@@ -42,7 +42,7 @@ interface ActivityZone {
   topClients: string[];
 }
 
-export function MichiganHeatMap() {
+export function ServiceAreaHeatMap() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
@@ -430,7 +430,7 @@ export function MichiganHeatMap() {
     } catch { /* ignore */ }
 
     // Calculate initial bounds
-    let initialCenter: [number, number] = [-84.5, 44.0];
+    let initialCenter: [number, number] = [-98.5, 39.8];
     let initialZoom = 6;
     
     if (locations.length > 0) {
