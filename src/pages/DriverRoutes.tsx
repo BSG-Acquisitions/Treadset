@@ -431,6 +431,39 @@ export default function DriverRoutes() {
                               );
                             })()}
 
+                            {/* Payment & Revenue Info for completed stops */}
+                            {assignment.status === 'completed' && (
+                              <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <DollarSign className="h-4 w-4 text-emerald-600" />
+                                  <span className="text-base md:text-lg font-bold text-emerald-700">
+                                    {assignment.pickup?.computed_revenue
+                                      ? `$${Number(assignment.pickup.computed_revenue).toFixed(2)}`
+                                      : '$0.00'}
+                                  </span>
+                                </div>
+                                <div>
+                                  {assignment.pickup?.payment_method === 'CASH' && (
+                                    <span className="inline-flex items-center rounded-full bg-green-100 text-green-800 border border-green-300 px-2.5 py-0.5 text-xs font-semibold">Cash</span>
+                                  )}
+                                  {assignment.pickup?.payment_method === 'CHECK' && (
+                                    <span className="inline-flex items-center rounded-full bg-green-100 text-green-800 border border-green-300 px-2.5 py-0.5 text-xs font-semibold">
+                                      Check {assignment.pickup?.check_number ? `#${assignment.pickup.check_number}` : ''}
+                                    </span>
+                                  )}
+                                  {assignment.pickup?.payment_method === 'INVOICE' && (
+                                    <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-800 border border-amber-300 px-2.5 py-0.5 text-xs font-semibold">To Be Invoiced</span>
+                                  )}
+                                  {assignment.pickup?.payment_method === 'CARD_ON_FILE' && (
+                                    <span className="inline-flex items-center rounded-full bg-yellow-100 text-yellow-800 border border-yellow-300 px-2.5 py-0.5 text-xs font-semibold">Card on File</span>
+                                  )}
+                                  {assignment.pickup?.payment_method === 'CARD' && (
+                                    <span className="inline-flex items-center rounded-full bg-blue-100 text-blue-800 border border-blue-300 px-2.5 py-0.5 text-xs font-semibold">Card</span>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
                             {assignment.pickup?.notes && (
                               <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                                 <div className="text-sm md:text-base font-medium text-yellow-800 mb-1">Special Notes:</div>
