@@ -442,6 +442,37 @@ export default function EnhancedRoutesToday() {
                                     
                                     return null;
                                   })()}
+                                  
+                                  {/* Payment Method Badge */}
+                                  {pickup.status === 'completed' && pickup.payment_method && (
+                                    <div>
+                                      {pickup.payment_method === 'CASH' && (
+                                        <Badge className="bg-green-100 text-green-800 border-green-300 dark:bg-green-900/40 dark:text-green-200 dark:border-green-700 text-xs">
+                                          Cash
+                                        </Badge>
+                                      )}
+                                      {pickup.payment_method === 'CHECK' && (
+                                        <Badge className="bg-green-100 text-green-800 border-green-300 dark:bg-green-900/40 dark:text-green-200 dark:border-green-700 text-xs">
+                                          Check{pickup.check_number ? ` #${pickup.check_number}` : ''}
+                                        </Badge>
+                                      )}
+                                      {pickup.payment_method === 'INVOICE' && (
+                                        <Badge className="bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/40 dark:text-amber-200 dark:border-amber-700 text-xs">
+                                          To Be Invoiced
+                                        </Badge>
+                                      )}
+                                      {pickup.payment_method === 'CARD_ON_FILE' && (
+                                        <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/40 dark:text-yellow-200 dark:border-yellow-700 text-xs">
+                                          Card on File - Pending
+                                        </Badge>
+                                      )}
+                                      {pickup.payment_method === 'CARD' && (
+                                        <Badge className="bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/40 dark:text-blue-200 dark:border-blue-700 text-xs">
+                                          Card
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
                                 
                                 <div className="flex gap-1 pt-1">

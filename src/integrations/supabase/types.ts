@@ -2765,6 +2765,7 @@ export type Database = {
       manifests: {
         Row: {
           acroform_pdf_path: string | null
+          check_number: string | null
           client_id: string | null
           commercial_17_5_19_5_off: number | null
           commercial_17_5_19_5_on: number | null
@@ -2837,6 +2838,7 @@ export type Database = {
         }
         Insert: {
           acroform_pdf_path?: string | null
+          check_number?: string | null
           client_id?: string | null
           commercial_17_5_19_5_off?: number | null
           commercial_17_5_19_5_on?: number | null
@@ -2909,6 +2911,7 @@ export type Database = {
         }
         Update: {
           acroform_pdf_path?: string | null
+          check_number?: string | null
           client_id?: string | null
           commercial_17_5_19_5_off?: number | null
           commercial_17_5_19_5_on?: number | null
@@ -3766,6 +3769,7 @@ export type Database = {
       }
       pickups: {
         Row: {
+          check_number: string | null
           client_id: string
           computed_revenue: number | null
           created_at: string
@@ -3799,6 +3803,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          check_number?: string | null
           client_id: string
           computed_revenue?: number | null
           created_at?: string
@@ -3832,6 +3837,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          check_number?: string | null
           client_id?: string
           computed_revenue?: number | null
           created_at?: string
