@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 interface AuthGuardProps {
   children: React.ReactNode;
   requireAuth?: boolean;
-  roles?: ('admin' | 'ops_manager' | 'dispatcher' | 'driver' | 'sales' | 'client')[];
+  roles?: ('super_admin' | 'admin' | 'ops_manager' | 'dispatcher' | 'driver' | 'sales' | 'client')[];
 }
 
 export const AuthGuard = ({ children, requireAuth = true, roles = [] }: AuthGuardProps) => {

@@ -26,7 +26,7 @@ export default function PublicServices() {
             eyebrow="What We Do"
             title="Our Services"
             titleAccent="Services"
-            subtitle="Comprehensive tire recycling solutions for businesses and individuals across Michigan"
+            subtitle="Comprehensive tire recycling solutions for businesses and individuals across your region"
             size="large"
             icon={Briefcase}
           />

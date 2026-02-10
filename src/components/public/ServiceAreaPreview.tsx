@@ -17,8 +17,8 @@ export function ServiceAreaPreview() {
 
   const serviceRegions = stats?.service_regions || [
     { name: "Metro Detroit", days: ["Monday", "Friday"] },
-    { name: "Southeast Michigan", days: ["Tuesday", "Wednesday"] },
-    { name: "Greater Detroit Area", days: ["Thursday"] },
+    { name: "Regional Area", days: ["Tuesday", "Wednesday"] },
+    { name: "Extended Service Area", days: ["Thursday"] },
   ];
 
   const handleCheckZip = async () => {
@@ -70,7 +70,7 @@ export function ServiceAreaPreview() {
             eyebrow="Service Area"
             title="We're In Your Area This Week"
             titleAccent="This Week"
-            subtitle="Our trucks are on the road throughout Southeast Michigan every week. Check if we service your area."
+            subtitle="Our trucks are on the road throughout your region every week. Check if we service your area."
             icon={MapPin}
           />
         </div>

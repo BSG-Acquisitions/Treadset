@@ -1665,7 +1665,7 @@ function DriverManifestCreationWizardInner({
                   <div>Calculated tons (89 PTE = 1 ton): <strong>{calcTonsFromPTE().toFixed(2)}</strong></div>
                   {!manualWeightOverride && (
                     <div className="text-xs mt-2 text-primary">
-                      ✓ Weights auto-calculated based on Michigan conversions
+                      ✓ Weights auto-calculated based on state conversions
                     </div>
                   )}
                 </div>

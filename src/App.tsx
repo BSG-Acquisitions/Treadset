@@ -256,7 +256,7 @@ const App = () => (
                 </ProtectedRoute>
               } />
               <Route path="/manifests/backfill" element={
-                <ProtectedRoute roles={['admin']}>
+                <ProtectedRoute roles={['super_admin']}>
                   <AppLayout>
                     <BackfillManifestPdfs />
                   </AppLayout>
@@ -414,28 +414,28 @@ const App = () => (
                 </ProtectedRoute>
               } />
               <Route path="/deployment" element={
-                <ProtectedRoute roles={['admin']}>
+                <ProtectedRoute roles={['super_admin']}>
                   <AppLayout>
                     <DeploymentDashboard />
                   </AppLayout>
                 </ProtectedRoute>
               } />
               <Route path="/test/notifications" element={
-                <ProtectedRoute roles={['admin']}>
+                <ProtectedRoute roles={['super_admin']}>
                   <AppLayout>
                     <NotificationTest />
                   </AppLayout>
                 </ProtectedRoute>
               } />
               <Route path="/test/manifest-reminders" element={
-                <ProtectedRoute roles={['admin']}>
+                <ProtectedRoute roles={['super_admin']}>
                   <AppLayout>
                     <ManifestRemindersTest />
                   </AppLayout>
                 </ProtectedRoute>
               } />
               <Route path="/data-quality" element={
-                <ProtectedRoute roles={['admin']}>
+                <ProtectedRoute roles={['super_admin']}>
                   <AppLayout>
                     <DataQuality />
                   </AppLayout>

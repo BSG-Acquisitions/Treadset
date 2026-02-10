@@ -1,4 +1,3 @@
-import { Badge } from '@/components/ui/badge';
 import { PickupPatternsCard } from '@/components/intelligence/PickupPatternsCard';
 import { RevenueForecastCard } from '@/components/intelligence/RevenueForecastCard';
 import { OperationalMetricsCard } from '@/components/intelligence/OperationalMetricsCard';
@@ -25,7 +24,7 @@ const IntelligenceDashboard = () => {
             <div className="flex items-center gap-3">
               <Brain className="h-8 w-8 text-brand-primary" />
               <h1 className="text-3xl font-bold text-foreground">Intelligence Dashboard</h1>
-              <Badge variant="secondary" className="text-xs">Beta</Badge>
+              
             </div>
             <p className="text-muted-foreground mt-2">
               AI-powered insights and predictive analytics to help you make data-driven decisions
