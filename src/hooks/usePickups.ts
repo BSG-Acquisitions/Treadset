@@ -87,7 +87,9 @@ export const usePickups = (date?: string) => {
             commercial_22_5_off,
             commercial_22_5_on,
             total,
-            status
+            status,
+            payment_method,
+            check_number
           )
         `)
         .eq('organization_id', orgData); // Explicitly filter by organization

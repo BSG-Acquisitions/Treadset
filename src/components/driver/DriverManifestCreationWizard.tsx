@@ -123,6 +123,7 @@ function DriverManifestCreationWizardInner({
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [requiresInvoice, setRequiresInvoice] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<string>("CASH");
+  const [checkNumber, setCheckNumber] = useState<string>("");
   const [driverNotes, setDriverNotes] = useState<string>("");
   const [saveNotesToClient, setSaveNotesToClient] = useState<boolean>(false);
   
@@ -922,6 +923,7 @@ function DriverManifestCreationWizardInner({
           total: calculatedTotal, // MUST include total to ensure revenue is persisted
           payment_method: requiresInvoice ? 'INVOICE' : 'CARD',
           payment_status: requiresInvoice ? 'PENDING' : 'PENDING',
+          ...(paymentMethod === 'CHECK' && checkNumber.trim() ? { check_number: checkNumber.trim() } : {}),
         })
         .eq('id', manifest.id);
 
@@ -1040,7 +1042,8 @@ function DriverManifestCreationWizardInner({
           computed_revenue: calculatedTotal,
           final_revenue: calculatedTotal,
           payment_method: paymentMethod,
-          payment_status: paymentMethod === 'CASH' || paymentMethod === 'CHECK' ? 'SUCCEEDED' : 'PENDING'
+          payment_status: paymentMethod === 'CASH' || paymentMethod === 'CHECK' ? 'SUCCEEDED' : 'PENDING',
+          ...(paymentMethod === 'CHECK' && checkNumber.trim() ? { check_number: checkNumber.trim() } : {}),
         })
         .eq('id', pickupId);
 
@@ -2183,6 +2186,28 @@ function DriverManifestCreationWizardInner({
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Check Number Input - shown when CHECK is selected */}
+              {paymentMethod === 'CHECK' && (
+                <Card className="border-primary/30 bg-primary/5">
+                  <CardContent className="p-4">
+                    <Label htmlFor="check-number" className="text-sm font-medium mb-2 block">
+                      Check Number
+                    </Label>
+                    <Input
+                      id="check-number"
+                      type="text"
+                      placeholder="Enter check number (e.g. 4521)"
+                      value={checkNumber}
+                      onChange={(e) => setCheckNumber(e.target.value)}
+                      className="max-w-xs"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      This will be visible to office staff on the route planning page.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
 
               <Card 
                 className={`cursor-pointer transition-colors hover:bg-muted/50 ${paymentMethod === 'CARD' ? 'border-primary border-2' : ''}`}
