@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useCanWrite } from "@/hooks/useCanWrite";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface Manifest {
   id: string;
@@ -130,8 +131,11 @@ export interface UpdateManifestData {
 }
 
 export const useManifests = (clientId?: string, driverId?: string) => {
+  const { user } = useAuth();
+  const orgId = user?.currentOrganization?.id;
+
   return useQuery({
-    queryKey: ['manifests', { clientId, driverId }],
+    queryKey: ['manifests', orgId, { clientId, driverId }],
     queryFn: async () => {
       let query = supabase
         .from('manifests')
@@ -141,6 +145,7 @@ export const useManifests = (clientId?: string, driverId?: string) => {
           location:locations(id, name, address),
           pickup:pickups!manifests_pickup_id_fkey(id, pickup_date)
         `)
+        .eq('organization_id', orgId!)
         .order('created_at', { ascending: false });
 
       if (clientId) {
@@ -156,6 +161,7 @@ export const useManifests = (clientId?: string, driverId?: string) => {
       if (error) throw error;
       return data as unknown as Manifest[];
     },
+    enabled: !!orgId,
   });
 };
 
