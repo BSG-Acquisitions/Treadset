@@ -307,8 +307,8 @@ export default function Clients() {
               <span>
                 <strong>{missingManifestFieldsCount} client{missingManifestFieldsCount !== 1 ? 's' : ''}</strong> {missingManifestFieldsCount !== 1 ? 'are' : 'is'} missing required address information (city, state, or county).
               </span>
-              <span className="text-sm opacity-90">
-                Michigan manifests cannot be generated correctly without complete address data. 
+               <span className="text-sm opacity-90">
+                 Manifests cannot be generated correctly without complete address data. 
                 {missingManifestFieldsCount <= 5 && clientsMissingManifestFields.length > 0 && (
                   <span className="font-medium"> Affected: {clientsMissingManifestFields.map(c => c.company_name).join(', ')}</span>
                 )}

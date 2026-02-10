@@ -181,7 +181,7 @@ export default function PublicDropoff() {
                 <div className="flex items-start gap-3">
                   <MapPin className="h-5 w-5 text-primary mt-1 shrink-0" />
                   <div>
-                    <p className="font-semibold text-foreground">BSG Tire Recycling</p>
+                    <p className="font-semibold text-foreground">TreadSet Tire Recycling</p>
                     <p className="text-muted-foreground">2971 Bellevue St</p>
                     <p className="text-muted-foreground">Detroit, MI 48207</p>
                   </div>

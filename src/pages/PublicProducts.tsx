@@ -140,7 +140,7 @@ export default function PublicProducts() {
         <div className="absolute inset-0">
           <img 
             src={facilityDisplayImg} 
-            alt="BSG Tire Recycling facility showing recycled products" 
+            alt="TreadSet Tire Recycling facility showing recycled products" 
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/70 to-background" />
@@ -252,7 +252,7 @@ export default function PublicProducts() {
               eyebrow="Sustainability"
               title="Every Product Tells a Story"
               titleAccent="Story"
-              subtitle="Each of our products represents tires saved from landfills and given new purpose. When you choose BSG products, you're choosing sustainability."
+              subtitle="Each of our products represents tires saved from landfills and given new purpose. When you choose TreadSet products, you're choosing sustainability."
               icon={Leaf}
             />
             
@@ -278,7 +278,7 @@ export default function PublicProducts() {
                   <Truck className="w-8 h-8 text-primary" />
                 </div>
                 <h3 className="text-2xl font-bold text-primary mb-2">Local</h3>
-                <p className="text-muted-foreground">Michigan & Ohio operations</p>
+                <p className="text-muted-foreground">Nationwide operations</p>
               </div>
             </div>
           </motion.div>
