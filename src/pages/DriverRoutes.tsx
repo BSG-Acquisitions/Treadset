@@ -1,4 +1,6 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { useDriverAssignments } from "@/hooks/useDriverAssignments";
 import { useDriverWeeklyAssignments } from "@/hooks/useDriverWeeklyAssignments";
 import { useClientPickupStats } from "@/hooks/useClientPickupStats";
@@ -16,7 +18,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
-import { Building, MapPin, Calendar, CheckCircle2, Clock, AlertCircle, Package, Truck, MoreVertical, Move, Phone, Plus, TrendingUp, DollarSign, ChevronLeft, ChevronRight, Search, Route } from "lucide-react";
+import { Building, MapPin, Calendar, CheckCircle2, Clock, AlertCircle, Package, Truck, MoreVertical, Move, Phone, Plus, TrendingUp, DollarSign, ChevronLeft, ChevronRight, Search, Route, Pencil, Save } from "lucide-react";
 import { format, addWeeks, startOfWeek } from "date-fns";
 import { toast } from "sonner";
 
@@ -30,6 +32,35 @@ export default function DriverRoutes() {
   const [movePickupOpen, setMovePickupOpen] = useState(false);
   const [selectedPickupToMove, setSelectedPickupToMove] = useState<any>(null);
   
+  // Inline check number editing
+  const [editingCheckPickupId, setEditingCheckPickupId] = useState<string | null>(null);
+  const [checkNumberDraft, setCheckNumberDraft] = useState('');
+  const [savingCheckNumber, setSavingCheckNumber] = useState(false);
+  const queryClient = useQueryClient();
+
+  const saveCheckNumber = useCallback(async (pickupId: string) => {
+    if (!checkNumberDraft.trim()) {
+      toast.error('Please enter a check number');
+      return;
+    }
+    setSavingCheckNumber(true);
+    try {
+      const { error } = await supabase
+        .from('pickups')
+        .update({ check_number: checkNumberDraft.trim() })
+        .eq('id', pickupId);
+      if (error) throw error;
+      toast.success(`Check #${checkNumberDraft.trim()} saved`);
+      setEditingCheckPickupId(null);
+      queryClient.invalidateQueries({ queryKey: ['driver-assignments'] });
+    } catch (err: any) {
+      toast.error('Failed to save check number');
+      console.error('Check number save error:', err);
+    } finally {
+      setSavingCheckNumber(false);
+    }
+  }, [checkNumberDraft, queryClient]);
+
   // Route suggestions state
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [alongRouteSuggestions, setAlongRouteSuggestions] = useState<RouteSuggestion[]>([]);
@@ -447,9 +478,42 @@ export default function DriverRoutes() {
                                     <span className="inline-flex items-center rounded-full bg-green-100 text-green-800 border border-green-300 px-2.5 py-0.5 text-xs font-semibold">Cash</span>
                                   )}
                                   {assignment.pickup?.payment_method === 'CHECK' && (
-                                    <span className="inline-flex items-center rounded-full bg-green-100 text-green-800 border border-green-300 px-2.5 py-0.5 text-xs font-semibold">
-                                      Check {assignment.pickup?.check_number ? `#${assignment.pickup.check_number}` : ''}
-                                    </span>
+                                    editingCheckPickupId === assignment.pickup?.id ? (
+                                      <div className="flex items-center gap-1.5">
+                                        <Input
+                                          value={checkNumberDraft}
+                                          onChange={(e) => setCheckNumberDraft(e.target.value)}
+                                          placeholder="Check #"
+                                          className="h-7 w-28 text-xs bg-white border-green-300 focus-visible:ring-green-500"
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter') saveCheckNumber(assignment.pickup!.id);
+                                            if (e.key === 'Escape') setEditingCheckPickupId(null);
+                                          }}
+                                          autoFocus
+                                          disabled={savingCheckNumber}
+                                        />
+                                        <Button
+                                          size="icon"
+                                          variant="ghost"
+                                          className="h-7 w-7 text-green-700 hover:bg-green-200"
+                                          onClick={() => saveCheckNumber(assignment.pickup!.id)}
+                                          disabled={savingCheckNumber}
+                                        >
+                                          <Save className="h-3.5 w-3.5" />
+                                        </Button>
+                                      </div>
+                                    ) : (
+                                      <button
+                                        className="inline-flex items-center gap-1 rounded-full bg-green-100 text-green-800 border border-green-300 px-2.5 py-0.5 text-xs font-semibold hover:bg-green-200 transition-colors"
+                                        onClick={() => {
+                                          setEditingCheckPickupId(assignment.pickup!.id);
+                                          setCheckNumberDraft(assignment.pickup?.check_number || '');
+                                        }}
+                                      >
+                                        Check {assignment.pickup?.check_number ? `#${assignment.pickup.check_number}` : ''}
+                                        <Pencil className="h-3 w-3 ml-0.5 opacity-60" />
+                                      </button>
+                                    )
                                   )}
                                   {assignment.pickup?.payment_method === 'INVOICE' && (
                                     <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-800 border border-amber-300 px-2.5 py-0.5 text-xs font-semibold">To Be Invoiced</span>
