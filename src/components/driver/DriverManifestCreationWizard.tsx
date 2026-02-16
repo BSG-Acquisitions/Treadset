@@ -889,8 +889,8 @@ function DriverManifestCreationWizardInner({
         tare_weight_lbs: finalTare,
         net_weight_lbs: finalNet,
         total: calculatedTotal, // Revenue collected at pickup
-        payment_method: requiresInvoice ? ('INVOICE' as const) : ('CARD' as const),
-        payment_status: requiresInvoice ? ('PENDING' as const) : ('PENDING' as const),
+        payment_method: paymentMethod as 'CARD' | 'CASH' | 'CHECK' | 'INVOICE',
+        payment_status: (paymentMethod === 'CASH' || paymentMethod === 'CHECK') ? ('SUCCEEDED' as const) : ('PENDING' as const),
         status: 'AWAITING_RECEIVER_SIGNATURE' as const,
       };
 
@@ -921,8 +921,8 @@ function DriverManifestCreationWizardInner({
           signed_by_name: data.generator_print_name,
           signed_by_title: data.hauler_print_name, // Store hauler's print name in title field
           total: calculatedTotal, // MUST include total to ensure revenue is persisted
-          payment_method: requiresInvoice ? 'INVOICE' : 'CARD',
-          payment_status: requiresInvoice ? 'PENDING' : 'PENDING',
+          payment_method: paymentMethod,
+          payment_status: (paymentMethod === 'CASH' || paymentMethod === 'CHECK') ? 'SUCCEEDED' : 'PENDING',
           ...(paymentMethod === 'CHECK' && checkNumber.trim() ? { check_number: checkNumber.trim() } : {}),
         })
         .eq('id', manifest.id);
