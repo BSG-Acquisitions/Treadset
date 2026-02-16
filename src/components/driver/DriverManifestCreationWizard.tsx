@@ -125,7 +125,7 @@ function DriverManifestCreationWizardInner({
   const [paymentMethod, setPaymentMethod] = useState<string>("CASH");
   const [checkNumber, setCheckNumber] = useState<string>("");
   const [driverNotes, setDriverNotes] = useState<string>("");
-  const [saveNotesToClient, setSaveNotesToClient] = useState<boolean>(false);
+  // Notes always auto-save to client profile (no toggle needed)
   
   // Use ref for more reliable duplicate prevention
   const isSubmittingRef = useRef(false);
@@ -1068,7 +1068,7 @@ function DriverManifestCreationWizardInner({
       }
 
       // Save driver notes to client profile if checkbox is checked
-      if (saveNotesToClient && driverNotes.trim() && resolvedClientId) {
+      if (driverNotes.trim() && resolvedClientId) {
         const timestamp = new Date().toLocaleDateString('en-US', { 
           month: 'short', 
           day: 'numeric', 
@@ -2488,16 +2488,7 @@ function DriverManifestCreationWizardInner({
                   className="w-full min-h-[80px] p-3 text-sm border rounded-md resize-none bg-background"
                   rows={3}
                 />
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="save-to-client"
-                    checked={saveNotesToClient}
-                    onCheckedChange={setSaveNotesToClient}
-                  />
-                  <Label htmlFor="save-to-client" className="text-xs sm:text-sm cursor-pointer">
-                    Save to client profile (visible on client detail page)
-                  </Label>
-                </div>
+                <p className="text-xs text-muted-foreground">Notes will automatically save to the client profile.</p>
               </CardContent>
             </Card>
 
@@ -2524,6 +2515,14 @@ function DriverManifestCreationWizardInner({
         const paymentOtrTotalCount = (paymentFormValues.otr_count || 0) + (paymentFormValues.tractor_count || 0);
 
         const handleCollectPayment = async () => {
+          if (paymentMethod === 'CHECK' && !checkNumber.trim()) {
+            toast({
+              title: "Check Number Required",
+              description: "Please enter the check number before completing payment",
+              variant: "destructive",
+            });
+            return;
+          }
           if (calculatedTotal <= 0) {
             toast({
               title: "Invalid Total",
@@ -2682,7 +2681,7 @@ function DriverManifestCreationWizardInner({
               <Button
                 type="button"
                 onClick={handleCollectPayment}
-                disabled={calculatedTotal <= 0}
+                disabled={calculatedTotal <= 0 || (paymentMethod === 'CHECK' && !checkNumber.trim())}
                 className="flex-1"
               >
                 <DollarSign className="w-4 h-4 mr-2" />
