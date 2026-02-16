@@ -1,27 +1,31 @@
 
-# Add Inline Check Number Input on Driver's Completed Stop Cards
+# Auto-Save Driver Notes and Require Check Number
 
-## Problem
-1. When Brenner completes a stop and selects CHECK as the payment method, the check number input exists in the manifest wizard but may not be getting saved properly or may be getting skipped.
-2. After a stop is already completed, there is **no way** to add or edit the check number from the driver's route view -- the green payment bar is completely read-only.
+## Two Changes
 
-## Solution
-Make the check number **editable inline** on the green payment bar for completed stops where the payment method is CHECK. This way Brenner can enter or update the check number directly on the route card after completion, and it syncs to the database so the office can see it too.
+### 1. Remove the "Save to Client Profile" Toggle -- Auto-Save Notes Always
+Currently, when the driver types notes during manifest completion, there's a toggle switch they have to turn on to save notes to the client profile. This adds unnecessary friction -- Brenner shouldn't have to think about it.
 
-## What Will Change
+**What changes:**
+- Remove the Switch/toggle component and its label from the review step (lines 2491-2500)
+- Remove the `saveNotesToClient` state variable (line 128) since it will always be true
+- Change the save logic (line 1071) from `if (saveNotesToClient && driverNotes.trim()...)` to just `if (driverNotes.trim()...)` -- notes always save automatically when the driver enters them
 
-**File: `src/pages/DriverRoutes.tsx`**
+### 2. Require Check Number When Payment Method is CHECK
+Currently, the check number field appears when CHECK is selected, but it's optional -- Brenner can skip it and still proceed. This means the office may never see the check number.
 
-On the green payment bar for completed CHECK stops (lines 449-453), replace the static "Check #" badge with an interactive inline input:
+**What changes:**
+- In the `handleCollectPayment` function (line 2526), add a validation check: if `paymentMethod === 'CHECK'` and `checkNumber.trim()` is empty, show an error toast saying "Check number is required" and block progression
+- Also disable the "Collect Payment" button when CHECK is selected and no check number has been entered
 
-- When payment method is CHECK, show a small text input field pre-filled with any existing check number
-- The input will have a "save" button (or auto-save on blur) that updates the pickup's `check_number` field in the database
-- After saving, the badge updates to show the saved check number (e.g., "Check #4521")
-- A toast confirmation appears so Brenner knows it saved
-- The save calls `supabase.from('pickups').update({ check_number }).eq('id', pickupId)` directly, plus invalidates the relevant query caches so the admin view sees the update immediately
+This ensures the driver must enter a check number before completing the manifest when they select CHECK as the payment method. The check number then flows through to the pickup record and is visible on the admin route tiles and the driver's own route cards via the inline edit feature we already built.
 
-**Visual behavior:**
-- If no check number is set yet: Shows the input field with placeholder "Enter check #"
-- If check number already exists: Shows the green badge "Check #4521" with a small edit/pencil icon that, when tapped, toggles back to the input for editing
+## Technical Details
 
-**No new files or dependencies needed.** This uses the existing `Input` component and Supabase client. The `useDriverAssignments` hook already fetches `pickup:pickups(*)` which includes `check_number`.
+**File:** `src/components/driver/DriverManifestCreationWizard.tsx`
+
+- **Remove state:** Delete `saveNotesToClient` state and `setSaveNotesToClient` setter
+- **Remove UI:** Delete the Switch + Label block (lines 2491-2500)
+- **Update save logic:** Line 1071 -- remove `saveNotesToClient &&` from the condition
+- **Add validation:** In `handleCollectPayment` (line 2526), before the existing `calculatedTotal <= 0` check, add a check for empty check number when payment method is CHECK
+- **Disable button:** Update the "Collect Payment" button's `disabled` prop to also check `paymentMethod === 'CHECK' && !checkNumber.trim()`
