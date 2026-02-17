@@ -5204,6 +5204,7 @@ export type Database = {
           route_name: string
           scheduled_date: string
           status: Database["public"]["Enums"]["trailer_route_status"]
+          trailer_id: string | null
           updated_at: string
           vehicle_id: string | null
         }
@@ -5216,6 +5217,7 @@ export type Database = {
           route_name: string
           scheduled_date: string
           status?: Database["public"]["Enums"]["trailer_route_status"]
+          trailer_id?: string | null
           updated_at?: string
           vehicle_id?: string | null
         }
@@ -5228,6 +5230,7 @@ export type Database = {
           route_name?: string
           scheduled_date?: string
           status?: Database["public"]["Enums"]["trailer_route_status"]
+          trailer_id?: string | null
           updated_at?: string
           vehicle_id?: string | null
         }
@@ -5244,6 +5247,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trailer_routes_trailer_id_fkey"
+            columns: ["trailer_id"]
+            isOneToOne: false
+            referencedRelation: "trailers"
             referencedColumns: ["id"]
           },
           {
