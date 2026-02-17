@@ -1,54 +1,77 @@
 
 
-# Add Trailer Assignment to Trailer Route Wizard
+# Drag-and-Drop Pickups + Manifest Status in Weekly View
 
 ## Overview
 
-Add a trailer selection dropdown to Step 1 of the "Create Trailer Route" wizard so dispatchers can assign a specific trailer when creating a trailer route. This way drivers will know which trailer to hook up.
+Two enhancements to the Weekly Pickups Grid:
+
+1. **Drag-and-drop pickups between days** -- drag a pickup card from one day column and drop it on another to move it, instead of using the click-based move dialog.
+2. **Show manifest completion status** -- if a pickup has a signed/completed manifest, show a visual indicator (green badge) on the tile so dispatchers can see at a glance which stops are done.
 
 ## What Changes
 
-### 1. Database: Add `trailer_id` to `trailer_routes` table
+### 1. Drag-and-Drop Between Day Columns
 
-Add a nullable `trailer_id` column to the `trailer_routes` table with a foreign key to the `trailers` table. This links a specific trailer to the trailer route.
+Each pickup card becomes `draggable`. When dragged over a different day column, that column highlights as a drop target. On drop, the `useMovePickup` mutation fires to update the pickup date and assignment date in the database.
 
-```text
-ALTER TABLE trailer_routes
-  ADD COLUMN trailer_id UUID REFERENCES trailers(id) ON DELETE SET NULL;
-```
+- Pickup cards get `draggable` attribute, `onDragStart` sets the pickup ID and source date in `dataTransfer`
+- Day columns get `onDragOver` (to allow drop + highlight) and `onDrop` (to trigger the move)
+- A visual highlight (border color change) shows which column you're hovering over
+- The existing click-to-move and menu "Move Pickup" options remain as fallbacks
 
-### 2. Update TrailerRouteWizard (Step 1)
+### 2. Manifest Completion Badge on Pickup Tiles
 
-Add a "Assign Trailer" dropdown in Step 1 (Route Details) below the vehicle selection. It will list all active trailers showing their trailer number, current status, and location -- same pattern as the driver/vehicle dropdowns already there.
+The `usePickups` hook already fetches manifest data including `status`. The pickup card will check if any linked manifest has status `COMPLETED` or `AWAITING_RECEIVER_SIGNATURE` and display:
 
-### 3. Update `useCreateTrailerRoute` hook
-
-Pass the new `trailer_id` field through the create mutation so it gets saved to the database.
-
-### 4. Update `useTrailerRoutes` hook
-
-Join the `trailers` table in the query so trailer info is available when viewing routes:
-
-```text
-trailer:trailers(id, trailer_number, current_status, current_location)
-```
-
-### 5. Update TrailerRoute interface
-
-Add the optional `trailer` relation to the `TrailerRoute` TypeScript interface.
-
-### 6. Display trailer on route cards (TrailerRoutes page)
-
-Show the assigned trailer number on each route card in the trailer routes list so it's visible at a glance.
+- A green "Completed" or amber "Signed" badge in the top-right area of the card
+- A subtle green left-border on completed pickup cards for quick visual scanning
 
 ---
 
-## Files Changed
+## Technical Details
+
+### File: `src/components/routes/WeeklyPickupsGrid.tsx`
+
+**Props change on `WeeklyPickupsGrid`:**
+- No new props needed; `useMovePickup` hook is used internally in `DayColumn`
+
+**Drag-and-drop implementation:**
+
+On pickup cards:
+```text
+draggable={true}
+onDragStart -> e.dataTransfer.setData('pickupId', pickup.id)
+              e.dataTransfer.setData('sourceDate', dateStr)
+```
+
+On day column drop zone:
+```text
+onDragOver -> e.preventDefault(), set dragOver state for highlight
+onDragLeave -> clear dragOver state
+onDrop -> read pickupId from dataTransfer, call useMovePickup({ pickupId, newDate: dateStr })
+```
+
+**Manifest status display:**
+
+For each pickup card, check `pickup.manifests` array:
+```text
+const completedManifest = pickup.manifests?.find(m => m.status === 'COMPLETED');
+const signedManifest = pickup.manifests?.find(m => m.status === 'AWAITING_RECEIVER_SIGNATURE');
+```
+
+Display a Badge component:
+- Green "Completed" badge if manifest status is COMPLETED
+- Amber "Signed" badge if AWAITING_RECEIVER_SIGNATURE
+- No badge otherwise
+
+Add a green left border (`border-l-4 border-green-500`) to completed pickup cards for quick visual identification.
+
+### Files Changed
 
 | File | Change |
 |------|--------|
-| New migration | Add `trailer_id` column to `trailer_routes` |
-| `src/components/trailers/TrailerRouteWizard.tsx` | Add trailer dropdown to Step 1 |
-| `src/hooks/useTrailerRoutes.ts` | Add `trailer_id` to create mutation, join trailers in queries, update interface |
-| `src/pages/TrailerRoutes.tsx` | Display assigned trailer on route cards |
+| `src/components/routes/WeeklyPickupsGrid.tsx` | Add drag-and-drop handlers, manifest status badges, visual drop zone highlighting |
+
+No database changes or new files needed -- the existing `useMovePickup` hook and manifest data from `usePickups` provide everything required.
 
