@@ -20,7 +20,7 @@ import {
   AlertDialogTitle, 
   AlertDialogTrigger 
 } from "@/components/ui/alert-dialog";
-import { Plus, CalendarIcon, Truck, MapPin, User, Play, CheckCircle, Trash2, Eye, XCircle } from "lucide-react";
+import { Plus, CalendarIcon, Truck, MapPin, User, Play, CheckCircle, Trash2, Eye, XCircle, Container } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { isFeatureEnabled } from "@/lib/featureFlags";
@@ -234,6 +234,12 @@ export default function TrailerRoutes() {
                   <span className="flex items-center gap-1">
                     <Truck className="h-4 w-4" />
                     {route.vehicle.vehicle_number}
+                  </span>
+                )}
+                {route.trailer && (
+                  <span className="flex items-center gap-1">
+                    <Container className="h-4 w-4" />
+                    Trailer: {route.trailer.trailer_number}
                   </span>
                 )}
                 <span className="flex items-center gap-1">

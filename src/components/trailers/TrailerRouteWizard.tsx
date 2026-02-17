@@ -49,6 +49,7 @@ export function TrailerRouteWizard({ onComplete, onCancel }: TrailerRouteWizardP
     scheduled_date: new Date(),
     driver_id: '',
     vehicle_id: '',
+    trailer_id: '',
     notes: '',
   });
   
@@ -159,6 +160,7 @@ export function TrailerRouteWizard({ onComplete, onCancel }: TrailerRouteWizardP
         scheduled_date: format(routeDetails.scheduled_date, 'yyyy-MM-dd'),
         driver_id: routeDetails.driver_id || undefined,
         vehicle_id: routeDetails.vehicle_id || undefined,
+        trailer_id: routeDetails.trailer_id || undefined,
         notes: routeDetails.notes || undefined,
       });
       
@@ -308,6 +310,26 @@ export function TrailerRouteWizard({ onComplete, onCancel }: TrailerRouteWizardP
             </Select>
           </div>
           
+          <div>
+            <Label>Assign Trailer</Label>
+            <Select
+              value={routeDetails.trailer_id}
+              onValueChange={(value) => setRouteDetails(prev => ({ ...prev, trailer_id: value === 'none' ? '' : value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select trailer..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No trailer assigned</SelectItem>
+                {trailers?.map(trailer => (
+                  <SelectItem key={trailer.id} value={trailer.id}>
+                    {trailer.trailer_number} — {trailer.current_status || 'unknown'}{trailer.current_location ? ` • ${trailer.current_location}` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div>
             <Label>Notes</Label>
             <Textarea

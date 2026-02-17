@@ -26,6 +26,13 @@ export interface TrailerRoute {
     id: string;
     vehicle_number: string;
   };
+  trailer_id: string | null;
+  trailer?: {
+    id: string;
+    trailer_number: string;
+    current_status: string | null;
+    current_location: string | null;
+  };
   stops?: TrailerRouteStop[];
 }
 
@@ -59,6 +66,7 @@ export const useTrailerRoutes = (date?: string) => {
           *,
           driver:users(id, first_name, last_name, email),
           vehicle:trailer_vehicles(id, vehicle_number),
+          trailer:trailers(id, trailer_number, current_status, current_location),
           stops:trailer_route_stops(*)
         `)
         .eq('organization_id', orgId)
@@ -126,6 +134,7 @@ export const useCreateTrailerRoute = () => {
       scheduled_date: string;
       driver_id?: string;
       vehicle_id?: string;
+      trailer_id?: string;
       notes?: string;
     }) => {
       if (!orgId) throw new Error('No organization selected');
@@ -138,6 +147,7 @@ export const useCreateTrailerRoute = () => {
           scheduled_date: data.scheduled_date,
           driver_id: data.driver_id,
           vehicle_id: data.vehicle_id,
+          trailer_id: data.trailer_id,
           notes: data.notes,
           status: 'draft',
         })
