@@ -1,72 +1,54 @@
 
 
-# Assign Trailers to Driver Routes
+# Add Trailer Assignment to Trailer Route Wizard
 
 ## Overview
 
-Add the ability for dispatchers to assign a specific trailer to a driver's route for a given day, so drivers know which trailer to hook up and move before leaving. This works just like the existing driver assignment dropdown but for trailers.
+Add a trailer selection dropdown to Step 1 of the "Create Trailer Route" wizard so dispatchers can assign a specific trailer when creating a trailer route. This way drivers will know which trailer to hook up.
 
 ## What Changes
 
-### 1. Database: Add `trailer_id` to `assignments` table
+### 1. Database: Add `trailer_id` to `trailer_routes` table
 
-Add a new nullable `trailer_id` column to the `assignments` table with a foreign key to the `trailers` table. This links a specific trailer to a driver's assignment for the day.
-
-### 2. New Component: `TrailerAssignmentDropdown`
-
-Build a dropdown component (modeled after the existing `DriverAssignmentDropdown`) that:
-- Shows the currently assigned trailer (or "No Trailer")
-- Lists all active trailers from the organization with their trailer number, current status (empty/full/staged), and current location
-- Allows dispatchers to assign or unassign a trailer for a vehicle's assignments on a specific date
-- Updates all assignments for that vehicle + date combo (same pattern as driver assignment)
-
-### 3. Admin Route Planning Page (EnhancedRoutesToday)
-
-Add the `TrailerAssignmentDropdown` alongside the existing driver assignment area on each route card, so dispatchers can assign both a driver and a trailer when planning routes.
-
-### 4. Driver Dashboard + Driver Assignments
-
-Update the driver-facing queries (`useDriverAssignments`, `useDriverWeeklyAssignments`) to include the trailer relation so drivers can see which trailer is assigned to them. Display the trailer number prominently on the driver's assignment cards.
-
-### 5. Driver Dashboard Display
-
-Show a trailer badge/indicator on the driver dashboard assignment cards so drivers immediately see "Hook to Trailer #93511-MJ" or similar when viewing their day's stops.
-
----
-
-## Technical Details
-
-### Database Migration
+Add a nullable `trailer_id` column to the `trailer_routes` table with a foreign key to the `trailers` table. This links a specific trailer to the trailer route.
 
 ```text
-ALTER TABLE assignments 
+ALTER TABLE trailer_routes
   ADD COLUMN trailer_id UUID REFERENCES trailers(id) ON DELETE SET NULL;
-
-CREATE INDEX idx_assignments_trailer_id ON assignments(trailer_id);
 ```
 
-### New Component: `TrailerAssignmentDropdown`
+### 2. Update TrailerRouteWizard (Step 1)
 
-- **Location:** `src/components/TrailerAssignmentDropdown.tsx`
-- **Props:** `vehicleId`, `routeDate`, `currentTrailerId`, `onTrailerAssigned`
-- **Behavior:** Uses `useTrailers()` hook to list available trailers, mutation updates `assignments.trailer_id` for matching vehicle + date
+Add a "Assign Trailer" dropdown in Step 1 (Route Details) below the vehicle selection. It will list all active trailers showing their trailer number, current status, and location -- same pattern as the driver/vehicle dropdowns already there.
 
-### Modified Files
+### 3. Update `useCreateTrailerRoute` hook
 
-| File | Change |
-|------|--------|
-| `src/hooks/useDriverAssignments.ts` | Add `trailer:trailers(id, trailer_number, current_status, current_location)` to select query |
-| `src/hooks/useDriverWeeklyAssignments.ts` | Same trailer join added |
-| `src/pages/EnhancedRoutesToday.tsx` | Import and render `TrailerAssignmentDropdown` on route cards |
-| `src/pages/DriverDashboard.tsx` | Display assigned trailer info on assignment cards |
-| `src/integrations/supabase/types.ts` | Auto-updated after migration |
+Pass the new `trailer_id` field through the create mutation so it gets saved to the database.
 
-### Query Updates
+### 4. Update `useTrailerRoutes` hook
 
-The driver assignment hooks will include the trailer relation:
+Join the `trailers` table in the query so trailer info is available when viewing routes:
 
 ```text
 trailer:trailers(id, trailer_number, current_status, current_location)
 ```
 
-This lets the driver see "Trailer: 93511-MJ (empty, BSG Yard)" on their assignment.
+### 5. Update TrailerRoute interface
+
+Add the optional `trailer` relation to the `TrailerRoute` TypeScript interface.
+
+### 6. Display trailer on route cards (TrailerRoutes page)
+
+Show the assigned trailer number on each route card in the trailer routes list so it's visible at a glance.
+
+---
+
+## Files Changed
+
+| File | Change |
+|------|--------|
+| New migration | Add `trailer_id` column to `trailer_routes` |
+| `src/components/trailers/TrailerRouteWizard.tsx` | Add trailer dropdown to Step 1 |
+| `src/hooks/useTrailerRoutes.ts` | Add `trailer_id` to create mutation, join trailers in queries, update interface |
+| `src/pages/TrailerRoutes.tsx` | Display assigned trailer on route cards |
+
