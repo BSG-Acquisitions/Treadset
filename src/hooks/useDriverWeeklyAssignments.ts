@@ -57,7 +57,8 @@ export const useDriverWeeklyAssignments = (weekStartDate: Date) => {
             location:locations(id, address, name, latitude, longitude)
           ),
           vehicle:vehicles(id, name, capacity, license_plate, driver_email),
-          hauler:haulers(id, hauler_name, hauler_mi_reg)
+          hauler:haulers(id, hauler_name, hauler_mi_reg),
+          trailer:trailers(id, trailer_number, current_status, current_location)
         `)
         .in('vehicle_id', vehicleIds)
         .gte('scheduled_date', startDateStr)

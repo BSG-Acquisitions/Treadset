@@ -116,6 +116,7 @@ export type Database = {
           scheduled_date: string
           sequence_order: number | null
           status: string | null
+          trailer_id: string | null
           updated_at: string
           vehicle_id: string
         }
@@ -131,6 +132,7 @@ export type Database = {
           scheduled_date: string
           sequence_order?: number | null
           status?: string | null
+          trailer_id?: string | null
           updated_at?: string
           vehicle_id: string
         }
@@ -146,6 +148,7 @@ export type Database = {
           scheduled_date?: string
           sequence_order?: number | null
           status?: string | null
+          trailer_id?: string | null
           updated_at?: string
           vehicle_id?: string
         }
@@ -176,6 +179,13 @@ export type Database = {
             columns: ["pickup_id"]
             isOneToOne: false
             referencedRelation: "pickups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignments_trailer_id_fkey"
+            columns: ["trailer_id"]
+            isOneToOne: false
+            referencedRelation: "trailers"
             referencedColumns: ["id"]
           },
           {
