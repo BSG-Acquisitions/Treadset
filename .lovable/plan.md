@@ -1,55 +1,72 @@
 
-# Fix: Manifest Payment Method Mismatch
 
-## The Problem
+# Assign Trailers to Driver Routes
 
-The manifest record **always** saves `payment_method: 'CARD'` (or `'INVOICE'`) regardless of what the driver actually selects. The pickup record saves the correct value. This creates a data integrity issue across the entire history.
+## Overview
 
-**Root cause:** Two lines in `DriverManifestCreationWizard.tsx` hardcode the manifest payment method instead of using the driver's actual selection:
+Add the ability for dispatchers to assign a specific trailer to a driver's route for a given day, so drivers know which trailer to hook up and move before leaving. This works just like the existing driver assignment dropdown but for trailers.
 
-- Line 892: `payment_method: requiresInvoice ? 'INVOICE' : 'CARD'` (manifest creation)
-- Line 924: `payment_method: requiresInvoice ? 'INVOICE' : 'CARD'` (manifest update)
+## What Changes
 
-Meanwhile line 1044 correctly uses: `payment_method: paymentMethod` (pickup update)
+### 1. Database: Add `trailer_id` to `assignments` table
 
-## The Fix
+Add a new nullable `trailer_id` column to the `assignments` table with a foreign key to the `trailers` table. This links a specific trailer to a driver's assignment for the day.
 
-### 1. Code Fix (DriverManifestCreationWizard.tsx)
+### 2. New Component: `TrailerAssignmentDropdown`
 
-Replace the hardcoded values on lines 892 and 924 with the actual `paymentMethod` state variable:
+Build a dropdown component (modeled after the existing `DriverAssignmentDropdown`) that:
+- Shows the currently assigned trailer (or "No Trailer")
+- Lists all active trailers from the organization with their trailer number, current status (empty/full/staged), and current location
+- Allows dispatchers to assign or unassign a trailer for a vehicle's assignments on a specific date
+- Updates all assignments for that vehicle + date combo (same pattern as driver assignment)
 
-- Line 892: Change to `payment_method: paymentMethod`
-- Line 924: Change to `payment_method: paymentMethod`
+### 3. Admin Route Planning Page (EnhancedRoutesToday)
 
-Both payment_status lines (893 and 925) should also use the actual method to determine status:
-- `payment_status: (paymentMethod === 'CASH' || paymentMethod === 'CHECK') ? 'SUCCEEDED' : 'PENDING'`
+Add the `TrailerAssignmentDropdown` alongside the existing driver assignment area on each route card, so dispatchers can assign both a driver and a trailer when planning routes.
 
-### 2. Historical Data Repair (SQL Migration)
+### 4. Driver Dashboard + Driver Assignments
 
-Run a one-time migration to sync all existing manifest records with their pickup's actual payment method:
+Update the driver-facing queries (`useDriverAssignments`, `useDriverWeeklyAssignments`) to include the trailer relation so drivers can see which trailer is assigned to them. Display the trailer number prominently on the driver's assignment cards.
 
-```text
-UPDATE manifests m
-SET payment_method = p.payment_method,
-    check_number = COALESCE(m.check_number, p.check_number)
-FROM pickups p
-WHERE m.pickup_id = p.id
-  AND p.payment_method IS NOT NULL
-  AND m.payment_method IS DISTINCT FROM p.payment_method;
-```
+### 5. Driver Dashboard Display
 
-This will fix all the historical mismatches (North End, Redford Auto, 75 Tires, Crown Tire, King Tire, One Stop, City Tire, Fischer Honda, etc.).
+Show a trailer badge/indicator on the driver dashboard assignment cards so drivers immediately see "Hook to Trailer #93511-MJ" or similar when viewing their day's stops.
 
-### 3. Verification
-
-After both changes, query to confirm zero mismatches remain between pickup and manifest payment methods.
+---
 
 ## Technical Details
 
-**File:** `src/components/driver/DriverManifestCreationWizard.tsx`
-- Line 892: `payment_method: requiresInvoice ? ('INVOICE' as const) : ('CARD' as const)` --> `payment_method: paymentMethod`
-- Line 893: `payment_status: requiresInvoice ? ('PENDING' as const) : ('PENDING' as const)` --> `payment_status: (paymentMethod === 'CASH' || paymentMethod === 'CHECK') ? ('SUCCEEDED' as const) : ('PENDING' as const)`
-- Line 924: `payment_method: requiresInvoice ? 'INVOICE' : 'CARD'` --> `payment_method: paymentMethod`
-- Line 925: `payment_status: requiresInvoice ? 'PENDING' : 'PENDING'` --> `payment_status: (paymentMethod === 'CASH' || paymentMethod === 'CHECK') ? 'SUCCEEDED' : 'PENDING'`
+### Database Migration
 
-**SQL Migration:** One UPDATE statement to backfill correct payment methods from pickups into their linked manifests.
+```text
+ALTER TABLE assignments 
+  ADD COLUMN trailer_id UUID REFERENCES trailers(id) ON DELETE SET NULL;
+
+CREATE INDEX idx_assignments_trailer_id ON assignments(trailer_id);
+```
+
+### New Component: `TrailerAssignmentDropdown`
+
+- **Location:** `src/components/TrailerAssignmentDropdown.tsx`
+- **Props:** `vehicleId`, `routeDate`, `currentTrailerId`, `onTrailerAssigned`
+- **Behavior:** Uses `useTrailers()` hook to list available trailers, mutation updates `assignments.trailer_id` for matching vehicle + date
+
+### Modified Files
+
+| File | Change |
+|------|--------|
+| `src/hooks/useDriverAssignments.ts` | Add `trailer:trailers(id, trailer_number, current_status, current_location)` to select query |
+| `src/hooks/useDriverWeeklyAssignments.ts` | Same trailer join added |
+| `src/pages/EnhancedRoutesToday.tsx` | Import and render `TrailerAssignmentDropdown` on route cards |
+| `src/pages/DriverDashboard.tsx` | Display assigned trailer info on assignment cards |
+| `src/integrations/supabase/types.ts` | Auto-updated after migration |
+
+### Query Updates
+
+The driver assignment hooks will include the trailer relation:
+
+```text
+trailer:trailers(id, trailer_number, current_status, current_location)
+```
+
+This lets the driver see "Trailer: 93511-MJ (empty, BSG Yard)" on their assignment.
