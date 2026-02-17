@@ -11,6 +11,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCreateManifest } from "@/hooks/useManifests";
 import { ReceiverSignatureDialog } from "@/components/ReceiverSignatureDialog";
+import { useMovePickup } from "@/hooks/useMovePickup";
+import { Badge } from "@/components/ui/badge";
 
 export type WeeklyPickupsGridProps = {
   currentWeek: Date;
@@ -34,6 +36,8 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
   const [receiverManifest, setReceiverManifest] = useState<{ id: string; number?: string } | null>(null);
   const [isOpeningReceiver, setIsOpeningReceiver] = useState(false);
   const createManifest = useCreateManifest({ toastOnSuccess: false });
+  const movePickup = useMovePickup();
+  const [isDragOver, setIsDragOver] = useState(false);
 
   const openReceiverSignature = async (pickup: any) => {
     try {
@@ -160,8 +164,32 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
     return acc;
   }, {});
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const pickupId = e.dataTransfer.getData('pickupId');
+    const sourceDate = e.dataTransfer.getData('sourceDate');
+    if (pickupId && sourceDate !== dateStr) {
+      movePickup.mutate({ pickupId, newDate: dateStr });
+    }
+  };
+
   return (
-    <div className="flex flex-col border-r border-gray-300 last:border-r-0 h-[calc(100vh-220px)] min-h-[700px]">
+    <div
+      className={`flex flex-col border-r border-gray-300 last:border-r-0 h-[calc(100vh-220px)] min-h-[700px] transition-colors ${isDragOver ? 'bg-primary/10 ring-2 ring-primary ring-inset' : ''}`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       {/* Day Header */}
       <div className={`text-center py-4 border-b-2 border-gray-300 flex-shrink-0 ${isToday ? 'bg-[#5b8f4d] text-white' : 'bg-white text-gray-800'}`}>
         <div className={`font-semibold text-base mb-1 ${isToday ? 'text-white' : 'text-gray-900'}`}>
@@ -186,10 +214,21 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
               
               return (
                   <div key={vehicleId} className="space-y-3">
-                  {(vehiclePickups as any[]).map((pickup: any) => (
+                  {(vehiclePickups as any[]).map((pickup: any) => {
+                    const completedManifest = pickup.manifests?.find((m: any) => m.status === 'COMPLETED');
+                    const signedManifest = pickup.manifests?.find((m: any) => m.status === 'AWAITING_RECEIVER_SIGNATURE');
+                    const hasCompleted = !!completedManifest;
+                    
+                    return (
                     <div
                       key={pickup.id}
-                      className="bg-white rounded border border-gray-300 p-3 hover:shadow-md hover:border-primary transition-all relative cursor-pointer group"
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('pickupId', pickup.id);
+                        e.dataTransfer.setData('sourceDate', dateStr);
+                        e.dataTransfer.effectAllowed = 'move';
+                      }}
+                      className={`bg-white rounded border border-gray-300 p-3 hover:shadow-md hover:border-primary transition-all relative cursor-grab active:cursor-grabbing group ${hasCompleted ? 'border-l-4 border-l-green-500' : ''}`}
                       onClick={() => onMovePickup?.(pickup)}
                     >
                       {/* Vehicle/Driver Header */}
@@ -201,6 +240,8 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
                           </span>
                         </div>
                         <div className="flex items-center gap-1">
+                          {hasCompleted && <Badge className="bg-green-500 text-white text-[10px] px-1.5 py-0">Completed</Badge>}
+                          {!hasCompleted && signedManifest && <Badge className="bg-amber-500 text-white text-[10px] px-1.5 py-0">Signed</Badge>}
                           <Calendar className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -208,34 +249,25 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
                                 <MoreVertical className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={(e) => {
-            e.stopPropagation();
-            onMovePickup?.(pickup);
-          }}>
-            <Calendar className="h-4 w-4 mr-2" />
-            Move Pickup
-          </DropdownMenuItem>
-          <DropdownMenuItem 
-            onClick={(e) => {
-              e.stopPropagation();
-              openReceiverSignature(pickup);
-            }}
-            disabled={isOpeningReceiver || createManifest.isPending}
-          >
-            Receiver Signature
-          </DropdownMenuItem>
-          <DropdownMenuItem 
-            onClick={(e) => {
-              e.stopPropagation();
-              setPickupToDelete(pickup);
-            }}
-            className="text-destructive"
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Remove from Route
-          </DropdownMenuItem>
-        </DropdownMenuContent>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onMovePickup?.(pickup); }}>
+                                <Calendar className="h-4 w-4 mr-2" />
+                                Move Pickup
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={(e) => { e.stopPropagation(); openReceiverSignature(pickup); }}
+                                disabled={isOpeningReceiver || createManifest.isPending}
+                              >
+                                Receiver Signature
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={(e) => { e.stopPropagation(); setPickupToDelete(pickup); }}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Remove from Route
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
                       </div>
@@ -261,7 +293,8 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
                         Click to move
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               );
             })}
