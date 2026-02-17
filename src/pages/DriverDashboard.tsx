@@ -232,6 +232,12 @@ export default function DriverDashboard() {
                         <p className="text-xs text-muted-foreground">
                           {assignment.pickup?.preferred_window || 'Time TBD'} • {assignment.vehicle?.name}
                         </p>
+                        {assignment.trailer && (
+                          <p className="text-xs font-medium text-primary">
+                            🚛 Hook to Trailer #{assignment.trailer.trailer_number}
+                            {assignment.trailer.current_location && ` • ${assignment.trailer.current_location}`}
+                          </p>
+                        )}
                       </div>
                         <div className="flex gap-2">
                           <Button size="sm" variant="outline" asChild>

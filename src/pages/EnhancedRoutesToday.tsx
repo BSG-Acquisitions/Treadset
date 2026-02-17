@@ -7,6 +7,7 @@ import { useEnsureManifestPdf } from "@/hooks/useEnsureManifestPdf";
 import { CompletePickupDialog } from "@/components/CompletePickupDialog";
 import { MovePickupDialog } from "@/components/MovePickupDialog";
 import { DriverAssignmentDropdown } from "@/components/DriverAssignmentDropdown";
+import { TrailerAssignmentDropdown } from "@/components/TrailerAssignmentDropdown";
 import { VehicleManagementDialog } from "@/components/VehicleManagementDialog";
 import { SchedulePickupDialog } from "@/components/SchedulePickupDialog";
 import { useGeocodeLocations } from "@/hooks/useGeocodeLocations";
@@ -385,12 +386,21 @@ export default function EnhancedRoutesToday() {
                                   </div>
                                   
                                   {/* Vehicle/Driver Assignment */}
-                                  {vehicle && (
+                                   {vehicle && (
                                     <div className="flex items-center gap-1.5">
                                       <Truck className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                                       <span className="text-xs text-muted-foreground">{vehicle.name}</span>
                                     </div>
-                                  )}
+                                   )}
+                                   
+                                   {/* Trailer Assignment */}
+                                   {assignment && (
+                                     <TrailerAssignmentDropdown
+                                       vehicleId={assignment.vehicle_id}
+                                       routeDate={activeDay}
+                                       currentTrailerId={assignment.trailer_id}
+                                     />
+                                   )}
                                   
                                   {/* PTE and Revenue for completed pickups */}
                                   {(() => {
