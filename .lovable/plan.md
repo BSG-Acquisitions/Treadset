@@ -1,74 +1,66 @@
 
-# Fix: Manifest Address Data Must Only Come From Client Record, Never Location/Geocoding
+# Fix: Physical Address Field Should Only Contain Street Number & Name
 
-## The Exact Problem
+## The Problem
 
-In `src/hooks/useManifestIntegration.ts`, the `convertManifestToAcroForm` function has two fallback lines that introduce geocoded location data into the manifest when client fields are blank:
+On manifests for clients like AA Parking, the physical address section looks like this:
 
 ```text
-Line 38: const mailingAddress = manifestData.client?.mailing_address || manifestData.location?.address || '';
-Line 40: const physicalAddress = manifestData.client?.physical_address || manifestData.location?.address || mailingAddress;
+Physical Address: 24260 Mound Rd, Warren, MI 48091   ← full address string in ONE line
+Physical City:    Warren
+Physical State:   MI
+Physical Zip:     48091
 ```
 
-When `client.mailing_address` is null or empty, the code falls back to `location.address` — which is the geocoded locations table record. It then tries to parse the city/state/zip out of that single string using a regex. For Unique Auto Care at 10301 M-102, the geocoder resolved the location to "Grosse Pointe Woods" instead of "Detroit," which is what got stamped on the manifest.
+When it should look like:
 
-The manifest fetch query also pulls in the entire locations record (`location:locations(*)`), making all geocoded data available to this fallback logic.
+```text
+Physical Address: 24260 Mound Rd   ← street only
+Physical City:    Warren
+Physical State:   MI
+Physical Zip:     48091
+```
+
+## Root Cause
+
+In `src/hooks/useManifestIntegration.ts`, the `generator_physical_address` field is built as:
+
+```text
+physicalAddress = client.physical_address || client.mailing_address
+```
+
+For most clients, `physical_address` is NULL in the database (because they have the same mailing and physical address). So it falls back to `mailing_address`. When the `mailing_address` field in the database was entered as a full combined string (e.g., `"24260 Mound Rd, Warren, MI 48091"`), the entire string — city, state, and zip included — gets stamped into the `Physical_Mailing_Address` field on the PDF. The city/state/zip fields right below it are then also populated separately, creating duplication.
+
+The PDF template has **separate fields** for street, city, state, and zip. The street field should only ever contain the street portion.
 
 ## The Fix
 
-### 1. Remove all `location?.address` fallbacks from `convertManifestToAcroForm`
+Add a `stripCityStateZip` helper that removes any trailing `, City, ST XXXXX` portion from an address string before putting it into the street field. This ensures:
 
-The address fields for the manifest generator section should ONLY read from the `clients` table. If a client's address fields are blank, the manifest should show blank — not geocoded location data.
+- If a client has `mailing_address = "24260 Mound Rd"` (street only) → stays as-is ✅
+- If a client has `mailing_address = "24260 Mound Rd, Warren, MI 48091"` (full string) → stripped to `"24260 Mound Rd"` ✅
+- If `physical_address` is NULL, falls back to the stripped `mailing_address` ✅
 
-**Change line 38:**
-```text
-BEFORE: manifestData.client?.mailing_address || manifestData.location?.address || ''
-AFTER:  manifestData.client?.mailing_address || ''
-```
-
-**Change line 40:**
-```text
-BEFORE: manifestData.client?.physical_address || manifestData.location?.address || mailingAddress
-AFTER:  manifestData.client?.physical_address || manifestData.client?.mailing_address || ''
-```
-
-This means:
-- `generator_mail_address` = `client.mailing_address` only
-- `generator_city` = `client.city` only (no regex parsing fallback from address string)
-- `generator_state` = `client.state` only
-- `generator_zip` = `client.zip` only
-- `generator_physical_address` = `client.physical_address` or falls back to `client.mailing_address`
-- `generator_physical_city` = `client.physical_city` or `client.city`
-- `generator_physical_state` = `client.physical_state` or `client.state`
-- `generator_physical_zip` = `client.physical_zip` or `client.zip`
-
-### 2. Remove `parseCityStateZip` usage for city/state/zip fields
-
-Since we are no longer falling back to an address string from the locations table, the `parseCityStateZip` function is no longer needed for the generator address fields. The city, state, and zip all have their own dedicated columns on the `clients` table (`city`, `state`, `zip`, `physical_city`, `physical_state`, `physical_zip`). Those should be used directly.
-
-The `parseCityStateZip` helper function itself can stay (it may have other uses), but it should not be called in the city/state/zip field assignments.
-
-### 3. Remove `location` from the manifest fetch query (optional but clean)
-
-The fetch query in `useManifestIntegration` currently selects `location:locations(*)`. Since location data should never be used for manifest addresses, we can remove it from the select entirely to prevent any future accidental use. However, the `location` join may be needed for other data on the manifest row — we can simply not reference `manifestData.location` in the address fields.
+The same treatment is applied to `generator_mail_address` for the mailing address street field — for consistency and to protect against any clients whose mailing address was stored as a full string.
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `src/hooks/useManifestIntegration.ts` | Remove `location?.address` fallbacks on lines 38 and 40; update city/state/zip fields to only use direct `client.*` columns with no regex-parsed fallbacks from address strings |
+| `src/hooks/useManifestIntegration.ts` | Add `stripCityStateZip()` helper; apply it to `generator_mail_address` and `generator_physical_address` before they are written to the PDF field mapping |
 
-## Result After Fix
+## Technical Detail
 
-Every manifest will use exactly what is stored in the `clients` table:
-- `clients.mailing_address` → Generator mailing address
-- `clients.city` → Generator city (always "Detroit" for Unique Auto Care, not "Grosse Pointe Woods")
-- `clients.state` → Generator state
-- `clients.zip` → Generator zip
-- `clients.physical_address/city/state/zip` → Generator physical address fields
+The new helper strips anything that looks like `, City ST ZIP` or `, City, ST ZIP` from the end of an address string:
 
-Geocoding is completely isolated from manifesting. It is only used for routing (map coordinates) and will never touch a manifest PDF again.
+```text
+"24260 Mound Rd, Warren, MI 48091" → "24260 Mound Rd"
+"10301 M-102, Detroit, MI 48221"   → "10301 M-102"
+"24260 Mound Rd"                   → "24260 Mound Rd"  (unchanged — no stripping needed)
+```
 
-## Note on Unique Auto Care's Existing Manifests
+The city, state, and zip fields are already sourced directly from their own individual database columns (`client.city`, `client.state`, `client.zip`) and are not affected by this change.
 
-For the manifests that already exist with "Grosse Pointe Woods" on them, those will need to be voided and re-signed using the new "Void & Redo" workflow that was just implemented. After this fix, any newly generated manifest for Unique Auto Care will correctly show "Detroit."
+## What Dispatchers Will See After the Fix
+
+Both the mailing and physical address street lines on every manifest will contain only the street number and street name. The city, state, and zip will appear only on their own dedicated lines — no duplication.
