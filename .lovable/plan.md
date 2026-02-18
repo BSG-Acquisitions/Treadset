@@ -1,53 +1,74 @@
 
+# Fix: Manifest Address Data Must Only Come From Client Record, Never Location/Geocoding
 
-# Fix Printed Names/Timestamps + Add "Void & Redo" Manifest Workflow
+## The Exact Problem
 
-## Part 1: Fix Printed Names & Timestamps (Always Correct Going Forward)
+In `src/hooks/useManifestIntegration.ts`, the `convertManifestToAcroForm` function has two fallback lines that introduce geocoded location data into the manifest when client fields are blank:
 
-### Problem
-When the wizard generates the PDF, it passes correct names and timestamps as overrides, but `useManifestIntegration` re-fetches from the database and the `convertManifestToAcroForm` function can overwrite those overrides during the merge/sanitization step.
+```text
+Line 38: const mailingAddress = manifestData.client?.mailing_address || manifestData.location?.address || '';
+Line 40: const physicalAddress = manifestData.client?.physical_address || manifestData.location?.address || mailingAddress;
+```
 
-### Fix
-In `src/hooks/useManifestIntegration.ts`, after the sanitization step, **re-apply** the override values for all signature-related fields. This ensures the wizard's explicit values (e.g., "Ethan - 1:33:44 PM", "Brenner Whitt - 1:34:02 PM") always win over whatever the database re-fetch returns.
+When `client.mailing_address` is null or empty, the code falls back to `location.address` — which is the geocoded locations table record. It then tries to parse the city/state/zip out of that single string using a regex. For Unique Auto Care at 10301 M-102, the geocoder resolved the location to "Grosse Pointe Woods" instead of "Detroit," which is what got stamped on the manifest.
 
-**File:** `src/hooks/useManifestIntegration.ts`
-- After `sanitizeAcroFormData(mergedData)` runs, loop through overrides and forcibly restore any `generator_print_name`, `hauler_print_name`, `receiver_print_name`, `generator_signature`, `hauler_signature`, `receiver_signature`, and their date/time fields back onto `sanitizedData`
+The manifest fetch query also pulls in the entire locations record (`location:locations(*)`), making all geocoded data available to this fallback logic.
 
----
+## The Fix
 
-## Part 2: Void & Redo a Bad Manifest
+### 1. Remove all `location?.address` fallbacks from `convertManifestToAcroForm`
 
-When a manifest PDF comes out wrong (missing names, wrong data), dispatchers need a way to void it and redo the signing. Currently there is a "Regenerate" button that re-creates the PDF from existing database data, but there is no way to **void** a bad manifest and start fresh.
+The address fields for the manifest generator section should ONLY read from the `clients` table. If a client's address fields are blank, the manifest should show blank — not geocoded location data.
 
-### New Feature: "Void Manifest" Button
+**Change line 38:**
+```text
+BEFORE: manifestData.client?.mailing_address || manifestData.location?.address || ''
+AFTER:  manifestData.client?.mailing_address || ''
+```
 
-Add a "Void Manifest" action to the Receiver Signatures page (on both Pending and Completed tabs) that:
+**Change line 40:**
+```text
+BEFORE: manifestData.client?.physical_address || manifestData.location?.address || mailingAddress
+AFTER:  manifestData.client?.physical_address || manifestData.client?.mailing_address || ''
+```
 
-1. **Marks the manifest as VOIDED** -- sets `status = 'VOIDED'` in the database
-2. **Resets signature fields** -- clears `customer_signature_png_path`, `driver_signature_png_path`, `receiver_sig_path`, `signed_by_name`, `signed_by_title`, and all `_signed_at` timestamps so the manifest can be re-signed
-3. **Moves the pickup back to "needs manifest"** -- the pickup will reappear in the driver's manifest creation wizard so signatures can be collected fresh
-4. **Sends a corrected notification** (optional) -- if an email was already sent, notifies the client that the previous manifest was voided
+This means:
+- `generator_mail_address` = `client.mailing_address` only
+- `generator_city` = `client.city` only (no regex parsing fallback from address string)
+- `generator_state` = `client.state` only
+- `generator_zip` = `client.zip` only
+- `generator_physical_address` = `client.physical_address` or falls back to `client.mailing_address`
+- `generator_physical_city` = `client.physical_city` or `client.city`
+- `generator_physical_state` = `client.physical_state` or `client.state`
+- `generator_physical_zip` = `client.physical_zip` or `client.zip`
 
-### When to use what:
-- **Regenerate** -- the signatures in the database are correct but the PDF came out wrong. Just re-creates the PDF from existing data.
-- **Void & Redo** -- the signatures or data were captured incorrectly. Clears everything so the signing process starts over from scratch.
+### 2. Remove `parseCityStateZip` usage for city/state/zip fields
 
----
+Since we are no longer falling back to an address string from the locations table, the `parseCityStateZip` function is no longer needed for the generator address fields. The city, state, and zip all have their own dedicated columns on the `clients` table (`city`, `state`, `zip`, `physical_city`, `physical_state`, `physical_zip`). Those should be used directly.
+
+The `parseCityStateZip` helper function itself can stay (it may have other uses), but it should not be called in the city/state/zip field assignments.
+
+### 3. Remove `location` from the manifest fetch query (optional but clean)
+
+The fetch query in `useManifestIntegration` currently selects `location:locations(*)`. Since location data should never be used for manifest addresses, we can remove it from the select entirely to prevent any future accidental use. However, the `location` join may be needed for other data on the manifest row — we can simply not reference `manifestData.location` in the address fields.
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `src/hooks/useManifestIntegration.ts` | After sanitization, forcibly re-apply override values for print name, signature, and timestamp fields |
-| `src/components/ManifestReceiversView.tsx` | Add "Void Manifest" button with confirmation dialog; on void, reset manifest status and signature fields |
-| `src/hooks/useVoidManifest.ts` (new) | New hook that sets manifest status to VOIDED, clears all signature data, and optionally sends a voided notification email |
+| `src/hooks/useManifestIntegration.ts` | Remove `location?.address` fallbacks on lines 38 and 40; update city/state/zip fields to only use direct `client.*` columns with no regex-parsed fallbacks from address strings |
 
-## How It Works for Dispatchers
+## Result After Fix
 
-1. You notice a manifest has wrong names or missing timestamps
-2. Go to the **Receiver Signatures** page
-3. Find the manifest and click **"Void"** (with a confirmation dialog)
-4. The manifest is marked VOIDED and the pickup becomes available again for the driver to redo
-5. Driver goes through the signing process again -- names and timestamps will now always populate correctly thanks to Part 1
-6. A fresh, correct manifest is generated and emailed to the client
+Every manifest will use exactly what is stored in the `clients` table:
+- `clients.mailing_address` → Generator mailing address
+- `clients.city` → Generator city (always "Detroit" for Unique Auto Care, not "Grosse Pointe Woods")
+- `clients.state` → Generator state
+- `clients.zip` → Generator zip
+- `clients.physical_address/city/state/zip` → Generator physical address fields
 
+Geocoding is completely isolated from manifesting. It is only used for routing (map coordinates) and will never touch a manifest PDF again.
+
+## Note on Unique Auto Care's Existing Manifests
+
+For the manifests that already exist with "Grosse Pointe Woods" on them, those will need to be voided and re-signed using the new "Void & Redo" workflow that was just implemented. After this fix, any newly generated manifest for Unique Auto Care will correctly show "Detroit."
