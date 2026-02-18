@@ -35,25 +35,24 @@ export const convertManifestToAcroForm = (manifestData: any, receiverData?: any)
     return res;
   };
 
-  const mailingAddress = manifestData.client?.mailing_address || manifestData.location?.address || '';
-  const mailParsed = parseCityStateZip(mailingAddress);
-  const physicalAddress = manifestData.client?.physical_address || manifestData.location?.address || mailingAddress;
-  const physParsed = parseCityStateZip(physicalAddress);
+  // Address data comes ONLY from the clients table — never from geocoded location records
+  const mailingAddress = manifestData.client?.mailing_address || '';
+  const physicalAddress = manifestData.client?.physical_address || manifestData.client?.mailing_address || '';
 
   const result = {
     manifest_number: manifestData.manifest_number || `M-${Date.now()}`,
     vehicle_trailer: `V-${manifestData.vehicle_id || '123'}`,
     
-    // Generator (Client) information - prefer structured client fields, fallback to parsed address tail
+    // Generator (Client) information — sourced exclusively from clients table columns
     generator_name: manifestData.client?.company_name || '',
     generator_mail_address: mailingAddress,
-    generator_city: manifestData.client?.city || mailParsed.city || '',
-    generator_state: manifestData.client?.state || mailParsed.state || '',
-    generator_zip: manifestData.client?.zip || mailParsed.zip || '',
+    generator_city: manifestData.client?.city || '',
+    generator_state: manifestData.client?.state || '',
+    generator_zip: manifestData.client?.zip || '',
     generator_physical_address: physicalAddress,
-    generator_physical_city: manifestData.client?.physical_city || physParsed.city || manifestData.client?.city || mailParsed.city || '',
-    generator_physical_state: manifestData.client?.physical_state || physParsed.state || manifestData.client?.state || mailParsed.state || '',
-    generator_physical_zip: manifestData.client?.physical_zip || physParsed.zip || manifestData.client?.zip || mailParsed.zip || '',
+    generator_physical_city: manifestData.client?.physical_city || manifestData.client?.city || '',
+    generator_physical_state: manifestData.client?.physical_state || manifestData.client?.state || '',
+    generator_physical_zip: manifestData.client?.physical_zip || manifestData.client?.zip || '',
     generator_county: manifestData.client?.county || '',
     generator_phone: manifestData.client?.phone || '',
     generator_volume_weight: (() => {
