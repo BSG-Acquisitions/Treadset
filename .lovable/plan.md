@@ -1,77 +1,53 @@
 
 
-# Drag-and-Drop Pickups + Manifest Status in Weekly View
+# Fix Printed Names/Timestamps + Add "Void & Redo" Manifest Workflow
 
-## Overview
+## Part 1: Fix Printed Names & Timestamps (Always Correct Going Forward)
 
-Two enhancements to the Weekly Pickups Grid:
+### Problem
+When the wizard generates the PDF, it passes correct names and timestamps as overrides, but `useManifestIntegration` re-fetches from the database and the `convertManifestToAcroForm` function can overwrite those overrides during the merge/sanitization step.
 
-1. **Drag-and-drop pickups between days** -- drag a pickup card from one day column and drop it on another to move it, instead of using the click-based move dialog.
-2. **Show manifest completion status** -- if a pickup has a signed/completed manifest, show a visual indicator (green badge) on the tile so dispatchers can see at a glance which stops are done.
+### Fix
+In `src/hooks/useManifestIntegration.ts`, after the sanitization step, **re-apply** the override values for all signature-related fields. This ensures the wizard's explicit values (e.g., "Ethan - 1:33:44 PM", "Brenner Whitt - 1:34:02 PM") always win over whatever the database re-fetch returns.
 
-## What Changes
-
-### 1. Drag-and-Drop Between Day Columns
-
-Each pickup card becomes `draggable`. When dragged over a different day column, that column highlights as a drop target. On drop, the `useMovePickup` mutation fires to update the pickup date and assignment date in the database.
-
-- Pickup cards get `draggable` attribute, `onDragStart` sets the pickup ID and source date in `dataTransfer`
-- Day columns get `onDragOver` (to allow drop + highlight) and `onDrop` (to trigger the move)
-- A visual highlight (border color change) shows which column you're hovering over
-- The existing click-to-move and menu "Move Pickup" options remain as fallbacks
-
-### 2. Manifest Completion Badge on Pickup Tiles
-
-The `usePickups` hook already fetches manifest data including `status`. The pickup card will check if any linked manifest has status `COMPLETED` or `AWAITING_RECEIVER_SIGNATURE` and display:
-
-- A green "Completed" or amber "Signed" badge in the top-right area of the card
-- A subtle green left-border on completed pickup cards for quick visual scanning
+**File:** `src/hooks/useManifestIntegration.ts`
+- After `sanitizeAcroFormData(mergedData)` runs, loop through overrides and forcibly restore any `generator_print_name`, `hauler_print_name`, `receiver_print_name`, `generator_signature`, `hauler_signature`, `receiver_signature`, and their date/time fields back onto `sanitizedData`
 
 ---
 
-## Technical Details
+## Part 2: Void & Redo a Bad Manifest
 
-### File: `src/components/routes/WeeklyPickupsGrid.tsx`
+When a manifest PDF comes out wrong (missing names, wrong data), dispatchers need a way to void it and redo the signing. Currently there is a "Regenerate" button that re-creates the PDF from existing database data, but there is no way to **void** a bad manifest and start fresh.
 
-**Props change on `WeeklyPickupsGrid`:**
-- No new props needed; `useMovePickup` hook is used internally in `DayColumn`
+### New Feature: "Void Manifest" Button
 
-**Drag-and-drop implementation:**
+Add a "Void Manifest" action to the Receiver Signatures page (on both Pending and Completed tabs) that:
 
-On pickup cards:
-```text
-draggable={true}
-onDragStart -> e.dataTransfer.setData('pickupId', pickup.id)
-              e.dataTransfer.setData('sourceDate', dateStr)
-```
+1. **Marks the manifest as VOIDED** -- sets `status = 'VOIDED'` in the database
+2. **Resets signature fields** -- clears `customer_signature_png_path`, `driver_signature_png_path`, `receiver_sig_path`, `signed_by_name`, `signed_by_title`, and all `_signed_at` timestamps so the manifest can be re-signed
+3. **Moves the pickup back to "needs manifest"** -- the pickup will reappear in the driver's manifest creation wizard so signatures can be collected fresh
+4. **Sends a corrected notification** (optional) -- if an email was already sent, notifies the client that the previous manifest was voided
 
-On day column drop zone:
-```text
-onDragOver -> e.preventDefault(), set dragOver state for highlight
-onDragLeave -> clear dragOver state
-onDrop -> read pickupId from dataTransfer, call useMovePickup({ pickupId, newDate: dateStr })
-```
+### When to use what:
+- **Regenerate** -- the signatures in the database are correct but the PDF came out wrong. Just re-creates the PDF from existing data.
+- **Void & Redo** -- the signatures or data were captured incorrectly. Clears everything so the signing process starts over from scratch.
 
-**Manifest status display:**
+---
 
-For each pickup card, check `pickup.manifests` array:
-```text
-const completedManifest = pickup.manifests?.find(m => m.status === 'COMPLETED');
-const signedManifest = pickup.manifests?.find(m => m.status === 'AWAITING_RECEIVER_SIGNATURE');
-```
-
-Display a Badge component:
-- Green "Completed" badge if manifest status is COMPLETED
-- Amber "Signed" badge if AWAITING_RECEIVER_SIGNATURE
-- No badge otherwise
-
-Add a green left border (`border-l-4 border-green-500`) to completed pickup cards for quick visual identification.
-
-### Files Changed
+## Files Changed
 
 | File | Change |
 |------|--------|
-| `src/components/routes/WeeklyPickupsGrid.tsx` | Add drag-and-drop handlers, manifest status badges, visual drop zone highlighting |
+| `src/hooks/useManifestIntegration.ts` | After sanitization, forcibly re-apply override values for print name, signature, and timestamp fields |
+| `src/components/ManifestReceiversView.tsx` | Add "Void Manifest" button with confirmation dialog; on void, reset manifest status and signature fields |
+| `src/hooks/useVoidManifest.ts` (new) | New hook that sets manifest status to VOIDED, clears all signature data, and optionally sends a voided notification email |
 
-No database changes or new files needed -- the existing `useMovePickup` hook and manifest data from `usePickups` provide everything required.
+## How It Works for Dispatchers
+
+1. You notice a manifest has wrong names or missing timestamps
+2. Go to the **Receiver Signatures** page
+3. Find the manifest and click **"Void"** (with a confirmation dialog)
+4. The manifest is marked VOIDED and the pickup becomes available again for the driver to redo
+5. Driver goes through the signing process again -- names and timestamps will now always populate correctly thanks to Part 1
+6. A fresh, correct manifest is generated and emailed to the client
 
