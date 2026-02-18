@@ -15,6 +15,16 @@ export interface ManifestIntegrationParams {
 
 // Convert manifest database data to AcroForm structure  
 export const convertManifestToAcroForm = (manifestData: any, receiverData?: any): Record<string, string> => {
+  // Strip trailing ", City ST ZIP" or ", City, ST ZIP" from an address string
+  // so that only the street number and name remain for the street address PDF field.
+  const stripCityStateZip = (addr: string | undefined | null): string => {
+    if (!addr) return '';
+    // Remove trailing: optional comma, city name, optional comma, 2-letter state, optional zip
+    return String(addr)
+      .replace(/,?\s+[A-Za-z .'-]+,?\s+[A-Z]{2}(?:\s+\d{5}(?:-\d{4})?)?$/, '')
+      .trim();
+  };
+
   // Fallback parser for "City ST [ZIP]" at end of an address line
   const parseCityStateZip = (addr: string | undefined | null) => {
     const res = { city: '', state: '', zip: '' };
@@ -35,9 +45,10 @@ export const convertManifestToAcroForm = (manifestData: any, receiverData?: any)
     return res;
   };
 
-  // Address data comes ONLY from the clients table — never from geocoded location records
-  const mailingAddress = manifestData.client?.mailing_address || '';
-  const physicalAddress = manifestData.client?.physical_address || manifestData.client?.mailing_address || '';
+  // Address data comes ONLY from the clients table — never from geocoded location records.
+  // Strip any trailing ", City ST ZIP" so the street field only contains the street number & name.
+  const mailingAddress = stripCityStateZip(manifestData.client?.mailing_address);
+  const physicalAddress = stripCityStateZip(manifestData.client?.physical_address || manifestData.client?.mailing_address);
 
   const result = {
     manifest_number: manifestData.manifest_number || `M-${Date.now()}`,
