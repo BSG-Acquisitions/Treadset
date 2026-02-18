@@ -246,6 +246,24 @@ export const useManifestIntegration = () => {
       // Sanitize data to ensure all fields have valid values
       const sanitizedData = sanitizeAcroFormData(mergedData as Partial<AcroFormManifestData>);
 
+      // CRITICAL: Re-apply override values for all signature-related fields after sanitization.
+      // sanitizeAcroFormData may replace empty/null values with fallbacks, but the wizard's
+      // explicit overrides (names, timestamps) must ALWAYS win — they are the ground truth.
+      const signatureOverrideKeys = [
+        'generator_print_name', 'generator_date', 'generator_time', 'generator_signature',
+        'hauler_print_name', 'hauler_date', 'hauler_time', 'hauler_signature',
+        'receiver_print_name', 'receiver_date', 'receiver_time', 'receiver_signature',
+      ] as const;
+
+      if (overrides) {
+        signatureOverrideKeys.forEach((key) => {
+          const val = (overrides as any)[key];
+          if (val !== undefined && val !== null && val !== '') {
+            (sanitizedData as any)[key] = String(val);
+          }
+        });
+      }
+
       // Map domain field names to v4 template field names
       const config = getCurrentTemplateConfig();
       const templateFields: Record<string, string> = {};
