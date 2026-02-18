@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useManifests } from "@/hooks/useManifests";
 import { useSendManifestEmail } from "@/hooks/useSendManifestEmail";
 import { useManifestIntegration } from "@/hooks/useManifestIntegration";
+import { useVoidManifest } from "@/hooks/useVoidManifest";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,9 +10,19 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ReceiverSignatureDialog } from "./ReceiverSignatureDialog";
 import { format, subDays, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
-import { Clock, FileText, Signature, Search, Calendar, Filter, ChevronDown, ChevronRight, Mail, Loader2, RefreshCw } from "lucide-react";
+import { Clock, FileText, Signature, Search, Calendar, Filter, ChevronDown, ChevronRight, Mail, Loader2, RefreshCw, XCircle } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -28,9 +39,12 @@ export const ManifestReceiversView = () => {
   const [manifestClientNames, setManifestClientNames] = useState<Record<string, string>>({});
   const { mutate: sendEmail } = useSendManifestEmail();
   const manifestIntegration = useManifestIntegration();
+  const voidManifest = useVoidManifest();
   const { toast } = useToast();
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
+  const [voidConfirmId, setVoidConfirmId] = useState<string | null>(null);
+  const [voidManifestNumber, setVoidManifestNumber] = useState<string>('');
   
   // Filters and search
   const [searchTerm, setSearchTerm] = useState("");
@@ -383,6 +397,21 @@ export const ManifestReceiversView = () => {
       setRegeneratingId(null);
     }
   };
+  const handleVoidManifest = (manifestId: string, manifestNumber: string) => {
+    setVoidConfirmId(manifestId);
+    setVoidManifestNumber(manifestNumber);
+  };
+
+  const confirmVoid = () => {
+    if (!voidConfirmId) return;
+    voidManifest.mutate(voidConfirmId, {
+      onSettled: () => {
+        setVoidConfirmId(null);
+        setVoidManifestNumber('');
+      },
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="p-6">
@@ -620,14 +649,27 @@ export const ManifestReceiversView = () => {
                                     format(new Date(manifest.updated_at || manifest.signed_at || manifest.created_at), 'h:mm a') : 'N/A'
                                   }
                                 </TableCell>
-                                <TableCell className="text-right">
-                                  <Button 
-                                    size="sm" 
-                                    onClick={() => handleAddReceiverSignature(manifest.id)}
-                                  >
-                                    Sign
-                                  </Button>
-                                </TableCell>
+                                 <TableCell className="text-right">
+                                   <div className="flex items-center justify-end gap-2">
+                                     <Button 
+                                       size="sm" 
+                                       onClick={() => handleAddReceiverSignature(manifest.id)}
+                                     >
+                                       Sign
+                                     </Button>
+                                     <Button
+                                       size="sm"
+                                       variant="ghost"
+                                       className="text-destructive hover:text-destructive"
+                                       onClick={() => handleVoidManifest(manifest.id, manifest.manifest_number)}
+                                       disabled={voidManifest.isPending}
+                                       title="Void this manifest and restart signing"
+                                     >
+                                       <XCircle className="h-4 w-4 mr-1" />
+                                       Void
+                                     </Button>
+                                   </div>
+                                 </TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
@@ -674,14 +716,24 @@ export const ManifestReceiversView = () => {
                                   </div>
                                 </div>
                                 
-                                <Button 
-                                  size="sm" 
-                                  className="w-full"
-                                  onClick={() => handleAddReceiverSignature(manifest.id)}
-                                >
-                                  <Signature className="h-4 w-4 mr-2" />
-                                  Sign for {manifestClientNames[manifest.id] || clientNames[manifest.client_id] || 'Client'}
-                                </Button>
+                                 <Button 
+                                   size="sm" 
+                                   className="w-full"
+                                   onClick={() => handleAddReceiverSignature(manifest.id)}
+                                 >
+                                   <Signature className="h-4 w-4 mr-2" />
+                                   Sign for {manifestClientNames[manifest.id] || clientNames[manifest.client_id] || 'Client'}
+                                 </Button>
+                                 <Button
+                                   size="sm"
+                                   variant="outline"
+                                   className="w-full text-destructive border-destructive/30 hover:bg-destructive/10"
+                                   onClick={() => handleVoidManifest(manifest.id, manifest.manifest_number)}
+                                   disabled={voidManifest.isPending}
+                                 >
+                                   <XCircle className="h-4 w-4 mr-2" />
+                                   Void & Redo
+                                 </Button>
                               </div>
                             </CardContent>
                           </Card>
@@ -787,6 +839,17 @@ export const ManifestReceiversView = () => {
                                          className="inline-flex"
                                        />
                                      )}
+                                     <Button
+                                       size="sm"
+                                       variant="ghost"
+                                       className="text-destructive hover:text-destructive"
+                                       onClick={() => handleVoidManifest(manifest.id, manifest.manifest_number)}
+                                       disabled={voidManifest.isPending}
+                                       title="Void and redo this manifest"
+                                     >
+                                       <XCircle className="h-4 w-4 mr-1" />
+                                       Void
+                                     </Button>
                                    </div>
                                  </TableCell>
                               </TableRow>
@@ -888,6 +951,18 @@ export const ManifestReceiversView = () => {
                                            className="inline-flex"
                                          />
                                        )}
+
+                                       <Button
+                                         size="sm"
+                                         variant="ghost"
+                                         className="text-destructive hover:text-destructive"
+                                         onClick={() => handleVoidManifest(manifest.id, manifest.manifest_number)}
+                                         disabled={voidManifest.isPending}
+                                         title="Void and redo this manifest"
+                                       >
+                                         <XCircle className="h-4 w-4 mr-1" />
+                                         Void
+                                       </Button>
                                      </div>
                                    </div>
                                 </CardContent>
@@ -916,6 +991,35 @@ export const ManifestReceiversView = () => {
           }
         />
       )}
+
+      {/* Void Manifest Confirmation Dialog */}
+      <AlertDialog open={!!voidConfirmId} onOpenChange={(open) => { if (!open) { setVoidConfirmId(null); setVoidManifestNumber(''); } }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Void Manifest {voidManifestNumber}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently void this manifest and clear all signatures, allowing the driver to restart the signing process from scratch.
+              <br /><br />
+              <strong>Use this when:</strong> names were wrong, timestamps were missing, or data was captured incorrectly.
+              <br /><br />
+              The pickup will reappear in the driver's manifest wizard for re-signing.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmVoid}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {voidManifest.isPending ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Voiding...</>
+              ) : (
+                <><XCircle className="h-4 w-4 mr-2" />Void Manifest</>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
