@@ -101,6 +101,7 @@ const PublicContact = lazy(() => import('./pages/PublicContact'));
 const PublicProducts = lazy(() => import('./pages/PublicProducts'));
 const PartnerApplications = lazy(() => import('./pages/PartnerApplications'));
 const ContactSubmissions = lazy(() => import('./pages/ContactSubmissions'));
+const ManifestHealth = lazy(() => import('./pages/ManifestHealth'));
 
 // Domain-based routing: show BSG marketing on bsgtires domains, TreadSet app landing elsewhere
 function RootRoute() {
@@ -585,6 +586,15 @@ const App = () => (
               <Route path="/client-portal" element={
                 <ProtectedRoute roles={['admin', 'ops_manager', 'client']}>
                   <ClientPortal />
+                </ProtectedRoute>
+              } />
+
+              {/* Manifest Health Scan - Admin/Ops only */}
+              <Route path="/manifest-health" element={
+                <ProtectedRoute roles={['admin', 'ops_manager']}>
+                  <AppLayout>
+                    <ManifestHealth />
+                  </AppLayout>
                 </ProtectedRoute>
               } />
               

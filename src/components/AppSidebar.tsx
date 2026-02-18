@@ -27,7 +27,8 @@ import {
   ArrowRightLeft,
   UserCog,
   Clock,
-  Package
+  Package,
+  ShieldAlert
 } from "lucide-react";
 import { useHasSemiHaulerCapability } from "@/hooks/useDriverCapabilities";
 import { NavLink, useLocation } from "react-router-dom";
@@ -124,6 +125,7 @@ export function AppSidebar() {
       { id: 'integrations', label: 'Integrations', icon: CreditCard, path: '/integrations', roles: ['admin'] as const },
       { id: 'signatures', label: 'Signatures', icon: PenTool, path: '/receiver-signatures', roles: ['admin', 'ops_manager'] as const },
       { id: 'receivers', label: 'Receivers', icon: Building, path: '/receivers', roles: ['admin', 'ops_manager'] as const },
+      { id: 'manifest-health', label: 'Manifest Health', icon: ShieldAlert, path: '/manifest-health', roles: ['admin', 'ops_manager'] as const },
     ],
   };
 
@@ -165,6 +167,7 @@ export function AppSidebar() {
     { id: 'integrations', label: 'Integrations', icon: CreditCard, path: '/integrations', roles: ['admin'] as const },
     { id: 'signatures', label: 'Signatures', icon: PenTool, path: '/receiver-signatures', roles: ['admin', 'ops_manager'] as const },
     { id: 'receivers', label: 'Receivers', icon: Building, path: '/receivers', roles: ['admin', 'ops_manager'] as const },
+    { id: 'manifest-health', label: 'Manifest Health', icon: ShieldAlert, path: '/manifest-health', roles: ['admin', 'ops_manager'] as const },
     { id: 'sandbox', label: 'Sandbox Testing', icon: TestTube, path: '/sandbox', roles: ['admin'] as const },
   ];
 

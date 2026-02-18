@@ -31,7 +31,8 @@ import {
   ChevronLeft,
   PenTool,
   CheckCircle,
-  FileText
+  FileText,
+  RefreshCw
 } from "lucide-react";
 
 // Validation schema - tire counts, printed names, and optional weights
@@ -125,6 +126,12 @@ function DriverManifestCreationWizardInner({
   const [paymentMethod, setPaymentMethod] = useState<string>("CASH");
   const [checkNumber, setCheckNumber] = useState<string>("");
   const [driverNotes, setDriverNotes] = useState<string>("");
+  // Timestamp locked at moment of signature save (not at submit time)
+  const [generatorSignedAt, setGeneratorSignedAt] = useState<string | null>(null);
+  const [haulerSignedAt, setHaulerSignedAt] = useState<string | null>(null);
+  // Upload status tracking
+  const [genSigUploading, setGenSigUploading] = useState(false);
+  const [haulSigUploading, setHaulSigUploading] = useState(false);
   // Notes always auto-save to client profile (no toggle needed)
   
   // Use ref for more reliable duplicate prevention
@@ -574,42 +581,76 @@ function DriverManifestCreationWizardInner({
           return new Blob([u8arr], { type: mime });
         };
 
+        // --- Generator signature ---
         if (generatorSigRef.current && !genSigPath) {
+          setGenSigUploading(true);
           console.log('[DRIVER_WIZARD] Saving generator signature...');
+          // Lock timestamp NOW — at the moment the user tapped Save, not at form submit
+          const genTimestamp = new Date().toISOString();
           const dataUrl = generatorSigRef.current.toDataURL();
-          setGenSigDataUrl(dataUrl); // Store data URL for restoration
+          setGenSigDataUrl(dataUrl);
           const generatorBlob = dataURLtoBlob(dataUrl);
           const generatorFileName = `signatures/${timestamp}-generator.png`;
-          const { error: genUploadError } = await supabase.storage
+          const { error: genUploadError, data: genUploadData } = await supabase.storage
             .from('manifests')
             .upload(generatorFileName, generatorBlob, { contentType: 'image/png', upsert: true });
+          setGenSigUploading(false);
           if (genUploadError) {
+            const isPermission = genUploadError.message?.toLowerCase().includes('policy') ||
+              genUploadError.message?.toLowerCase().includes('permission') ||
+              (genUploadError as any).statusCode === 403;
             console.error('[DRIVER_WIZARD] Generator signature upload error:', genUploadError);
-            throw genUploadError;
+            throw new Error(
+              isPermission
+                ? 'Storage permission denied for generator signature. Please ask your admin to check storage policies, then try again.'
+                : `Generator signature upload failed: ${genUploadError.message}. Please check your internet connection and try again.`
+            );
+          }
+          // Verify the file actually landed (non-null path confirms success)
+          if (!genUploadData?.path) {
+            throw new Error('Generator signature upload returned no path — the file may not have saved. Please try again.');
           }
           setGenSigPath(generatorFileName);
-          console.log('[DRIVER_WIZARD] Generator signature saved:', generatorFileName);
+          setGeneratorSignedAt(genTimestamp); // Lock the timestamp at the moment of signing
+          console.log('[DRIVER_WIZARD] Generator signature saved:', generatorFileName, 'at', genTimestamp);
         }
 
+        // --- Hauler signature ---
         if (haulerSigRef.current && !haulSigPath) {
+          setHaulSigUploading(true);
           console.log('[DRIVER_WIZARD] Saving hauler signature...');
+          const haulTimestamp = new Date().toISOString();
           const dataUrl = haulerSigRef.current.toDataURL();
-          setHaulSigDataUrl(dataUrl); // Store data URL for restoration
+          setHaulSigDataUrl(dataUrl);
           const haulerBlob = dataURLtoBlob(dataUrl);
           const haulerFileName = `signatures/${timestamp}-hauler.png`;
-          const { error: haulUploadError } = await supabase.storage
+          const { error: haulUploadError, data: haulUploadData } = await supabase.storage
             .from('manifests')
             .upload(haulerFileName, haulerBlob, { contentType: 'image/png', upsert: true });
+          setHaulSigUploading(false);
           if (haulUploadError) {
+            const isPermission = haulUploadError.message?.toLowerCase().includes('policy') ||
+              haulUploadError.message?.toLowerCase().includes('permission') ||
+              (haulUploadError as any).statusCode === 403;
             console.error('[DRIVER_WIZARD] Hauler signature upload error:', haulUploadError);
-            throw haulUploadError;
+            throw new Error(
+              isPermission
+                ? 'Storage permission denied for hauler signature. Please ask your admin to check storage policies, then try again.'
+                : `Hauler signature upload failed: ${haulUploadError.message}. Please check your internet connection and try again.`
+            );
+          }
+          if (!haulUploadData?.path) {
+            throw new Error('Hauler signature upload returned no path — the file may not have saved. Please try again.');
           }
           setHaulSigPath(haulerFileName);
-          console.log('[DRIVER_WIZARD] Hauler signature saved:', haulerFileName);
+          setHaulerSignedAt(haulTimestamp);
+          console.log('[DRIVER_WIZARD] Hauler signature saved:', haulerFileName, 'at', haulTimestamp);
         }
 
         console.log('[DRIVER_WIZARD] Both signatures saved successfully');
       } catch (e: any) {
+        setGenSigUploading(false);
+        setHaulSigUploading(false);
         console.error('[DRIVER_WIZARD] Failed to upload signatures:', e);
         toast({
           title: "Upload Failed",
@@ -2332,10 +2373,21 @@ function DriverManifestCreationWizardInner({
                       }}
                     />
                   </div>
-                  {genSigPath && (
-                    <div className="text-xs text-green-600 flex items-center gap-1 mt-1">
+                  {genSigUploading && (
+                    <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1 animate-pulse">
+                      <RefreshCw className="h-3 w-3 animate-spin" />
+                      Uploading signature…
+                    </div>
+                  )}
+                  {!genSigUploading && genSigPath && (
+                    <div className="text-xs text-primary flex items-center gap-1 mt-1 font-medium">
                       <CheckCircle className="h-3 w-3" />
-                      Signature saved
+                      Generator signature saved ✓
+                    </div>
+                  )}
+                  {!genSigUploading && !genSigPath && genSigDataUrl && (
+                    <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                      Signature drawn — will be uploaded when you tap Next
                     </div>
                   )}
                 </div>
@@ -2407,10 +2459,21 @@ function DriverManifestCreationWizardInner({
                       }}
                     />
                   </div>
-                  {haulSigPath && (
-                    <div className="text-xs text-green-600 flex items-center gap-1 mt-1">
+                  {haulSigUploading && (
+                    <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1 animate-pulse">
+                      <RefreshCw className="h-3 w-3 animate-spin" />
+                      Uploading signature…
+                    </div>
+                  )}
+                  {!haulSigUploading && haulSigPath && (
+                    <div className="text-xs text-primary flex items-center gap-1 mt-1 font-medium">
                       <CheckCircle className="h-3 w-3" />
-                      Signature saved
+                      Hauler signature saved ✓
+                    </div>
+                  )}
+                  {!haulSigUploading && !haulSigPath && haulSigDataUrl && (
+                    <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                      Signature drawn — will be uploaded when you tap Next
                     </div>
                   )}
                 </div>
