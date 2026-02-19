@@ -164,9 +164,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (userError) {
         console.error('Error loading user data:', userError);
-        // Provide fallback user with admin role
+        // Look up real internal users.id before falling back to auth UUID
+        const { data: basicUser } = await supabase
+          .from('users')
+          .select('id')
+          .eq('auth_user_id', authUser.id)
+          .maybeSingle();
         setUserIfChanged({
-          id: authUser.id,
+          id: basicUser?.id || authUser.id,
           email: authUser.email || '',
           firstName: authUser.user_metadata?.first_name || 'User',
           lastName: authUser.user_metadata?.last_name || '',
@@ -182,8 +187,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (!userData) {
         console.log('No user data found, providing fallback');
+        // Look up real internal users.id before falling back to auth UUID
+        const { data: basicUser } = await supabase
+          .from('users')
+          .select('id')
+          .eq('auth_user_id', authUser.id)
+          .maybeSingle();
         setUserIfChanged({
-          id: authUser.id,
+          id: basicUser?.id || authUser.id,
           email: authUser.email || '',
           firstName: authUser.user_metadata?.first_name || 'User',
           lastName: authUser.user_metadata?.last_name || '',
@@ -235,20 +246,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     } catch (error) {
       console.error('Error loading user data:', error);
-      // Provide fallback user
+      // Provide fallback user — look up real internal users.id first
       if (authUser) {
-        setUserIfChanged({
-          id: authUser.id,
-          email: authUser.email || '',
-          firstName: authUser.user_metadata?.first_name || 'User',
-          lastName: authUser.user_metadata?.last_name || '',
-          roles: ['admin'],
-          currentOrganization: {
-            id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
-            name: 'BSG Logistics',
-            slug: 'bsg'
-          }
-        });
+        try {
+          const { data: basicUser } = await supabase
+            .from('users')
+            .select('id')
+            .eq('auth_user_id', authUser.id)
+            .maybeSingle();
+          setUserIfChanged({
+            id: basicUser?.id || authUser.id,
+            email: authUser.email || '',
+            firstName: authUser.user_metadata?.first_name || 'User',
+            lastName: authUser.user_metadata?.last_name || '',
+            roles: ['admin'],
+            currentOrganization: {
+              id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
+              name: 'BSG Logistics',
+              slug: 'bsg'
+            }
+          });
+        } catch {
+          setUserIfChanged({
+            id: authUser.id,
+            email: authUser.email || '',
+            firstName: authUser.user_metadata?.first_name || 'User',
+            lastName: authUser.user_metadata?.last_name || '',
+            roles: ['admin'],
+            currentOrganization: {
+              id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
+              name: 'BSG Logistics',
+              slug: 'bsg'
+            }
+          });
+        }
       } else {
         setUserIfChanged(null);
       }
