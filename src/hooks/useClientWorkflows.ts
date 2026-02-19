@@ -37,7 +37,7 @@ export const useActiveFollowups = () => {
     queryKey: ['active-followups'],
     queryFn: async () => {
       const today = new Date().toISOString().split('T')[0];
-      const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const sixtyDaysFromNow = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
       // 1) Fetch workflows first (without join to avoid missing FK issues)
       const { data: workflows, error: wfError } = await supabase
@@ -73,7 +73,7 @@ export const useActiveFollowups = () => {
         .in('client_id', clientIds)
         .eq('status', 'scheduled')
         .gte('pickup_date', today)
-        .lte('pickup_date', sevenDaysFromNow);
+        .lte('pickup_date', sixtyDaysFromNow);
 
       // Build sets/maps for quick lookup
       const clientMap = new Map(clients?.map(c => [c.id, c]) ?? []);
@@ -88,7 +88,7 @@ export const useActiveFollowups = () => {
           clients: clientMap.get(w.client_id) || null,
         }))
         .filter(w => {
-          // CRITICAL: Skip if client already has a pickup scheduled
+          // CRITICAL: Skip if client already has a pickup scheduled in the next 60 days
           if (scheduledClientIds.has(w.client_id)) {
             return false;
           }
@@ -99,12 +99,13 @@ export const useActiveFollowups = () => {
           const lastPickupDate = new Date(client.last_pickup_at);
           const daysSincePickup = Math.floor((Date.now() - lastPickupDate.getTime()) / (1000 * 60 * 60 * 24));
           
-          // Get client's actual pattern interval (default to 30 days if unknown)
+          // Use workflow's stored interval first (kept accurate by DB trigger),
+          // then fall back to pattern, then default to 30 days
           const pattern = patternMap.get(w.client_id);
-          const intervalDays = pattern?.average_days_between_pickups || 30;
+          const intervalDays = w.contact_interval_days || pattern?.average_days_between_pickups || 30;
           
           // Only show followup if they're at least 75% through their interval
-          // e.g., for 11-day interval, show after ~8 days
+          // e.g., for 7-day interval: show after ~5 days; 14-day: after ~10 days; 30-day: after ~22 days
           const thresholdDays = Math.floor(intervalDays * 0.75);
           
           if (daysSincePickup < thresholdDays) return false; // Too early for followup

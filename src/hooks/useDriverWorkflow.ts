@@ -89,7 +89,7 @@ export const useUpdateAssignmentStatus = () => {
                 status: 'active',
                 next_contact_date: followupDate.toISOString().split('T')[0],
                 last_contact_date: new Date().toISOString().split('T')[0],
-                contact_frequency_days: 30,
+                contact_interval_days: 30,
                 notes: `Auto-created after pickup completion on ${new Date().toLocaleDateString()}`
               });
             
