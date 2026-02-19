@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 interface MovePickupData {
   pickupId: string;
   newDate: string;
+  oldDate?: string;
 }
 
 export const useMovePickup = () => {
@@ -12,8 +13,7 @@ export const useMovePickup = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ pickupId, newDate }: MovePickupData) => {
-      // Update the pickup date
+    mutationFn: async ({ pickupId, newDate, oldDate }: MovePickupData) => {
       const { error: pickupError } = await supabase
         .from('pickups')
         .update({ pickup_date: newDate })
@@ -21,7 +21,6 @@ export const useMovePickup = () => {
 
       if (pickupError) throw pickupError;
 
-      // Update any related assignments
       const { error: assignmentError } = await supabase
         .from('assignments')
         .update({ scheduled_date: newDate })
@@ -29,16 +28,17 @@ export const useMovePickup = () => {
 
       if (assignmentError) throw assignmentError;
 
-      return { pickupId, newDate };
+      return { pickupId, newDate, oldDate };
     },
     onSuccess: (data) => {
-      // Invalidate all pickup and assignment queries to refresh the data
-      queryClient.invalidateQueries({ queryKey: ['pickups'] });
+      // Force immediate refetch of both the source and destination day columns,
+      // bypassing staleTime so the UI updates instantly after drag-and-drop.
+      queryClient.refetchQueries({ queryKey: ['pickups'], type: 'active' });
       queryClient.invalidateQueries({ queryKey: ['assignments'] });
       
       toast({
         title: "Pickup Moved",
-        description: `Pickup has been successfully moved to ${new Date(data.newDate).toLocaleDateString()}`,
+        description: `Pickup has been successfully moved to ${new Date(data.newDate + 'T00:00:00').toLocaleDateString()}`,
       });
     },
     onError: (error) => {

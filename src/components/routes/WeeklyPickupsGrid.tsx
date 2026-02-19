@@ -179,7 +179,7 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
     const pickupId = e.dataTransfer.getData('pickupId');
     const sourceDate = e.dataTransfer.getData('sourceDate');
     if (pickupId && sourceDate !== dateStr) {
-      movePickup.mutate({ pickupId, newDate: dateStr });
+      movePickup.mutate({ pickupId, newDate: dateStr, oldDate: sourceDate });
     }
   };
 
