@@ -16,9 +16,9 @@ export function useRealtimeUpdates() {
           schema: 'public',
           table: 'clients'
         },
-        () => {
-          // Invalidate clients queries to trigger refetch
-          queryClient.invalidateQueries({ queryKey: ['clients'] });
+          () => {
+          // Mark stale but don't immediately refetch
+          queryClient.invalidateQueries({ queryKey: ['clients'], refetchType: 'none' });
         }
       )
       .subscribe();
@@ -34,8 +34,7 @@ export function useRealtimeUpdates() {
           table: 'pickups'
         },
         () => {
-          // Invalidate pickups queries to trigger refetch
-          queryClient.invalidateQueries({ queryKey: ['pickups'] });
+          queryClient.invalidateQueries({ queryKey: ['pickups'], refetchType: 'none' });
         }
       )
       .subscribe();
@@ -51,8 +50,7 @@ export function useRealtimeUpdates() {
           table: 'vehicles'
         },
         () => {
-          // Invalidate vehicles queries to trigger refetch
-          queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+          queryClient.invalidateQueries({ queryKey: ['vehicles'], refetchType: 'none' });
         }
       )
       .subscribe();
@@ -68,9 +66,8 @@ export function useRealtimeUpdates() {
           table: 'client_summaries'
         },
         () => {
-          // Invalidate client summaries queries to trigger refetch
-          queryClient.invalidateQueries({ queryKey: ['client-summaries'] });
-          queryClient.invalidateQueries({ queryKey: ['client-summary-analytics'] });
+          queryClient.invalidateQueries({ queryKey: ['client-summaries'], refetchType: 'none' });
+          queryClient.invalidateQueries({ queryKey: ['client-summary-analytics'], refetchType: 'none' });
         }
       )
       .subscribe();
@@ -86,8 +83,7 @@ export function useRealtimeUpdates() {
           table: 'assignments'
         },
         () => {
-          // Invalidate assignments queries to trigger refetch
-          queryClient.invalidateQueries({ queryKey: ['assignments'] });
+          queryClient.invalidateQueries({ queryKey: ['assignments'], refetchType: 'none' });
         }
       )
       .subscribe();
@@ -103,8 +99,7 @@ export function useRealtimeUpdates() {
           table: 'manifests'
         },
         () => {
-          // Invalidate manifests queries to trigger refetch
-          queryClient.invalidateQueries({ queryKey: ['manifests'] });
+          queryClient.invalidateQueries({ queryKey: ['manifests'], refetchType: 'none' });
         }
       )
       .subscribe();

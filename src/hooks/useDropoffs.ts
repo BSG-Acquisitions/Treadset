@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import type { Database } from "@/integrations/supabase/types";
 import { format } from "date-fns";
 
@@ -30,8 +31,8 @@ export const useDropoffs = (customerId?: string) => {
       if (error) throw error;
       return data || [];
     },
-    refetchOnWindowFocus: true,
-    staleTime: 0
+    refetchOnWindowFocus: false,
+    staleTime: 5 * 60 * 1000
   });
 };
 
@@ -143,8 +144,11 @@ export const useDeleteDropoff = () => {
 };
 
 export const useTodaysDropoffs = () => {
+  const { user } = useAuth();
+  const orgId = user?.currentOrganization?.id;
+
   return useQuery({
-    queryKey: ['todays-dropoffs'],
+    queryKey: ['todays-dropoffs', orgId],
     queryFn: async () => {
       const today = format(new Date(), 'yyyy-MM-dd');
       
@@ -154,11 +158,14 @@ export const useTodaysDropoffs = () => {
           *,
           clients(contact_name, company_name)
         `)
+        .eq('organization_id', orgId!)
         .eq('dropoff_date', today)
         .order('dropoff_time', { ascending: false });
       
       if (error) throw error;
       return data || [];
-    }
+    },
+    enabled: !!orgId,
+    staleTime: 5 * 60 * 1000,
   });
 };
