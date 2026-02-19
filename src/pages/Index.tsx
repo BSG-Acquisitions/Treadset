@@ -72,259 +72,27 @@ export default function Index() {
   // Enable real-time updates for auto-refreshing tiles
   useRealtimeUpdates();
   
-  // Real data hooks - now enabled for live updates
+  // Page-specific lightweight hooks
   const { data: todayPickupsData = [] } = usePickups(format(new Date(), 'yyyy-MM-dd'));
   const { data: clientsResponse } = useClients();
   const { data: todaysDropoffs = [] } = useTodaysDropoffs();
   
-  // Fetch today's manifests to get actual PTE counts
-  const { data: todaysManifests = [] } = useQuery({
-    queryKey: ['manifests', 'today', user?.currentOrganization?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('manifests')
-        .select('*')
-        .eq('organization_id', user?.currentOrganization?.id)
-        .gte('created_at', format(new Date(), 'yyyy-MM-dd'))
-        .lt('created_at', format(addDays(new Date(), 1), 'yyyy-MM-dd'));
-      
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!user?.currentOrganization?.id,
-  });
+  // ============= SINGLE HOOK REPLACES ALL 13 INLINE QUERIES =============
+  // useDashboardData uses optimized RPC calls with sensible poll intervals (2-15 min)
+  const {
+    todayPTEStats,
+    yesterdayPTEStats,
+    weeklyPTEStats,
+    monthlyPTEStats,
+    dayBeforeYesterdayPTEs,
+    lastWeekPTEs,
+    lastMonthPTEs,
+    thisMonthRevenue,
+    weeklyChartData,
+    monthlyChartData,
+  } = useDashboardData();
 
-  // Fetch this month's manifests and dropoffs for revenue calculation
-  const { data: thisMonthRevenue = 0 } = useQuery({
-    queryKey: ['monthly-revenue', user?.currentOrganization?.id, format(new Date(), 'yyyy-MM')],
-    queryFn: async () => {
-      const monthStart = new Date();
-      monthStart.setDate(1);
-      monthStart.setHours(0, 0, 0, 0);
-      
-      const [manifestsData, dropoffsData] = await Promise.all([
-        supabase
-          .from('manifests')
-          .select('total')
-          .eq('organization_id', user?.currentOrganization?.id)
-          .gte('created_at', format(monthStart, 'yyyy-MM-dd')),
-        supabase
-          .from('dropoffs')
-          .select('computed_revenue')
-          .eq('organization_id', user?.currentOrganization?.id)
-          .gte('dropoff_date', format(monthStart, 'yyyy-MM-dd'))
-      ]);
-      
-      const manifestRevenue = (manifestsData.data || []).reduce((sum: number, m: any) => sum + (m.total || 0), 0);
-      const dropoffRevenue = (dropoffsData.data || []).reduce((sum: number, d: any) => sum + (d.computed_revenue || 0), 0);
-      
-      return manifestRevenue + dropoffRevenue;
-    },
-    enabled: !!user?.currentOrganization?.id,
-    refetchInterval: 30000,
-  });
-
-  // Fetch daily stats for current month for Environmental Impact chart
-  const { data: currentMonthDailyData = [] } = useQuery({
-    queryKey: ['current-month-daily-stats', user?.currentOrganization?.id, format(new Date(), 'yyyy-MM')],
-    queryFn: async () => {
-      const today = new Date();
-      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-      const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-      
-      const startDate = format(monthStart, 'yyyy-MM-dd');
-      const endDate = format(monthEnd, 'yyyy-MM-dd');
-      
-      const [manifestsResult, dropoffsResult] = await Promise.all([
-        supabase
-          .from('manifests')
-          .select('pte_on_rim, pte_off_rim, commercial_17_5_19_5_off, commercial_17_5_19_5_on, commercial_22_5_off, commercial_22_5_on, otr_count, tractor_count, signed_at, created_at')
-          .eq('organization_id', user?.currentOrganization?.id)
-          .gte('created_at', `${startDate}T00:00:00`)
-          .lte('created_at', `${endDate}T23:59:59`),
-        supabase
-          .from('dropoffs')
-          .select('pte_count, otr_count, tractor_count, dropoff_date')
-          .eq('organization_id', user?.currentOrganization?.id)
-          .gte('dropoff_date', startDate)
-          .lte('dropoff_date', endDate)
-      ]);
-      
-      if (manifestsResult.error) throw manifestsResult.error;
-      if (dropoffsResult.error) throw dropoffsResult.error;
-      
-      const ptesByDate: Record<string, number> = {};
-      
-      // Sum manifest tire counts by completion date
-      (manifestsResult.data || []).forEach(m => {
-        const completionDate = m.signed_at || m.created_at;
-        const dateKey = format(new Date(completionDate), 'yyyy-MM-dd');
-        const ptes = calculateManifestPTE(m as any);
-        ptesByDate[dateKey] = (ptesByDate[dateKey] || 0) + ptes;
-      });
-      
-      // Add dropoff counts
-      (dropoffsResult.data || []).forEach(d => {
-        const converted = (d.pte_count || 0) + ((d.otr_count || 0) * 15) + ((d.tractor_count || 0) * 5);
-        ptesByDate[d.dropoff_date] = (ptesByDate[d.dropoff_date] || 0) + converted;
-      });
-      
-      // Generate all days in current month
-      const days = [];
-      const currentDay = today.getDate();
-      for (let i = 1; i <= currentDay; i++) {
-        const date = new Date(today.getFullYear(), today.getMonth(), i);
-        const dateKey = format(date, 'yyyy-MM-dd');
-        days.push({
-          day: format(date, 'MMM d'),
-          ptes: ptesByDate[dateKey] || 0
-        });
-      }
-      
-      return days;
-    },
-    enabled: !!user?.currentOrganization?.id,
-    refetchInterval: 30000,
-  });
-
-  // Fetch this week's tire totals (Monday through today) - TIMEZONE ALIGNED
-  const { data: weeklyTireStats } = useQuery({
-    queryKey: ['weekly-tire-totals', user?.currentOrganization?.id, format(new Date(), 'yyyy-MM-dd')],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_weekly_pte_totals', {
-        org_id: user?.currentOrganization?.id
-      });
-      
-      if (error) throw error;
-      
-      console.log('📊 WEEKLY PTE TOTALS:');
-      console.log(`  Pickups: ${data[0]?.pickup_ptes || 0} PTEs`);
-      console.log(`  Drop-offs: ${data[0]?.dropoff_ptes || 0} PTEs`);
-      const weeklyCombined = Number(data[0]?.pickup_ptes || 0) + Number(data[0]?.dropoff_ptes || 0);
-      console.log(`  Combined: ${weeklyCombined} PTEs`);
-      
-      return weeklyCombined;
-    },
-    enabled: !!user?.currentOrganization?.id,
-    refetchInterval: 30000,
-    staleTime: 0
-  });
-
-  // Fetch yesterday's tire totals - TIMEZONE ALIGNED
-  const { data: yesterdayTireStats } = useQuery({
-    queryKey: ['yesterday-tire-totals', user?.currentOrganization?.id, format(addDays(new Date(), -1), 'yyyy-MM-dd')],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_yesterday_pte_totals', {
-        org_id: user?.currentOrganization?.id
-      });
-      
-      if (error) throw error;
-      
-      console.log('📊 YESTERDAY PTE TOTALS:');
-      console.log(`  Pickups: ${data[0]?.pickup_ptes || 0} PTEs`);
-      console.log(`  Drop-offs: ${data[0]?.dropoff_ptes || 0} PTEs`);
-      const yesterdayCombined = Number(data[0]?.pickup_ptes || 0) + Number(data[0]?.dropoff_ptes || 0);
-      console.log(`  Combined: ${yesterdayCombined} PTEs`);
-      
-      return yesterdayCombined;
-    },
-    enabled: !!user?.currentOrganization?.id,
-    refetchInterval: 30000,
-    staleTime: 0
-  });
-
-  // Fetch this month's tire totals (1st through today) - TIMEZONE ALIGNED
-  const { data: monthlyTireStats } = useQuery({
-    queryKey: ['monthly-tire-totals', user?.currentOrganization?.id, format(new Date(), 'yyyy-MM-dd')],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_monthly_pte_totals', {
-        org_id: user?.currentOrganization?.id
-      });
-      
-      if (error) throw error;
-      
-      console.log('📊 MONTHLY PTE TOTALS:');
-      console.log(`  Pickups: ${data[0]?.pickup_ptes || 0} PTEs`);
-      console.log(`  Drop-offs: ${data[0]?.dropoff_ptes || 0} PTEs`);
-      const monthlyCombined = Number(data[0]?.pickup_ptes || 0) + Number(data[0]?.dropoff_ptes || 0);
-      console.log(`  Combined: ${monthlyCombined} PTEs`);
-      
-      return monthlyCombined;
-    },
-    enabled: !!user?.currentOrganization?.id,
-    refetchInterval: 30000,
-    staleTime: 0
-  });
-
-  // Fetch this week's daily stats for PTE goal chart (current week Mon-Fri only) - MANIFEST-BASED
-  const { data: weeklyData = [] } = useQuery({
-    queryKey: ['weekly-stats', user?.currentOrganization?.id, format(new Date(), 'yyyy-MM-dd')],
-    queryFn: async () => {
-      const today = new Date();
-      const todayDay = today.getDay();
-      const daysFromMonday = todayDay === 0 ? 6 : todayDay - 1;
-      const monday = new Date(today);
-      monday.setDate(today.getDate() - daysFromMonday);
-      
-      const days = [];
-      for (let i = 0; i < 5; i++) {
-        const date = new Date(monday);
-        date.setDate(monday.getDate() + i);
-        days.push({
-          date: format(date, 'yyyy-MM-dd'),
-          label: format(date, 'EEE')
-        });
-      }
-      
-      const startDate = format(monday, 'yyyy-MM-dd');
-      const endDate = format(today, 'yyyy-MM-dd');
-      
-      // Use manifests (actual tire counts) + dropoffs
-      const [manifestsResult, dropoffsResult] = await Promise.all([
-        supabase
-          .from('manifests')
-          .select('pte_on_rim, pte_off_rim, commercial_17_5_19_5_off, commercial_17_5_19_5_on, commercial_22_5_off, commercial_22_5_on, otr_count, tractor_count, signed_at, created_at')
-          .eq('organization_id', user?.currentOrganization?.id)
-          .gte('created_at', `${startDate}T00:00:00`)
-          .lte('created_at', `${endDate}T23:59:59`),
-        supabase
-          .from('dropoffs')
-          .select('pte_count, otr_count, tractor_count, dropoff_date')
-          .eq('organization_id', user?.currentOrganization?.id)
-          .gte('dropoff_date', startDate)
-          .lte('dropoff_date', endDate)
-      ]);
-      
-      if (manifestsResult.error) throw manifestsResult.error;
-      if (dropoffsResult.error) throw dropoffsResult.error;
-      
-      const ptesByDate: Record<string, number> = {};
-      
-      // Sum manifest tire counts by completion date
-      (manifestsResult.data || []).forEach(m => {
-        const completionDate = m.signed_at || m.created_at;
-        const dateKey = format(new Date(completionDate), 'yyyy-MM-dd');
-        const ptes = calculateManifestPTE(m as any);
-        ptesByDate[dateKey] = (ptesByDate[dateKey] || 0) + ptes;
-      });
-      
-      // Add dropoff counts
-      (dropoffsResult.data || []).forEach(d => {
-        const converted = (d.pte_count || 0) + ((d.otr_count || 0) * 15) + ((d.tractor_count || 0) * 5);
-        ptesByDate[d.dropoff_date] = (ptesByDate[d.dropoff_date] || 0) + converted;
-      });
-      
-      return days.map(({ date, label }) => ({
-        day: label,
-        ptes: ptesByDate[date] || 0,
-        target: 2600
-      }));
-    },
-    enabled: !!user?.currentOrganization?.id,
-    refetchInterval: 30000,
-  });
-  
-  // Pickups this month by client (live)
+  // Pickups this month by client (lightweight, page-specific — 5 min interval)
   const { data: pickupsThisMonth = [] } = useQuery({
     queryKey: ['pickups-this-month', user?.currentOrganization?.id, format(new Date(), 'yyyy-MM')],
     queryFn: async () => {
@@ -346,6 +114,8 @@ export default function Index() {
       return data || [];
     },
     enabled: !!user?.currentOrganization?.id,
+    refetchInterval: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 
   const pickupsThisMonthMap = (pickupsThisMonth || []).reduce((acc: Record<string, number>, p: any) => {
@@ -379,225 +149,38 @@ export default function Index() {
     pickups_count: client.pickups?.[0]?.count || 0
   }));
 
-  // Enhanced statistics with real BSG metrics
-  const activeClients = { length: totalActiveClientsCount }; // Use total count instead of filtered array
+  const activeClients = { length: totalActiveClientsCount };
   const totalRevenue = clients.reduce((sum: number, client: any) => sum + (client.lifetime_revenue || 0), 0);
   const assignedPickups = todayPickups.filter(p => p.status !== 'pending');
   const completedPickups = todayPickups.filter(p => p.status === 'completed');
   const overduePickups = todayPickups.filter(p => p.status === 'overdue');
-  
-  // Calculate TODAY's PTEs - TIMEZONE ALIGNED
-  const { data: todayPTEStats = { ptes: 0, pounds: 0 } } = useQuery({
-    queryKey: ['today-pte-stats', user?.currentOrganization?.id, format(new Date(), 'yyyy-MM-dd')],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_today_pte_totals', {
-        org_id: user?.currentOrganization?.id
-      });
-      
-      if (error) throw error;
-      
-      const pickup = Number(data[0]?.pickup_ptes || 0);
-      const dropoff = Number(data[0]?.dropoff_ptes || 0);
-      const ptes = pickup + dropoff;
-      const pounds = ptes * 22;
-      
-      return { ptes, pounds };
-    },
-    enabled: !!user?.currentOrganization?.id,
-    refetchInterval: 30000,
-  });
-  
-  // Yesterday's PTEs
-  const { data: yesterdayPTEStats = { ptes: 0 } } = useQuery({
-    queryKey: ['yesterday-pte-stats', user?.currentOrganization?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_yesterday_pte_totals', {
-        org_id: user?.currentOrganization?.id
-      });
-      if (error) throw error;
-      const ptes = Number(data[0]?.total_ptes || 0);
-      return { ptes };
-    },
-    enabled: !!user?.currentOrganization?.id,
-    refetchInterval: 30000,
-  });
-  
-  // This Week's PTEs
-  const { data: weeklyPTEStats = { ptes: 0 } } = useQuery({
-    queryKey: ['weekly-pte-stats', user?.currentOrganization?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_weekly_pte_totals', {
-        org_id: user?.currentOrganization?.id
-      });
-      if (error) throw error;
-      const ptes = Number(data[0]?.total_ptes || 0);
-      return { ptes };
-    },
-    enabled: !!user?.currentOrganization?.id,
-    refetchInterval: 30000,
-  });
-  
-  // This Month's PTEs
-  const { data: monthlyPTEStats = { ptes: 0 } } = useQuery({
-    queryKey: ['monthly-pte-stats', user?.currentOrganization?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_monthly_pte_totals', {
-        org_id: user?.currentOrganization?.id
-      });
-      if (error) throw error;
-      const ptes = Number(data[0]?.total_ptes || 0);
-      return { ptes };
-    },
-    enabled: !!user?.currentOrganization?.id,
-    refetchInterval: 30000,
-  });
-  
-  // Day Before Yesterday
-  const { data: dayBeforeYesterdayPTEs = 0 } = useQuery({
-    queryKey: ['day-before-yesterday-ptes', user?.currentOrganization?.id],
-    queryFn: async () => {
-      const twoDaysAgo = format(addDays(new Date(), -2), 'yyyy-MM-dd');
-      const oneDayAgo = format(addDays(new Date(), -1), 'yyyy-MM-dd');
-      
-      const [manifests, dropoffs] = await Promise.all([
-        supabase.from('manifests')
-          .select('pte_on_rim, pte_off_rim, commercial_17_5_19_5_off, commercial_17_5_19_5_on, commercial_22_5_off, commercial_22_5_on, otr_count, tractor_count, signed_at, created_at')
-          .eq('organization_id', user?.currentOrganization?.id),
-        supabase.from('dropoffs')
-          .select('pte_count, otr_count, tractor_count')
-          .eq('organization_id', user?.currentOrganization?.id)
-          .eq('dropoff_date', twoDaysAgo)
-      ]);
-      
-      // Filter manifests by signed_at (completion date) with fallback to created_at
-      const twoDaysAgoManifests = (manifests.data || []).filter(m => {
-        const completionDate = m.signed_at || m.created_at;
-        const dateOnly = format(new Date(completionDate), 'yyyy-MM-dd');
-        return dateOnly === twoDaysAgo;
-      });
-      
-      const manifestPTEs = twoDaysAgoManifests.reduce((sum, m) => 
-        sum + (m.pte_on_rim || 0) + (m.pte_off_rim || 0) + 
-        (m.commercial_17_5_19_5_off || 0) + (m.commercial_17_5_19_5_on || 0) +
-        (m.commercial_22_5_off || 0) + (m.commercial_22_5_on || 0) +
-        ((m.otr_count || 0) * 15) + ((m.tractor_count || 0) * 5), 0);
-      
-      const dropoffPTEs = (dropoffs.data || []).reduce((sum, d) =>
-        sum + (d.pte_count || 0) + ((d.otr_count || 0) * 15) + ((d.tractor_count || 0) * 5), 0);
-      
-      console.log(`📊 DAY BEFORE YESTERDAY (${twoDaysAgo}):`, manifestPTEs + dropoffPTEs);
-      
-      return manifestPTEs + dropoffPTEs;
-    },
-    enabled: !!user?.currentOrganization?.id,
-    refetchInterval: 30000,
-  });
-  
-  // Last Week Same Period
-  const { data: lastWeekPTEs = 0 } = useQuery({
-    queryKey: ['last-week-ptes', user?.currentOrganization?.id],
-    queryFn: async () => {
-      const today = new Date();
-      const todayDay = today.getDay();
-      const daysFromMonday = todayDay === 0 ? 6 : todayDay - 1;
-      
-      const lastWeekStart = format(addDays(today, -daysFromMonday - 7), 'yyyy-MM-dd');
-      const lastWeekEnd = format(addDays(today, -7), 'yyyy-MM-dd');
-      
-      const [manifests, dropoffs] = await Promise.all([
-        supabase.from('manifests')
-          .select('pte_on_rim, pte_off_rim, commercial_17_5_19_5_off, commercial_17_5_19_5_on, commercial_22_5_off, commercial_22_5_on, otr_count, tractor_count')
-          .eq('organization_id', user?.currentOrganization?.id)
-          .gte('created_at', `${lastWeekStart}T00:00:00`)
-          .lte('created_at', `${lastWeekEnd}T23:59:59`),
-        supabase.from('dropoffs')
-          .select('pte_count, otr_count, tractor_count')
-          .eq('organization_id', user?.currentOrganization?.id)
-          .gte('dropoff_date', lastWeekStart)
-          .lte('dropoff_date', lastWeekEnd)
-      ]);
-      
-      const manifestPTEs = (manifests.data || []).reduce((sum, m) => 
-        sum + (m.pte_on_rim || 0) + (m.pte_off_rim || 0) + 
-        (m.commercial_17_5_19_5_off || 0) + (m.commercial_17_5_19_5_on || 0) +
-        (m.commercial_22_5_off || 0) + (m.commercial_22_5_on || 0) +
-        ((m.otr_count || 0) * 15) + ((m.tractor_count || 0) * 5), 0);
-      
-      const dropoffPTEs = (dropoffs.data || []).reduce((sum, d) =>
-        sum + (d.pte_count || 0) + ((d.otr_count || 0) * 15) + ((d.tractor_count || 0) * 5), 0);
-      
-      return manifestPTEs + dropoffPTEs;
-    },
-    enabled: !!user?.currentOrganization?.id,
-    refetchInterval: 30000,
-  });
-  
-  // Last Month Same Period
-  const { data: lastMonthPTEs = 0 } = useQuery({
-    queryKey: ['last-month-ptes', user?.currentOrganization?.id],
-    queryFn: async () => {
-      const today = new Date();
-      const currentDay = today.getDate();
-      const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-      const lastMonthEnd = new Date(today.getFullYear(), today.getMonth() - 1, currentDay);
-      
-      const startDate = format(lastMonthStart, 'yyyy-MM-dd');
-      const endDate = format(lastMonthEnd, 'yyyy-MM-dd');
-      
-      const [manifests, dropoffs] = await Promise.all([
-        supabase.from('manifests')
-          .select('pte_on_rim, pte_off_rim, commercial_17_5_19_5_off, commercial_17_5_19_5_on, commercial_22_5_off, commercial_22_5_on, otr_count, tractor_count')
-          .eq('organization_id', user?.currentOrganization?.id)
-          .gte('created_at', `${startDate}T00:00:00`)
-          .lte('created_at', `${endDate}T23:59:59`),
-        supabase.from('dropoffs')
-          .select('pte_count, otr_count, tractor_count')
-          .eq('organization_id', user?.currentOrganization?.id)
-          .gte('dropoff_date', startDate)
-          .lte('dropoff_date', endDate)
-      ]);
-      
-      const manifestPTEs = (manifests.data || []).reduce((sum, m) => 
-        sum + (m.pte_on_rim || 0) + (m.pte_off_rim || 0) + 
-        (m.commercial_17_5_19_5_off || 0) + (m.commercial_17_5_19_5_on || 0) +
-        (m.commercial_22_5_off || 0) + (m.commercial_22_5_on || 0) +
-        ((m.otr_count || 0) * 15) + ((m.tractor_count || 0) * 5), 0);
-      
-      const dropoffPTEs = (dropoffs.data || []).reduce((sum, d) =>
-        sum + (d.pte_count || 0) + ((d.otr_count || 0) * 15) + ((d.tractor_count || 0) * 5), 0);
-      
-      return manifestPTEs + dropoffPTEs;
-    },
-    enabled: !!user?.currentOrganization?.id,
-    refetchInterval: 30000,
-  });
-  
-  // Calculate percent changes
-  const todayChange = yesterdayTireStats && yesterdayTireStats > 0 
-    ? Math.round(((todayPTEStats.ptes - yesterdayTireStats) / yesterdayTireStats) * 100)
-    : 0;
-  
-  const yesterdayChange = dayBeforeYesterdayPTEs > 0
-    ? Math.round(((yesterdayTireStats - dayBeforeYesterdayPTEs) / dayBeforeYesterdayPTEs) * 100)
-    : 0;
-    
-  const weeklyChange = lastWeekPTEs > 0
-    ? Math.round(((weeklyPTEStats.ptes - lastWeekPTEs) / lastWeekPTEs) * 100)
-    : 0;
-    
-  const monthlyChange = lastMonthPTEs > 0
-    ? Math.round(((monthlyPTEStats.ptes - lastMonthPTEs) / lastMonthPTEs) * 100)
-    : 0;
-  
+
+  // Derived values from useDashboardData
   const totalTiresRecycled = todayPTEStats.ptes;
   const totalPoundsRecycled = todayPTEStats.pounds;
 
-// Calculate revenue from manifests and drop-offs
-const manifestRevenue = todaysManifests.reduce((sum: number, manifest: any) => sum + (manifest.total || 0), 0);
-const dropoffRevenue = todaysDropoffs.reduce((sum: number, dropoff: any) => sum + (dropoff.computed_revenue || 0), 0);
-const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing code
+  // Revenue from today's dropoffs and manifests
+  const manifestRevenue = todaysDropoffs.reduce((sum: number, dropoff: any) => sum + (dropoff.computed_revenue || 0), 0);
+  const totalDailyRevenue = manifestRevenue;
 
-  // Fetch detailed breakdown data for each period
+  // Percent change calculations
+  const todayChange = yesterdayPTEStats > 0 
+    ? Math.round(((todayPTEStats.ptes - yesterdayPTEStats) / yesterdayPTEStats) * 100)
+    : 0;
+  
+  const yesterdayChange = dayBeforeYesterdayPTEs > 0
+    ? Math.round(((yesterdayPTEStats - dayBeforeYesterdayPTEs) / dayBeforeYesterdayPTEs) * 100)
+    : 0;
+    
+  const weeklyChange = lastWeekPTEs > 0
+    ? Math.round(((weeklyPTEStats - lastWeekPTEs) / lastWeekPTEs) * 100)
+    : 0;
+    
+  const monthlyChange = lastMonthPTEs > 0
+    ? Math.round(((monthlyPTEStats - lastMonthPTEs) / lastMonthPTEs) * 100)
+    : 0;
+
+  // Fetch detailed breakdown data for the PTE breakdown dialog (only when open)
   const { data: breakdownData } = useQuery({
     queryKey: ['pte-breakdown', breakdownDialog.period, user?.currentOrganization?.id],
     queryFn: async () => {
@@ -634,7 +217,6 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
           startDate.setHours(0, 0, 0, 0);
       }
 
-      // First fetch all dropoffs to get their linked manifest IDs
       const { data: dropoffsData, error: dropoffsError } = await supabase
         .from('dropoffs')
         .select(`
@@ -652,12 +234,9 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
 
       if (dropoffsError) throw dropoffsError;
 
-      // Get manifest IDs linked to dropoffs to exclude from pickups
       const dropoffManifestIds = new Set(
         dropoffsData?.filter(d => d.manifest_id).map(d => d.manifest_id) || []
       );
-
-      // Fetch manifests for the target date range by created_at (pickup date)
 
       const { data: manifestsData, error: manifestsError } = await supabase
         .from('manifests')
@@ -684,7 +263,6 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
 
       if (manifestsError) throw manifestsError;
 
-      // Filter and transform manifests with tire counts, excluding dropoff-linked manifests
       const pickupsData = manifestsData
         ?.filter(m => {
           const totalPTE = calculateManifestPTE(m as any);
@@ -702,9 +280,6 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
           location: m.location
         })) || [];
 
-      if (dropoffsError) throw dropoffsError;
-
-      // Filter dropoffs with tire counts
       const filteredDropoffs = dropoffsData?.filter(d => {
         const totalTires = (d.pte_count || 0) + (d.otr_count || 0) + (d.tractor_count || 0);
         return totalTires > 0;
@@ -716,7 +291,7 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
       };
     },
     enabled: breakdownDialog.open && !!user?.currentOrganization?.id,
-    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
+    refetchInterval: 5000,
     staleTime: 0
   });
 
@@ -757,7 +332,7 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
           <SlideUp>
             <StatsCard
               title="Tires Recycled Yesterday"
-              value={yesterdayTireStats ? `${yesterdayTireStats} PTEs` : '0 PTEs'}
+              value={yesterdayPTEStats ? `${yesterdayPTEStats} PTEs` : '0 PTEs'}
               icon={<Recycle className="w-5 h-5" />}
               variant="primary"
               change={yesterdayChange}
@@ -769,7 +344,7 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
           <SlideUp>
             <StatsCard
               title="Tires Recycled This Week"
-              value={weeklyTireStats ? `${weeklyTireStats} PTEs` : '0 PTEs'}
+              value={weeklyPTEStats ? `${weeklyPTEStats} PTEs` : '0 PTEs'}
               icon={<Recycle className="w-5 h-5" />}
               variant="primary"
               change={weeklyChange}
@@ -781,7 +356,7 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
           <SlideUp>
             <StatsCard
               title="Tires Recycled This Month"
-              value={monthlyTireStats ? `${monthlyTireStats} PTEs` : '0 PTEs'}
+              value={monthlyPTEStats ? `${monthlyPTEStats} PTEs` : '0 PTEs'}
               icon={<Recycle className="w-5 h-5" />}
               variant="success"
               change={monthlyChange}
@@ -790,8 +365,6 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
             />
           </SlideUp>
         </StaggerList>
-
-        {/* AI Insights moved to /intelligence page - available in sidebar/settings */}
 
         {/* Client Followups - Prominent section for sales team */}
         {hasAnyRole(['admin', 'ops_manager', 'sales']) && (
@@ -829,7 +402,7 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
                           <strong>Data source:</strong> manifests + dropoffs tables<br/>
                           <strong>Period:</strong> This month (daily breakdown)<br/>
                           <strong>Filter:</strong> status = COMPLETED<br/>
-                          <strong>Updates:</strong> Real-time
+                          <strong>Updates:</strong> Every 10 minutes
                         </p>
                       </TooltipContent>
                     </Tooltip>
@@ -839,7 +412,7 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
               <CardContent className="p-6 space-y-4">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-brand-recycling mb-1">
-                    {monthlyTireStats ? (monthlyTireStats * 22).toLocaleString() : '0'} lbs
+                    {monthlyPTEStats ? (monthlyPTEStats * 22).toLocaleString() : '0'} lbs
                   </div>
                   <div className="text-sm text-muted-foreground">Tires Recycled This Month</div>
                 </div>
@@ -849,7 +422,7 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
                   <div className="text-xs font-medium text-muted-foreground">This Month's Daily Breakdown (PTEs)</div>
                   <ResponsiveContainer width="100%" height={140}>
                     <LineChart
-                      data={currentMonthDailyData || []}
+                      data={monthlyChartData}
                       margin={{ top: 10, right: 15, left: 0, bottom: 30 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
@@ -894,7 +467,7 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
                 <div className="space-y-2 pt-2 border-t">
                   <div className="flex justify-between text-sm">
                     <span>CO₂ Saved This Month</span>
-                    <span className="font-medium">{monthlyTireStats ? ((monthlyTireStats * 0.00427).toFixed(2)) : '0'} tons</span>
+                    <span className="font-medium">{monthlyPTEStats ? ((monthlyPTEStats * 0.00427).toFixed(2)) : '0'} tons</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Revenue This Month</span>
@@ -919,7 +492,7 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
                           <strong>Data source:</strong> manifests + dropoffs + pickups tables<br/>
                           <strong>Filter:</strong> Today, status = COMPLETED<br/>
                           <strong>Calculation:</strong> Sum of ALL tire intake<br/>
-                          <strong>Updates:</strong> Real-time
+                          <strong>Updates:</strong> Every 2 minutes
                         </p>
                       </TooltipContent>
                     </Tooltip>
@@ -970,7 +543,7 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
                               <strong>Period:</strong> Current week (Mon-today)<br/>
                               <strong>Aggregation:</strong> All tire intake sources combined<br/>
                               <strong>Scale:</strong> 0-5,000 PTEs<br/>
-                              <strong>Updates:</strong> Real-time
+                              <strong>Updates:</strong> Every 10 minutes
                             </p>
                           </TooltipContent>
                         </Tooltip>
@@ -978,7 +551,7 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
                     </div>
                     <ResponsiveContainer width="100%" height={140}>
                       <BarChart
-                        data={weeklyData}
+                        data={weeklyChartData}
                         margin={{ top: 10, right: 15, left: 0, bottom: 5 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
@@ -1056,9 +629,6 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
           </div>
         </SlideUp>
 
-        {/* Quick Actions removed - navigation available in sidebar/top nav */}
-
-        {/* Today's Pickup Activity removed - stats shown in top cards */}
       </main>
 
       {/* PTE Breakdown Dialog */}
@@ -1070,9 +640,9 @@ const totalDailyRevenue = manifestRevenue + dropoffRevenue; // ... keep existing
         dropoffs={breakdownData?.dropoffs || []}
         totalPTEs={
           breakdownDialog.period === 'today' ? totalTiresRecycled :
-          breakdownDialog.period === 'yesterday' ? (yesterdayTireStats || 0) :
-          breakdownDialog.period === 'week' ? (weeklyTireStats || 0) :
-          (monthlyTireStats || 0)
+          breakdownDialog.period === 'yesterday' ? yesterdayPTEStats :
+          breakdownDialog.period === 'week' ? weeklyPTEStats :
+          monthlyPTEStats
         }
       />
     </div>
