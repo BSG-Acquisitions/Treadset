@@ -1,86 +1,86 @@
 
-# Two Problems, Two Solutions
+# Fix: Wire the Notification System So It Actually Shows Notifications
 
-## Problem 1: How to Detect Manifest Issues (Missing Signatures, Bad Timestamps, Wrong Names)
+## The Root Cause — The Notification Inbox is Always Empty
 
-Currently there is no automated detection. You find out when someone prints or emails a manifest and notices something wrong. The fix is a **Manifest Health Scan** — a new page that automatically identifies every manifest with a known issue.
+There are **545 notifications** in the database (247 unread warnings, 124 unread missing_pickups, etc.) — but the app shows zero for every user including you (Zach). Here is exactly why:
 
-### What the scan checks:
+### The ID Mismatch Bug
 
-| Check | Why it matters |
+The edge functions (like `check-missing-pickups` and `check-manifest-reminders`) store notifications using the **internal `users.id`** (e.g., `1c39d6ae-...` for Zach). They get this from `user_organization_roles.user_id`.
+
+But `useEnhancedNotifications` fetches notifications with:
+```text
+.eq('user_id', authUserId)
+```
+where `authUserId = session.user.id` — which is the **Supabase Auth UUID** (e.g., `70c2f0d6-...` for Zach).
+
+These are two completely different UUIDs. The query never finds anything. This is confirmed by the database: zero notifications exist for Zach's auth UUID, even though 545 notifications exist using internal IDs.
+
+**Fix:** Change the notification query to use `users.id` (the internal ID), not `session.user.id`. The hook already has access to `user` from `useAuth()` which contains the internal user record — specifically `user.id` which is the internal ID.
+
+### The Manifest Health Scan Is a Separate Page (User Doesn't Want That)
+
+The `/manifest-health` page was added as a standalone page. The user wants these issues to flow through the notification bell instead. So:
+- Remove the `/manifest-health` route from the sidebar nav
+- Add a new `check-manifest-health` edge function that scans for the same compliance issues the health scan page detects and creates real notifications for them
+- Wire it into the auto-trigger in `useEnhancedNotifications`
+
+## What Gets Fixed
+
+### Fix 1 — `useEnhancedNotifications.ts`: Use Internal User ID
+
+Change `authUserId` from `session.user.id` to `user.id` (the internal users table ID):
+
+```text
+BEFORE: const authUserId = session?.user?.id ?? null;  // auth UUID
+AFTER:  the query needs to use user?.id (internal DB UUID)
+```
+
+The query in `markAllAsRead` and `deleteAllRead` also uses `authUserId` — those all need the same fix.
+
+### Fix 2 — New Edge Function: `check-manifest-health`
+
+A new edge function that runs the same compliance checks as `useManifestHealthScan` but on the server side and inserts real notifications. It checks every manifest in `COMPLETED` or `AWAITING_RECEIVER_SIGNATURE` status and creates a `warning` or `error` notification when any of these are detected:
+
+| Check | Notification Title |
 |---|---|
-| `customer_signature_png_path` is null | Generator signature image missing from manifest |
-| `driver_signature_png_path` is null | Hauler signature image missing from manifest |
-| `signed_by_name` is null or blank | Generator's printed name is blank on PDF |
-| `signed_by_title` is null or blank | Hauler's printed name is blank on PDF |
-| `generator_signed_at` is null | Generator timestamp missing |
-| `hauler_signed_at` is null | Hauler timestamp missing |
-| `client.city` is blank | City will be empty on manifest address line |
-| `receiver_signed_at` is null (for COMPLETED status) | Marked complete but no receiver signature |
+| `customer_signature_png_path IS NULL` | "Manifest missing generator signature" |
+| `driver_signature_png_path IS NULL` | "Manifest missing hauler signature" |
+| `signed_by_name IS NULL` | "Manifest missing printed name" |
+| `generator_signed_at IS NULL` | "Manifest missing generator timestamp" |
+| `status = COMPLETED AND receiver_signed_at IS NULL` | "Completed manifest missing receiver timestamp" |
 
-Each manifest gets a health score and a list of specific issues found. The page gives you Void & Redo buttons for the ones that need to be redone.
+The function deduplicates: only creates a notification if one doesn't already exist for that specific manifest + issue combo in the last 7 days.
 
----
+### Fix 3 — Wire `check-manifest-health` into Auto-Trigger
 
-## Problem 2: Ethan's Signatures and Timestamps Are Wrong
+In `useEnhancedNotifications`, the `useEffect` already auto-calls `check-missing-pickups`, `check-manifest-reminders`, and `check-trailer-alerts` on login. Add `check-manifest-health` to that list.
 
-**Ethan has the admin role — that is not the problem.** The routes, the wizard, and the PDF generation all allow admin. The database confirms his role is `admin`.
+### Fix 4 — Remove `/manifest-health` from Sidebar
 
-Looking at the manifest data from days where Ethan was completing paperwork, those manifests show:
-- `customer_signature_png_path: null`
-- `driver_signature_png_path: null`
-- `signed_by_name: null`
+Since the user wants everything in the notification bell, remove the "Manifest Health" nav item from `AppSidebar.tsx`. The page and hook can stay as internal code (used by other parts), but it should not be a top-level nav item.
 
-This means the **Supabase Storage upload step is failing silently**. When the signature upload to the `manifests` storage bucket fails, the code catches the error and shows a toast — but sometimes in a degraded network or stale-auth state, the upload error is swallowed and the manifest continues through with null signature paths. Because the timestamp is generated from `generator_signed_at` which relies on the signature upload succeeding first, a failed upload cascade means the timestamp is also wrong.
+### Fix 5 — Notification Panel: Show "Manifest" as Actionable Link
 
-### Root Causes
-
-**Root Cause A — No retry on failed uploads:**
-If Ethan's storage upload times out or fails (network hiccup, session edge case), the wizard just shows a toast and returns. There is no retry and no clear indication to Ethan that he needs to start over. He may have tapped Next and assumed it worked.
-
-**Root Cause B — No storage upload verification before proceeding:**
-After uploading, the code does not verify the file actually landed in storage. It trusts the Supabase SDK response. If the upload silently fails (non-throwing error), `genSigPath` stays null and the manifest is created without signatures.
-
-**Root Cause C — Timestamp is derived at wrong moment:**
-`generatorSignedAt` is captured at `new Date()` at the moment of form submission — not at the moment the signature canvas was actually signed. If the upload takes 30 seconds (slow network), the timestamp on the manifest is 30 seconds later than when the customer actually signed. This is the "incorrect timestamp" you observed.
-
-### The Fix
-
-**Fix A — Capture the timestamp at the moment the signature pad is cleared/completed, not at submit time.**
-When the user finishes drawing their signature and taps "Save Signatures," lock in the timestamp at that exact second. Store it in component state alongside the signature path. When the form submits, use the locked timestamp, not `new Date()`.
-
-**Fix B — Add a pre-submit verification check.**
-Before proceeding past the signatures step, confirm both signature paths are non-null. If either is missing, block the Next button and show a clear error: "Signatures must be saved before continuing."
-
-**Fix C — Add an upload status indicator on the Signatures step.**
-Show a clear checkmark or "Saved" badge next to each signature pad after a successful upload. This gives Ethan visual confirmation that his signature was actually captured, rather than guessing.
-
-**Fix D — Add a fallback for storage permission errors.**
-Wrap the upload in explicit error handling that distinguishes between a permission error (storage RLS) and a network error, and shows the user a specific, actionable message instead of a generic toast.
-
----
+In `EnhancedNotificationCenter.tsx`, notifications of `type: 'warning'` that have `related_type: 'manifest'` should show a "View Manifest" action button that navigates to `/manifests/{related_id}`. Currently all notifications render the same way regardless of type.
 
 ## Files Changed
 
 | File | Change |
 |---|---|
-| `src/pages/ManifestHealth.tsx` | New page — Manifest Health Scan dashboard, lists all manifests with detected issues, grouped by issue type, with Void & Redo buttons |
-| `src/hooks/useManifestHealthScan.ts` | New hook — fetches all manifests + client data, runs compliance checks, returns categorized results with issue descriptions |
-| `src/components/AppSidebar.tsx` | Add "Manifest Health" nav item under the admin/ops_manager group |
-| `src/App.tsx` | Register the `/manifest-health` route (admin, ops_manager, super_admin only) |
-| `src/components/driver/DriverManifestCreationWizard.tsx` | (1) Capture signature timestamps at the moment of canvas completion, not at submit time. (2) Add upload status badges on the Signatures step. (3) Block Next button if signature paths are null. (4) Add specific error handling for storage permission vs. network errors. |
+| `src/hooks/useEnhancedNotifications.ts` | Fix `authUserId` to use internal `user.id` from `useAuth()`, not `session.user.id`. Update all mutations (markAllAsRead, deleteAllRead) to use the same corrected ID. Add `check-manifest-health` to the auto-trigger. |
+| `supabase/functions/check-manifest-health/index.ts` | New edge function — scans all manifests for compliance issues and creates notifications for admin/ops_manager users |
+| `src/components/AppSidebar.tsx` | Remove the "Manifest Health" nav item |
+| `src/components/notifications/EnhancedNotificationCenter.tsx` | Add "View Manifest" action link for manifest-related notifications |
 
----
+## What You'll See After This Fix
 
-## What Will Be Different After This Fix
+- The notification bell will immediately start showing the existing 545 notifications that are already in the database (they were always there — just never being fetched)
+- Every time someone logs in, the system auto-checks for manifest compliance issues and creates new notifications if manifests are missing signatures, names, or timestamps
+- Clicking a manifest notification will offer a direct link to that manifest
+- The sidebar will not have a separate "Manifest Health" page — everything flows through the bell
 
-- The Manifest Health page will show you — right now — every manifest that has missing signatures, missing names, or blank city/state on the client address
-- The 20+ manifests currently showing `signed_by_name: null` will appear in the scan so you can decide which to void and redo
-- When Ethan (or any admin) completes a manifest, he will see a clear "Signature Saved" confirmation badge before being allowed to proceed
-- The Next button on the Signatures step will be disabled until both uploads succeed
-- Timestamps will reflect the actual moment the signature was drawn, not the moment the form was submitted
-- Any storage upload failure will show a specific error message explaining what failed and what to do
+## Note on the 35 Recent Manifests With Issues
 
-## Note on the Historical Manifests with Missing Signatures
-
-The 20 manifests currently missing `signed_by_name` and signature paths — those were completed using an earlier version of the wizard (before the current two-signature flow was fully hardened). They cannot be retroactively signed since the moment has passed. The Manifest Health page will surface all of them so you can review each one and decide: Void & Redo for important clients, or leave as-is for minor ones (like Walk-in drop-offs).
+The scan confirmed that right now (last 30 days): **35 manifests are missing generator signatures, hauler signatures, and printed names**. Two of these are from today (manifests 20260218-00004 and 20260218-00002, both COMPLETED). These will immediately generate notifications once the fix is deployed.
