@@ -1,101 +1,99 @@
 
-# Fix: Client Followups Not Suppressing Correctly After Scheduling/Completion
+# Fix: Notifications Are Still Empty — Two Remaining Root Causes
 
-## What the Data Shows
+## What the Database Actually Shows Right Now
 
-After examining the live database and all the relevant code, there are **4 distinct bugs** causing followups to display incorrectly.
+The hook code was corrected to use `user.id` (internal ID). But the database proves notifications are still unreachable:
+
+- **545 notifications** exist in the database
+- They are stored against 3 user IDs: `0bb957cc`, `4799a680`, `c23a9f4d`
+- **None of these match any row in the `users` table** — they are orphaned records written by the edge functions using IDs from a different source (likely `user_organization_roles.user_id` references that pointed to a stale users table state)
+- Every real user (Zach, Justin, Ethan, Liz, etc.) has zero notifications linked to them
+
+This means: even though the hook is now querying the right column, it still returns zero because the notifications were never written with matching IDs.
 
 ---
 
-## Bug 1 — The 7-Day Scheduling Lookahead Is Too Narrow
+## Root Cause 1 — The `AuthContext` Fallback Uses the Wrong ID
 
-**Current behavior:** The code only fetches scheduled pickups within the next 7 days to decide whether to hide a followup:
+In `AuthContext.tsx`, when the `users` table query fails or returns nothing, the fallback is:
 
-```text
-.lte('pickup_date', sevenDaysFromNow)  // only looks 7 days ahead
+```
+id: authUser.id  // This is the Supabase Auth UUID, NOT the internal users.id
 ```
 
-**The problem — confirmed by Twin's Tire Service:**
-Twin's has a scheduled pickup for TODAY (Feb 19). The system correctly has it in `upcoming_scheduled: 1`. But the filter window happens to catch it since it falls within 7 days. However, for any client with a pickup scheduled 8+ days out (which is common for monthly clients), the followup will still appear even though the client is already on the calendar.
+So if Ethan or anyone hits a load error, `user.id` in the app becomes the Auth UUID — and the notification query will never find anything, even if the edge functions write correctly.
 
-**The fix:** Expand the scheduling lookahead to **60 days** — if a client is on the schedule at any point in the next 2 months, they should not appear as a followup target.
+**Fix:** Change all three fallback `setUserIfChanged` calls in `AuthContext` to fetch and use the real `users.id` where possible, or at minimum ensure the fallback makes clear it is an auth ID mismatch. Since the users table always has a row created by the `handle_new_user_organization` trigger, the correct fix is to look up `users.id` from `users WHERE auth_user_id = authUser.id` before falling back.
 
 ---
 
-## Bug 2 — The `useActiveFollowups` Hook Uses the Wrong Column Name for the Interval
+## Root Cause 2 — The Edge Functions Were Writing to Orphaned User IDs
 
-**Current code (line 104 of `useClientWorkflows.ts`):**
-```text
-const intervalDays = pattern?.average_days_between_pickups || 30;
+The 3 user IDs in the notifications table (`0bb957cc`, `4799a680`, `c23a9f4d`) do not exist in the `users` table. This means the edge functions looked up users via `user_organization_roles` and found IDs that were deleted or from a previous state of the database.
+
+Those 545 old notifications are permanently orphaned — they can never be seen. The clean fix is:
+
+1. **Delete all orphaned notifications** (those whose `user_id` doesn't match any real `users.id`) via a migration
+2. **Re-run the edge functions** after login so fresh notifications get written against the correct, current user IDs
+
+---
+
+## Root Cause 3 — `useEnhancedNotifications` Auto-Trigger Uses `user.id` Which May Be Auth UUID
+
+In `useEnhancedNotifications.ts`, the auto-trigger uses:
+```ts
+.eq('auth_user_id', user.id)
 ```
+to look up the organization. If `user.id` is the auth UUID (from the fallback), this works. But then the notification query uses `internalUserId = user?.id` which is the same potentially-wrong value.
 
-**The problem:** `client_pickup_patterns` has a column called `average_days_between_pickups`, but the 75% threshold logic that decides whether to show a followup also reads from `workflow.contact_interval_days` — yet the `intervalDays` variable used for the threshold comes from the **pattern** table, not the workflow. When the pattern has no `average_days_between_pickups` (which is the case for many clients — `avg_interval_days: <nil>` in the data), it falls back to 30.
-
-This means clients like Universal Tire (7-day interval) or Avis (14-day interval) fall through to the default 30-day threshold, so their followup threshold is calculated wrong and they may appear or disappear at the wrong time.
-
-**The fix:** Use `workflow.contact_interval_days` as the primary source of interval truth (since the trigger already keeps it accurate per pickup), and only fall back to the pattern if the workflow interval is null. This ensures the correct client-specific cadence is used for the 75% threshold.
+The auto-trigger correctly queries `.eq('auth_user_id', user.id)` to get the org — that part is fine. The problem is the query `queryKey: ['enhanced-notifications', internalUserId]` then uses `user.id` directly as the `user_id` filter. If the fallback path is active, `user.id` is the auth UUID and the query returns nothing.
 
 ---
 
-## Bug 3 — The Trigger Uses Wrong Column Name (Silent Failure for Some Clients)
+## The Fix Plan
 
-**The DB function `update_workflow_on_pickup_completion` contains:**
+### Fix 1 — Clean Up Orphaned Notifications (Database Migration)
+
+Delete all notifications where `user_id` does not match any row in `users`:
+
 ```sql
-SET 
-  last_contact_date = NEW.pickup_date,
-  next_contact_date = NEW.pickup_date + (v_interval_days || ' days')::interval,
-  contact_interval_days = v_interval_days,   ← correct column
+DELETE FROM notifications 
+WHERE user_id NOT IN (SELECT id FROM users)
+AND user_id IS NOT NULL;
 ```
 
-This is actually using the right column (`contact_interval_days`) in the current version. The trigger IS working — confirmed by seeing today's and yesterday's workflows updating correctly. However, the trigger **only fires when `status = 'completed'`**, not when a pickup is scheduled. So the workflow `next_contact_date` only advances when the pickup is actually completed, not when it's scheduled.
+This clears the 538 orphaned notifications (the old bad data). The 7 null user_id ones (contact form submissions) stay since those are a different type.
 
-**The consequence:** A client can show up in followups even while they have a pickup in "scheduled" status — the scheduling lookahead filter (Bug 1) is the only thing preventing it, and when it's too narrow, they slip through.
+### Fix 2 — Fix AuthContext Fallback to Not Use Auth UUID as `user.id`
 
----
-
-## Bug 4 — `contact_frequency_days` vs `contact_interval_days` Column Mismatch in `useDriverWorkflow.ts`
-
-In `src/hooks/useDriverWorkflow.ts` (the pickup completion flow), the upsert that creates/updates the followup workflow uses `contact_frequency_days`:
+In `AuthContext.tsx`, there are three `setUserIfChanged` fallback calls that do `id: authUser.id`. Each of these needs to look up the real internal ID first:
 
 ```ts
-contact_frequency_days: 30,
+// Before falling back, try to get the real internal ID
+const { data: basicUser } = await supabase
+  .from('users')
+  .select('id')
+  .eq('auth_user_id', authUser.id)
+  .maybeSingle();
+
+setUserIfChanged({
+  id: basicUser?.id || authUser.id,  // prefer internal ID
+  ...
+});
 ```
 
-But the actual column in the database is `contact_interval_days`. This means every auto-created followup after pickup completion is missing its interval value — it stays null — causing the 75% threshold logic to always fall back to 30 days regardless of the client's real cadence.
+This ensures that even when the full user data load fails, `user.id` is the real internal UUID that edge functions use for notifications.
 
----
+### Fix 3 — Re-run Notification Checks on Next Login
 
-## The Fixes
+Once the auth context fix is in place, the next login will:
+1. Get the correct internal `user.id`
+2. The auto-trigger in `useEnhancedNotifications` will fire after 5 seconds
+3. Edge functions will write fresh notifications using the correct user ID
+4. The query will find them
 
-### Fix 1 — Expand scheduling lookahead to 60 days (`useClientWorkflows.ts`)
-
-```text
-BEFORE: sevenDaysFromNow = today + 7 days
-AFTER:  sixtyDaysFromNow = today + 60 days
-```
-
-Any client with a pickup scheduled in the next 60 days will be suppressed from the followup list.
-
-### Fix 2 — Use `workflow.contact_interval_days` as primary interval source (`useClientWorkflows.ts`)
-
-```text
-BEFORE: const intervalDays = pattern?.average_days_between_pickups || 30;
-AFTER:  const intervalDays = w.contact_interval_days || pattern?.average_days_between_pickups || 30;
-```
-
-This uses the workflow's own stored interval first (which the DB trigger keeps accurate), then the pattern, then the default.
-
-### Fix 3 — Fix `contact_frequency_days` → `contact_interval_days` typo in `useDriverWorkflow.ts`
-
-The upsert that auto-creates a followup after pickup completion currently writes to a column that doesn't exist:
-```ts
-BEFORE: contact_frequency_days: 30,
-AFTER:  contact_interval_days: 30,
-```
-
-### Fix 4 — Improve the 75% threshold to also consider workflow `contact_interval_days`
-
-The threshold filter in `useActiveFollowups` currently filters **out** clients who were picked up too recently. But it needs to use the corrected interval (from Fix 2) so that weekly clients are suppressed for 5+ days, biweekly clients for 10+ days, monthly clients for 22+ days — not all 22+ days using a hardcoded 30-day fallback.
+No manual intervention needed — just log out and back in after the deploy.
 
 ---
 
@@ -103,14 +101,12 @@ The threshold filter in `useActiveFollowups` currently filters **out** clients w
 
 | File | Change |
 |---|---|
-| `src/hooks/useClientWorkflows.ts` | (1) Expand scheduling lookahead from 7 to 60 days. (2) Use `workflow.contact_interval_days` as primary interval, pattern as fallback. |
-| `src/hooks/useDriverWorkflow.ts` | Fix `contact_frequency_days` typo to `contact_interval_days` in the upsert. |
+| Database migration | Delete 538 orphaned notifications that can never be seen |
+| `src/contexts/AuthContext.tsx` | Fix all 3 fallback `setUserIfChanged` calls to look up real `users.id` before falling back to `authUser.id` |
 
----
+## What You'll See After This Fix
 
-## What Dispatchers Will See After the Fix
-
-- **Twin's Tire** (weekly, pickup scheduled today) — correctly hidden from followups ✓
-- **Any monthly client with a pickup in the next 30-60 days** — correctly hidden ✓
-- **Clients whose interval tracking was wrong** (like Universal Tire, Avis) — now uses the correct 7-day or 14-day threshold instead of the 30-day default ✓
-- **Auto-created followup workflows after pickup completion** — now correctly set `contact_interval_days` so future threshold calculations work correctly ✓
+- On next login, the edge functions fire and write fresh notifications against your real internal user ID
+- The notification bell will show the new notifications (missing pickups, manifest compliance issues, etc.)
+- The orphaned historical notifications are cleared — they were invisible anyway and cannot be retroactively fixed
+- Ethan, Justin, and you will all see notifications correctly because the auth context fallback no longer corrupts the user ID
