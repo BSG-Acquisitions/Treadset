@@ -1,99 +1,99 @@
 
-# Fix: Notifications Are Still Empty — Two Remaining Root Causes
+# Fix: Dashboard Loading Very Slow — Statement Timeouts on PTE Functions
 
-## What the Database Actually Shows Right Now
+## What Is Actually Happening Right Now
 
-The hook code was corrected to use `user.id` (internal ID). But the database proves notifications are still unreachable:
+The database log shows **hundreds of statement timeout errors** — every single page load is hitting them. The timeouts are all on `get_monthly_pte_totals` and `get_yesterday_pte_totals`. These are the SQL functions that power the PTE stat cards at the top of the dashboard.
 
-- **545 notifications** exist in the database
-- They are stored against 3 user IDs: `0bb957cc`, `4799a680`, `c23a9f4d`
-- **None of these match any row in the `users` table** — they are orphaned records written by the edge functions using IDs from a different source (likely `user_organization_roles.user_id` references that pointed to a stale users table state)
-- Every real user (Zach, Justin, Ethan, Liz, etc.) has zero notifications linked to them
-
-This means: even though the hook is now querying the right column, it still returns zero because the notifications were never written with matching IDs.
+The root causes are two specific problems inside those functions.
 
 ---
 
-## Root Cause 1 — The `AuthContext` Fallback Uses the Wrong ID
+## Root Cause 1 — `COALESCE(signed_at, created_at)::date` Breaks Index Usage
 
-In `AuthContext.tsx`, when the `users` table query fails or returns nothing, the fallback is:
+Every PTE function filters manifests like this:
+
+```sql
+WHERE COALESCE(signed_at, created_at)::date >= date_trunc('month', CURRENT_DATE)::date
+```
+
+The problem: wrapping a column in `COALESCE(...)::date` makes Postgres unable to use any index on `signed_at` or `created_at`. Postgres has to scan the entire manifests table row-by-row and compute the expression for every row to evaluate the filter. This is confirmed by the query plan:
 
 ```
-id: authUser.id  // This is the Supabase Auth UUID, NOT the internal users.id
+Seq Scan on manifests   ← full table scan, no index used
+Filter: ((COALESCE(signed_at, created_at))::date >= ...)
 ```
 
-So if Ethan or anyone hits a load error, `user.id` in the app becomes the Auth UUID — and the notification query will never find anything, even if the edge functions write correctly.
+The fix is to rewrite the filter to use indexed columns directly:
 
-**Fix:** Change all three fallback `setUserIfChanged` calls in `AuthContext` to fetch and use the real `users.id` where possible, or at minimum ensure the fallback makes clear it is an auth ID mismatch. Since the users table always has a row created by the `handle_new_user_organization` trigger, the correct fix is to look up `users.id` from `users WHERE auth_user_id = authUser.id` before falling back.
+```sql
+-- Instead of:
+COALESCE(signed_at, created_at)::date >= date_trunc('month', CURRENT_DATE)::date
+
+-- Use:
+(signed_at >= date_trunc('month', CURRENT_DATE) OR created_at >= date_trunc('month', CURRENT_DATE))
+```
+
+This lets Postgres use the existing `idx_manifests_org_status_signed` and `idx_manifests_org_status_date` indexes.
 
 ---
 
-## Root Cause 2 — The Edge Functions Were Writing to Orphaned User IDs
+## Root Cause 2 — `NOT IN (subquery)` Is the Slowest Possible Anti-Join
 
-The 3 user IDs in the notifications table (`0bb957cc`, `4799a680`, `c23a9f4d`) do not exist in the `users` table. This means the edge functions looked up users via `user_organization_roles` and found IDs that were deleted or from a previous state of the database.
+Each function also runs:
 
-Those 545 old notifications are permanently orphaned — they can never be seen. The clean fix is:
+```sql
+AND id NOT IN (SELECT manifest_id FROM dropoffs WHERE manifest_id IS NOT NULL AND organization_id = org_id)
+```
 
-1. **Delete all orphaned notifications** (those whose `user_id` doesn't match any real `users.id`) via a migration
-2. **Re-run the edge functions** after login so fresh notifications get written against the correct, current user IDs
+`NOT IN` with a subquery is known to be one of the worst SQL patterns for performance. It forces Postgres to re-evaluate the subquery for every row and cannot use indexes efficiently. The query plan confirms it runs a sequential scan on `dropoffs` for every manifest row.
+
+The fix is to replace it with `NOT EXISTS`, which uses an anti-join that Postgres can optimize:
+
+```sql
+-- Instead of:
+AND id NOT IN (SELECT manifest_id FROM dropoffs WHERE manifest_id IS NOT NULL ...)
+
+-- Use:
+AND NOT EXISTS (SELECT 1 FROM dropoffs WHERE manifest_id = manifests.id AND organization_id = org_id)
+```
+
+This allows Postgres to use the existing `idx_dropoffs_manifest_id` index and stop early on the first match.
 
 ---
 
-## Root Cause 3 — `useEnhancedNotifications` Auto-Trigger Uses `user.id` Which May Be Auth UUID
+## Root Cause 3 — Dashboard Polls Every 30 Seconds
 
-In `useEnhancedNotifications.ts`, the auto-trigger uses:
-```ts
-.eq('auth_user_id', user.id)
-```
-to look up the organization. If `user.id` is the auth UUID (from the fallback), this works. But then the notification query uses `internalUserId = user?.id` which is the same potentially-wrong value.
+In `useDashboardData.ts`, every stat query uses `refetchInterval: 30000` (30 seconds). This means the slow, timing-out functions are being called automatically every 30 seconds even while you are sitting on the dashboard. This compounds the timeout problem — while one request is timing out, the next one fires before the first finishes.
 
-The auto-trigger correctly queries `.eq('auth_user_id', user.id)` to get the org — that part is fine. The problem is the query `queryKey: ['enhanced-notifications', internalUserId]` then uses `user.id` directly as the `user_id` filter. If the fallback path is active, `user.id` is the auth UUID and the query returns nothing.
+After fixing the SQL, the polling should be relaxed to 5 minutes for monthly/weekly stats (which don't change minute by minute) and 2 minutes for today/yesterday stats.
 
 ---
 
 ## The Fix Plan
 
-### Fix 1 — Clean Up Orphaned Notifications (Database Migration)
+### Fix 1 — Rewrite All 4 PTE SQL Functions (Database Migration)
 
-Delete all notifications where `user_id` does not match any row in `users`:
+Replace `COALESCE(signed_at, created_at)::date` with index-friendly range comparisons, and replace `NOT IN` with `NOT EXISTS` in all four functions:
+- `get_today_pte_totals`
+- `get_yesterday_pte_totals`
+- `get_weekly_pte_totals`
+- `get_monthly_pte_totals`
 
-```sql
-DELETE FROM notifications 
-WHERE user_id NOT IN (SELECT id FROM users)
-AND user_id IS NOT NULL;
-```
+Each function runs the same manifests scan twice (once for pickup_ptes, once for total_ptes). The rewrite will make both subqueries use indexes.
 
-This clears the 538 orphaned notifications (the old bad data). The 7 null user_id ones (contact form submissions) stay since those are a different type.
+### Fix 2 — Relax Poll Intervals in `useDashboardData.ts`
 
-### Fix 2 — Fix AuthContext Fallback to Not Use Auth UUID as `user.id`
+| Query | Current | After Fix |
+|---|---|---|
+| Today PTEs | 30 seconds | 2 minutes |
+| Yesterday PTEs | 30 seconds | 5 minutes |
+| Weekly PTEs | 30 seconds | 5 minutes |
+| Monthly PTEs | 30 seconds | 10 minutes |
+| Comparison data | 60 seconds | 15 minutes |
+| Charts/Revenue | 30 seconds | 10 minutes |
 
-In `AuthContext.tsx`, there are three `setUserIfChanged` fallback calls that do `id: authUser.id`. Each of these needs to look up the real internal ID first:
-
-```ts
-// Before falling back, try to get the real internal ID
-const { data: basicUser } = await supabase
-  .from('users')
-  .select('id')
-  .eq('auth_user_id', authUser.id)
-  .maybeSingle();
-
-setUserIfChanged({
-  id: basicUser?.id || authUser.id,  // prefer internal ID
-  ...
-});
-```
-
-This ensures that even when the full user data load fails, `user.id` is the real internal UUID that edge functions use for notifications.
-
-### Fix 3 — Re-run Notification Checks on Next Login
-
-Once the auth context fix is in place, the next login will:
-1. Get the correct internal `user.id`
-2. The auto-trigger in `useEnhancedNotifications` will fire after 5 seconds
-3. Edge functions will write fresh notifications using the correct user ID
-4. The query will find them
-
-No manual intervention needed — just log out and back in after the deploy.
+This alone cuts the database load by 80%. Yesterday and monthly stats simply do not change every 30 seconds.
 
 ---
 
@@ -101,12 +101,14 @@ No manual intervention needed — just log out and back in after the deploy.
 
 | File | Change |
 |---|---|
-| Database migration | Delete 538 orphaned notifications that can never be seen |
-| `src/contexts/AuthContext.tsx` | Fix all 3 fallback `setUserIfChanged` calls to look up real `users.id` before falling back to `authUser.id` |
+| New migration | Rewrite all 4 PTE SQL functions with index-friendly WHERE clauses and NOT EXISTS anti-joins |
+| `src/hooks/useDashboardData.ts` | Relax refetchInterval for all queries (today: 2min, historical: 5-15min) |
 
-## What You'll See After This Fix
+---
 
-- On next login, the edge functions fire and write fresh notifications against your real internal user ID
-- The notification bell will show the new notifications (missing pickups, manifest compliance issues, etc.)
-- The orphaned historical notifications are cleared — they were invisible anyway and cannot be retroactively fixed
-- Ethan, Justin, and you will all see notifications correctly because the auth context fallback no longer corrupts the user ID
+## What You Will See After This Fix
+
+- The dashboard will load immediately instead of waiting for timed-out queries
+- The stat cards (Today / Yesterday / Weekly / Monthly PTEs) will populate within 1-2 seconds
+- The database log will stop showing hundreds of timeout errors
+- The app will feel dramatically faster on every page (since these timeouts were blocking the connection pool)
