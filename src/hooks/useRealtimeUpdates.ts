@@ -34,7 +34,7 @@ export function useRealtimeUpdates() {
           table: 'pickups'
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['pickups'], refetchType: 'none' });
+          queryClient.invalidateQueries({ queryKey: ['pickups'] });
         }
       )
       .subscribe();
