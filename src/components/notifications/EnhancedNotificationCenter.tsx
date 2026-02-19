@@ -124,9 +124,26 @@ const NotificationItem = ({ notification, onMarkAsRead, onActionClick, onDelete 
                   onDismiss={onMarkAsRead}
                 />
               )}
+
+              {/* View Manifest action for manifest-related notifications */}
+              {notification.related_type === 'manifest' && notification.related_id && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onActionClick(`/manifests/${notification.related_id}`);
+                    onMarkAsRead(notification.id);
+                  }}
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  View Manifest
+                </Button>
+              )}
               
-              {/* Standard action link */}
-              {notification.action_link && notification.type !== 'missing_pickup' && (
+              {/* Standard action link for non-manifest, non-missing-pickup notifications */}
+              {notification.action_link && notification.type !== 'missing_pickup' && notification.related_type !== 'manifest' && (
                 <Button
                   size="sm"
                   variant="outline"

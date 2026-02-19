@@ -44,8 +44,9 @@ export const useEnhancedNotifications = () => {
   const { createUpdate } = useSystemUpdates();
   const triggeredRef = useRef(false);
   
-  // Use session from AuthContext instead of creating duplicate listener
-  const authUserId = session?.user?.id ?? null;
+  // Use internal users.id (NOT session.user.id which is the auth UUID)
+  // Edge functions store notifications using internal users.id from user_organization_roles
+  const internalUserId = user?.id ?? null;
 
   // Auto-trigger notification checks once per session
   useEffect(() => {
@@ -81,6 +82,11 @@ export const useEnhancedNotifications = () => {
           body: {}
         });
 
+        // Trigger manifest health/compliance check
+        await supabase.functions.invoke('check-manifest-health', {
+          body: { organization_id: orgId }
+        });
+
         console.log('[Notifications] Auto-trigger complete');
       } catch (error) {
         console.error('[Notifications] Auto-trigger error:', error);
@@ -93,22 +99,22 @@ export const useEnhancedNotifications = () => {
   }, [user?.id]);
 
   const { data: notifications, isLoading } = useQuery({
-    queryKey: ['enhanced-notifications', authUserId],
+    queryKey: ['enhanced-notifications', internalUserId],
     queryFn: async () => {
-      if (!authUserId) return [];
+      if (!internalUserId) return [];
 
-      // Query with auth.users.id (from session, not AuthContext)
+      // Query using internal users.id (NOT auth UUID)
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
-        .eq('user_id', authUserId)
+        .eq('user_id', internalUserId)
         .order('created_at', { ascending: false })
         .limit(50);
 
       if (error) throw error;
       return data as EnhancedNotification[];
     },
-    enabled: !!authUserId,
+    enabled: !!internalUserId,
     refetchInterval: 60000, // Refetch every minute
   });
 
@@ -165,12 +171,12 @@ export const useEnhancedNotifications = () => {
 
   const markAllAsRead = useMutation({
     mutationFn: async () => {
-      if (!authUserId) return;
+      if (!internalUserId) return;
 
       const { error } = await supabase
         .from('notifications')
         .update({ is_read: true })
-        .eq('user_id', authUserId)
+        .eq('user_id', internalUserId)
         .eq('is_read', false);
 
       if (error) throw error;
@@ -197,12 +203,12 @@ export const useEnhancedNotifications = () => {
 
   const deleteAllRead = useMutation({
     mutationFn: async () => {
-      if (!authUserId) return;
+      if (!internalUserId) return;
 
       const { error } = await supabase
         .from('notifications')
         .delete()
-        .eq('user_id', authUserId)
+        .eq('user_id', internalUserId)
         .eq('is_read', true);
 
       if (error) throw error;
