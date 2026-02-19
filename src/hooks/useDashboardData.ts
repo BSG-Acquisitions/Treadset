@@ -61,7 +61,7 @@ export function useDashboardData(): DashboardData {
       return { ptes, pounds: ptes * 22 };
     },
     enabled: !!orgId,
-    refetchInterval: 30000,
+    refetchInterval: 2 * 60 * 1000, // 2 minutes — today stats change frequently
   });
 
   // Yesterday's PTEs - timezone aligned via RPC (single call, no duplicate)
@@ -75,7 +75,7 @@ export function useDashboardData(): DashboardData {
       return Number(data[0]?.pickup_ptes || 0) + Number(data[0]?.dropoff_ptes || 0);
     },
     enabled: !!orgId,
-    refetchInterval: 30000,
+    refetchInterval: 5 * 60 * 1000, // 5 minutes — yesterday doesn't change
   });
 
   // Weekly PTEs - timezone aligned via RPC (single call, no duplicate)
@@ -89,7 +89,7 @@ export function useDashboardData(): DashboardData {
       return Number(data[0]?.pickup_ptes || 0) + Number(data[0]?.dropoff_ptes || 0);
     },
     enabled: !!orgId,
-    refetchInterval: 30000,
+    refetchInterval: 5 * 60 * 1000, // 5 minutes — weekly doesn't change minute-to-minute
   });
 
   // Monthly PTEs - timezone aligned via RPC
@@ -103,7 +103,7 @@ export function useDashboardData(): DashboardData {
       return Number(data[0]?.pickup_ptes || 0) + Number(data[0]?.dropoff_ptes || 0);
     },
     enabled: !!orgId,
-    refetchInterval: 30000,
+    refetchInterval: 10 * 60 * 1000, // 10 minutes — monthly data is very stable
   });
 
   // ============= CONSOLIDATED COMPARISON DATA =============
@@ -188,8 +188,8 @@ export function useDashboardData(): DashboardData {
       return { dayBeforeYesterdayPTEs, lastWeekPTEs, lastMonthPTEs };
     },
     enabled: !!orgId,
-    refetchInterval: 60000, // Less frequent for historical data
-    staleTime: 30000,
+    refetchInterval: 15 * 60 * 1000, // 15 minutes — historical comparison data is static
+    staleTime: 10 * 60 * 1000,
   });
 
   // ============= CONSOLIDATED CHART + REVENUE DATA =============
@@ -277,7 +277,7 @@ export function useDashboardData(): DashboardData {
       return { thisMonthRevenue, weeklyChartData: weekDays, monthlyChartData: monthDays };
     },
     enabled: !!orgId,
-    refetchInterval: 30000,
+    refetchInterval: 10 * 60 * 1000, // 10 minutes — chart/revenue data is stable
   });
 
   const isLoading = todayLoading || yesterdayLoading || weeklyLoading || monthlyLoading || comparisonLoading || chartLoading;
