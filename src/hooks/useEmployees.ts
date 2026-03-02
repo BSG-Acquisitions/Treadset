@@ -163,51 +163,21 @@ export const useUpdateEmployee = () => {
         throw new Error('No organization selected');
       }
 
-      // Build update data
-      const updateData: any = {
-        first_name: updates.firstName,
-        last_name: updates.lastName,
-        phone: updates.phone,
-        is_active: updates.isActive
-      };
+      const { data, error } = await supabase.functions.invoke('update-employee', {
+        body: {
+          employeeId,
+          organizationId: user.currentOrganization.id,
+          email: updates.email,
+          firstName: updates.firstName,
+          lastName: updates.lastName,
+          phone: updates.phone,
+          roles: updates.roles,
+          isActive: updates.isActive
+        }
+      });
 
-      // Normalize email to lowercase if provided
-      if (updates.email) {
-        updateData.email = updates.email.toLowerCase().trim();
-      }
-
-      // Update user record in public.users
-      const { error: userError } = await supabase
-        .from('users')
-        .update(updateData)
-        .eq('id', employeeId);
-
-      if (userError) throw userError;
-
-      // Update roles if provided
-      if (updates.roles) {
-        // First, delete existing roles for this user in this organization
-        const { error: deleteError } = await supabase
-          .from('user_organization_roles')
-          .delete()
-          .eq('user_id', employeeId)
-          .eq('organization_id', user.currentOrganization.id);
-
-        if (deleteError) throw deleteError;
-
-        // Then insert new roles
-        const roleInserts = updates.roles.map(role => ({
-          user_id: employeeId,
-          organization_id: user.currentOrganization.id,
-          role: role as 'admin' | 'ops_manager' | 'dispatcher' | 'driver' | 'sales'
-        }));
-
-        const { error: roleError } = await supabase
-          .from('user_organization_roles')
-          .insert(roleInserts);
-
-        if (roleError) throw roleError;
-      }
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
       return { employeeId, updates };
     },
