@@ -80,19 +80,6 @@ export const TrailerAssignmentDropdown: React.FC<TrailerAssignmentDropdownProps>
         <span className="text-sm font-medium">Trailer:</span>
       </div>
 
-      {currentTrailer ? (
-        <Badge className={`flex items-center gap-1 ${getStatusColor(currentTrailer.current_status)}`}>
-          #{currentTrailer.trailer_number}
-          {currentTrailer.current_location && (
-            <span className="text-xs opacity-75">• {currentTrailer.current_location}</span>
-          )}
-        </Badge>
-      ) : (
-        <Badge variant="outline" className="flex items-center gap-1">
-          No Trailer
-        </Badge>
-      )}
-
       <Select
         value={currentTrailerId || "none"}
         onValueChange={handleTrailerChange}
