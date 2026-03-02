@@ -239,3 +239,6 @@ verify_jwt = false
 
 [functions.send-diagnostic-email]
 verify_jwt = false
+
+[functions.update-employee]
+verify_jwt = false
