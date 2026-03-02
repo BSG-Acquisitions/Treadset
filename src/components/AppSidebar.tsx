@@ -80,7 +80,7 @@ export function AppSidebar() {
       { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/dashboard', roles: ['admin', 'ops_manager', 'dispatcher', 'sales'] as const },
     ],
     scheduling: [
-      { id: 'clients', label: 'Clients', icon: Users, path: '/clients', roles: ['admin', 'ops_manager', 'sales'] as const },
+      { id: 'clients', label: 'Clients', icon: Users, path: '/clients', roles: ['admin', 'ops_manager', 'dispatcher', 'sales'] as const },
       { id: 'routes', label: 'Routes', icon: MapPin, path: '/routes/today', roles: ['admin', 'ops_manager', 'dispatcher'] as const },
       { id: 'outbound-schedule', label: 'Outbound', icon: Truck, path: '/outbound-schedule', roles: ['admin', 'ops_manager', 'dispatcher'] as const },
       { id: 'employees', label: 'Employees', icon: UserCheck, path: '/employees', roles: ['admin'] as const },
@@ -131,7 +131,7 @@ export function AppSidebar() {
   // Flat list for regular users
   const navigationItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/dashboard', roles: ['admin', 'ops_manager', 'dispatcher', 'sales'] as const },
-    { id: 'clients', label: 'Clients', icon: Users, path: '/clients', roles: ['admin', 'ops_manager', 'sales'] as const },
+    { id: 'clients', label: 'Clients', icon: Users, path: '/clients', roles: ['admin', 'ops_manager', 'dispatcher', 'sales'] as const },
     { id: 'routes', label: 'Routes', icon: MapPin, path: '/routes/today', roles: ['admin', 'ops_manager', 'dispatcher'] as const },
     { id: 'outbound-schedule', label: 'Outbound', icon: Truck, path: '/outbound-schedule', roles: ['admin', 'ops_manager', 'dispatcher'] as const },
     { id: 'driver-dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/driver/dashboard', roles: ['driver'] as const },
