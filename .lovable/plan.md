@@ -1,17 +1,36 @@
 
 
-## The Issue
+## The Problem
 
-The dispatcher role is already allowed to access the `/clients` route (the `ProtectedRoute` in `App.tsx` at line 169 includes `'dispatcher'`). However, the **sidebar navigation** in `src/components/AppSidebar.tsx` does not include `'dispatcher'` in the roles for the Clients menu item — so the link is hidden from dispatchers even though they have permission to use the page.
+The employee update flow in `useUpdateEmployee` (line ~143 in `src/hooks/useEmployees.ts`) updates the `public.users` table but does **not** update the email in `auth.users`. Supabase Auth is what controls login credentials, so the login email is still the old typo.
 
-The same applies to the permissions reference table in `src/components/settings/RolePermissionsCard.tsx`, which already correctly shows dispatchers can access Clients — so that's consistent with the route. Only the sidebar needs updating.
+## Fix
 
-## Changes
+We need to update the `create-employee` edge function (or create a new `update-employee` edge function) to use `supabaseAdmin.auth.admin.updateUserById()` when the email changes. Since this requires the service role key, it must be done server-side.
 
-**`src/components/AppSidebar.tsx`** — Add `'dispatcher'` to the `roles` array for the Clients nav item in **both** places it appears:
+### Option A — Quick fix for right now
+Update the auth email directly via the Supabase dashboard: go to Authentication > Users, find the user with `dispatch@bsgtire.com`, and manually change it to `dispatch@bsgtires.com`.
 
-- Line 83 (scheduling section): `roles: ['admin', 'ops_manager', 'sales']` → `roles: ['admin', 'ops_manager', 'dispatcher', 'sales']`
-- Line 134 (flat navigationItems): `roles: ['admin', 'ops_manager', 'sales']` → `roles: ['admin', 'ops_manager', 'dispatcher', 'sales']`
+### Option B — Permanent code fix (recommended)
+Create an `update-employee` edge function that:
+1. Accepts the employee ID and updated fields
+2. Verifies the caller is an admin in the organization
+3. Updates `public.users` (name, phone, etc.)
+4. If email changed: calls `supabaseAdmin.auth.admin.updateUserById(authUserId, { email: newEmail })` to update the auth email
+5. Updates roles if changed
 
-That's it — one file, two lines. The route permission and the permissions matrix already include dispatcher.
+Then update `useUpdateEmployee` in `src/hooks/useEmployees.ts` to call this edge function instead of directly updating the database.
+
+### Changes
+
+**New file: `supabase/functions/update-employee/index.ts`**
+- Edge function that uses service role to update both `public.users` and `auth.users`
+- Verifies caller has admin role in the target organization
+- Handles email, name, phone, active status, and role updates
+
+**Modified: `src/hooks/useEmployees.ts`**
+- Change `useUpdateEmployee` mutation to call the new edge function via `supabase.functions.invoke('update-employee', ...)` instead of direct DB updates
+
+### Immediate workaround
+For right now, you can fix this user's login by going to the Supabase dashboard > Authentication > Users and changing the email from `dispatch@bsgtire.com` to `dispatch@bsgtires.com`.
 
