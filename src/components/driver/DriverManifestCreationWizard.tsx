@@ -2230,10 +2230,10 @@ function DriverManifestCreationWizardInner({
 
               {/* Check Number Input - shown when CHECK is selected */}
               {paymentMethod === 'CHECK' && (
-                <Card className="border-primary/30 bg-primary/5">
+                <Card className={`border-primary/30 bg-primary/5 ${!checkNumber.trim() ? 'border-destructive border-2' : ''}`}>
                   <CardContent className="p-4">
                     <Label htmlFor="check-number" className="text-sm font-medium mb-2 block">
-                      Check Number
+                      Check Number <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id="check-number"
@@ -2241,11 +2241,17 @@ function DriverManifestCreationWizardInner({
                       placeholder="Enter check number (e.g. 4521)"
                       value={checkNumber}
                       onChange={(e) => setCheckNumber(e.target.value)}
-                      className="max-w-xs"
+                      className={`max-w-xs ${!checkNumber.trim() ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                     />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      This will be visible to office staff on the route planning page.
-                    </p>
+                    {!checkNumber.trim() ? (
+                      <p className="text-xs text-destructive mt-1 font-medium">
+                        ⚠ Check number is required to complete this stop.
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        This will be visible to office staff on the route planning page.
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
               )}
@@ -2730,7 +2736,13 @@ function DriverManifestCreationWizardInner({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => {
+                disabled={paymentMethod === 'CHECK' && !checkNumber.trim()}
+                onClick={async () => {
+                  // Save check number to both tables if CHECK was selected
+                  if (paymentMethod === 'CHECK' && checkNumber.trim() && createdManifestId) {
+                    await supabase.from('manifests').update({ check_number: checkNumber.trim() }).eq('id', createdManifestId);
+                    await supabase.from('pickups').update({ check_number: checkNumber.trim() }).eq('id', pickupId);
+                  }
                   if (onComplete) {
                     onComplete();
                   } else {
