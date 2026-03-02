@@ -1,36 +1,23 @@
 
 
-## The Problem
+You're right — the training guide has two inaccuracies:
 
-The employee update flow in `useUpdateEmployee` (line ~143 in `src/hooks/useEmployees.ts`) updates the `public.users` table but does **not** update the email in `auth.users`. Supabase Auth is what controls login credentials, so the login email is still the old typo.
+1. **Navigation references "sidebar"** — TreadSet uses a **top navigation bar** on desktop (with dropdowns for Routes, Inventory, Trailers, Reports) and a sidebar only on smaller screens. The guide should describe the top nav layout: logo left, search center, notifications + user menu right, and the nav tabs below (Dashboard, Clients, Routes dropdown, Inventory dropdown, Trailers dropdown, Reports dropdown, Drop-offs).
 
-## Fix
+2. **Dashboard description claims it shows routes/pickups** — The Dashboard is a stats overview page, not a route manager. The guide should clarify that the Dashboard shows summary cards/statistics, and that all pickup and route management happens under **Routes → Today's Routes**.
 
-We need to update the `create-employee` edge function (or create a new `update-employee` edge function) to use `supabaseAdmin.auth.admin.updateUserById()` when the email changes. Since this requires the service role key, it must be done server-side.
+### What needs to change in the guide
 
-### Option A — Quick fix for right now
-Update the auth email directly via the Supabase dashboard: go to Authentication > Users, find the user with `dispatch@bsgtire.com`, and manually change it to `dispatch@bsgtires.com`.
+**Section 1 (Getting Started → Navigation):**
+- Replace all "sidebar" references with "top navigation bar"
+- Describe the actual layout: nav tabs across the top (Dashboard, Clients, Routes ▾, Inventory ▾, Trailers ▾, Reports ▾, Drop-offs)
+- Mention the user menu (top right) for accessing Booking Requests, Manifests, Employees, Settings, etc.
+- Note that on mobile/tablet, a sidebar hamburger menu appears instead
 
-### Option B — Permanent code fix (recommended)
-Create an `update-employee` edge function that:
-1. Accepts the employee ID and updated fields
-2. Verifies the caller is an admin in the organization
-3. Updates `public.users` (name, phone, etc.)
-4. If email changed: calls `supabaseAdmin.auth.admin.updateUserById(authUserId, { email: newEmail })` to update the auth email
-5. Updates roles if changed
+**Section 2 (Dashboard):**
+- Remove claims about seeing "today's pickups, active routes" on the Dashboard
+- Rewrite to accurately describe what the Dashboard actually shows (summary statistics and overview cards)
+- Direct the user to **Routes → Today's Routes** for the daily pickup view
 
-Then update `useUpdateEmployee` in `src/hooks/useEmployees.ts` to call this edge function instead of directly updating the database.
-
-### Changes
-
-**New file: `supabase/functions/update-employee/index.ts`**
-- Edge function that uses service role to update both `public.users` and `auth.users`
-- Verifies caller has admin role in the target organization
-- Handles email, name, phone, active status, and role updates
-
-**Modified: `src/hooks/useEmployees.ts`**
-- Change `useUpdateEmployee` mutation to call the new edge function via `supabase.functions.invoke('update-employee', ...)` instead of direct DB updates
-
-### Immediate workaround
-For right now, you can fix this user's login by going to the Supabase dashboard > Authentication > Users and changing the email from `dispatch@bsgtire.com` to `dispatch@bsgtires.com`.
+No code changes needed — this is a content correction to the text document I provided. I'll rewrite those two sections with the correct information when you approve.
 
