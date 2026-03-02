@@ -76,7 +76,9 @@ Available query types:
 - client_risk: At-risk clients (params: risk_level)
 - route_call_list: Recommend clients to call near scheduled route stops (params: date, driver_id, limit)
 
-Time periods: today, this_week, last_week, this_month, last_month, this_year
+Time periods: today, this_week, last_week, this_month, last_month, this_year, ytd, last_year
+For specific months, use "month" (1-12) and "year" (e.g. 2025) parameters instead of "period".
+Examples: "December 2025" → month: 12, year: 2025. "January 2026" → month: 1, year: 2026. "Last month" → period: "last_month".
 Risk levels: high, medium, low
 
 For route_call_list queries:
@@ -109,6 +111,8 @@ Return ONLY valid JSON.`
                   type: 'object',
                   properties: {
                     period: { type: 'string' },
+                    month: { type: 'number', description: 'Month number 1-12 for specific month queries' },
+                    year: { type: 'number', description: 'Year e.g. 2025 for specific month/year queries' },
                     limit: { type: 'number' },
                     threshold: { type: 'number' },
                     days: { type: 'number' },
@@ -165,32 +169,147 @@ Return ONLY valid JSON.`
       }
 
       case 'pte_processed': {
-        const period = parsedQuery.parameters.period || 'this_week';
-        let dateFilter = new Date();
+        const period = parsedQuery.parameters.period;
+        const month = parsedQuery.parameters.month;
+        const year = parsedQuery.parameters.year;
         
-        if (period === 'today') {
-          dateFilter.setHours(0, 0, 0, 0);
-        } else if (period === 'this_week') {
-          dateFilter.setDate(dateFilter.getDate() - 7);
-        } else if (period === 'this_month') {
-          dateFilter.setDate(1);
+        let startDate: Date;
+        let endDate: Date;
+        let periodLabel: string;
+
+        if (month && year) {
+          // Specific month/year query (e.g. December 2025)
+          startDate = new Date(Date.UTC(year, month - 1, 1));
+          endDate = new Date(Date.UTC(year, month, 1));
+          const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+          periodLabel = `${monthNames[month - 1]} ${year}`;
+        } else if (year && !month) {
+          startDate = new Date(Date.UTC(year, 0, 1));
+          endDate = new Date(Date.UTC(year + 1, 0, 1));
+          periodLabel = `${year}`;
+        } else {
+          const now = new Date();
+          switch (period) {
+            case 'today':
+              startDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+              endDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate() + 1));
+              periodLabel = 'today';
+              break;
+            case 'this_week':
+              startDate = new Date(now);
+              startDate.setDate(startDate.getDate() - 7);
+              endDate = new Date(now);
+              endDate.setDate(endDate.getDate() + 1);
+              periodLabel = 'this week';
+              break;
+            case 'last_week':
+              startDate = new Date(now);
+              startDate.setDate(startDate.getDate() - 14);
+              endDate = new Date(now);
+              endDate.setDate(endDate.getDate() - 7);
+              periodLabel = 'last week';
+              break;
+            case 'last_month': {
+              const lm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+              startDate = new Date(Date.UTC(lm.getFullYear(), lm.getMonth(), 1));
+              endDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
+              periodLabel = 'last month';
+              break;
+            }
+            case 'ytd':
+              startDate = new Date(Date.UTC(now.getFullYear(), 0, 1));
+              endDate = new Date(now);
+              endDate.setDate(endDate.getDate() + 1);
+              periodLabel = 'year to date';
+              break;
+            case 'last_year':
+              startDate = new Date(Date.UTC(now.getFullYear() - 1, 0, 1));
+              endDate = new Date(Date.UTC(now.getFullYear(), 0, 1));
+              periodLabel = `${now.getFullYear() - 1}`;
+              break;
+            case 'this_month':
+            default:
+              startDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
+              endDate = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 1));
+              periodLabel = 'this month';
+              break;
+          }
         }
 
-        const { data, error } = await supabase
+        const startStr = startDate.toISOString();
+        const endStr = endDate.toISOString();
+
+        console.log('PTE query range:', startStr, 'to', endStr);
+
+        // Query manifests with full PTE formula using COALESCE(signed_at, created_at)
+        const { data: manifestData, error: manifestError } = await supabase
           .from('manifests')
-          .select('pte_on_rim, pte_off_rim')
+          .select('pte_on_rim, pte_off_rim, commercial_17_5_19_5_off, commercial_17_5_19_5_on, commercial_22_5_off, commercial_22_5_on, tractor_count, otr_count, signed_at, created_at')
           .eq('organization_id', organizationId)
-          .eq('status', 'COMPLETED')
-          .gte('created_at', dateFilter.toISOString());
+          .in('status', ['COMPLETED', 'AWAITING_RECEIVER_SIGNATURE'])
+          .gte('signed_at', startStr)
+          .lt('signed_at', endStr);
 
-        if (error) throw error;
+        if (manifestError) throw manifestError;
 
-        const totalPtes = data.reduce((sum, m) => sum + (m.pte_on_rim || 0) + (m.pte_off_rim || 0), 0);
+        // Also get manifests where signed_at is null but created_at is in range
+        const { data: unsignedData, error: unsignedError } = await supabase
+          .from('manifests')
+          .select('pte_on_rim, pte_off_rim, commercial_17_5_19_5_off, commercial_17_5_19_5_on, commercial_22_5_off, commercial_22_5_on, tractor_count, otr_count, signed_at, created_at')
+          .eq('organization_id', organizationId)
+          .in('status', ['COMPLETED', 'AWAITING_RECEIVER_SIGNATURE'])
+          .is('signed_at', null)
+          .gte('created_at', startStr)
+          .lt('created_at', endStr);
+
+        if (unsignedError) throw unsignedError;
+
+        const allManifests = [...(manifestData || []), ...(unsignedData || [])];
+
+        // Full PTE formula: pte_on_rim + pte_off_rim + 5*(commercial types + tractor) + 15*otr
+        const manifestPtes = allManifests.reduce((sum, m) => {
+          return sum +
+            (m.pte_on_rim || 0) + (m.pte_off_rim || 0) +
+            5 * (
+              (m.commercial_17_5_19_5_off || 0) + (m.commercial_17_5_19_5_on || 0) +
+              (m.commercial_22_5_off || 0) + (m.commercial_22_5_on || 0) +
+              (m.tractor_count || 0)
+            ) +
+            15 * (m.otr_count || 0);
+        }, 0);
+
+        // Query dropoffs
+        const dateOnlyStart = startStr.split('T')[0];
+        const dateOnlyEnd = endStr.split('T')[0];
+        
+        const { data: dropoffData, error: dropoffError } = await supabase
+          .from('dropoffs')
+          .select('pte_count, otr_count, tractor_count')
+          .eq('organization_id', organizationId)
+          .gte('dropoff_date', dateOnlyStart)
+          .lt('dropoff_date', dateOnlyEnd);
+
+        if (dropoffError) throw dropoffError;
+
+        const dropoffPtes = (dropoffData || []).reduce((sum, d) => {
+          return sum + (d.pte_count || 0) + 15 * (d.otr_count || 0) + 5 * (d.tractor_count || 0);
+        }, 0);
+
+        const totalPtes = manifestPtes + dropoffPtes;
+        const estimatedTons = Math.round(totalPtes / 89 * 10) / 10;
 
         result = {
           type: 'pte_processed',
-          data: { total: totalPtes, period },
-          summary: `Processed ${totalPtes} PTEs ${period}`
+          data: { 
+            total: totalPtes, 
+            manifest_ptes: manifestPtes,
+            dropoff_ptes: dropoffPtes,
+            manifest_count: allManifests.length,
+            dropoff_count: (dropoffData || []).length,
+            estimated_tons: estimatedTons,
+            period: periodLabel 
+          },
+          summary: `${periodLabel}: ${totalPtes.toLocaleString()} total PTEs (${estimatedTons} tons) — ${manifestPtes.toLocaleString()} from ${allManifests.length} manifests, ${dropoffPtes.toLocaleString()} from ${(dropoffData || []).length} drop-offs`
         };
         break;
       }
