@@ -10,6 +10,18 @@ export const useGenerateDropoffManifest = () => {
 
   return useMutation({
     mutationFn: async (dropoffId: string) => {
+      // 0. Idempotency check — prevent duplicate manifests for the same dropoff
+      const { data: existingManifest } = await supabase
+        .from('manifests')
+        .select('id')
+        .eq('dropoff_id', dropoffId)
+        .limit(1)
+        .maybeSingle();
+
+      if (existingManifest) {
+        throw new Error('A manifest already exists for this drop-off');
+      }
+
       // 1. Fetch the dropoff with all related data
       const { data: dropoffData, error: dropoffError } = await supabase
         .from('dropoffs')

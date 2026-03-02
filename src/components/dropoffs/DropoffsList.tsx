@@ -88,6 +88,7 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
   const navigate = useNavigate();
   const generateManifest = useGenerateDropoffManifest();
   const deleteDropoff = useDeleteDropoff();
+  const [generatingDropoffId, setGeneratingDropoffId] = useState<string | null>(null);
   
   const handleDelete = () => {
     if (deleteDropoffId) {
@@ -357,10 +358,15 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
                 <Button 
                   size="sm" 
                   variant="default"
-                  onClick={() => generateManifest.mutate(dropoff.id)}
-                  disabled={generateManifest.isPending}
+                  onClick={() => {
+                    setGeneratingDropoffId(dropoff.id);
+                    generateManifest.mutate(dropoff.id, {
+                      onSettled: () => setGeneratingDropoffId(null),
+                    });
+                  }}
+                  disabled={generatingDropoffId === dropoff.id || generateManifest.isPending}
                 >
-                  {generateManifest.isPending ? (
+                  {generatingDropoffId === dropoff.id ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       Generating...
@@ -410,8 +416,13 @@ export const DropoffsList = ({ dropoffs, loading, searchTerm }: DropopffsListPro
                     </DropdownMenuItem>
                     {!dropoff.manifest_id && (
                       <DropdownMenuItem 
-                        onClick={() => generateManifest.mutate(dropoff.id)}
-                        disabled={generateManifest.isPending}
+                        onClick={() => {
+                          setGeneratingDropoffId(dropoff.id);
+                          generateManifest.mutate(dropoff.id, {
+                            onSettled: () => setGeneratingDropoffId(null),
+                          });
+                        }}
+                        disabled={generatingDropoffId === dropoff.id || generateManifest.isPending}
                       >
                         <FileText className="h-4 w-4 mr-2" />
                         Generate Manifest
