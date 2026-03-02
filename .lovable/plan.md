@@ -1,49 +1,68 @@
 
 
-## Why the AI Assistant Returns Zero
+## Root Cause
 
-The `pte_processed` handler in the AI assistant edge function (lines 167-196) has four critical bugs:
+The walk-in drop-off with 6 PTEs was clicked "Generate Manifest" 4 times in rapid succession (within ~20 seconds). Each click created a new manifest record with 6 PTEs. The database now has:
+- **1 dropoff** record (correct) with `manifest_id = NULL` (because `requires_manifest = false`)
+- **4 manifest** records all pointing to the same dropoff via `dropoff_id`
 
-1. **No support for specific months/years** — It only understands `today`, `this_week`, `this_month`. When you ask "How many tires in December 2025?", the AI maps it to `pte_processed` with a period it can't handle, so the date filter defaults to "now" and finds nothing.
+The RPC `get_today_pte_totals` deduplicates by checking `NOT EXISTS (SELECT 1 FROM dropoffs WHERE manifest_id = manifests.id)`. But since the dropoff's `manifest_id` is null, none of the 4 manifests get excluded. Result: 4 × 6 = 24 extra PTEs → 484 instead of 460.
 
-2. **Incomplete PTE calculation** — It only sums `pte_on_rim + pte_off_rim`, ignoring commercial tires (×5), OTR (×15), and tractor (×5). This alone would undercount by ~50%.
+## Two bugs enabling this
 
-3. **Uses `created_at` instead of `signed_at`** — Per business rules, manifests should be counted by completion time.
+**Bug 1: No idempotency in `useGenerateDropoffManifest`** — The hook blindly creates a new manifest every call. It never checks whether a manifest already exists for that `dropoff_id`.
 
-4. **Ignores drop-offs entirely** — The query only hits `manifests`, missing the 20,855 PTEs from drop-offs in December 2025.
-
-5. **Missing status** — Only checks `COMPLETED`, misses `AWAITING_RECEIVER_SIGNATURE`.
+**Bug 2: Insufficient button disabling** — The "Generate Manifest" button checks `generateManifest.isPending` (a shared boolean), but multiple rapid clicks can queue mutations before the first one completes and updates `dropoff.manifest_id`.
 
 ## Plan
 
-### Rewrite the `pte_processed` case in `supabase/functions/ai-assistant/index.ts`
+### Step 1: Immediate data fix — delete the 3 duplicate manifests
 
-**Step 1: Expand the AI's period vocabulary**
+Delete the 3 orphan manifests for this walk-in drop-off (keeping the earliest one), and optionally link it to the dropoff record. This immediately corrects the count from 484 → 460.
 
-Update the system prompt (line 79) to include specific month/year periods:
-- Add format: `month_year` (e.g., `december_2025`, `january_2026`)
-- Add `last_month`, `last_year`, `ytd` periods
-- Add new parameters: `month` (1-12) and `year` (2024, 2025, 2026)
+### Step 2: Add idempotency guard to `useGenerateDropoffManifest`
 
-**Step 2: Rewrite the `pte_processed` database query (lines 167-196)**
+**File: `src/hooks/useGenerateDropoffManifest.ts`**
 
-- Parse specific month+year parameters into proper date ranges
-- Use the comprehensive PTE formula matching `_compute_manifest_ptes`: `pte_on_rim + pte_off_rim + 5*(commercial_17_5_19_5_off + commercial_17_5_19_5_on + commercial_22_5_off + commercial_22_5_on + tractor_count) + 15*otr_count`
-- Use `COALESCE(signed_at, created_at)` for date filtering
-- Include both `COMPLETED` and `AWAITING_RECEIVER_SIGNATURE` statuses
-- Also query the `dropoffs` table and combine totals
-- Return breakdown: manifest PTEs, drop-off PTEs, total PTEs, estimated tons (÷89)
+Before creating a new manifest, check if one already exists for this dropoff:
+```typescript
+// Check if manifest already exists for this dropoff
+const { data: existingManifest } = await supabase
+  .from('manifests')
+  .select('id')
+  .eq('dropoff_id', dropoffId)
+  .limit(1)
+  .maybeSingle();
 
-**Step 3: Update the tool schema (lines 96-127)**
+if (existingManifest) {
+  throw new Error('A manifest already exists for this drop-off');
+}
+```
 
-Add `month` and `year` as optional parameters so the AI can pass specific time ranges like December 2025.
+### Step 3: Add per-dropoff mutation tracking to prevent rapid clicks
 
-### Summary of changes
+**File: `src/components/dropoffs/DropoffsList.tsx`**
 
-One file: `supabase/functions/ai-assistant/index.ts`
-- ~15 lines changed in system prompt
-- ~5 lines added to tool schema
-- ~50 lines rewritten in the `pte_processed` case
+Track which dropoff ID is currently generating a manifest:
+- Add state: `const [generatingDropoffId, setGeneratingDropoffId] = useState<string | null>(null)`
+- Disable the button per-row: `disabled={generatingDropoffId === dropoff.id || generateManifest.isPending}`
+- Set/clear the ID around the mutation call
 
-After this fix, asking "How many tires did we bring in for December 2025?" will return: **47,054 PTEs (529 tons) — 26,199 from manifests, 20,855 from drop-offs across 146 completed manifests.**
+### Step 4: Add database-level unique constraint (defense in depth)
+
+Add a unique index on `manifests.dropoff_id` (where not null) to prevent duplicate manifests at the database level, regardless of UI race conditions:
+```sql
+CREATE UNIQUE INDEX IF NOT EXISTS idx_manifests_unique_dropoff 
+ON manifests(dropoff_id) WHERE dropoff_id IS NOT NULL;
+```
+
+This is the strongest protection — even if the UI fails, the database rejects duplicates.
+
+### Technical details
+
+**Files changed:**
+- `src/hooks/useGenerateDropoffManifest.ts` — add existence check before insert (~5 lines)
+- `src/components/dropoffs/DropoffsList.tsx` — add per-row disable tracking (~8 lines)
+- Database migration — unique partial index on `manifests.dropoff_id`
+- Data cleanup — delete 3 duplicate manifests
 
