@@ -179,6 +179,7 @@ export const useUpdateTrailerRoute = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trailer-routes'] });
+      queryClient.invalidateQueries({ queryKey: ['driver-trailer-routes'] });
       toast.success('Route updated');
     },
     onError: (error: Error) => {
