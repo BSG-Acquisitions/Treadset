@@ -1,43 +1,24 @@
 
 
-## Getting Jody Green Squared Away
+## Show Trailer Routes on Driver Dashboard
 
-### The Core Bug
+### Problem
+Jody's assignment is a **trailer route** (stored in the `trailer_routes` table), but the Driver Dashboard only queries the `assignments` table via `useDriverAssignments`. Trailer routes are only visible on the separate `/driver/trailer-assignments` page. This makes Jody's dashboard appear empty even when she has work scheduled.
 
-The AuthContext correctly resolves Jody's `user.id` to her **`users` table PK** (`55967bd4...`). However, several hooks then incorrectly query `users` with `auth_user_id = user.id` — treating the users table PK as if it were the auth UUID. This causes repeated **406 errors** (0 rows returned with `.single()`).
+### Solution
+Add trailer route data to the Driver Dashboard so drivers with `semi_hauler` capability see their trailer assignments alongside (or instead of) regular pickup assignments.
 
-Her auth UUID is `6090e705...`, her users table id is `55967bd4...`. The hooks are passing the wrong one.
+### Changes
 
-### Affected Hooks
+**1. `src/pages/DriverDashboard.tsx`**
+- Import `useDriverTrailerRoutes` hook and check `hasSemiHauler`
+- In the "Today's Assignments" card, also fetch and display today's trailer routes for semi_hauler drivers
+- Show trailer route entries with destination name, trailer number, and status
+- Include trailer routes in the stats counts (Today's Routes, Completed)
+- Link each trailer route entry to the trailer assignments detail view
 
-These hooks use `user.id` (from AuthContext) as `auth_user_id` when they should use it directly as the users table `id`:
+**2. No backend changes needed** — the `useDriverTrailerRoutes` hook and `driver_capabilities` table already exist and work correctly. Jody already has the `semi_hauler` capability.
 
-1. **`useDriverCapabilities.ts`** — `useCurrentUserCapabilities` (line 44) and `useGrantCapability` (line 134)
-2. **`useStopTrailerEvents.ts`** — `completeTrailerEvent` mutation (line 87)
-3. **`useOutboundManifests.ts`** — multiple places (lines 60, 171, 346)
-4. **`useEnhancedNotifications.ts`** — line 60
-5. **`useStripePayment.ts`** — line 78
-6. **`useIndependentHaulers.ts`** — line 78
-7. **`useHaulerRelationships.ts`** — line 96
-
-### The Fix
-
-In each of these hooks, replace the pattern:
-```typescript
-// WRONG: user.id is already the users table PK
-const { data: userData } = await supabase
-  .from('users')
-  .select('id')
-  .eq('auth_user_id', user.id)  
-  .single();
-```
-
-With simply using `user.id` directly, since it's already the internal users table ID. No extra lookup needed.
-
-### Scope
-
-- Fix all ~7 hooks that have this redundant (and broken) lookup pattern
-- No database changes needed
-- No edge function changes needed
-- This will fix the 406 errors Jody is experiencing and ensure capabilities, trailer events, manifests, notifications, etc. all work correctly for her
+### Result
+When Jody opens her Driver Dashboard, she'll see her "Entech" trailer route for today in the "Today's Assignments" section, with the trailer number and a link to manage it.
 
