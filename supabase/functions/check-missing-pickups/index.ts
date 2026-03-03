@@ -7,8 +7,8 @@ const corsHeaders = {
 };
 
 const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const EMAIL_FREQUENCY_DAYS = 14; // Only email clients every 14 days
-const INACTIVE_THRESHOLD_DAYS = 30; // Email clients inactive for 30+ days
+const EMAIL_FREQUENCY_DAYS = 14;
+const INACTIVE_THRESHOLD_DAYS = 30;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -25,13 +25,13 @@ Deno.serve(async (req) => {
     const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
     let organization_id: string | null = null;
-    let sendEmails = true; // Default to sending emails
+    let sendEmails = true;
     try {
       const body = await req.json();
       organization_id = body.organization_id;
       if (body.sendEmails === false) sendEmails = false;
     } catch {
-      // No body - will check all orgs
+      // No body
     }
 
     // Get organizations to check
@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
     const { data: orgs, error: orgsError } = await orgsQuery;
     if (orgsError) throw orgsError;
 
-    console.log(`[MISSING_PICKUPS] Checking ${orgs?.length || 0} organization(s), sendEmails: ${sendEmails}`);
+    console.log(`[MISSING_PICKUPS] Checking ${orgs?.length || 0} org(s), sendEmails: ${sendEmails}`);
     
     let totalNotifications = 0;
     let totalEmailsSent = 0;
@@ -50,91 +50,129 @@ Deno.serve(async (req) => {
     const today = new Date();
     const currentDayOfWeek = today.getDay();
     const currentWeekOfMonth = Math.ceil(today.getDate() / 7);
+    const todayStr = today.toISOString().split('T')[0];
     const endDate = new Date(today);
     endDate.setDate(today.getDate() + 7);
-    const thirtyDaysAgo = new Date(today);
-    thirtyDaysAgo.setDate(today.getDate() - INACTIVE_THRESHOLD_DAYS);
-    
-    // Track clients already processed by pattern-based system
-    const processedClientIds = new Set<string>();
+    const endDateStr = endDate.toISOString().split('T')[0];
+    const threeDaysAgo = new Date(today);
+    threeDaysAgo.setDate(today.getDate() - 3);
+    const threeDaysAgoStr = threeDaysAgo.toISOString();
     
     for (const org of orgs || []) {
       const orgId = org.id;
       const orgName = org.name || 'TreadSet';
       const orgLogo = org.logo_url || '/treadset-logo.png';
-      console.log(`[MISSING_PICKUPS] Processing org: ${orgId}`);
 
-      // Get admin users to create notifications for
+      // ---- BATCH: Get admin users ----
       const { data: adminUsers, error: usersError } = await supabase
         .from('user_organization_roles')
-        .select('user_id, users!inner(auth_user_id)')
+        .select('user_id')
         .eq('organization_id', orgId)
         .in('role', ['admin', 'ops_manager', 'dispatcher']);
 
-      if (usersError) {
-        console.error(`[MISSING_PICKUPS] Error getting admin users for org ${orgId}:`, usersError);
-        continue;
-      }
+      if (usersError || !adminUsers?.length) continue;
+      const userIds = adminUsers.map(u => u.user_id).filter(Boolean);
 
-      if (!adminUsers || adminUsers.length === 0) {
-        console.log(`[MISSING_PICKUPS] No admin users found for org ${orgId}`);
-        continue;
-      }
+      // ---- BATCH: Get all active clients for this org ----
+      const { data: allClients } = await supabase
+        .from('clients')
+        .select('id, company_name, email, contact_name, is_active, last_pickup_at')
+        .eq('organization_id', orgId)
+        .eq('is_active', true);
+
+      if (!allClients?.length) continue;
+      const allClientIds = allClients.map(c => c.id);
+
+      // ---- BATCH: Get pickup counts per client (one query) ----
+      const { data: pickupCounts } = await supabase
+        .from('pickups')
+        .select('client_id')
+        .in('client_id', allClientIds)
+        .eq('organization_id', orgId);
       
-      // Use internal user_id (not auth_user_id) for notifications.user_id FK
-      const userIds = adminUsers
-        .map(u => u.user_id)
-        .filter(Boolean);
+      const clientHasPickups = new Set<string>();
+      for (const p of pickupCounts || []) {
+        clientHasPickups.add(p.client_id);
+      }
 
-      const notificationsToCreate: any[] = [];
+      // ---- BATCH: Get dropoff counts per client (one query) ----
+      const { data: dropoffCounts } = await supabase
+        .from('dropoffs')
+        .select('client_id')
+        .in('client_id', allClientIds)
+        .eq('organization_id', orgId);
+      
+      const clientHasDropoffs = new Set<string>();
+      for (const d of dropoffCounts || []) {
+        clientHasDropoffs.add(d.client_id);
+      }
 
-      // ============ PASS 1: PATTERN-BASED CLIENTS ============
-      // Only include clients who have pickups (not dropoff-only clients)
-      const { data: patterns, error: patternsError } = await supabase
+      // ---- BATCH: Get clients scheduled in next 7 days (one query) ----
+      const { data: scheduledPickups } = await supabase
+        .from('pickups')
+        .select('client_id')
+        .in('client_id', allClientIds)
+        .eq('organization_id', orgId)
+        .gte('pickup_date', todayStr)
+        .lte('pickup_date', endDateStr)
+        .in('status', ['scheduled', 'in_progress', 'completed']);
+      
+      const clientIsScheduled = new Set<string>();
+      for (const p of scheduledPickups || []) {
+        clientIsScheduled.add(p.client_id);
+      }
+
+      // ---- BATCH: Get existing recent notifications to deduplicate ----
+      const { data: existingNotifs } = await supabase
+        .from('notifications')
+        .select('user_id, title')
+        .eq('organization_id', orgId)
+        .eq('type', 'missing_pickup')
+        .gte('created_at', threeDaysAgoStr)
+        .in('user_id', userIds);
+      
+      // Build a Set of "userId::clientName" for fast dedup
+      const existingNotifKeys = new Set<string>();
+      for (const n of existingNotifs || []) {
+        // Extract client name from title for dedup
+        existingNotifKeys.add(`${n.user_id}::${n.title}`);
+      }
+
+      // ---- BATCH: Get patterns for this org ----
+      const { data: patterns } = await supabase
         .from('client_pickup_patterns')
-        .select(`
-          *,
-          client:clients!inner(id, company_name, email, contact_name, is_active)
-        `)
+        .select('*, client:clients!inner(id, company_name, email, contact_name, is_active)')
         .eq('organization_id', orgId)
         .gte('confidence_score', 60)
         .neq('frequency', 'irregular');
-      
-      // Filter to only pickup clients (clients who have at least 1 pickup OR no dropoffs)
-      // This excludes dropoff-only clients who should not receive pickup scheduling emails
 
-      if (patternsError) {
-        console.error(`[MISSING_PICKUPS] Error getting patterns for org ${orgId}:`, patternsError);
-      }
+      const notificationsToCreate: any[] = [];
+      const processedClientIds = new Set<string>();
 
+      // Helper to check if notification already exists
+      const hasRecentNotif = (userId: string, title: string) => {
+        return existingNotifKeys.has(`${userId}::${title}`);
+      };
+
+      // Helper: is dropoff-only client?
+      const isDropoffOnly = (clientId: string) => {
+        return clientHasDropoffs.has(clientId) && !clientHasPickups.has(clientId);
+      };
+
+      // ============ PASS 1: PATTERN-BASED CLIENTS ============
       for (const pattern of patterns || []) {
         const client = pattern.client;
-        if (!client || !client.is_active) continue;
-        
-        // Check if this is a dropoff-only client (skip them)
-        const { count: pickupCount } = await supabase
-          .from('pickups')
-          .select('id', { count: 'exact', head: true })
-          .eq('client_id', client.id);
-        
-        const { count: dropoffCount } = await supabase
-          .from('dropoffs')
-          .select('id', { count: 'exact', head: true })
-          .eq('client_id', client.id);
-        
-        // Skip if this is a dropoff-only client (has dropoffs but no pickups)
-        if ((dropoffCount || 0) > 0 && (pickupCount || 0) === 0) {
+        if (!client?.is_active) continue;
+        if (isDropoffOnly(client.id)) {
           console.log(`[MISSING_PICKUPS] Skipping dropoff-only client: ${client.company_name}`);
           continue;
         }
         
-        // Track this client as processed
         processedClientIds.add(client.id);
 
-        // Check if client should be picked up in the next week
+        // Check if should be scheduled
         let shouldBeScheduled = false;
         let scheduleReason = '';
-
         const daysSinceLastPickup = pattern.last_pickup_date 
           ? Math.round((today.getTime() - new Date(pattern.last_pickup_date).getTime()) / (1000 * 60 * 60 * 24))
           : 999;
@@ -168,77 +206,26 @@ Deno.serve(async (req) => {
         }
 
         if (!shouldBeScheduled) continue;
+        if (clientIsScheduled.has(client.id)) continue;
 
-        // Check if client is already scheduled in the next 7 days
-        const { data: scheduledPickups } = await supabase
-          .from('pickups')
-          .select('id')
-          .eq('client_id', client.id)
-          .eq('organization_id', orgId)
-          .gte('pickup_date', today.toISOString().split('T')[0])
-          .lte('pickup_date', endDate.toISOString().split('T')[0])
-          .in('status', ['scheduled', 'in_progress', 'completed']);
-
-        if (scheduledPickups && scheduledPickups.length > 0) {
-          continue;
-        }
-
-        // ============ SEND AUTOMATED OUTREACH EMAIL ============
+        // Send email (sequential is fine - these are few)
         if (sendEmails && resend && client.email) {
-          await sendOutreachEmail(
-            supabase,
-            resend,
-            orgId,
-            orgName,
-            orgLogo,
-            client,
-            daysSinceLastPickup,
-            pattern.frequency,
-            pattern.typical_day_of_week,
-            'pattern'
-          ).then(sent => {
-            if (sent) totalEmailsSent++;
-          });
+          const sent = await sendOutreachEmail(
+            supabase, resend, orgId, orgName, orgLogo, client,
+            daysSinceLastPickup, pattern.frequency, pattern.typical_day_of_week, 'pattern'
+          );
+          if (sent) totalEmailsSent++;
         }
 
-        // ============ CREATE IN-APP NOTIFICATION ============
-        const threeDaysAgo = new Date(today);
-        threeDaysAgo.setDate(today.getDate() - 3);
-
-        const dayName = pattern.typical_day_of_week !== null 
-          ? DAYS_OF_WEEK[pattern.typical_day_of_week] 
-          : 'this week';
-        
-        const frequencyText = pattern.frequency === 'weekly' 
-          ? 'weekly' 
-          : pattern.frequency === 'biweekly' 
-          ? 'every 2 weeks' 
-          : 'monthly';
-        
-        const confidenceEmoji = pattern.confidence_score >= 80 
-          ? '🎯' 
-          : pattern.confidence_score >= 60 
-          ? '✓' 
-          : '~';
-
+        // Create notifications
+        const dayName = pattern.typical_day_of_week !== null ? DAYS_OF_WEEK[pattern.typical_day_of_week] : 'this week';
+        const frequencyText = pattern.frequency === 'weekly' ? 'weekly' : pattern.frequency === 'biweekly' ? 'every 2 weeks' : 'monthly';
+        const confidenceEmoji = pattern.confidence_score >= 80 ? '🎯' : pattern.confidence_score >= 60 ? '✓' : '~';
         const notificationTitle = `${client.company_name} may need scheduling`;
 
-        // Create notification for EACH admin user - with per-user deduplication
         for (const userId of userIds) {
-          const { data: existingNotifs } = await supabase
-            .from('notifications')
-            .select('id')
-            .eq('user_id', userId)
-            .eq('organization_id', orgId)
-            .eq('type', 'missing_pickup')
-            .ilike('title', `%${client.company_name}%`)
-            .gte('created_at', threeDaysAgo.toISOString());
-
-          if (existingNotifs && existingNotifs.length > 0) {
-            console.log(`[MISSING_PICKUPS] Skipping duplicate for user ${userId}, client ${client.company_name}`);
-            continue;
-          }
-
+          if (hasRecentNotif(userId, notificationTitle)) continue;
+          
           notificationsToCreate.push({
             user_id: userId,
             organization_id: orgId,
@@ -260,82 +247,31 @@ Deno.serve(async (req) => {
         console.log(`[MISSING_PICKUPS] Processed pattern-based notifications for ${client.company_name}`);
       }
 
-      // ============ PASS 2: 30-DAY INACTIVE CLIENTS (NO PATTERN REQUIRED) ============
+      // ============ PASS 2: 30-DAY INACTIVE CLIENTS ============
       console.log(`[MISSING_PICKUPS] Starting 30-day inactive client check for org ${orgId}`);
       
-      const { data: inactiveClients, error: inactiveError } = await supabase
-        .from('clients')
-        .select('id, company_name, email, contact_name, last_pickup_at')
-        .eq('organization_id', orgId)
-        .eq('is_active', true)
-        .not('email', 'is', null);
-
-      if (inactiveError) {
-        console.error(`[MISSING_PICKUPS] Error getting inactive clients for org ${orgId}:`, inactiveError);
-      }
-
-      for (const client of inactiveClients || []) {
-        // Skip if already processed by pattern-based system
-        if (processedClientIds.has(client.id)) {
-          continue;
-        }
-
-        // Check if this is a dropoff-only client (skip them)
-        const { count: pickupCount } = await supabase
-          .from('pickups')
-          .select('id', { count: 'exact', head: true })
-          .eq('client_id', client.id);
-        
-        const { count: dropoffCount } = await supabase
-          .from('dropoffs')
-          .select('id', { count: 'exact', head: true })
-          .eq('client_id', client.id);
-        
-        // Skip if this is a dropoff-only client (has dropoffs but no pickups)
-        if ((dropoffCount || 0) > 0 && (pickupCount || 0) === 0) {
+      for (const client of allClients) {
+        if (processedClientIds.has(client.id)) continue;
+        if (!client.email) continue;
+        if (isDropoffOnly(client.id)) {
           console.log(`[MISSING_PICKUPS] Skipping dropoff-only inactive client: ${client.company_name}`);
           continue;
         }
 
-        // Check if inactive for 30+ days
         const lastPickupDate = client.last_pickup_at ? new Date(client.last_pickup_at) : null;
         const daysSinceLastPickup = lastPickupDate 
           ? Math.round((today.getTime() - lastPickupDate.getTime()) / (1000 * 60 * 60 * 24))
           : 999;
 
-        if (daysSinceLastPickup < INACTIVE_THRESHOLD_DAYS) {
-          continue;
-        }
-
-        // Check if client is already scheduled in the next 7 days
-        const { data: scheduledPickups } = await supabase
-          .from('pickups')
-          .select('id')
-          .eq('client_id', client.id)
-          .eq('organization_id', orgId)
-          .gte('pickup_date', today.toISOString().split('T')[0])
-          .lte('pickup_date', endDate.toISOString().split('T')[0])
-          .in('status', ['scheduled', 'in_progress', 'completed']);
-
-        if (scheduledPickups && scheduledPickups.length > 0) {
-          continue;
-        }
+        if (daysSinceLastPickup < INACTIVE_THRESHOLD_DAYS) continue;
+        if (clientIsScheduled.has(client.id)) continue;
 
         console.log(`[MISSING_PICKUPS] Found 30-day inactive client: ${client.company_name} (${daysSinceLastPickup} days)`);
 
-        // ============ SEND "WE MISS YOU" EMAIL ============
         if (sendEmails && resend && client.email) {
           const sent = await sendOutreachEmail(
-            supabase,
-            resend,
-            orgId,
-            orgName,
-            orgLogo,
-            client,
-            daysSinceLastPickup,
-            'inactive',
-            null,
-            'inactive'
+            supabase, resend, orgId, orgName, orgLogo, client,
+            daysSinceLastPickup, 'inactive', null, 'inactive'
           );
           if (sent) {
             inactiveEmailsSent++;
@@ -343,25 +279,10 @@ Deno.serve(async (req) => {
           }
         }
 
-        // ============ CREATE IN-APP NOTIFICATION ============
-        const threeDaysAgo = new Date(today);
-        threeDaysAgo.setDate(today.getDate() - 3);
-
         const notificationTitle = `${client.company_name} hasn't been serviced in ${daysSinceLastPickup} days`;
 
         for (const userId of userIds) {
-          const { data: existingNotifs } = await supabase
-            .from('notifications')
-            .select('id')
-            .eq('user_id', userId)
-            .eq('organization_id', orgId)
-            .eq('type', 'missing_pickup')
-            .ilike('title', `%${client.company_name}%`)
-            .gte('created_at', threeDaysAgo.toISOString());
-
-          if (existingNotifs && existingNotifs.length > 0) {
-            continue;
-          }
+          if (hasRecentNotif(userId, notificationTitle)) continue;
 
           notificationsToCreate.push({
             user_id: userId,
@@ -380,7 +301,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Insert notifications for this org
+      // Insert notifications in batch
       if (notificationsToCreate.length > 0) {
         const { error: insertError } = await supabase
           .from('notifications')
@@ -439,13 +360,11 @@ async function sendOutreachEmail(
       .eq('organization_id', orgId)
       .single();
 
-    // Check if can send outreach
     if (prefs?.can_receive_outreach === false) {
       console.log(`[EMAIL] Client ${client.company_name} has opted out of outreach`);
       return false;
     }
 
-    // Check frequency limit (14 days)
     if (prefs?.last_outreach_sent_at) {
       const lastSent = new Date(prefs.last_outreach_sent_at);
       const daysSinceLastEmail = Math.round((Date.now() - lastSent.getTime()) / (1000 * 60 * 60 * 24));
@@ -455,17 +374,11 @@ async function sendOutreachEmail(
       }
     }
 
-    // Generate suggested dates based on service pattern
     const suggestedDates = generateSuggestedDates(typicalDay);
-    // Use public booking URL so clients don't need to login
     const bookingUrl = `https://treadset.lovable.app/public-book?client=${client.id}`;
-    
-    // Create tracking pixel URL for open tracking
     const trackingPixelUrl = `https://wvjehbozyxhmgdljwsiz.supabase.co/functions/v1/track-email-event?type=open&client=${client.id}&source=${emailType}`;
-    
     const contactName = client.contact_name || 'there';
     
-    // Different messaging for pattern-based vs inactive clients
     let subjectLine: string;
     let introText: string;
     
@@ -488,53 +401,28 @@ async function sendOutreachEmail(
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background-color: #f4f4f5;">
         <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            <!-- Header -->
             <div style="background: linear-gradient(135deg, #1A4314 0%, #2d5a24 100%); padding: 30px; text-align: center;">
               <h1 style="color: white; margin: 0; font-size: 24px;">${orgName}</h1>
               <p style="color: rgba(255,255,255,0.8); margin: 10px 0 0 0;">Tire Recycling Services</p>
             </div>
-            
-            <!-- Content -->
             <div style="padding: 30px;">
               <h2 style="color: #1A4314; margin: 0 0 20px 0;">Hi ${contactName}!</h2>
-              
-              <p style="color: #374151; line-height: 1.6; margin: 0 0 20px 0;">
-                ${introText}
-              </p>
-
+              <p style="color: #374151; line-height: 1.6; margin: 0 0 20px 0;">${introText}</p>
               ${suggestedDates.length > 0 ? `
               <div style="background: #f0fdf4; border-radius: 8px; padding: 20px; margin: 20px 0;">
                 <h3 style="color: #166534; margin: 0 0 10px 0; font-size: 16px;">📅 Suggested Dates</h3>
-                <p style="color: #374151; margin: 0;">
-                  ${suggestedDates.join(' • ')}
-                </p>
+                <p style="color: #374151; margin: 0;">${suggestedDates.join(' • ')}</p>
               </div>
               ` : ''}
-
               <div style="text-align: center; margin: 30px 0;">
-                <a href="${bookingUrl}" 
-                   style="display: inline-block; background: #1A4314; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">
-                  Schedule Your Pickup
-                </a>
+                <a href="${bookingUrl}" style="display: inline-block; background: #1A4314; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">Schedule Your Pickup</a>
               </div>
-
-              <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">
-                Need to talk to someone? Give us a call or reply to this email. We're happy to help!
-              </p>
+              <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">Need to talk to someone? Give us a call or reply to this email. We're happy to help!</p>
             </div>
-            
-            <!-- Footer -->
             <div style="background: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
-              <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-                ${orgName} • Professional Tire Recycling
-              </p>
-              <p style="color: #9ca3af; font-size: 11px; margin: 10px 0 0 0;">
-                <a href="${bookingUrl}&unsubscribe=true" style="color: #9ca3af;">Unsubscribe from these emails</a>
-              </p>
-              <p style="color: #b0b0b0; font-size: 10px; margin: 15px 0 0 0;">
-                Powered by <a href="https://treadset.com" style="color: #1A4314; text-decoration: none;">TreadSet</a>
-              </p>
-              <!-- Open tracking pixel -->
+              <p style="color: #9ca3af; font-size: 12px; margin: 0;">${orgName} • Professional Tire Recycling</p>
+              <p style="color: #9ca3af; font-size: 11px; margin: 10px 0 0 0;"><a href="${bookingUrl}&unsubscribe=true" style="color: #9ca3af;">Unsubscribe from these emails</a></p>
+              <p style="color: #b0b0b0; font-size: 10px; margin: 15px 0 0 0;">Powered by <a href="https://treadset.com" style="color: #1A4314; text-decoration: none;">TreadSet</a></p>
               <img src="${trackingPixelUrl}" width="1" height="1" style="display:none;" alt="" />
             </div>
           </div>
@@ -543,8 +431,7 @@ async function sendOutreachEmail(
       </html>
     `;
 
-    // Send email using verified domain
-    console.log(`[EMAIL] Attempting to send ${emailType} email to ${client.email} from noreply@bsgtires.com`);
+    console.log(`[EMAIL] Attempting to send ${emailType} email to ${client.email}`);
     const emailResult = await resend.emails.send({
       from: `${orgName} <noreply@bsgtires.com>`,
       to: [client.email],
@@ -552,16 +439,13 @@ async function sendOutreachEmail(
       html: emailHtml,
     });
 
-    const emailError = emailResult?.error;
-
-    if (emailError) {
-      console.error(`[EMAIL] Error sending to ${client.email}:`, emailError);
+    if (emailResult?.error) {
+      console.error(`[EMAIL] Error sending to ${client.email}:`, emailResult.error);
       return false;
     }
 
     console.log(`[EMAIL] Sent ${emailType} outreach email to ${client.email}`);
 
-    // Update or create email preferences
     if (prefs) {
       await supabase
         .from('client_email_preferences')
@@ -599,14 +483,11 @@ function generateSuggestedDates(typicalDay: number | null): string[] {
     const date = new Date(today);
     date.setDate(today.getDate() + i);
     const dayOfWeek = date.getDay();
-    
-    // Skip weekends
     if (dayOfWeek === 0 || dayOfWeek === 6) continue;
     
-    // Prioritize typical day if known
     if (typicalDay !== null && dayOfWeek === typicalDay) {
       const formatted = date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
-      dates.unshift(formatted); // Add to beginning
+      dates.unshift(formatted);
     } else if (dates.length < 3) {
       const formatted = date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
       dates.push(formatted);
