@@ -1,29 +1,39 @@
 
 
-## Plan: Add time tracking details to trailer tiles
+## Fix password reset redirect + brand the emails
 
-The trailer event data (who moved it, when, what action) already exists in the database via `trailer_events`. The `TrailerCard` component currently shows only a relative "2 hours ago" timestamp. The fix is purely UI — surface more detail on each tile.
+### Problem
+1. Reset redirect URL is `treadset.lovable.app` but should be `app.treadset.co` per the custom domain routing strategy
+2. Supabase default auth emails are unbranded — no TreadSet logo or styling, which confused Jody previously
 
-### Changes to `src/components/trailers/TrailerCard.tsx`
+### Plan
 
-**Compact view** (the tiles used in inventory/board views):
-- Replace the generic relative time with a two-line time display:
-  - Line 1: Event type label + driver name (e.g., "Staged Empty — Jody")
-  - Line 2: Exact date/time + relative time (e.g., "Mar 3 at 2:45 PM · 2h ago")
+#### Step 1: Update redirect URL in AuthContext.tsx
 
-**Full card view**:
-- Add the event type label next to the driver name in the last_event section
-- Show the exact timestamp formatted as `MMM d 'at' h:mm a` alongside the relative time
+Change the `productionUrl` in the `resetPassword` function from `https://treadset.lovable.app` to `https://app.treadset.co`.
 
-### Changes to `src/hooks/useTrailerInventory.ts`
+**File: `src/contexts/AuthContext.tsx`** (line 454)
+```typescript
+const productionUrl = 'https://app.treadset.co';
+```
 
-The `last_event` object already includes `event_type` and `driver` info. No data model or query changes needed — the `TrailerWithLastEvent` interface already has everything required.
+#### Step 2: Brand the auth emails in Supabase Dashboard
 
-### No database changes needed
+This is a **manual step** — go to the Supabase Dashboard > Authentication > Email Templates and update:
+- **Confirm signup** template — add TreadSet branding, green color scheme
+- **Reset password** template — add TreadSet logo, branded styling
+- **Magic link** template (if used)
 
-All the timestamp and driver data is already captured in `trailer_events.timestamp` and `trailer_events.driver_id`. This is a display-only change.
+These templates support HTML so you can match the green gradient branding from the existing `send-password-reset` edge function template.
+
+Alternatively, if you want fully custom branded emails sent from your own domain (e.g., `noreply@treadset.co`), we can set up Lovable auth email templates with a custom sender domain. This requires DNS configuration.
+
+#### Step 3: Verify Jody can reset and sign in
+
+After updating the redirect URL, trigger a password reset for Jody's email to confirm:
+- Email arrives (check spam)
+- Link goes to `app.treadset.co/reset-password`
+- He can set a new password and sign in
 
 ### Summary
-
-One file changed: `TrailerCard.tsx` — add formatted date/time, event type label, and driver name to both compact and full card views so operators can see exactly when and by whom a trailer was last moved.
-
+One line changed in `AuthContext.tsx`. The rest is Supabase Dashboard email template branding (manual). No database changes needed.
