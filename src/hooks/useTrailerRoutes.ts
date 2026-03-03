@@ -93,15 +93,6 @@ export const useDriverTrailerRoutes = () => {
     queryFn: async () => {
       if (!user?.id) return [];
       
-      // Get the internal user id
-      const { data: userData } = await supabase
-        .from('users')
-        .select('id')
-        .eq('auth_user_id', user.id)
-        .single();
-      
-      if (!userData) return [];
-      
       const today = new Date().toISOString().split('T')[0];
       
       const { data, error } = await supabase
@@ -111,7 +102,7 @@ export const useDriverTrailerRoutes = () => {
           vehicle:trailer_vehicles(id, vehicle_number),
           stops:trailer_route_stops(*)
         `)
-        .eq('driver_id', userData.id)
+        .eq('driver_id', user.id)
         .gte('scheduled_date', today)
         .in('status', ['scheduled', 'in_progress'])
         .order('scheduled_date', { ascending: true });
