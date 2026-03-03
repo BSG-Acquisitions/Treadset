@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useManifests } from '@/hooks/useManifests';
 import { useDriverAssignments } from '@/hooks/useDriverAssignments';
+import { useDriverTrailerRoutes } from '@/hooks/useTrailerRoutes';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHasOutboundHaulerCapability, useHasSemiHaulerCapability } from '@/hooks/useDriverCapabilities';
 import { format } from 'date-fns';
@@ -35,12 +36,23 @@ export default function DriverDashboard() {
   
   const { data: manifests = [], isLoading: manifestsLoading } = useManifests(undefined, user?.id);
   
+  // Get trailer routes for semi_hauler drivers
+  const { data: trailerRoutes = [], isLoading: trailerRoutesLoading } = useDriverTrailerRoutes();
+
   // Get today's date for filtering
   const today = new Date();
   const todayStr = format(today, 'yyyy-MM-dd');
 
   // Get driver-specific assignments for today
   const { data: assignments = [], isLoading: assignmentsLoading } = useDriverAssignments(todayStr);
+
+  // Filter today's trailer routes
+  const todayTrailerRoutes = trailerRoutes.filter(route => 
+    route.scheduled_date === todayStr && (route.status === 'scheduled' || route.status === 'in_progress')
+  );
+  const completedTrailerRoutesToday = trailerRoutes.filter(route => 
+    route.scheduled_date === todayStr && route.status === 'completed'
+  );
 
   // Filter today's assignments by status
   const todayAssignments = assignments.filter(assignment => 
@@ -51,6 +63,10 @@ export default function DriverDashboard() {
   const completedToday = assignments.filter(assignment => 
     assignment.status === 'completed'
   );
+
+  // Combined counts for stats
+  const totalTodayRoutes = todayAssignments.length + (hasSemiHauler ? todayTrailerRoutes.length : 0);
+  const totalCompletedToday = completedToday.length + (hasSemiHauler ? completedTrailerRoutesToday.length : 0);
 
   // Recent manifests (last 5)
   const recentManifests = manifests
@@ -79,7 +95,7 @@ export default function DriverDashboard() {
               <MapPin className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{todayAssignments.length}</div>
+              <div className="text-2xl font-bold">{totalTodayRoutes}</div>
               <p className="text-xs text-muted-foreground">Scheduled pickups</p>
             </CardContent>
           </Card>
@@ -90,7 +106,7 @@ export default function DriverDashboard() {
               <CheckCircle className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{completedToday.length}</div>
+              <div className="text-2xl font-bold text-green-600">{totalCompletedToday}</div>
               <p className="text-xs text-muted-foreground">Finished today</p>
             </CardContent>
           </Card>
@@ -113,8 +129,8 @@ export default function DriverDashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                <Badge variant={todayAssignments.length > 0 ? "default" : "secondary"}>
-                  {todayAssignments.length > 0 ? "Active" : "Available"}
+                <Badge variant={totalTodayRoutes > 0 ? "default" : "secondary"}>
+                  {totalTodayRoutes > 0 ? "Active" : "Available"}
                 </Badge>
               </div>
             </CardContent>
@@ -200,17 +216,17 @@ export default function DriverDashboard() {
                 Today's Assignments
               </CardTitle>
               <CardDescription>
-                {todayAssignments.length} pickups scheduled for today
+                {totalTodayRoutes} routes scheduled for today
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {assignmentsLoading ? (
+              {(assignmentsLoading || trailerRoutesLoading) ? (
                 <div className="space-y-3">
                   {[...Array(3)].map((_, i) => (
                     <div key={i} className="animate-pulse bg-muted h-16 rounded" />
                   ))}
                 </div>
-              ) : todayAssignments.length === 0 ? (
+              ) : (totalTodayRoutes === 0) ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>No assignments for today</p>
@@ -218,6 +234,45 @@ export default function DriverDashboard() {
                 </div>
               ) : (
                 <div className="space-y-3">
+                  {/* Trailer Routes for semi_hauler drivers */}
+                  {hasSemiHauler && todayTrailerRoutes.map((route) => (
+                    <div key={route.id} className="flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <Container className="h-4 w-4 text-primary" />
+                          <h4 className="font-medium truncate">
+                            {route.route_name}
+                          </h4>
+                          <Badge variant={route.status === 'scheduled' ? 'secondary' : 'default'} className="text-xs">
+                            {route.status}
+                          </Badge>
+                        </div>
+                        {route.trailer && (
+                          <p className="text-xs font-medium text-primary mt-1">
+                            🚛 Trailer #{route.trailer.trailer_number}
+                            {route.trailer.current_location && ` • ${route.trailer.current_location}`}
+                          </p>
+                        )}
+                        {route.stops && route.stops.length > 0 && (
+                          <p className="text-sm text-muted-foreground truncate mt-1">
+                            {route.stops.length} stop{route.stops.length !== 1 ? 's' : ''}: {route.stops.map(s => s.location_name).filter(Boolean).join(', ')}
+                          </p>
+                        )}
+                        {route.vehicle && (
+                          <p className="text-xs text-muted-foreground">
+                            Vehicle: {route.vehicle.vehicle_number}
+                          </p>
+                        )}
+                      </div>
+                      <Button size="sm" variant="outline" asChild>
+                        <Link to="/driver/trailer-assignments">
+                          View Details
+                        </Link>
+                      </Button>
+                    </div>
+                  ))}
+
+                  {/* Regular pickup assignments */}
                   {todayAssignments.slice(0, 5).map((assignment) => (
                     <div key={assignment.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                       <div className="flex-1 min-w-0">
@@ -250,13 +305,13 @@ export default function DriverDashboard() {
                           </p>
                         )}
                       </div>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" asChild>
-                            <Link to={`/driver/assignment/${assignment.id}`}>
-                              View Details
-                            </Link>
-                          </Button>
-                        </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" asChild>
+                          <Link to={`/driver/assignment/${assignment.id}`}>
+                            View Details
+                          </Link>
+                        </Button>
+                      </div>
                     </div>
                   ))}
                   {todayAssignments.length > 5 && (
