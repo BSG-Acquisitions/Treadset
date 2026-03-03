@@ -127,7 +127,7 @@ export function GuidedStopEvents({
                   : "hover:bg-muted/50 cursor-pointer"
               )}
             >
-              <CardContent className="p-3">
+              <CardContent className="p-3 sm:p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     {done ? (
@@ -150,6 +150,7 @@ export function GuidedStopEvents({
                   ) : (
                     <Button
                       size="sm"
+                      className="min-h-[44px] min-w-[44px] px-4"
                       onClick={() => handleTap(pe)}
                       disabled={isLoading}
                     >

@@ -130,7 +130,7 @@ export function TrailerSignatureDialog({
 
   return (
     <Dialog open={open} onOpenChange={(val) => { if (!val) resetForm(); onOpenChange(val); }}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="w-full sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{getEventTitle()}</DialogTitle>
         </DialogHeader>
@@ -167,8 +167,8 @@ export function TrailerSignatureDialog({
               <SignatureCanvas
                 ref={sigRef}
                 canvasProps={{
-                  className: "w-full h-32",
-                  style: { width: '100%', height: '128px' }
+                  className: "w-full h-40 sm:h-32",
+                  style: { width: '100%', height: '160px' }
                 }}
                 backgroundColor="white"
               />
