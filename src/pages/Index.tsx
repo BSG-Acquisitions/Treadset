@@ -53,8 +53,8 @@ export default function Index() {
     
     if (user && user.roles?.includes('driver') && !hasAnyRole(['admin', 'ops_manager', 'dispatcher', 'sales'])) {
       hasRedirectedDriver.current = true;
-      console.log('Redirecting pure driver to routes');
-      navigate('/routes/driver', { replace: true });
+      console.log('Redirecting pure driver to dashboard');
+      navigate('/driver/dashboard', { replace: true });
     }
   }, [user?.id, navigate, hasAnyRole]);
   
