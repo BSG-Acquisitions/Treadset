@@ -115,10 +115,10 @@ export default function DriverTrailerAssignments() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Trailer Assignments</h1>
-        <p className="text-muted-foreground">Your scheduled trailer move routes</p>
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground">Trailer Assignments</h1>
+        <p className="text-sm text-muted-foreground">Your scheduled trailer move routes</p>
       </div>
 
       {(!routes || routes.length === 0) ? (
@@ -199,58 +199,58 @@ function RouteCard({
       <Collapsible open={expanded} onOpenChange={onToggleRoute}>
         <CardHeader className="pb-3">
           <CollapsibleTrigger className="w-full">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+            <div className="flex items-start gap-2 sm:gap-3">
+              <div className="mt-1">
                 {expanded ? (
                   <ChevronDown className="h-5 w-5 text-muted-foreground" />
                 ) : (
                   <ChevronRight className="h-5 w-5 text-muted-foreground" />
                 )}
-                <div className="text-left">
-                  <CardTitle className="text-lg">{route.route_name}</CardTitle>
-                  <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      {format(new Date(route.scheduled_date), 'EEEE, MMM d')}
-                    </span>
-                    {route.vehicle && (
-                      <span className="flex items-center gap-1">
-                        <Truck className="h-4 w-4" />
-                        {route.vehicle.vehicle_number}
-                      </span>
-                    )}
-                  </div>
-                </div>
               </div>
-              
-              <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                <Badge variant={route.status === 'in_progress' ? 'default' : 'secondary'}>
-                  {route.status === 'in_progress' ? (
-                    <><Clock className="h-3 w-3 mr-1" /> In Progress</>
-                  ) : (
-                    route.status.replace('_', ' ')
+              <div className="flex-1 min-w-0 text-left">
+                <CardTitle className="text-base sm:text-lg leading-tight">{route.route_name}</CardTitle>
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1 text-sm text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <Calendar className="h-3.5 w-3.5" />
+                    {format(new Date(route.scheduled_date), 'EEE, MMM d')}
+                  </span>
+                  {route.vehicle && (
+                    <span className="flex items-center gap-1">
+                      <Truck className="h-3.5 w-3.5" />
+                      {route.vehicle.vehicle_number}
+                    </span>
                   )}
-                </Badge>
+                </div>
                 
-                {route.status === 'scheduled' && (
-                  <Button size="sm" onClick={onStartRoute}>
-                    <PlayCircle className="h-4 w-4 mr-1" />
-                    Start Route
-                  </Button>
-                )}
-                
-                {route.status === 'in_progress' && allStopsCompleted && (
-                  <Button size="sm" onClick={onCompleteRoute} variant="default">
-                    <Flag className="h-4 w-4 mr-1" />
-                    Finish Route
-                  </Button>
-                )}
+                <div className="flex flex-wrap items-center gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
+                  <Badge variant={route.status === 'in_progress' ? 'default' : 'secondary'}>
+                    {route.status === 'in_progress' ? (
+                      <><Clock className="h-3 w-3 mr-1" /> In Progress</>
+                    ) : (
+                      route.status.replace('_', ' ')
+                    )}
+                  </Badge>
+                  
+                  {route.status === 'scheduled' && (
+                    <Button size="sm" className="min-h-[44px]" onClick={onStartRoute}>
+                      <PlayCircle className="h-4 w-4 mr-1" />
+                      Start Route
+                    </Button>
+                  )}
+                  
+                  {route.status === 'in_progress' && allStopsCompleted && (
+                    <Button size="sm" className="min-h-[44px]" onClick={onCompleteRoute} variant="default">
+                      <Flag className="h-4 w-4 mr-1" />
+                      Finish Route
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           </CollapsibleTrigger>
           
-          <div className="mt-3 pl-8">
-            <div className="text-sm text-muted-foreground mb-1">
+          <div className="mt-3 pl-7 sm:pl-8">
+            <div className="text-xs sm:text-sm text-muted-foreground mb-1">
               Progress: {completedStops} / {totalStops} stops
             </div>
             <div className="w-full bg-muted rounded-full h-2">
@@ -342,7 +342,7 @@ function StopCard({
         )}
       >
         <CollapsibleTrigger asChild disabled={!canInteract}>
-          <div className="p-4" onClick={canInteract ? onToggle : undefined}>
+          <div className="p-3 sm:p-4" onClick={canInteract ? onToggle : undefined}>
             <div className="flex items-start gap-3">
               <div className={cn(
                 "flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium flex-shrink-0",

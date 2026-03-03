@@ -146,17 +146,4 @@ textarea {
   input, textarea, select {
     margin-bottom: 0.75rem;
   }
-
-  /* Ensure buttons are always accessible */
-  button[type="submit"],
-  button[type="button"] {
-    position: sticky;
-    bottom: 0;
-    width: 100%;
-    z-index: 10;
-    background: var(--background);
-    padding: 1rem;
-    margin: 0;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
-  }
 }

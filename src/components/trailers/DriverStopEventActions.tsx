@@ -228,7 +228,7 @@ export function DriverStopEventActions({
     <div className="space-y-3">
       <Label className="text-sm font-medium">Record Event</Label>
       
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {DRIVER_EVENT_TYPES.map(eventType => {
           const config = EVENT_CONFIG[eventType];
           const Icon = config.icon;
@@ -239,7 +239,7 @@ export function DriverStopEventActions({
               key={eventType}
               variant={completed ? "secondary" : "outline"}
               className={cn(
-                "justify-start h-auto py-3",
+                "justify-start h-auto py-3 min-h-[44px]",
                 completed && "opacity-50"
               )}
               onClick={() => handleEventSelect(eventType)}
