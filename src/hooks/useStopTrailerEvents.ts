@@ -80,12 +80,7 @@ export const useCompleteTrailerEvent = () => {
     mutationFn: async (data: CompleteTrailerEventData) => {
       if (!orgId) throw new Error('No organization selected');
       
-      // Get the driver's internal user ID
-      const { data: userData } = await supabase
-        .from('users')
-        .select('id')
-        .eq('auth_user_id', user?.id)
-        .single();
+      // user.id is already the internal users table PK (resolved by AuthContext)
       
       // Extract signer name from notes if present (format: "Name: notes")
       let signerName = data.signer_name;
@@ -108,7 +103,7 @@ export const useCompleteTrailerEvent = () => {
           route_id: data.route_id,
           location_name: data.location_name,
           location_id: data.location_id,
-          driver_id: userData?.id,
+          driver_id: user?.id,
           notes: eventNotes,
           signature_path: data.signature_path,
           signer_name: signerName,

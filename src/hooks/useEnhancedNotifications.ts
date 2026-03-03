@@ -53,14 +53,8 @@ export const useEnhancedNotifications = () => {
     const triggerNotificationChecks = async () => {
       if (!user?.id || triggeredRef.current || isQuietHours()) return;
       
-      // Get user's organization
-      const { data: userData } = await supabase
-        .from('users')
-        .select('id, user_organization_roles(organization_id)')
-        .eq('auth_user_id', user.id)
-        .single();
-
-      const orgId = userData?.user_organization_roles?.[0]?.organization_id;
+      // user.id is already the internal users table PK
+      const orgId = user.currentOrganization?.id;
       if (!orgId) return;
 
       triggeredRef.current = true;

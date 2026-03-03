@@ -94,9 +94,10 @@ export const useInviteHauler = () => {
         .from("users")
         .select("id")
         .eq("auth_user_id", user.id)
-        .single();
+        .maybeSingle();
 
       if (userError) throw userError;
+      if (!currentUser) throw new Error("User profile not found");
 
       // Create user account
       const { data: newUserData, error: createUserError } = await (supabase as any)

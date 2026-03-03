@@ -37,19 +37,11 @@ export const useCurrentUserCapabilities = () => {
     queryFn: async () => {
       if (!user?.id) return [];
       
-      // Get the internal user id first
-      const { data: userData } = await supabase
-        .from('users')
-        .select('id')
-        .eq('auth_user_id', user.id)
-        .single();
-      
-      if (!userData) return [];
-      
+      // user.id is already the internal users table PK (resolved by AuthContext)
       const { data, error } = await supabase
         .from('driver_capabilities')
         .select('*')
-        .eq('user_id', userData.id);
+        .eq('user_id', user.id);
       
       if (error) throw error;
       return data as DriverCapability[];
@@ -127,19 +119,13 @@ export const useGrantCapability = () => {
 
   return useMutation({
     mutationFn: async ({ userId, capability }: { userId: string; capability: string }) => {
-      // Get current user's internal id for granted_by
-      const { data: grantor } = await supabase
-        .from('users')
-        .select('id')
-        .eq('auth_user_id', user?.id)
-        .single();
-      
+      // user.id is already the internal users table PK
       const { error } = await supabase
         .from('driver_capabilities')
         .insert({
           user_id: userId,
           capability,
-          granted_by: grantor?.id,
+          granted_by: user?.id,
         });
       
       if (error) throw error;

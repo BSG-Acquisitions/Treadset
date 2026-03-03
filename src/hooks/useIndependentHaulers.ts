@@ -72,13 +72,15 @@ export const useHaulerProfile = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
+      // Need to resolve auth UUID to internal ID since this hook uses supabase.auth directly
       const { data: userData, error: userError } = await supabase
         .from("users")
         .select("id")
         .eq("auth_user_id", user.id)
-        .single();
+        .maybeSingle();
 
       if (userError) throw userError;
+      if (!userData) throw new Error("User profile not found");
 
       const { data, error } = await (supabase as any)
         .from("haulers")
