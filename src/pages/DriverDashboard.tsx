@@ -19,17 +19,19 @@ import {
   Eye,
   Navigation,
   Package,
-  ArrowUpRight
+  ArrowUpRight,
+  Container
 } from 'lucide-react';
 import { useManifests } from '@/hooks/useManifests';
 import { useDriverAssignments } from '@/hooks/useDriverAssignments';
 import { useAuth } from '@/contexts/AuthContext';
-import { useHasOutboundHaulerCapability } from '@/hooks/useDriverCapabilities';
+import { useHasOutboundHaulerCapability, useHasSemiHaulerCapability } from '@/hooks/useDriverCapabilities';
 import { format } from 'date-fns';
 
 export default function DriverDashboard() {
   const { user } = useAuth();
   const { hasOutboundHauler } = useHasOutboundHaulerCapability();
+  const { hasSemiHauler } = useHasSemiHaulerCapability();
   
   const { data: manifests = [], isLoading: manifestsLoading } = useManifests(undefined, user?.id);
   
@@ -151,6 +153,15 @@ export default function DriverDashboard() {
                   <Link to="/driver/outbound/new">
                     <ArrowUpRight className="h-6 w-6" />
                     <span>Outbound Manifest</span>
+                  </Link>
+                </Button>
+              )}
+              
+              {hasSemiHauler && (
+                <Button asChild variant="outline" className="h-20 flex-col gap-2 border-primary/50 bg-primary/5">
+                  <Link to="/driver/trailer-assignments">
+                    <Container className="h-6 w-6" />
+                    <span>Trailer Assignments</span>
                   </Link>
                 </Button>
               )}
