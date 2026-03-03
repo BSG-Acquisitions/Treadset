@@ -1,28 +1,31 @@
 
 
-## Root Cause
+## Problem
 
-Jody's `users` table record has a **mismatched `auth_user_id`**:
-- Record has: `00ddb4a3-da9e-4c39-a8bf-0b585abbb39f`
-- Actual auth user (from login): `6090e705-2081-4b11-b00c-36125cad4341`
-
-Every API call querying `users WHERE auth_user_id = '6090e705...'` returns 0 rows. The app cannot find his roles, organization, or capabilities, so it falls through to the default admin-style dashboard.
+`useDriverTrailerRoutes` has a redundant and broken user ID lookup. The auth context already provides the **internal** `users.id` (`55967bd4...`) as `user.id`. But the hook treats `user.id` as the Supabase **auth** ID and queries `users WHERE auth_user_id = user.id`, which returns no rows — so Jody sees nothing.
 
 ## Fix
 
-### 1. Update Jody's auth_user_id (SQL migration)
-```sql
-UPDATE users 
-SET auth_user_id = '6090e705-2081-4b11-b00c-36125cad4341'
-WHERE id = '55967bd4-e590-4760-8224-2a6cfd58ae59';
+In `src/hooks/useTrailerRoutes.ts`, simplify `useDriverTrailerRoutes` to use `user.id` directly as the `driver_id` filter, removing the unnecessary `users` table lookup:
+
+**Before (lines 93-103):**
+```ts
+if (!user?.id) return [];
+// Get the internal user id  ← unnecessary, user.id IS the internal id
+const { data: userData } = await supabase
+  .from('users').select('id').eq('auth_user_id', user.id).single();
+if (!userData) return [];
+// ...
+.eq('driver_id', userData.id)
 ```
 
-This single fix will make the entire chain work:
-- `loadUserData` will find Jody's user record
-- His `driver` role in BSG will be loaded
-- The redirect logic will send him to `/driver/dashboard`
-- His `semi_hauler` capability will be found
-- The "Trailer Assignments" button will appear
+**After:**
+```ts
+if (!user?.id) return [];
+// user.id is already the internal users table id
+// ...
+.eq('driver_id', user.id)
+```
 
-No code changes needed -- the code changes from the previous edit (redirect to `/driver/dashboard`, Trailer Assignments button) are already in place. This is purely a data fix.
+This is a single-file, ~8-line change. No database or migration changes needed.
 
