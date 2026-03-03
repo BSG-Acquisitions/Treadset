@@ -412,7 +412,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signUp = async (email: string, password: string, firstName?: string, lastName?: string) => {
-    const redirectUrl = 'https://treadset.lovable.app/';
+    const redirectUrl = 'https://app.treadset.co/';
     
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -451,7 +451,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const resetPassword = async (email: string) => {
     // Hardcode production URL to prevent preview/dev environment issues
-    const productionUrl = 'https://treadset.lovable.app';
+    const productionUrl = 'https://app.treadset.co';
     const resetUrl = `${productionUrl}/reset-password`;
     
     console.log('Password reset redirect URL:', resetUrl);
