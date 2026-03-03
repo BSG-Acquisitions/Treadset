@@ -1,43 +1,49 @@
 
 
-## Plan: Guided Trailer Stop Workflow for Drivers
+## Mobile-Optimize Trailer Assignments for Jody
 
-### Problem
-When the dispatcher creates a trailer route with stops and events (step 3 of the wizard), those events fire immediately as completed `trailer_events` — they're not stored as *planned* actions for the driver. So when Jody opens a stop, he sees a generic grid of 6 event-type buttons with no guidance on what he's supposed to do at each location.
+### Problems
 
-The desired workflow (example):
-1. **BSG** → Pick up empty trailer #123
-2. **Tire Disposal** → Drop empty #123, Pick up full #456
-3. **NTech** → Drop full #456, Pick up empty #789
-4. **BSG** → Drop empty #789
+The current layout has several mobile issues:
+
+1. **Route card header** — The route name, date, badge, and "Start Route" button are in a single horizontal `flex justify-between` row. On a phone this overflows or crushes text. The badge and action button need to stack below the title.
+
+2. **Progress bar area** — Has `pl-8` padding that wastes space on small screens.
+
+3. **Stop cards** — The completed events badges (`flex-wrap gap-1`) and contact info can overflow. The collapsible content padding is too wide for mobile.
+
+4. **GuidedStopEvents cards** — The `flex items-center justify-between` layout with label + "Complete" button works okay but could have larger touch targets.
+
+5. **DriverStopEventActions grid** — Uses `grid-cols-2` which crampes button text on small screens. The dialog content (`max-w-md`) doesn't use mobile-friendly sizing.
+
+6. **TrailerSignatureDialog** — The dialog uses `max-w-md` and has a fixed-height signature canvas (`h-32` / `128px`) which is tight on mobile. The form can get cut off by the keyboard.
+
+7. **Page-level padding** — The outer `div` uses `p-6` which is too much on a phone.
+
+8. **The `mobile.css` sticky button hack** — The global CSS makes ALL `button[type="submit"]` and `button[type="button"]` sticky with full width on mobile. This breaks button grids and inline buttons throughout the trailer workflow. This global rule needs to be scoped or removed.
 
 ### Changes
 
-**1. Database: Add `planned_events` column to `trailer_route_stops`**
+**1. `src/styles/mobile.css`** — Remove the aggressive global sticky button rule (lines ~139-148) that forces ALL buttons to be sticky full-width on mobile. This is the biggest offender — it breaks button grids, inline "Complete" buttons, dialog footer buttons, etc.
 
-Add a JSONB column to store the dispatcher's planned events per stop:
-```sql
-ALTER TABLE trailer_route_stops 
-ADD COLUMN planned_events jsonb DEFAULT '[]';
-```
+**2. `src/pages/DriverTrailerAssignments.tsx`**
+- Reduce page padding: `p-6` → `p-3 sm:p-6`
+- Reduce title size on mobile: `text-2xl` → `text-xl sm:text-2xl`
+- **RouteCard header**: Stack the title/meta and badge/action vertically on mobile instead of side-by-side. Use `flex-col sm:flex-row` so the route name is on top, badge + button below.
+- Reduce progress bar left padding on mobile
+- Stop card padding: `p-4` → `p-3 sm:p-4`
 
-Format: `[{ "event_type": "pickup_empty", "trailer_id": "uuid", "trailer_number": "123" }]`
+**3. `src/components/trailers/GuidedStopEvents.tsx`**
+- Make "Complete" / "Sign & Complete" buttons larger touch targets (`min-h-[44px]`)
+- Ensure event cards have adequate padding for thumb taps
 
-**2. Fix `TrailerRouteWizard.tsx` — Store planned events instead of firing them**
+**4. `src/components/trailers/DriverStopEventActions.tsx`**
+- Change grid to `grid-cols-1 sm:grid-cols-2` so buttons are full-width stacked on phone
+- Dialog: add `max-h-[85vh] overflow-y-auto` for mobile scrollability
 
-In `handleSubmit` (line 182-189), instead of calling `createEvent.mutateAsync` (which creates a real completed event), save the events as `planned_events` on the stop record. Remove the immediate event creation entirely.
-
-**3. Update `DriverTrailerAssignments.tsx` — Show guided stop actions**
-
-Replace the generic `DriverStopEventActions` grid with a guided view per stop:
-- Show each planned event as a card: "Drop Empty — Trailer #123" with a "Complete" button
-- Driver taps "Complete" → fires the real `trailer_event`, which updates trailer status/location via the existing `update_trailer_from_event` trigger
-- Track completion by comparing planned events against actual `trailer_events` for that stop
-- Once all planned events at a stop are done, show "Mark Stop Complete"
-- Driver can still add unplanned events if needed (collapsible "Add Other Event" section)
-
-**4. No changes to `useStopTrailerEvents.ts` or the event completion logic** — the existing `useCompleteTrailerEvent` hook already handles creating events, updating trailer status, and generating manifests for signed events. We just change how it's invoked (from guided cards instead of a generic picker).
-
-### Result
-Jody sees exactly what to do at each stop — which trailer to pick up or drop, whether it's empty or full — and completes each action with a single tap. The trailer inventory board updates in real-time as each event fires.
+**5. `src/components/trailers/TrailerSignatureDialog.tsx`**
+- Make dialog full-width on mobile: `max-w-md` → `sm:max-w-md w-full`
+- Make dialog content scrollable: add `max-h-[85vh] overflow-y-auto`
+- Increase signature canvas height on mobile for better finger signing
+- Stack dialog footer buttons vertically on mobile
 
