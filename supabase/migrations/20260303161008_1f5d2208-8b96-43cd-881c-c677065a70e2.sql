@@ -1,0 +1,3 @@
+UPDATE users 
+SET auth_user_id = '6090e705-2081-4b11-b00c-36125cad4341'
+WHERE id = '55967bd4-e590-4760-8224-2a6cfd58ae59';
