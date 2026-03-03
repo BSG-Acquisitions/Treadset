@@ -70,13 +70,9 @@ export const useVerifyPayment = () => {
           description: "Payment has been processed successfully.",
         });
 
-        // Create notification for successful payment
+        // Create notification for successful payment - user.id is already internal PK
         if (user?.currentOrganization) {
-          const { data: userData } = await supabase
-            .from('users')
-            .select('id')
-            .eq('auth_user_id', user.id)
-            .single();
+          const userData = { id: user.id };
 
           if (userData) {
             const amount = data.payment.amount ? `$${(data.payment.amount / 100).toFixed(2)}` : '';

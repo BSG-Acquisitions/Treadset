@@ -53,14 +53,8 @@ export const useOutboundManifests = () => {
         throw new Error('No organization context');
       }
 
-      // Get driver's internal user ID
-      const { data: driverUser } = await supabase
-        .from('users')
-        .select('id')
-        .eq('auth_user_id', user?.id)
-        .single();
-
-      if (!driverUser) {
+      // user.id is already the internal users table PK (resolved by AuthContext)
+      if (!user?.id) {
         return [];
       }
 
@@ -77,7 +71,7 @@ export const useOutboundManifests = () => {
         `)
         .eq('organization_id', organizationId)
         .eq('direction', 'outbound')
-        .eq('driver_id', driverUser.id)
+        .eq('driver_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -164,12 +158,12 @@ export const useCreateOutboundManifest = () => {
         throw new Error('No organization context');
       }
 
-      // Get driver's internal user ID
+      // user.id is already the internal users table PK - just need name info
       const { data: driverUser } = await supabase
         .from('users')
         .select('id, first_name, last_name')
-        .eq('auth_user_id', user?.id)
-        .single();
+        .eq('id', user?.id)
+        .maybeSingle();
 
       if (!driverUser) {
         throw new Error('Driver user not found');
@@ -339,14 +333,8 @@ export const usePendingOutboundManifests = () => {
         throw new Error('No organization context');
       }
 
-      // Get driver's internal user ID
-      const { data: driverUser } = await supabase
-        .from('users')
-        .select('id')
-        .eq('auth_user_id', user?.id)
-        .single();
-
-      if (!driverUser) {
+      // user.id is already the internal users table PK
+      if (!user?.id) {
         return [];
       }
 
@@ -363,7 +351,7 @@ export const usePendingOutboundManifests = () => {
         `)
         .eq('organization_id', organizationId)
         .eq('direction', 'outbound')
-        .eq('driver_id', driverUser.id)
+        .eq('driver_id', user.id)
         .not('hauler_signed_at', 'is', null)
         .is('receiver_signed_at', null)
         .order('created_at', { ascending: false });
