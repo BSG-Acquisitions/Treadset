@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { organizationId, dryRun = true } = await req.json();
+    const { organizationId, dryRun = true, retryEmails = null } = await req.json();
 
     if (!organizationId) {
       return new Response(
@@ -52,9 +52,15 @@ Deno.serve(async (req) => {
 
     const optedOutIds = new Set((optedOut || []).map((r: any) => r.client_id));
 
-    const recipients = (clients || []).filter(
+    let recipients = (clients || []).filter(
       (c: any) => c.email && !optedOutIds.has(c.id)
     );
+
+    // If retryEmails provided, only send to those specific emails
+    if (retryEmails && Array.isArray(retryEmails) && retryEmails.length > 0) {
+      const retrySet = new Set(retryEmails.map((e: string) => e.toLowerCase()));
+      recipients = recipients.filter((c: any) => retrySet.has(c.email.toLowerCase()));
+    }
 
     // DRY RUN — return list only
     if (dryRun) {
@@ -183,8 +189,8 @@ Deno.serve(async (req) => {
         results.push({ email: client.email, success: false, error: err.message });
       }
 
-      // 200ms delay between sends
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      // 600ms delay between sends to respect Resend's 2 req/sec limit
+      await new Promise((resolve) => setTimeout(resolve, 600));
     }
 
     const sent = results.filter((r) => r.success).length;
