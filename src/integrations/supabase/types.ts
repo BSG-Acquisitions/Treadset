@@ -5145,6 +5145,7 @@ export type Database = {
           location_address: string | null
           location_id: string | null
           location_name: string | null
+          planned_events: Json | null
           route_id: string
           sequence_number: number
           updated_at: string
@@ -5159,6 +5160,7 @@ export type Database = {
           location_address?: string | null
           location_id?: string | null
           location_name?: string | null
+          planned_events?: Json | null
           route_id: string
           sequence_number?: number
           updated_at?: string
@@ -5173,6 +5175,7 @@ export type Database = {
           location_address?: string | null
           location_id?: string | null
           location_name?: string | null
+          planned_events?: Json | null
           route_id?: string
           sequence_number?: number
           updated_at?: string

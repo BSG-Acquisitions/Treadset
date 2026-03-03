@@ -36,6 +36,12 @@ export interface TrailerRoute {
   stops?: TrailerRouteStop[];
 }
 
+export interface PlannedEvent {
+  event_type: string;
+  trailer_id: string;
+  trailer_number: string;
+}
+
 export interface TrailerRouteStop {
   id: string;
   route_id: string;
@@ -47,6 +53,7 @@ export interface TrailerRouteStop {
   contact_phone: string | null;
   instructions: string | null;
   completed_at: string | null;
+  planned_events: PlannedEvent[];
   created_at: string;
   updated_at: string;
 }
@@ -79,7 +86,7 @@ export const useTrailerRoutes = (date?: string) => {
       const { data, error } = await query;
       
       if (error) throw error;
-      return data as TrailerRoute[];
+      return (data as unknown) as TrailerRoute[];
     },
     enabled: !!orgId,
   });
@@ -108,7 +115,7 @@ export const useDriverTrailerRoutes = () => {
         .order('scheduled_date', { ascending: true });
       
       if (error) throw error;
-      return data as TrailerRoute[];
+      return (data as unknown) as TrailerRoute[];
     },
     enabled: !!user?.id,
   });
@@ -193,10 +200,11 @@ export const useAddRouteStop = () => {
       contact_name?: string;
       contact_phone?: string;
       instructions?: string;
+      planned_events?: PlannedEvent[];
     }) => {
       const { data: stop, error } = await supabase
         .from('trailer_route_stops')
-        .insert(data)
+        .insert(data as any)
         .select()
         .single();
       

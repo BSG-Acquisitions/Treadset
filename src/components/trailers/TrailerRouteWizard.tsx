@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useCreateTrailerRoute, useAddRouteStop } from "@/hooks/useTrailerRoutes";
 import { useCreateTrailerEvent, TrailerEventType, EVENT_TYPE_LABELS } from "@/hooks/useTrailerEvents";
+import { supabase } from "@/integrations/supabase/client";
 import { useSemiHaulerDrivers } from "@/hooks/useDriverCapabilities";
 import { useTrailerVehicles } from "@/hooks/useTrailerVehicles";
 import { useTrailers } from "@/hooks/useTrailers";
@@ -178,14 +179,21 @@ export function TrailerRouteWizard({ onComplete, onCancel }: TrailerRouteWizardP
           instructions: stopData.instructions || undefined,
         });
         
-        // Create events for this stop
-        for (const event of stopData.events) {
-          await createEvent.mutateAsync({
-            trailer_id: event.trailer_id,
-            event_type: event.event_type,
-            location_name: stopData.location_name,
-            notes: event.notes || undefined,
+        // Update stop with planned events (don't fire real events yet)
+        if (stopData.events.length > 0) {
+          const plannedEvents = stopData.events.map(event => {
+            const trailer = trailers?.find(t => t.id === event.trailer_id);
+            return {
+              event_type: event.event_type,
+              trailer_id: event.trailer_id,
+              trailer_number: trailer?.trailer_number || 'Unknown',
+            };
           });
+          
+          await supabase
+            .from('trailer_route_stops')
+            .update({ planned_events: plannedEvents } as any)
+            .eq('id', stop.id);
         }
       }
       

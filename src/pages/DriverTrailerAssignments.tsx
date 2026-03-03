@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { useDriverTrailerRoutes, useUpdateTrailerRoute, TrailerRouteStop } from "@/hooks/useTrailerRoutes";
+import { useDriverTrailerRoutes, useUpdateTrailerRoute, TrailerRouteStop, PlannedEvent } from "@/hooks/useTrailerRoutes";
 import { useTrailers } from "@/hooks/useTrailers";
 import { useRouteStopEvents } from "@/hooks/useStopTrailerEvents";
 import { useHasSemiHaulerCapability } from "@/hooks/useDriverCapabilities";
+import { GuidedStopEvents } from "@/components/trailers/GuidedStopEvents";
 import { DriverStopEventActions } from "@/components/trailers/DriverStopEventActions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -422,18 +423,34 @@ function StopCard({
         <CollapsibleContent>
           <div className="px-4 pb-4 pt-0 border-t">
             <div className="pt-4 space-y-4">
-              <DriverStopEventActions
-                stopId={stop.id}
-                routeId={routeId}
-                locationName={stop.location_name || ''}
-                locationId={stop.location_id || undefined}
-                trailers={trailers}
-                completedEvents={stopEvents.map((e: any) => ({
-                  event_type: e.event_type,
-                  trailer_id: e.trailer_id,
-                }))}
-                onEventCompleted={handleEventCompleted}
-              />
+              {(stop as any).planned_events && (stop as any).planned_events.length > 0 ? (
+                <GuidedStopEvents
+                  stopId={stop.id}
+                  routeId={routeId}
+                  locationName={stop.location_name || ''}
+                  locationId={stop.location_id || undefined}
+                  plannedEvents={(stop as any).planned_events as PlannedEvent[]}
+                  completedEvents={stopEvents.map((e: any) => ({
+                    event_type: e.event_type,
+                    trailer_id: e.trailer_id,
+                  }))}
+                  trailers={trailers}
+                  onEventCompleted={handleEventCompleted}
+                />
+              ) : (
+                <DriverStopEventActions
+                  stopId={stop.id}
+                  routeId={routeId}
+                  locationName={stop.location_name || ''}
+                  locationId={stop.location_id || undefined}
+                  trailers={trailers}
+                  completedEvents={stopEvents.map((e: any) => ({
+                    event_type: e.event_type,
+                    trailer_id: e.trailer_id,
+                  }))}
+                  onEventCompleted={handleEventCompleted}
+                />
+              )}
 
               {hasEvents && (
                 <Button 
