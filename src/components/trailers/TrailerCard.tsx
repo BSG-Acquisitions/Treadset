@@ -4,7 +4,7 @@ import { EVENT_TYPE_LABELS } from "@/hooks/useTrailerEvents";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Truck, MapPin, Clock, User, ArrowRight, Building2, GripVertical } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { DragEvent } from "react";
 
@@ -70,9 +70,22 @@ export function TrailerCard({ trailer, onClick, compact = false, draggable = fal
         )}
         
         {trailer.last_event && (
-          <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-            <Clock className="h-3 w-3" />
-            {formatDistanceToNow(new Date(trailer.last_event.timestamp), { addSuffix: true })}
+          <div className="mt-2 space-y-0.5">
+            <div className="flex items-center gap-1 text-xs font-medium text-foreground">
+              <User className="h-3 w-3 text-muted-foreground" />
+              <span className="truncate">
+                {EVENT_TYPE_LABELS[trailer.last_event.event_type]}
+                {driverName && ` — ${driverName}`}
+              </span>
+            </div>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Clock className="h-3 w-3" />
+              <span>
+                {format(new Date(trailer.last_event.timestamp), "MMM d 'at' h:mm a")}
+                {' · '}
+                {formatDistanceToNow(new Date(trailer.last_event.timestamp), { addSuffix: true })}
+              </span>
+            </div>
           </div>
         )}
       </div>
@@ -119,17 +132,18 @@ export function TrailerCard({ trailer, onClick, compact = false, draggable = fal
               <Badge variant="outline" className="text-xs">
                 {EVENT_TYPE_LABELS[trailer.last_event.event_type]}
               </Badge>
-              <span className="text-xs text-muted-foreground">
-                {formatDistanceToNow(new Date(trailer.last_event.timestamp), { addSuffix: true })}
-              </span>
+              {driverName && (
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <User className="h-3 w-3" />
+                  {driverName}
+                </div>
+              )}
             </div>
-            
-            {driverName && (
-              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                <User className="h-3 w-3" />
-                {driverName}
-              </div>
-            )}
+            <div className="text-xs text-muted-foreground">
+              {format(new Date(trailer.last_event.timestamp), "MMM d 'at' h:mm a")}
+              {' · '}
+              {formatDistanceToNow(new Date(trailer.last_event.timestamp), { addSuffix: true })}
+            </div>
           </div>
         )}
 
