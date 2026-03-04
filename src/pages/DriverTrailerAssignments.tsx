@@ -510,7 +510,6 @@ function StopCard({
               )}
             </div>
           </div>
-        </div>
 
         <CollapsibleContent>
           <div className="px-4 pb-4 pt-0 border-t">
