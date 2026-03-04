@@ -1,49 +1,47 @@
 
 
-## Mobile-Optimize Trailer Assignments for Jody
+## Fix Notification Bloat and Performance Impact
 
-### Problems
+### Problem
+There are **44,807 unread notifications** in the database, all accumulated since January. This is caused by:
 
-The current layout has several mobile issues:
+1. **Every page load triggers 4 edge functions** — `triggeredRef` only prevents re-firing within a single React mount. Refreshing the page or opening a new tab fires all four again.
+2. **Short dedup windows** — `check-manifest-reminders` deduplicates over 1 day, `check-missing-pickups` over 3 days, meaning the same notifications get recreated repeatedly.
+3. **No notification cap** — nothing prevents unbounded growth.
 
-1. **Route card header** — The route name, date, badge, and "Start Route" button are in a single horizontal `flex justify-between` row. On a phone this overflows or crushes text. The badge and action button need to stack below the title.
+This absolutely slows the app down: 44K+ rows in a table that's queried every 60 seconds, plus 4 edge function invocations on every page load.
 
-2. **Progress bar area** — Has `pl-8` padding that wastes space on small screens.
+### Plan
 
-3. **Stop cards** — The completed events badges (`flex-wrap gap-1`) and contact info can overflow. The collapsible content padding is too wide for mobile.
+#### 1. Purge old notifications (SQL migration)
+Delete all notifications older than 14 days and all read notifications to bring the count to a manageable level:
+```sql
+DELETE FROM notifications WHERE created_at < NOW() - INTERVAL '14 days';
+DELETE FROM notifications WHERE is_read = true;
+```
 
-4. **GuidedStopEvents cards** — The `flex items-center justify-between` layout with label + "Complete" button works okay but could have larger touch targets.
+#### 2. Throttle edge function triggers to once per 6 hours
+**File: `src/hooks/useEnhancedNotifications.ts`**
+- Replace `triggeredRef` (which resets on page reload) with a `localStorage` timestamp check
+- Only invoke the 4 edge functions if 6+ hours have passed since the last trigger
+- This reduces edge function calls from ~dozens/day to ~2-3/day per user
 
-5. **DriverStopEventActions grid** — Uses `grid-cols-2` which crampes button text on small screens. The dialog content (`max-w-md`) doesn't use mobile-friendly sizing.
+#### 3. Increase dedup windows in edge functions
+- **`supabase/functions/check-manifest-reminders/index.ts`**: Change dedup from 1 day to 7 days
+- **`supabase/functions/check-missing-pickups/index.ts`**: Change dedup from 3 days to 7 days
+- **`supabase/functions/check-manifest-health/index.ts`**: Already 7 days, no change needed
 
-6. **TrailerSignatureDialog** — The dialog uses `max-w-md` and has a fixed-height signature canvas (`h-32` / `128px`) which is tight on mobile. The form can get cut off by the keyboard.
+#### 4. Add per-user notification cap in edge functions
+In all three edge functions, before inserting new notifications, check if the user already has 100+ unread notifications. If so, skip insertion. This prevents runaway growth even if dedup fails.
 
-7. **Page-level padding** — The outer `div` uses `p-6` which is too much on a phone.
+#### 5. Disable `useContextualNotifications` duplicate checks
+**File: `src/hooks/useContextualNotifications.ts`**
+- This hook creates *additional* client-side notifications on top of what the edge functions already produce, compounding the duplication problem
+- Disable the incomplete-manifests and unassigned-pickups checks since the edge functions already handle these
 
-8. **The `mobile.css` sticky button hack** — The global CSS makes ALL `button[type="submit"]` and `button[type="button"]` sticky with full width on mobile. This breaks button grids and inline buttons throughout the trailer workflow. This global rule needs to be scoped or removed.
-
-### Changes
-
-**1. `src/styles/mobile.css`** — Remove the aggressive global sticky button rule (lines ~139-148) that forces ALL buttons to be sticky full-width on mobile. This is the biggest offender — it breaks button grids, inline "Complete" buttons, dialog footer buttons, etc.
-
-**2. `src/pages/DriverTrailerAssignments.tsx`**
-- Reduce page padding: `p-6` → `p-3 sm:p-6`
-- Reduce title size on mobile: `text-2xl` → `text-xl sm:text-2xl`
-- **RouteCard header**: Stack the title/meta and badge/action vertically on mobile instead of side-by-side. Use `flex-col sm:flex-row` so the route name is on top, badge + button below.
-- Reduce progress bar left padding on mobile
-- Stop card padding: `p-4` → `p-3 sm:p-4`
-
-**3. `src/components/trailers/GuidedStopEvents.tsx`**
-- Make "Complete" / "Sign & Complete" buttons larger touch targets (`min-h-[44px]`)
-- Ensure event cards have adequate padding for thumb taps
-
-**4. `src/components/trailers/DriverStopEventActions.tsx`**
-- Change grid to `grid-cols-1 sm:grid-cols-2` so buttons are full-width stacked on phone
-- Dialog: add `max-h-[85vh] overflow-y-auto` for mobile scrollability
-
-**5. `src/components/trailers/TrailerSignatureDialog.tsx`**
-- Make dialog full-width on mobile: `max-w-md` → `sm:max-w-md w-full`
-- Make dialog content scrollable: add `max-h-[85vh] overflow-y-auto`
-- Increase signature canvas height on mobile for better finger signing
-- Stack dialog footer buttons vertically on mobile
+### Expected Result
+- Notification count drops from 44K to a few hundred
+- Page loads no longer fire 4 edge functions every time
+- Notification query (every 60s) scans a small table instead of 44K rows
+- App performance improves noticeably
 
