@@ -419,20 +419,6 @@ const App = () => (
                   </AppLayout>
                 </ProtectedRoute>
               } />
-              <Route path="/test/notifications" element={
-                <ProtectedRoute roles={['super_admin']}>
-                  <AppLayout>
-                    <NotificationTest />
-                  </AppLayout>
-                </ProtectedRoute>
-              } />
-              <Route path="/test/manifest-reminders" element={
-                <ProtectedRoute roles={['super_admin']}>
-                  <AppLayout>
-                    <ManifestRemindersTest />
-                  </AppLayout>
-                </ProtectedRoute>
-              } />
               <Route path="/data-quality" element={
                 <ProtectedRoute roles={['super_admin']}>
                   <AppLayout>

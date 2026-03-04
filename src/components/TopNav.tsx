@@ -101,22 +101,6 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
           {/* Organization Switcher */}
           {hasAnyRole(['admin','ops_manager','dispatcher','sales','viewer']) && <OrganizationSwitcher />}
           
-          {/* Enhanced notifications */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="ghost" size="sm" className="relative hover:bg-brand-primary/10 transition-colors" aria-label="Notifications">
-                <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-brand-tire-black/70" />
-                {unreadCount > 0 && (
-                  <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs bg-brand-accent flex items-center justify-center min-w-[20px] animate-pulse">
-                    {unreadCount}
-                  </Badge>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[420px] p-0" align="end">
-              <EnhancedNotificationCenter />
-            </PopoverContent>
-          </Popover>
 
           {/* User menu - Streamlined to personal/account items only */}
           <DropdownMenu>

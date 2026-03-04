@@ -65,25 +65,6 @@ export const useVerifyPayment = () => {
           title: "Payment Successful",
           description: "Payment has been processed successfully.",
         });
-
-        // Create notification for successful payment - user.id is already internal PK
-        if (user?.currentOrganization) {
-          const userData = { id: user.id };
-
-          if (userData) {
-            const amount = data.payment.amount ? `$${(data.payment.amount / 100).toFixed(2)}` : '';
-            createNotification({
-              user_id: userData.id,
-              organization_id: user.currentOrganization.id,
-              title: "Payment Received",
-              message: `Stripe payment of ${amount} was successfully processed${data.payment.description ? ` for ${data.payment.description}` : ''}.`,
-              type: 'success',
-              priority: 'medium',
-              related_type: 'payment',
-              related_id: data.payment.id,
-            });
-          }
-        }
       }
       // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: ["payments"] });
