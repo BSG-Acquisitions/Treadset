@@ -248,14 +248,6 @@ if (preferencesLoading) {
                 <Button 
                   variant="ghost" 
                   className="w-full justify-start"
-                  onClick={() => scrollToSection('notifications-section')}
-                >
-                  <Bell className="h-4 w-4 mr-2" />
-                  Notifications
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-start"
                   onClick={() => scrollToSection('appearance-section')}
                 >
                   <Palette className="h-4 w-4 mr-2" />
