@@ -38,7 +38,7 @@ export interface TrailerRoute {
 
 export interface PlannedEvent {
   event_type: string;
-  trailer_id: string;
+  trailer_id: string | null;
   trailer_number: string;
 }
 

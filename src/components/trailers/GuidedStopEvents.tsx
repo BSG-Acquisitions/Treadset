@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TrailerSignatureDialog } from "./TrailerSignatureDialog";
 import { useCompleteTrailerEvent, StopTrailerEvent } from "@/hooks/useStopTrailerEvents";
 import { TrailerEventType, EVENT_TYPE_LABELS } from "@/hooks/useTrailerEvents";
@@ -69,30 +70,49 @@ export function GuidedStopEvents({
   const [activeEvent, setActiveEvent] = useState<PlannedEvent | null>(null);
   const [showSignature, setShowSignature] = useState(false);
   const [showUnplanned, setShowUnplanned] = useState(false);
+  // For "Any" trailer events — driver picks the trailer
+  const [driverSelectedTrailer, setDriverSelectedTrailer] = useState<Record<number, string>>({});
   const completeEvent = useCompleteTrailerEvent();
   const navigate = useNavigate();
 
-  const isCompleted = (pe: PlannedEvent) =>
-    completedEvents.some(
-      (ce) => ce.event_type === pe.event_type && ce.trailer_id === pe.trailer_id
-    );
+  const isCompleted = (pe: PlannedEvent, idx: number) => {
+    if (pe.trailer_id) {
+      return completedEvents.some(
+        (ce) => ce.event_type === pe.event_type && ce.trailer_id === pe.trailer_id
+      );
+    }
+    // For "Any" trailer events, match by event_type + index (count how many of this type are completed vs planned)
+    const plannedOfType = plannedEvents.filter((p, i) => p.event_type === pe.event_type && !p.trailer_id && i <= idx);
+    const completedOfType = completedEvents.filter(ce => ce.event_type === pe.event_type);
+    // A null-trailer planned event is "done" if there are enough completed events of the same type
+    return completedOfType.length >= plannedOfType.length;
+  };
 
   // Find the full event record for a completed planned event
-  const getEventRecord = (pe: PlannedEvent): StopTrailerEvent | undefined =>
-    stopEvents.find(
-      (se) => se.event_type === pe.event_type && se.trailer_id === pe.trailer_id
-    );
+  const getEventRecord = (pe: PlannedEvent): StopTrailerEvent | undefined => {
+    if (pe.trailer_id) {
+      return stopEvents.find(
+        (se) => se.event_type === pe.event_type && se.trailer_id === pe.trailer_id
+      );
+    }
+    // For "Any" events, just find a matching event_type
+    return stopEvents.find((se) => se.event_type === pe.event_type);
+  };
 
-  const allPlannedDone = plannedEvents.every(isCompleted);
+  const allPlannedDone = plannedEvents.every((pe, idx) => isCompleted(pe, idx));
 
   const handleComplete = async (
     pe: PlannedEvent,
+    overrideTrailerId?: string,
     signaturePath?: string,
     notes?: string,
     contactInfo?: { email?: string; name?: string }
   ) => {
+    const trailerId = overrideTrailerId || pe.trailer_id;
+    if (!trailerId) return; // shouldn't happen
+
     await completeEvent.mutateAsync({
-      trailer_id: pe.trailer_id,
+      trailer_id: trailerId,
       event_type: pe.event_type as TrailerEventType,
       stop_id: stopId,
       route_id: routeId,
@@ -108,14 +128,22 @@ export function GuidedStopEvents({
     onEventCompleted();
   };
 
-  const handleTap = (pe: PlannedEvent) => {
-    if (isCompleted(pe)) return;
+  const handleTap = (pe: PlannedEvent, idx: number) => {
+    if (isCompleted(pe, idx)) return;
+
+    // For "Any" trailer events, require driver to select a trailer first
+    if (!pe.trailer_id) {
+      const selected = driverSelectedTrailer[idx];
+      if (!selected) return; // button should be disabled
+    }
+
     setActiveEvent(pe);
 
     if (SIGNATURE_REQUIRED.includes(pe.event_type)) {
       setShowSignature(true);
     } else {
-      handleComplete(pe);
+      const overrideId = !pe.trailer_id ? driverSelectedTrailer[idx] : undefined;
+      handleComplete(pe, overrideId);
     }
   };
 
@@ -125,36 +153,41 @@ export function GuidedStopEvents({
 
       <div className="space-y-2">
         {plannedEvents.map((pe, idx) => {
-          const done = isCompleted(pe);
+          const done = isCompleted(pe, idx);
           const eventRecord = done ? getEventRecord(pe) : undefined;
           const Icon = EVENT_ICONS[pe.event_type] || Package;
           const label = EVENT_LABELS[pe.event_type] || pe.event_type;
           const isLoading = completeEvent.isPending && activeEvent === pe;
+          const isAnyTrailer = !pe.trailer_id;
+          const selectedTrailerForAny = driverSelectedTrailer[idx];
 
           return (
             <Card
-              key={`${pe.event_type}-${pe.trailer_id}-${idx}`}
+              key={`${pe.event_type}-${pe.trailer_id || 'any'}-${idx}`}
               className={cn(
                 "transition-all",
                 done
                   ? "bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800"
-                  : "hover:bg-muted/50 cursor-pointer"
+                  : "hover:bg-muted/50"
               )}
             >
               <CardContent className="p-3 sm:p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-3 min-w-0">
                     {done ? (
                       <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
                     ) : (
                       <Icon className="h-5 w-5 text-primary flex-shrink-0" />
                     )}
-                    <div>
+                    <div className="min-w-0">
                       <div className="font-medium text-sm">{label}</div>
                       <div className="text-xs text-muted-foreground">
-                        Trailer #{pe.trailer_number}
+                        {isAnyTrailer && !done ? (
+                          'Any Available Trailer'
+                        ) : (
+                          `Trailer #${eventRecord?.trailer?.trailer_number || pe.trailer_number}`
+                        )}
                       </div>
-                      {/* Timestamp for completed events */}
                       {done && eventRecord && (
                         <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
                           <Clock className="h-3 w-3" />
@@ -164,53 +197,71 @@ export function GuidedStopEvents({
                     </div>
                   </div>
 
-                   <div className="flex items-center gap-2">
-                     {done ? (
-                       <div className="flex items-center gap-2">
-                         {/* Manifest badge for signed events */}
-                         {eventRecord?.manifest_number && (
-                           <Badge variant="outline" className="text-xs gap-1 bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700">
-                             <FileText className="h-3 w-3" />
-                             {eventRecord.manifest_number}
-                           </Badge>
-                         )}
-                         {/* Create Manifest button for signed events without a manifest */}
-                         {SIGNATURE_REQUIRED.includes(pe.event_type) && !eventRecord?.manifest_number && (
-                           <Button
-                             size="sm"
-                             variant="outline"
-                             className="text-xs gap-1 min-h-[36px]"
-                             onClick={(e) => {
-                               e.stopPropagation();
-                               const params = new URLSearchParams();
-                               if (locationName) params.set('location', locationName);
-                               if (pe.trailer_number) params.set('trailer', pe.trailer_number);
-                               navigate(`/driver/manifest/new?${params.toString()}`);
-                             }}
-                           >
-                             <FileText className="h-3 w-3" />
-                             Create Manifest
-                           </Button>
-                         )}
-                         <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-400 dark:border-green-700">
-                           Done
-                         </Badge>
-                       </div>
-                    ) : (
-                      <Button
-                        size="sm"
-                        className="min-h-[44px] min-w-[44px] px-4"
-                        onClick={() => handleTap(pe)}
-                        disabled={isLoading}
-                      >
-                        {isLoading ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : SIGNATURE_REQUIRED.includes(pe.event_type) ? (
-                          "Sign & Complete"
-                        ) : (
-                          "Complete"
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {done ? (
+                      <div className="flex items-center gap-2">
+                        {eventRecord?.manifest_number && (
+                          <Badge variant="outline" className="text-xs gap-1 bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700">
+                            <FileText className="h-3 w-3" />
+                            {eventRecord.manifest_number}
+                          </Badge>
                         )}
-                      </Button>
+                        {SIGNATURE_REQUIRED.includes(pe.event_type) && !eventRecord?.manifest_number && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs gap-1 min-h-[36px]"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const params = new URLSearchParams();
+                              if (locationName) params.set('location', locationName);
+                              if (pe.trailer_number) params.set('trailer', pe.trailer_number);
+                              navigate(`/driver/manifest/new?${params.toString()}`);
+                            }}
+                          >
+                            <FileText className="h-3 w-3" />
+                            Create Manifest
+                          </Button>
+                        )}
+                        <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-400 dark:border-green-700">
+                          Done
+                        </Badge>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        {/* Trailer selector for "Any" events */}
+                        {isAnyTrailer && (
+                          <Select
+                            value={selectedTrailerForAny || ''}
+                            onValueChange={(v) => setDriverSelectedTrailer(prev => ({ ...prev, [idx]: v }))}
+                          >
+                            <SelectTrigger className="w-[120px] h-9 text-xs">
+                              <SelectValue placeholder="Select trailer" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {trailers.map(t => (
+                                <SelectItem key={t.id} value={t.id}>
+                                  {t.trailer_number}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                        <Button
+                          size="sm"
+                          className="min-h-[44px] min-w-[44px] px-4"
+                          onClick={() => handleTap(pe, idx)}
+                          disabled={isLoading || (isAnyTrailer && !selectedTrailerForAny)}
+                        >
+                          {isLoading ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : SIGNATURE_REQUIRED.includes(pe.event_type) ? (
+                            "Sign & Complete"
+                          ) : (
+                            "Complete"
+                          )}
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -263,8 +314,12 @@ export function GuidedStopEvents({
           trailerNumber={activeEvent.trailer_number}
           locationName={locationName}
           onComplete={async (signaturePath, notes, contactInfo) => {
+            const overrideId = !activeEvent.trailer_id
+              ? driverSelectedTrailer[plannedEvents.indexOf(activeEvent)]
+              : undefined;
             await handleComplete(
               activeEvent,
+              overrideId,
               signaturePath || undefined,
               notes,
               contactInfo

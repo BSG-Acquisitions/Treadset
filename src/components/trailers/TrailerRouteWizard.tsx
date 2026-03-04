@@ -31,7 +31,7 @@ interface StopData {
 interface EventData {
   id: string;
   event_type: TrailerEventType;
-  trailer_id: string;
+  trailer_id: string | null;
   notes: string;
 }
 
@@ -104,11 +104,7 @@ export function TrailerRouteWizard({ onComplete, onCancel }: TrailerRouteWizardP
     setStops(prev => prev.filter(s => s.id !== stopId));
   };
 
-  const addEventToStop = (stopId: string, eventType: TrailerEventType, trailerId: string, notes: string = '') => {
-    if (!trailerId) {
-      toast.error('Please select a trailer');
-      return;
-    }
+  const addEventToStop = (stopId: string, eventType: TrailerEventType, trailerId: string | null, notes: string = '') => {
     
     // Handle swap - creates two events
     if (eventType === 'swap') {
@@ -180,11 +176,11 @@ export function TrailerRouteWizard({ onComplete, onCancel }: TrailerRouteWizardP
         // Update stop with planned events (don't fire real events yet)
         if (stopData.events.length > 0) {
           const plannedEvents = stopData.events.map(event => {
-            const trailer = trailers?.find(t => t.id === event.trailer_id);
+            const trailer = event.trailer_id ? trailers?.find(t => t.id === event.trailer_id) : null;
             return {
               event_type: event.event_type,
               trailer_id: event.trailer_id,
-              trailer_number: trailer?.trailer_number || 'Unknown',
+              trailer_number: trailer?.trailer_number || (event.trailer_id ? 'Unknown' : 'Any'),
             };
           });
           
@@ -461,7 +457,7 @@ interface StopEventEditorProps {
   stop: StopData;
   stopIndex: number;
   trailers: { id: string; trailer_number: string }[];
-  onAddEvent: (eventType: TrailerEventType, trailerId: string, notes: string) => void;
+  onAddEvent: (eventType: TrailerEventType, trailerId: string | null, notes: string) => void;
   onRemoveEvent: (eventId: string) => void;
 }
 
@@ -471,11 +467,12 @@ function StopEventEditor({ stop, stopIndex, trailers, onAddEvent, onRemoveEvent 
   const [eventNotes, setEventNotes] = useState('');
 
   const handleAddEvent = () => {
-    if (!selectedEventType || !selectedTrailerId) {
-      toast.error('Please select event type and trailer');
+    if (!selectedEventType) {
+      toast.error('Please select an event type');
       return;
     }
-    onAddEvent(selectedEventType, selectedTrailerId, eventNotes);
+    const trailerId = selectedTrailerId === 'any' ? null : selectedTrailerId || null;
+    onAddEvent(selectedEventType, trailerId, eventNotes);
     setSelectedEventType('');
     setSelectedTrailerId('');
     setEventNotes('');
@@ -507,7 +504,7 @@ function StopEventEditor({ stop, stopIndex, trailers, onAddEvent, onRemoveEvent 
         {stop.events.length > 0 && (
           <div className="space-y-2">
             {stop.events.map((event) => {
-              const trailer = trailers.find(t => t.id === event.trailer_id);
+              const trailer = event.trailer_id ? trailers.find(t => t.id === event.trailer_id) : null;
               return (
                 <div
                   key={event.id}
@@ -515,7 +512,7 @@ function StopEventEditor({ stop, stopIndex, trailers, onAddEvent, onRemoveEvent 
                 >
                   <Container className="h-4 w-4 text-muted-foreground" />
                   <Badge variant="outline">{EVENT_TYPE_LABELS[event.event_type]}</Badge>
-                  <span className="text-sm">{trailer?.trailer_number || 'Unknown'}</span>
+                  <span className="text-sm">{trailer?.trailer_number || (event.trailer_id ? 'Unknown' : 'Any Available')}</span>
                   {event.notes && <span className="text-xs text-muted-foreground">({event.notes})</span>}
                   <Button
                     variant="ghost"
@@ -551,6 +548,7 @@ function StopEventEditor({ stop, stopIndex, trailers, onAddEvent, onRemoveEvent 
               <SelectValue placeholder="Trailer..." />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="any">Any Available</SelectItem>
               {trailers.map(trailer => (
                 <SelectItem key={trailer.id} value={trailer.id}>
                   {trailer.trailer_number}
