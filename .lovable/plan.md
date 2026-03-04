@@ -1,49 +1,41 @@
 
 
-## Mobile-Optimize Trailer Assignments for Jody
+## Why Your Notification Center Is Empty
 
-### Problems
+There are **duplicate user records** for your account (zachdevon@bsgtires.com). You have 4 entries in the `users` table — the key conflict:
 
-The current layout has several mobile issues:
+- **User `1c39d6ae`** — This is the one the app loads (has `auth_user_id` set). The notification query uses this ID.
+- **User `70c2f0d6`** — A duplicate record with no `auth_user_id`. All **29,512 notifications** are stored under this ID.
 
-1. **Route card header** — The route name, date, badge, and "Start Route" button are in a single horizontal `flex justify-between` row. On a phone this overflows or crushes text. The badge and action button need to stack below the title.
+The app queries `WHERE user_id = '1c39d6ae...'` but all notifications were written to `user_id = '70c2f0d6...'`. Result: empty notification center.
 
-2. **Progress bar area** — Has `pl-8` padding that wastes space on small screens.
+## Plan
 
-3. **Stop cards** — The completed events badges (`flex-wrap gap-1`) and contact info can overflow. The collapsible content padding is too wide for mobile.
+### Step 1: Migrate notifications to the correct user ID
+Run a SQL migration to reassign all notifications from the orphan user ID to the active one:
+```sql
+UPDATE notifications 
+SET user_id = '1c39d6ae-c319-47a8-96ed-a58de61d13ee' 
+WHERE user_id = '70c2f0d6-d1db-40ad-98fa-1def1c314b0d';
+```
 
-4. **GuidedStopEvents cards** — The `flex items-center justify-between` layout with label + "Complete" button works okay but could have larger touch targets.
+### Step 2: Clean up duplicate user_organization_roles
+Remove the org roles for the orphan user ID so edge functions don't keep writing to it:
+```sql
+DELETE FROM user_organization_roles 
+WHERE user_id = '70c2f0d6-d1db-40ad-98fa-1def1c314b0d';
+```
 
-5. **DriverStopEventActions grid** — Uses `grid-cols-2` which crampes button text on small screens. The dialog content (`max-w-md`) doesn't use mobile-friendly sizing.
+### Step 3: Clean up duplicate user records
+Remove or deactivate the orphan user records (the ones without `auth_user_id`) to prevent this from recurring:
+```sql
+DELETE FROM users 
+WHERE email = 'zachdevon@bsgtires.com' 
+AND auth_user_id IS NULL;
+```
 
-6. **TrailerSignatureDialog** — The dialog uses `max-w-md` and has a fixed-height signature canvas (`h-32` / `128px`) which is tight on mobile. The form can get cut off by the keyboard.
+Also delete user `676a2f69` (which has a different auth_user_id `346511c7` — likely an old login) if it's no longer active.
 
-7. **Page-level padding** — The outer `div` uses `p-6` which is too much on a phone.
-
-8. **The `mobile.css` sticky button hack** — The global CSS makes ALL `button[type="submit"]` and `button[type="button"]` sticky with full width on mobile. This breaks button grids and inline buttons throughout the trailer workflow. This global rule needs to be scoped or removed.
-
-### Changes
-
-**1. `src/styles/mobile.css`** — Remove the aggressive global sticky button rule (lines ~139-148) that forces ALL buttons to be sticky full-width on mobile. This is the biggest offender — it breaks button grids, inline "Complete" buttons, dialog footer buttons, etc.
-
-**2. `src/pages/DriverTrailerAssignments.tsx`**
-- Reduce page padding: `p-6` → `p-3 sm:p-6`
-- Reduce title size on mobile: `text-2xl` → `text-xl sm:text-2xl`
-- **RouteCard header**: Stack the title/meta and badge/action vertically on mobile instead of side-by-side. Use `flex-col sm:flex-row` so the route name is on top, badge + button below.
-- Reduce progress bar left padding on mobile
-- Stop card padding: `p-4` → `p-3 sm:p-4`
-
-**3. `src/components/trailers/GuidedStopEvents.tsx`**
-- Make "Complete" / "Sign & Complete" buttons larger touch targets (`min-h-[44px]`)
-- Ensure event cards have adequate padding for thumb taps
-
-**4. `src/components/trailers/DriverStopEventActions.tsx`**
-- Change grid to `grid-cols-1 sm:grid-cols-2` so buttons are full-width stacked on phone
-- Dialog: add `max-h-[85vh] overflow-y-auto` for mobile scrollability
-
-**5. `src/components/trailers/TrailerSignatureDialog.tsx`**
-- Make dialog full-width on mobile: `max-w-md` → `sm:max-w-md w-full`
-- Make dialog content scrollable: add `max-h-[85vh] overflow-y-auto`
-- Increase signature canvas height on mobile for better finger signing
-- Stack dialog footer buttons vertically on mobile
+### Result
+After this cleanup, your 29,512 notifications will appear in the notification center immediately, and future edge function notifications will be written to the correct user ID.
 
