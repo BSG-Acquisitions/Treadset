@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { TrailerSignatureDialog } from "./TrailerSignatureDialog";
+import { DriverManifestCreationWizard } from "@/components/driver/DriverManifestCreationWizard";
 import { useCompleteTrailerEvent } from "@/hooks/useStopTrailerEvents";
 import { TrailerEventType, EVENT_TYPE_LABELS } from "@/hooks/useTrailerEvents";
 import { Trailer } from "@/hooks/useTrailers";
@@ -122,6 +123,7 @@ export function DriverStopEventActions({
   const [notes, setNotes] = useState("");
   const [showDialog, setShowDialog] = useState(false);
   const [showSignatureDialog, setShowSignatureDialog] = useState(false);
+  const [showManifestWizard, setShowManifestWizard] = useState(false);
   
   const completeEvent = useCompleteTrailerEvent();
 
@@ -195,6 +197,7 @@ export function DriverStopEventActions({
 
     setShowDialog(false);
     setShowSignatureDialog(false);
+    setShowManifestWizard(false);
     setSelectedEventType(null);
     onEventCompleted();
   };
@@ -345,21 +348,43 @@ export function DriverStopEventActions({
             <Button variant="outline" onClick={() => setShowDialog(false)}>
               Cancel
             </Button>
-            <Button 
-              onClick={handleProceed} 
-              disabled={!canProceed() || completeEvent.isPending}
-            >
-              {completeEvent.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                selectedEventType && EVENT_CONFIG[selectedEventType].requiresSignature 
-                  ? 'Continue to Signature' 
-                  : 'Complete Event'
-              )}
-            </Button>
+            {selectedEventType && ['pickup_full', 'drop_full'].includes(selectedEventType) ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={handleProceed}
+                  disabled={!canProceed() || completeEvent.isPending}
+                >
+                  Complete without Manifest
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (!canProceed()) return;
+                    setShowDialog(false);
+                    setShowManifestWizard(true);
+                  }}
+                  disabled={!canProceed()}
+                >
+                  Create Manifest & Complete
+                </Button>
+              </>
+            ) : (
+              <Button 
+                onClick={handleProceed} 
+                disabled={!canProceed() || completeEvent.isPending}
+              >
+                {completeEvent.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  selectedEventType && EVENT_CONFIG[selectedEventType].requiresSignature 
+                    ? 'Continue to Signature' 
+                    : 'Complete Event'
+                )}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -376,6 +401,29 @@ export function DriverStopEventActions({
             await handleCompleteEvent(signaturePath || undefined, signatureNotes, contactInfo);
           }}
         />
+      )}
+
+      {/* Full Manifest Wizard Dialog */}
+      {selectedEventType && showManifestWizard && (
+        <Dialog
+          open={showManifestWizard}
+          onOpenChange={(open) => {
+            if (!open) {
+              setShowManifestWizard(false);
+              setSelectedEventType(null);
+            }
+          }}
+        >
+          <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto p-0" hideClose>
+            <DriverManifestCreationWizard
+              locationName={locationName}
+              trailerNumber={getSelectedTrailer()?.trailer_number}
+              onComplete={async () => {
+                await handleCompleteEvent();
+              }}
+            />
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
