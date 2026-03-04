@@ -296,6 +296,7 @@ Deno.serve(async (req) => {
         const notificationTitle = `${client.company_name} hasn't been serviced in ${daysSinceLastPickup} days`;
 
         for (const userId of userIds) {
+          if (userAtCap(userId)) continue;
           if (hasRecentNotif(userId, notificationTitle)) continue;
 
           notificationsToCreate.push({
