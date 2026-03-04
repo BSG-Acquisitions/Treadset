@@ -1,44 +1,49 @@
 
-Root cause confirmed: “Start Route” sends a PATCH successfully (204), but the route stays `scheduled` in DB due RLS, so stop cards never become interactive (`canInteract` requires `in_progress`). That is why Jody sees steps but no actionable buttons. A second issue is stop toggle wiring can double-toggle and block manual expansion.
 
-Implementation plan:
+## Mobile-Optimize Trailer Assignments for Jody
 
-1) Fix RLS so assigned drivers can run their own trailer routes
-- Add a new Supabase migration with two driver UPDATE policies:
-  - `trailer_routes`: assigned driver can update their own route row (needed for `scheduled -> in_progress -> completed`)
-  - `trailer_route_stops`: assigned driver can update stops on their own route (needed for `completed_at`)
-- Keep existing admin/ops/dispatcher policies unchanged.
+### Problems
 
-2) Make route/stop updates fail loudly instead of silently
-- `src/hooks/useTrailerRoutes.ts` (`useUpdateTrailerRoute`):
-  - switch to `.update(...).eq('id', id).select('id,status').single()`
-  - if no row returned, throw explicit permission/workflow error (so driver sees a real error toast).
-- `src/pages/DriverTrailerAssignments.tsx` (`markStopComplete`):
-  - capture and handle update errors; toast on failure and avoid false “progressed” UI state.
+The current layout has several mobile issues:
 
-3) Fix stop expansion behavior so actions are always reachable
-- `src/pages/DriverTrailerAssignments.tsx`:
-  - remove double-toggle behavior in stop `Collapsible` (currently both trigger click and `onOpenChange` can toggle).
-  - use a single source of truth for open state (set-open by stop id), so tapping a stop reliably opens `GuidedStopEvents` / `DriverStopEventActions`.
+1. **Route card header** — The route name, date, badge, and "Start Route" button are in a single horizontal `flex justify-between` row. On a phone this overflows or crushes text. The badge and action button need to stack below the title.
 
-4) Preserve guided operational flow for driver
-- After Start Route succeeds and DB returns `in_progress`, first incomplete stop auto-opens.
-- Driver completes each planned event inside `GuidedStopEvents` (buttons: Complete or Sign & Complete).
-- Event inserts continue to produce timestamps and manifests for signed events.
-- “Mark Stop Complete” updates `completed_at` and auto-advances to next stop.
+2. **Progress bar area** — Has `pl-8` padding that wastes space on small screens.
 
-Technical details (concise):
-- New migration file in `supabase/migrations/`:
-  - `CREATE POLICY ... FOR UPDATE USING (...) WITH CHECK (...)` on `trailer_routes` where `driver_id = current user internal id`.
-  - `CREATE POLICY ... FOR UPDATE` on `trailer_route_stops` where `route_id` belongs to a route assigned to current user.
-- Files to edit:
-  - `supabase/migrations/<new_timestamp>_driver_trailer_route_updates.sql`
-  - `src/hooks/useTrailerRoutes.ts`
-  - `src/pages/DriverTrailerAssignments.tsx`
+3. **Stop cards** — The completed events badges (`flex-wrap gap-1`) and contact info can overflow. The collapsible content padding is too wide for mobile.
 
-Validation after implementation:
-1. Login as Jody, press Start Route -> route status visibly changes to In Progress.
-2. First stop opens with actionable event buttons.
-3. Complete one event -> trailer_event row created with timestamp.
-4. Mark stop complete -> next stop auto-opens.
-5. Complete all stops -> Finish Route button appears and works.
+4. **GuidedStopEvents cards** — The `flex items-center justify-between` layout with label + "Complete" button works okay but could have larger touch targets.
+
+5. **DriverStopEventActions grid** — Uses `grid-cols-2` which crampes button text on small screens. The dialog content (`max-w-md`) doesn't use mobile-friendly sizing.
+
+6. **TrailerSignatureDialog** — The dialog uses `max-w-md` and has a fixed-height signature canvas (`h-32` / `128px`) which is tight on mobile. The form can get cut off by the keyboard.
+
+7. **Page-level padding** — The outer `div` uses `p-6` which is too much on a phone.
+
+8. **The `mobile.css` sticky button hack** — The global CSS makes ALL `button[type="submit"]` and `button[type="button"]` sticky with full width on mobile. This breaks button grids and inline buttons throughout the trailer workflow. This global rule needs to be scoped or removed.
+
+### Changes
+
+**1. `src/styles/mobile.css`** — Remove the aggressive global sticky button rule (lines ~139-148) that forces ALL buttons to be sticky full-width on mobile. This is the biggest offender — it breaks button grids, inline "Complete" buttons, dialog footer buttons, etc.
+
+**2. `src/pages/DriverTrailerAssignments.tsx`**
+- Reduce page padding: `p-6` → `p-3 sm:p-6`
+- Reduce title size on mobile: `text-2xl` → `text-xl sm:text-2xl`
+- **RouteCard header**: Stack the title/meta and badge/action vertically on mobile instead of side-by-side. Use `flex-col sm:flex-row` so the route name is on top, badge + button below.
+- Reduce progress bar left padding on mobile
+- Stop card padding: `p-4` → `p-3 sm:p-4`
+
+**3. `src/components/trailers/GuidedStopEvents.tsx`**
+- Make "Complete" / "Sign & Complete" buttons larger touch targets (`min-h-[44px]`)
+- Ensure event cards have adequate padding for thumb taps
+
+**4. `src/components/trailers/DriverStopEventActions.tsx`**
+- Change grid to `grid-cols-1 sm:grid-cols-2` so buttons are full-width stacked on phone
+- Dialog: add `max-h-[85vh] overflow-y-auto` for mobile scrollability
+
+**5. `src/components/trailers/TrailerSignatureDialog.tsx`**
+- Make dialog full-width on mobile: `max-w-md` → `sm:max-w-md w-full`
+- Make dialog content scrollable: add `max-h-[85vh] overflow-y-auto`
+- Increase signature canvas height on mobile for better finger signing
+- Stack dialog footer buttons vertically on mobile
+

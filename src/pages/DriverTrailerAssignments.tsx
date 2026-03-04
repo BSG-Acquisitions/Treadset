@@ -70,15 +70,19 @@ export default function DriverTrailerAssignments() {
   };
 
   const handleStartRoute = async (routeId: string) => {
-    await updateRoute.mutateAsync({ id: routeId, status: 'in_progress' });
-    setExpandedRoutes(prev => new Set([...prev, routeId]));
-    // Auto-expand the first stop so Jody sees what to do
-    const route = routes?.find(r => r.id === routeId);
-    const firstStop = route?.stops
-      ?.sort((a, b) => a.sequence_number - b.sequence_number)
-      ?.find(s => !s.completed_at);
-    if (firstStop) {
-      setExpandedStops(prev => new Set([...prev, firstStop.id]));
+    try {
+      await updateRoute.mutateAsync({ id: routeId, status: 'in_progress' });
+      setExpandedRoutes(prev => new Set([...prev, routeId]));
+      // Auto-expand the first stop so Jody sees what to do
+      const route = routes?.find(r => r.id === routeId);
+      const firstStop = route?.stops
+        ?.sort((a, b) => a.sequence_number - b.sequence_number)
+        ?.find(s => !s.completed_at);
+      if (firstStop) {
+        setExpandedStops(prev => new Set([...prev, firstStop.id]));
+      }
+    } catch (err) {
+      // Toast already shown by mutation onError
     }
   };
 
@@ -88,10 +92,19 @@ export default function DriverTrailerAssignments() {
   };
 
   const markStopComplete = async (stopId: string, routeId: string) => {
-    await supabase
+    const { error } = await supabase
       .from('trailer_route_stops')
       .update({ completed_at: new Date().toISOString() })
-      .eq('id', stopId);
+      .eq('id', stopId)
+      .select('id')
+      .single();
+    
+    if (error) {
+      toast.error('Failed to mark stop complete. You may not have permission.');
+      return;
+    }
+    
+    toast.success('Stop marked complete');
     
     // Auto-advance: expand next incomplete stop
     const route = routes?.find(r => r.id === routeId);
@@ -383,7 +396,7 @@ function StopCard({
   };
 
   return (
-    <Collapsible open={expanded && canInteract} onOpenChange={canInteract ? onToggle : undefined}>
+    <Collapsible open={expanded && canInteract} onOpenChange={() => { if (canInteract) onToggle(); }}>
       <div
         className={cn(
           "rounded-lg border transition-all",
@@ -394,8 +407,7 @@ function StopCard({
               : "bg-muted/30 border-border/50"
         )}
       >
-        <CollapsibleTrigger asChild disabled={!canInteract}>
-          <div className="p-3 sm:p-4" onClick={(e) => { e.stopPropagation(); if (canInteract) onToggle(); }}>
+        <div className="p-3 sm:p-4" role="button" tabIndex={canInteract ? 0 : undefined} onClick={() => { if (canInteract) onToggle(); }}>
             <div className="flex items-start gap-3">
               <div className={cn(
                 "flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium flex-shrink-0",
@@ -498,7 +510,7 @@ function StopCard({
               )}
             </div>
           </div>
-        </CollapsibleTrigger>
+        </div>
 
         <CollapsibleContent>
           <div className="px-4 pb-4 pt-0 border-t">

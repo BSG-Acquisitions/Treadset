@@ -171,12 +171,16 @@ export const useUpdateTrailerRoute = () => {
 
   return useMutation({
     mutationFn: async ({ id, ...data }: Partial<TrailerRoute> & { id: string }) => {
-      const { error } = await supabase
+      const { data: result, error } = await supabase
         .from('trailer_routes')
         .update(data)
-        .eq('id', id);
+        .eq('id', id)
+        .select('id, status')
+        .single();
       
       if (error) throw error;
+      if (!result) throw new Error('Update failed — you may not have permission to modify this route.');
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trailer-routes'] });
