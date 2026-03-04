@@ -380,7 +380,6 @@ function StopCard({
 
   const handleMarkComplete = () => {
     onStopComplete();
-    onToggle(); // Collapse after completing
   };
 
   return (
