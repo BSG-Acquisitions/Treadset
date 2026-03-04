@@ -396,7 +396,7 @@ function StopCard({
   };
 
   return (
-    <Collapsible open={expanded && canInteract} onOpenChange={canInteract ? onToggle : undefined}>
+    <Collapsible open={expanded && canInteract} onOpenChange={() => { if (canInteract) onToggle(); }}>
       <div
         className={cn(
           "rounded-lg border transition-all",
@@ -407,8 +407,7 @@ function StopCard({
               : "bg-muted/30 border-border/50"
         )}
       >
-        <CollapsibleTrigger asChild disabled={!canInteract}>
-          <div className="p-3 sm:p-4" onClick={(e) => { e.stopPropagation(); if (canInteract) onToggle(); }}>
+        <div className="p-3 sm:p-4" role="button" tabIndex={canInteract ? 0 : undefined} onClick={() => { if (canInteract) onToggle(); }}>
             <div className="flex items-start gap-3">
               <div className={cn(
                 "flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium flex-shrink-0",
