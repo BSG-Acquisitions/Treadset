@@ -230,7 +230,7 @@ function RouteCard({
                   )}
                 </div>
                 
-                <div className="flex flex-wrap items-center gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
+                <div className="flex flex-wrap items-center gap-2 mt-2">
                   <Badge variant={route.status === 'in_progress' ? 'default' : 'secondary'}>
                     {route.status === 'in_progress' ? (
                       <><Clock className="h-3 w-3 mr-1" /> In Progress</>
@@ -238,24 +238,28 @@ function RouteCard({
                       route.status.replace('_', ' ')
                     )}
                   </Badge>
-                  
-                  {route.status === 'scheduled' && (
-                    <Button size="sm" className="min-h-[44px]" onClick={onStartRoute}>
-                      <PlayCircle className="h-4 w-4 mr-1" />
-                      Start Route
-                    </Button>
-                  )}
-                  
-                  {route.status === 'in_progress' && allStopsCompleted && (
-                    <Button size="sm" className="min-h-[44px]" onClick={onCompleteRoute} variant="default">
-                      <Flag className="h-4 w-4 mr-1" />
-                      Finish Route
-                    </Button>
-                  )}
                 </div>
               </div>
             </div>
           </CollapsibleTrigger>
+          
+          {route.status === 'scheduled' && (
+            <div className="mt-3 pl-7 sm:pl-8">
+              <Button size="sm" className="min-h-[44px] w-full" onClick={onStartRoute}>
+                <PlayCircle className="h-4 w-4 mr-1" />
+                Start Route
+              </Button>
+            </div>
+          )}
+          
+          {route.status === 'in_progress' && allStopsCompleted && (
+            <div className="mt-3 pl-7 sm:pl-8">
+              <Button size="sm" className="min-h-[44px] w-full" onClick={onCompleteRoute} variant="default">
+                <Flag className="h-4 w-4 mr-1" />
+                Finish Route
+              </Button>
+            </div>
+          )}
           
           <div className="mt-3 pl-7 sm:pl-8">
             <div className="text-xs sm:text-sm text-muted-foreground mb-1">
