@@ -49,8 +49,6 @@ export const useCreatePayment = () => {
 export const useVerifyPayment = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { createNotification } = useEnhancedNotifications();
-  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async (params: VerifyPaymentParams) => {
