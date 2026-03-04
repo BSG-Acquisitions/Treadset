@@ -418,6 +418,7 @@ export function DriverStopEventActions({
             <DriverManifestCreationWizard
               locationName={locationName}
               trailerNumber={getSelectedTrailer()?.trailer_number}
+              manifestMode={selectedEventType === 'drop_full' ? 'drop_to_processor' : 'pickup'}
               onComplete={async () => {
                 await handleCompleteEvent();
               }}

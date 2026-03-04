@@ -325,6 +325,7 @@ export function GuidedStopEvents({
                 activeEvent.trailer_number ||
                 trailers.find(t => t.id === driverSelectedTrailer[plannedEvents.indexOf(activeEvent)])?.trailer_number
               }
+              manifestMode={activeEvent.event_type === 'drop_full' ? 'drop_to_processor' : 'pickup'}
               onComplete={async () => {
                 const overrideId = !activeEvent.trailer_id
                   ? driverSelectedTrailer[plannedEvents.indexOf(activeEvent)]

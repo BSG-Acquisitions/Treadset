@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { supabase } from "@/integrations/supabase/client";
+import { SearchableDropdown } from "@/components/SearchableDropdown";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCreateManifest, useUpdateManifest } from "@/hooks/useManifests";
@@ -60,6 +61,7 @@ interface DriverManifestCreationWizardProps {
   clientId?: string;
   locationName?: string;
   trailerNumber?: string;
+  manifestMode?: 'pickup' | 'drop_to_processor';
   onComplete?: () => void;
 }
 
@@ -80,9 +82,10 @@ export function DriverManifestCreationWizard({
   clientId,
   locationName,
   trailerNumber,
+  manifestMode = 'pickup',
   onComplete 
 }: DriverManifestCreationWizardProps) {
-  return <DriverManifestCreationWizardInner pickupId={pickupId} clientId={clientId} locationName={locationName} trailerNumber={trailerNumber} onComplete={onComplete} />;
+  return <DriverManifestCreationWizardInner pickupId={pickupId} clientId={clientId} locationName={locationName} trailerNumber={trailerNumber} manifestMode={manifestMode} onComplete={onComplete} />;
 }
 
 function DriverManifestCreationWizardInner({ 
@@ -90,16 +93,19 @@ function DriverManifestCreationWizardInner({
   clientId,
   locationName: initialLocationName,
   trailerNumber: initialTrailerNumber,
+  manifestMode = 'pickup',
   onComplete 
-}: { pickupId?: string; clientId?: string; locationName?: string; trailerNumber?: string; onComplete?: () => void }) {
+}: { pickupId?: string; clientId?: string; locationName?: string; trailerNumber?: string; manifestMode?: 'pickup' | 'drop_to_processor'; onComplete?: () => void }) {
   const isStandalone = !pickupId; // Standalone mode: no pickup, manual entry
+  const isDropToProcessor = manifestMode === 'drop_to_processor';
   const [step, setStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pickupData, setPickupData] = useState<any>(null);
   const [haulerData, setHaulerData] = useState<any>(null);
   const [assignmentData, setAssignmentData] = useState<any>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [standaloneGeneratorName, setStandaloneGeneratorName] = useState<string>(initialLocationName || '');
+  const [standaloneGeneratorName, setStandaloneGeneratorName] = useState<string>(isDropToProcessor ? '' : (initialLocationName || ''));
+  const [standaloneClientData, setStandaloneClientData] = useState<any>(null);
   const [resolvedClientId, setResolvedClientId] = useState<string | null>(null);
   const [manualWeightOverride, setManualWeightOverride] = useState<boolean>(false);
   const [manifestCreated, setManifestCreated] = useState(false);
@@ -153,11 +159,28 @@ function DriverManifestCreationWizardInner({
   // Signature refs
   const generatorSigRef = useRef<SignatureCanvas>(null);
   const haulerSigRef = useRef<SignatureCanvas>(null);
+  const receiverSigRef = useRef<SignatureCanvas>(null);
   const contentScrollRef = useRef<HTMLDivElement>(null);
   const [genSigPath, setGenSigPath] = useState<string>('');
   const [haulSigPath, setHaulSigPath] = useState<string>('');
+  const [receiverSigPath, setReceiverSigPath] = useState<string>('');
   const [genSigDataUrl, setGenSigDataUrl] = useState<string>('');
   const [haulSigDataUrl, setHaulSigDataUrl] = useState<string>('');
+  const [receiverSigDataUrl, setReceiverSigDataUrl] = useState<string>('');
+  const [receiverSigUploading, setReceiverSigUploading] = useState(false);
+  const [receiverPrintName, setReceiverPrintName] = useState<string>('');
+  
+  // Client search for standalone mode
+  const searchClients = async (search: string) => {
+    const { data, error } = await supabase
+      .from('clients')
+      .select('*')
+      .ilike('company_name', `%${search}%`)
+      .order('company_name')
+      .limit(50);
+    if (error) return [];
+    return data || [];
+  };
   const form = useForm<ManifestFormData>({
     resolver: zodResolver(manifestSchema),
     mode: "onChange",
@@ -374,6 +397,10 @@ function DriverManifestCreationWizardInner({
       if (haulSigDataUrl && haulerSigRef.current && haulerSigRef.current.isEmpty()) {
         haulerSigRef.current.fromDataURL(haulSigDataUrl);
       }
+      // Restore receiver signature if we have it saved
+      if (receiverSigDataUrl && receiverSigRef.current && receiverSigRef.current.isEmpty()) {
+        receiverSigRef.current.fromDataURL(receiverSigDataUrl);
+      }
     }
   });
 
@@ -389,6 +416,13 @@ function DriverManifestCreationWizardInner({
     if (haulerSigRef.current && !haulerSigRef.current.isEmpty()) {
       const dataUrl = haulerSigRef.current.toDataURL();
       setHaulSigDataUrl(dataUrl);
+    }
+  };
+
+  const handleReceiverSignatureEnd = () => {
+    if (receiverSigRef.current && !receiverSigRef.current.isEmpty()) {
+      const dataUrl = receiverSigRef.current.toDataURL();
+      setReceiverSigDataUrl(dataUrl);
     }
   };
 
@@ -448,6 +482,16 @@ function DriverManifestCreationWizardInner({
         toast({
           title: "Generator Name Required",
           description: "Please enter a generator/location name before continuing",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // For drop_to_processor, require receiver selection
+      if (isDropToProcessor && !standaloneClientData) {
+        toast({
+          title: "Receiver Required",
+          description: "Please select a receiver/processor before continuing",
           variant: "destructive",
         });
         return;
@@ -561,11 +605,30 @@ function DriverManifestCreationWizardInner({
     if (currentStep.key === "signatures") {
       const hasGeneratorSig = generatorSigRef.current && !generatorSigRef.current.isEmpty();
       const hasHaulerSig = haulerSigRef.current && !haulerSigRef.current.isEmpty();
+      const hasReceiverSig = isDropToProcessor ? (receiverSigRef.current && !receiverSigRef.current.isEmpty()) : true;
       
       if (!hasGeneratorSig || !hasHaulerSig) {
         toast({
           title: "Missing Signatures",
           description: "Both generator and hauler signatures are required",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (isDropToProcessor && !hasReceiverSig) {
+        toast({
+          title: "Missing Receiver Signature",
+          description: "Receiver signature is required for processor drops",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (isDropToProcessor && !receiverPrintName.trim()) {
+        toast({
+          title: "Missing Receiver Name",
+          description: "Receiver printed name is required",
           variant: "destructive",
         });
         return;
@@ -659,10 +722,34 @@ function DriverManifestCreationWizardInner({
           console.log('[DRIVER_WIZARD] Hauler signature saved:', haulerFileName, 'at', haulTimestamp);
         }
 
-        console.log('[DRIVER_WIZARD] Both signatures saved successfully');
+        // --- Receiver signature (drop_to_processor only) ---
+        if (isDropToProcessor && receiverSigRef.current && !receiverSigPath) {
+          setReceiverSigUploading(true);
+          console.log('[DRIVER_WIZARD] Saving receiver signature...');
+          const recvTimestamp = new Date().toISOString();
+          const dataUrl = receiverSigRef.current.toDataURL();
+          setReceiverSigDataUrl(dataUrl);
+          const receiverBlob = dataURLtoBlob(dataUrl);
+          const receiverFileName = `signatures/${timestamp}-receiver.png`;
+          const { error: recvUploadError, data: recvUploadData } = await supabase.storage
+            .from('manifests')
+            .upload(receiverFileName, receiverBlob, { contentType: 'image/png', upsert: true });
+          setReceiverSigUploading(false);
+          if (recvUploadError) {
+            throw new Error(`Receiver signature upload failed: ${recvUploadError.message}`);
+          }
+          if (!recvUploadData?.path) {
+            throw new Error('Receiver signature upload returned no path.');
+          }
+          setReceiverSigPath(receiverFileName);
+          console.log('[DRIVER_WIZARD] Receiver signature saved:', receiverFileName);
+        }
+
+        console.log('[DRIVER_WIZARD] All signatures saved successfully');
       } catch (e: any) {
         setGenSigUploading(false);
         setHaulSigUploading(false);
+        setReceiverSigUploading(false);
         console.error('[DRIVER_WIZARD] Failed to upload signatures:', e);
         toast({
           title: "Upload Failed",
@@ -946,7 +1033,7 @@ function DriverManifestCreationWizardInner({
         total: calculatedTotal, // Revenue collected at pickup
         payment_method: paymentMethod as 'CARD' | 'CASH' | 'CHECK' | 'INVOICE',
         payment_status: (paymentMethod === 'CASH' || paymentMethod === 'CHECK') ? ('SUCCEEDED' as const) : ('PENDING' as const),
-        status: 'AWAITING_RECEIVER_SIGNATURE' as const,
+        status: isDropToProcessor ? 'COMPLETED' as const : 'AWAITING_RECEIVER_SIGNATURE' as const,
       };
 
       // Only create a new manifest if one doesn't exist
@@ -962,7 +1049,8 @@ function DriverManifestCreationWizardInner({
         id: manifest.id,
         customer_signature_png_path: generatorSigPath,
         driver_signature_png_path: haulerSigPath,
-        status: 'AWAITING_RECEIVER_SIGNATURE',
+        ...(isDropToProcessor && receiverSigPath ? { receiver_signature_png_path: receiverSigPath } : {}),
+        status: isDropToProcessor ? 'COMPLETED' : 'AWAITING_RECEIVER_SIGNATURE',
       });
 
       // Also update additional fields via direct Supabase update
@@ -992,15 +1080,27 @@ function DriverManifestCreationWizardInner({
       await manifestIntegration.mutateAsync({
         manifestId: manifest.id,
         overrides: {
-          // Generator info - from client data or standalone manual entry
-          generator_name: isStandalone ? standaloneGeneratorName : pickupData.client?.company_name,
-          generator_mail_address: isStandalone ? '' : (pickupData.client?.physical_address || pickupData.client?.mailing_address),
-          generator_city: isStandalone ? '' : (pickupData.client?.physical_city || pickupData.client?.city),
-          generator_state: isStandalone ? '' : (pickupData.client?.physical_state || pickupData.client?.state),
-          generator_zip: isStandalone ? '' : (pickupData.client?.physical_zip || pickupData.client?.zip),
+          // Generator info - from client data, standalone client search, or manual entry
+          generator_name: isStandalone 
+            ? standaloneGeneratorName 
+            : pickupData.client?.company_name,
+          generator_mail_address: isStandalone 
+            ? (isDropToProcessor ? '' : (standaloneClientData?.physical_address || standaloneClientData?.mailing_address || ''))
+            : (pickupData.client?.physical_address || pickupData.client?.mailing_address),
+          generator_city: isStandalone 
+            ? (isDropToProcessor ? '' : (standaloneClientData?.physical_city || standaloneClientData?.city || ''))
+            : (pickupData.client?.physical_city || pickupData.client?.city),
+          generator_state: isStandalone 
+            ? (isDropToProcessor ? '' : (standaloneClientData?.physical_state || standaloneClientData?.state || ''))
+            : (pickupData.client?.physical_state || pickupData.client?.state),
+          generator_zip: isStandalone 
+            ? (isDropToProcessor ? '' : (standaloneClientData?.physical_zip || standaloneClientData?.zip || ''))
+            : (pickupData.client?.physical_zip || pickupData.client?.zip),
           generator_county: isStandalone ? '' : (pickupData.client?.county || ''),
-          generator_phone: isStandalone ? '' : (pickupData.client?.phone || ''),
-          // Signature paths (both domain and template keys to be safe)
+          generator_phone: isStandalone 
+            ? (isDropToProcessor ? '' : (standaloneClientData?.phone || ''))
+            : (pickupData.client?.phone || ''),
+          // Signature paths
           generator_signature: generatorSigPath,
           
           generator_print_name: `${data.generator_print_name} - ${new Date(generatorSignedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}`,
@@ -1033,6 +1133,19 @@ function DriverManifestCreationWizardInner({
           hauler_gross_weight: finalGross > 0 ? finalGross.toFixed(1) : '0.0',
           hauler_tare_weight: finalTare > 0 ? finalTare.toFixed(1) : '0.0',
           hauler_net_weight: finalNet > 0 ? finalNet.toFixed(1) : '0.0',
+
+          // Receiver info for drop_to_processor (3-signature flow)
+          ...(isDropToProcessor && receiverSigPath ? {
+            receiver_name: standaloneClientData?.company_name || '',
+            receiver_mail_address: standaloneClientData?.physical_address || standaloneClientData?.mailing_address || '',
+            receiver_city: standaloneClientData?.physical_city || standaloneClientData?.city || '',
+            receiver_state: standaloneClientData?.physical_state || standaloneClientData?.state || '',
+            receiver_zip: standaloneClientData?.physical_zip || standaloneClientData?.zip || '',
+            receiver_phone: standaloneClientData?.phone || '',
+            receiver_signature: receiverSigPath,
+            receiver_print_name: `${receiverPrintName} - ${new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}`,
+            receiver_date: new Date().toLocaleDateString('en-US'),
+          } : {}),
         }
       });
 
@@ -1053,17 +1166,27 @@ function DriverManifestCreationWizardInner({
         console.log('[DRIVER_WIZARD] Saved initial PDF path:', pdfPathData.acroform_pdf_path);
       }
 
-      // 5. Email the initial manifest to client (only in pickup mode with email)
-      if (!isStandalone && pickupData.client?.email) {
-        console.log('📧 Attempting to send manifest email to:', pickupData.client.email);
+      // 5. Email the manifest to client/receiver
+      const emailTarget = isStandalone 
+        ? standaloneClientData?.email 
+        : pickupData.client?.email;
+      const emailCompanyName = isStandalone 
+        ? (standaloneClientData?.company_name || standaloneGeneratorName) 
+        : pickupData.client?.company_name;
+      
+      if (emailTarget) {
+        console.log('📧 Attempting to send manifest email to:', emailTarget);
         try {
+          const emailMessage = isDropToProcessor
+            ? `<p>Your tire delivery manifest is attached. All signatures have been collected on-site.</p>`
+            : `<p>Your tire pickup manifest is attached. This is the initial manifest with generator and hauler signatures. A final version will be sent once the receiver has signed.</p>`;
           await sendEmail.mutateAsync({
             manifestId: manifest.id,
-            to: pickupData.client.email,
-            subject: `Tire Manifest - ${pickupData.client.company_name}`,
-            messageHtml: `<p>Your tire pickup manifest is attached. This is the initial manifest with generator and hauler signatures. A final version will be sent once the receiver has signed.</p>`,
+            to: emailTarget,
+            subject: `Tire Manifest - ${emailCompanyName}`,
+            messageHtml: emailMessage,
           });
-          console.log('✅ Email sent successfully to:', pickupData.client.email);
+          console.log('✅ Email sent successfully to:', emailTarget);
         } catch (emailError: any) {
           console.error('❌ Email sending failed:', emailError);
           toast({
@@ -1072,11 +1195,11 @@ function DriverManifestCreationWizardInner({
             variant: "destructive",
           });
         }
-      } else if (!isStandalone) {
-        console.warn('⚠️ No email address for client:', pickupData.client?.company_name);
+      } else {
+        console.warn('⚠️ No email address for client:', emailCompanyName);
         toast({
           title: "No Email Address",
-          description: `Manifest created but ${pickupData.client?.company_name || 'client'} has no email address configured.`,
+          description: `Manifest created but ${emailCompanyName || 'client'} has no email address configured.`,
           variant: "destructive",
         });
       }
@@ -1340,11 +1463,15 @@ function DriverManifestCreationWizardInner({
             
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Generator {isStandalone ? '(Location/Company)' : '(Client)'}</CardTitle>
-                <CardDescription>This information will appear on the manifest</CardDescription>
+                <CardTitle className="text-base">
+                  {isDropToProcessor ? 'Generator (Your Company)' : isStandalone ? 'Generator (Location/Company)' : 'Generator (Client)'}
+                </CardTitle>
+                <CardDescription>
+                  {isDropToProcessor ? 'BSG is the generator for processor drops' : 'This information will appear on the manifest'}
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
-                {isStandalone ? (
+                {isDropToProcessor ? (
                   <div className="space-y-3">
                     <div>
                       <Label htmlFor="standalone-generator">Generator Name *</Label>
@@ -1352,10 +1479,55 @@ function DriverManifestCreationWizardInner({
                         id="standalone-generator"
                         value={standaloneGeneratorName}
                         onChange={(e) => setStandaloneGeneratorName(e.target.value)}
-                        placeholder="Enter generator/location name"
+                        placeholder="e.g., BSG Tire Recycling"
                         className="mt-1"
                       />
                     </div>
+                    <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                      For processor drops, your company is the generator since it's your material being delivered.
+                    </div>
+                  </div>
+                ) : isStandalone ? (
+                  <div className="space-y-3">
+                    <div>
+                      <Label>Search Client / Generator *</Label>
+                      <SearchableDropdown
+                        placeholder="Search for client..."
+                        searchFunction={searchClients}
+                        onSelect={(client) => {
+                          if (client) {
+                            setStandaloneClientData(client);
+                            setStandaloneGeneratorName(client.company_name);
+                            setResolvedClientId(client.id);
+                          } else {
+                            setStandaloneClientData(null);
+                            setStandaloneGeneratorName('');
+                            setResolvedClientId(null);
+                          }
+                        }}
+                        displayField="company_name"
+                        selected={standaloneClientData}
+                      />
+                    </div>
+                    {standaloneClientData && (
+                      <div className="text-xs space-y-1 p-2 bg-muted/50 rounded">
+                        <div><strong>Address:</strong> {standaloneClientData.physical_address || standaloneClientData.mailing_address || 'N/A'}</div>
+                        <div><strong>Phone:</strong> {standaloneClientData.phone || 'N/A'}</div>
+                        <div><strong>Email:</strong> {standaloneClientData.email || 'N/A'}</div>
+                      </div>
+                    )}
+                    {!standaloneClientData && (
+                      <div>
+                        <Label htmlFor="standalone-generator-manual" className="text-xs text-muted-foreground">Or type name manually</Label>
+                        <Input
+                          id="standalone-generator-manual"
+                          value={standaloneGeneratorName}
+                          onChange={(e) => setStandaloneGeneratorName(e.target.value)}
+                          placeholder="Enter generator/location name"
+                          className="mt-1"
+                        />
+                      </div>
+                    )}
                     {initialTrailerNumber && (
                       <div className="text-xs text-muted-foreground">
                         Trailer: #{initialTrailerNumber}
@@ -1373,6 +1545,43 @@ function DriverManifestCreationWizardInner({
                 )}
               </CardContent>
             </Card>
+
+            {/* Receiver selection for drop_to_processor */}
+            {isDropToProcessor && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Receiver (Processor)</CardTitle>
+                  <CardDescription>The facility receiving the tires</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <div>
+                    <Label>Search Processor / Receiver *</Label>
+                    <SearchableDropdown
+                      placeholder="Search for receiver..."
+                      searchFunction={searchClients}
+                      onSelect={(client) => {
+                        if (client) {
+                          setStandaloneClientData(client);
+                          setResolvedClientId(client.id);
+                        } else {
+                          setStandaloneClientData(null);
+                          setResolvedClientId(null);
+                        }
+                      }}
+                      displayField="company_name"
+                      selected={standaloneClientData}
+                    />
+                  </div>
+                  {standaloneClientData && (
+                    <div className="text-xs space-y-1 p-2 bg-muted/50 rounded">
+                      <div><strong>Address:</strong> {standaloneClientData.physical_address || standaloneClientData.mailing_address || 'N/A'}</div>
+                      <div><strong>Phone:</strong> {standaloneClientData.phone || 'N/A'}</div>
+                      <div><strong>Email:</strong> {standaloneClientData.email || 'N/A'}</div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             <Card>
               <CardHeader>
@@ -2525,6 +2734,83 @@ function DriverManifestCreationWizardInner({
                 </div>
               </CardContent>
             </Card>
+
+            {/* Receiver Signature - only for drop_to_processor */}
+            {isDropToProcessor && (
+              <Card>
+                <CardHeader className="px-3 sm:px-6 py-3">
+                  <CardTitle className="text-sm sm:text-base">Receiver Signature</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">Processor representative signature (collected on-site)</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3 px-3 sm:px-6">
+                  <div>
+                    <Label className="text-xs sm:text-sm">Printed Name *</Label>
+                    <Input 
+                      value={receiverPrintName}
+                      onChange={(e) => setReceiverPrintName(e.target.value)}
+                      placeholder="Receiver's full name"
+                      type="text"
+                      autoComplete="off"
+                      className="text-sm mt-1"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <Label className="text-xs sm:text-sm">Signature *</Label>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => {
+                          receiverSigRef.current?.clear();
+                          setReceiverSigDataUrl('');
+                        }}
+                        className="text-xs h-7"
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                    <div 
+                      className="border-2 border-border rounded-lg bg-white overflow-hidden"
+                      onTouchStart={(e) => { blurActiveInputs(); e.stopPropagation(); }}
+                      onPointerDown={() => blurActiveInputs()}
+                    >
+                      <SignatureCanvas
+                        ref={receiverSigRef}
+                        onEnd={handleReceiverSignatureEnd}
+                        canvasProps={{ 
+                          className: "w-full h-24 sm:h-32 touch-none",
+                          style: { 
+                            width: '100%', 
+                            height: '96px', 
+                            touchAction: 'none',
+                            WebkitUserSelect: 'none',
+                            userSelect: 'none'
+                          }
+                        }}
+                      />
+                    </div>
+                    {receiverSigUploading && (
+                      <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1 animate-pulse">
+                        <RefreshCw className="h-3 w-3 animate-spin" />
+                        Uploading signature…
+                      </div>
+                    )}
+                    {!receiverSigUploading && receiverSigPath && (
+                      <div className="text-xs text-primary flex items-center gap-1 mt-1 font-medium">
+                        <CheckCircle className="h-3 w-3" />
+                        Receiver signature saved ✓
+                      </div>
+                    )}
+                    {!receiverSigUploading && !receiverSigPath && receiverSigDataUrl && (
+                      <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                        Signature drawn — will be uploaded when you tap Next
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         );
 
