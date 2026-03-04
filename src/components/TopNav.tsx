@@ -33,10 +33,7 @@ interface TopNavProps {
 export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
   const { user, signOut, hasAnyRole } = useAuth();
   const location = useLocation();
-  const { unreadCount } = useEnhancedNotifications();
   const { data: pendingBookingCount } = usePendingBookingCount();
-  useContextualNotifications();
-  useManifestReminders();
 
   // Determine which dropdown/tab is active
   const getActiveSection = () => {
