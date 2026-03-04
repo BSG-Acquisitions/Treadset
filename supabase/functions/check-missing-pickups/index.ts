@@ -54,9 +54,9 @@ Deno.serve(async (req) => {
     const endDate = new Date(today);
     endDate.setDate(today.getDate() + 7);
     const endDateStr = endDate.toISOString().split('T')[0];
-    const threeDaysAgo = new Date(today);
-    threeDaysAgo.setDate(today.getDate() - 3);
-    const threeDaysAgoStr = threeDaysAgo.toISOString();
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(today.getDate() - 7);
+    const sevenDaysAgoStr = sevenDaysAgo.toISOString();
     
     for (const org of orgs || []) {
       const orgId = org.id;
