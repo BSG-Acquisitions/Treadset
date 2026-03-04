@@ -92,10 +92,19 @@ export default function DriverTrailerAssignments() {
   };
 
   const markStopComplete = async (stopId: string, routeId: string) => {
-    await supabase
+    const { error } = await supabase
       .from('trailer_route_stops')
       .update({ completed_at: new Date().toISOString() })
-      .eq('id', stopId);
+      .eq('id', stopId)
+      .select('id')
+      .single();
+    
+    if (error) {
+      toast.error('Failed to mark stop complete. You may not have permission.');
+      return;
+    }
+    
+    toast.success('Stop marked complete');
     
     // Auto-advance: expand next incomplete stop
     const route = routes?.find(r => r.id === routeId);
