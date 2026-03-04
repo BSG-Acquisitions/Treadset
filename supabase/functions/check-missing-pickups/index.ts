@@ -237,6 +237,7 @@ Deno.serve(async (req) => {
         const notificationTitle = `${client.company_name} may need scheduling`;
 
         for (const userId of userIds) {
+          if (userAtCap(userId)) continue;
           if (hasRecentNotif(userId, notificationTitle)) continue;
           
           notificationsToCreate.push({
