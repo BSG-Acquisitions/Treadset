@@ -18,7 +18,6 @@ Deno.serve(async (req) => {
 
     console.log('[MANIFEST_REMINDERS] Starting manifest reminder check...');
 
-    // Get all organizations
     const { data: orgs, error: orgsError } = await supabase
       .from('organizations')
       .select('id');
@@ -29,8 +28,11 @@ Deno.serve(async (req) => {
     const twoDaysAgo = new Date();
     twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
 
+    // Dedup window: 7 days instead of 1 day
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
     for (const org of orgs || []) {
-      // Get incomplete manifests older than 2 days
       const { data: incompleteManifests, error: manifestsError } = await supabase
         .from('manifests')
         .select(`
@@ -54,101 +56,100 @@ Deno.serve(async (req) => {
 
       if (!incompleteManifests || incompleteManifests.length === 0) continue;
 
-      // Get admin users for this org - use internal user_id for notifications FK
       const { data: adminUsers, error: usersError } = await supabase
         .from('user_organization_roles')
         .select('user_id')
         .eq('organization_id', org.id)
         .in('role', ['admin', 'ops_manager', 'dispatcher', 'receptionist']);
 
-      if (usersError || !adminUsers || adminUsers.length === 0) {
-        console.log(`[MANIFEST_REMINDERS] No admin users found for org ${org.id}`);
-        continue;
+      if (usersError || !adminUsers || adminUsers.length === 0) continue;
+
+      const userIds = adminUsers.map(u => u.user_id).filter(Boolean);
+
+      // Batch: check existing notifications for dedup (7-day window)
+      const { data: existingNotifs } = await supabase
+        .from('notifications')
+        .select('related_id')
+        .eq('organization_id', org.id)
+        .eq('related_type', 'manifest')
+        .eq('type', 'warning')
+        .gte('created_at', sevenDaysAgo.toISOString());
+
+      const notifiedManifestIds = new Set((existingNotifs || []).map(n => n.related_id));
+
+      // Check per-user unread cap
+      const { data: unreadCounts } = await supabase
+        .from('notifications')
+        .select('user_id')
+        .in('user_id', userIds)
+        .eq('is_read', false);
+
+      const unreadByUser = new Map<string, number>();
+      for (const n of unreadCounts || []) {
+        unreadByUser.set(n.user_id, (unreadByUser.get(n.user_id) || 0) + 1);
       }
 
+      const notificationsToInsert: any[] = [];
+
       for (const manifest of incompleteManifests) {
+        // Skip if already notified in last 7 days
+        if (notifiedManifestIds.has(manifest.id)) continue;
+
         const issues: string[] = [];
         const daysSinceCreation = Math.floor(
           (Date.now() - new Date(manifest.created_at).getTime()) / (1000 * 60 * 60 * 24)
         );
 
-        if (manifest.status === 'DRAFT') {
-          issues.push('still in DRAFT status');
-        }
-        if (!manifest.customer_sig_path) {
-          issues.push('missing generator signature');
-        }
-        if (!manifest.receiver_sig_path) {
-          issues.push('missing receiver signature');
-        }
-
+        if (manifest.status === 'DRAFT') issues.push('still in DRAFT status');
+        if (!manifest.customer_sig_path) issues.push('missing generator signature');
+        if (!manifest.receiver_sig_path) issues.push('missing receiver signature');
         if (issues.length === 0) continue;
-
-        // Check if notification already exists for this manifest in last 24 hours
-        const oneDayAgo = new Date();
-        oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-
-        const { data: existingNotif } = await supabase
-          .from('notifications')
-          .select('id')
-          .eq('organization_id', org.id)
-          .eq('related_type', 'manifest')
-          .eq('related_id', manifest.id)
-          .eq('type', 'warning')
-          .gte('created_at', oneDayAgo.toISOString())
-          .limit(1);
-
-        if (existingNotif && existingNotif.length > 0) continue;
 
         const clientName = manifest.client?.company_name || 'Unknown Client';
         const priority = daysSinceCreation >= 7 ? 'high' : daysSinceCreation >= 3 ? 'medium' : 'low';
 
-        for (const user of adminUsers) {
-          // Use internal user_id for notifications FK constraint
-          const userId = user.user_id;
-          if (!userId) {
-            console.warn(`[MANIFEST_REMINDERS] No user_id for user role, skipping`);
-            continue;
-          }
+        for (const userId of userIds) {
+          // Skip if user already at 100 unread cap
+          if ((unreadByUser.get(userId) || 0) >= 100) continue;
 
-          const { error: insertError } = await supabase
-            .from('notifications')
-            .insert({
-              user_id: userId,
-              organization_id: org.id,
-              title: `Incomplete Manifest: ${manifest.manifest_number || clientName}`,
-              message: `Manifest for ${clientName} is ${issues.join(', ')}. Created ${daysSinceCreation} days ago.`,
-              type: 'warning',
-              priority,
-              related_type: 'manifest',
-              related_id: manifest.id,
-              metadata: {
-                manifest_id: manifest.id,
-                manifest_number: manifest.manifest_number,
-                client_name: clientName,
-                issues,
-                days_since_creation: daysSinceCreation,
-              },
-            });
-
-          if (insertError) {
-            console.error(`[MANIFEST_REMINDERS] Failed to insert notification for user ${user.user_id}:`, insertError.message);
-          } else {
-            totalNotifications++;
-          }
+          notificationsToInsert.push({
+            user_id: userId,
+            organization_id: org.id,
+            title: `Incomplete Manifest: ${manifest.manifest_number || clientName}`,
+            message: `Manifest for ${clientName} is ${issues.join(', ')}. Created ${daysSinceCreation} days ago.`,
+            type: 'warning',
+            priority,
+            related_type: 'manifest',
+            related_id: manifest.id,
+            metadata: {
+              manifest_id: manifest.id,
+              manifest_number: manifest.manifest_number,
+              client_name: clientName,
+              issues,
+              days_since_creation: daysSinceCreation,
+            },
+          });
         }
+      }
 
-        console.log(`[MANIFEST_REMINDERS] Processed manifest ${manifest.manifest_number}, notifications created for ${adminUsers.length} users`);
+      // Batch insert
+      if (notificationsToInsert.length > 0) {
+        const { error: insertError } = await supabase
+          .from('notifications')
+          .insert(notificationsToInsert);
+
+        if (insertError) {
+          console.error(`[MANIFEST_REMINDERS] Insert error for org ${org.id}:`, insertError);
+        } else {
+          totalNotifications += notificationsToInsert.length;
+        }
       }
     }
 
     console.log(`[MANIFEST_REMINDERS] Created ${totalNotifications} notifications`);
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        notifications_created: totalNotifications,
-      }),
+      JSON.stringify({ success: true, notifications_created: totalNotifications }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: any) {
