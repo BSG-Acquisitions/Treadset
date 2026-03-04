@@ -255,12 +255,6 @@ function DayColumn({ day, onMovePickup }: { day: Date; onMovePickup?: (pickup: a
                                 Move Pickup
                               </DropdownMenuItem>
                               <DropdownMenuItem 
-                                onClick={(e) => { e.stopPropagation(); openReceiverSignature(pickup); }}
-                                disabled={isOpeningReceiver || createManifest.isPending}
-                              >
-                                Receiver Signature
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
                                 onClick={(e) => { e.stopPropagation(); setPickupToDelete(pickup); }}
                                 className="text-destructive"
                               >
