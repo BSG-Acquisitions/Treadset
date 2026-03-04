@@ -378,14 +378,14 @@ export function TrailerRouteWizard({ onComplete, onCancel }: TrailerRouteWizardP
                   />
                 </div>
                 <div>
-                  <Label>Contact Name</Label>
+                  <Label>Contact Name (Optional)</Label>
                   <Input
                     value={newStop.contact_name}
                     onChange={(e) => setNewStop(prev => ({ ...prev, contact_name: e.target.value }))}
                   />
                 </div>
                 <div>
-                  <Label>Contact Phone</Label>
+                  <Label>Contact Phone (Optional)</Label>
                   <Input
                     value={newStop.contact_phone}
                     onChange={(e) => setNewStop(prev => ({ ...prev, contact_phone: e.target.value }))}
