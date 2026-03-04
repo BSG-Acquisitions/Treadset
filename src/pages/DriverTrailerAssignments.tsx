@@ -510,7 +510,7 @@ function StopCard({
               )}
             </div>
           </div>
-        </CollapsibleTrigger>
+        </div>
 
         <CollapsibleContent>
           <div className="px-4 pb-4 pt-0 border-t">
