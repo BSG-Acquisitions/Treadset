@@ -172,7 +172,7 @@ export default function DriverTrailerAssignments() {
               onToggleStop={toggleStop}
               onStartRoute={() => handleStartRoute(route.id)}
               onCompleteRoute={() => handleCompleteRoute(route.id)}
-              onStopComplete={markStopComplete}
+              onStopComplete={(stopId) => markStopComplete(stopId, route.id)}
               onEventCompleted={refetch}
             />
           ))}
