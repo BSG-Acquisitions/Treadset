@@ -128,7 +128,7 @@ Deno.serve(async (req) => {
         .select('user_id, title')
         .eq('organization_id', orgId)
         .eq('type', 'missing_pickup')
-        .gte('created_at', threeDaysAgoStr)
+        .gte('created_at', sevenDaysAgoStr)
         .in('user_id', userIds);
       
       // Build a Set of "userId::clientName" for fast dedup
