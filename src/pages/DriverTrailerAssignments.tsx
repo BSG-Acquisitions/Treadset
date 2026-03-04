@@ -284,7 +284,12 @@ function RouteCard({
                     )}
                   </div>
                 )}
-                
+                {route.notes && (
+                  <div className="mt-2 p-2 rounded-md bg-muted/50 border border-border">
+                    <span className="text-sm text-muted-foreground">{route.notes}</span>
+                  </div>
+                )}
+
                 <div className="flex flex-wrap items-center gap-2 mt-2">
                   <Badge variant={route.status === 'in_progress' ? 'default' : 'secondary'}>
                     {route.status === 'in_progress' ? (
