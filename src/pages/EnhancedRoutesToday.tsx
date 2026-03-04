@@ -71,6 +71,7 @@ export default function EnhancedRoutesToday() {
   const [selectedPickupToMove, setSelectedPickupToMove] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [pickupToDelete, setPickupToDelete] = useState<any>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [isFixingGeocoding, setIsFixingGeocoding] = useState(false);
   const [geocodeDialogOpen, setGeocodeDialogOpen] = useState(false);
   const [isGeneratingMissingPdfs, setIsGeneratingMissingPdfs] = useState(false);
