@@ -148,7 +148,7 @@ export const useCreateTrailerRoute = () => {
           vehicle_id: data.vehicle_id,
           trailer_id: data.trailer_id,
           notes: data.notes,
-          status: 'draft',
+          status: 'scheduled',
         })
         .select()
         .single();
