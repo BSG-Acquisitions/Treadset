@@ -530,7 +530,7 @@ const App = () => (
                 </ProtectedRoute>
               } />
               <Route path="/service-zones" element={
-                <ProtectedRoute roles={['admin', 'ops_manager']}>
+                <ProtectedRoute roles={['admin', 'ops_manager', 'dispatcher']}>
                   <AppLayout>
                     <ServiceZones />
                   </AppLayout>
