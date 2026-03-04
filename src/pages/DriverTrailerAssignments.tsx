@@ -413,6 +413,18 @@ function StopCard({
                   </div>
                 )}
 
+                {/* Show planned events preview (always visible) */}
+                {(stop as any).planned_events && (stop as any).planned_events.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {((stop as any).planned_events as PlannedEvent[]).map((pe, i) => (
+                      <div key={i} className="flex items-center gap-1.5 text-sm font-medium text-primary">
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                        {pe.event_type.replace('_', ' ')} — #{pe.trailer_number}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 {stop.instructions && (
                   <div className="mt-2 p-2 bg-muted rounded text-sm">
                     {stop.instructions}
