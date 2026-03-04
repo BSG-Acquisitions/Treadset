@@ -1,8 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useEnhancedNotifications } from "@/hooks/useEnhancedNotifications";
-import { useAuth } from "@/contexts/AuthContext";
 
 export interface CreatePaymentParams {
   amount: number; // Amount in dollars
