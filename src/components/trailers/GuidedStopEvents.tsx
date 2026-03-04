@@ -4,11 +4,12 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { TrailerSignatureDialog } from "./TrailerSignatureDialog";
-import { useCompleteTrailerEvent } from "@/hooks/useStopTrailerEvents";
+import { useCompleteTrailerEvent, StopTrailerEvent } from "@/hooks/useStopTrailerEvents";
 import { TrailerEventType, EVENT_TYPE_LABELS } from "@/hooks/useTrailerEvents";
 import { PlannedEvent } from "@/hooks/useTrailerRoutes";
 import { DriverStopEventActions } from "./DriverStopEventActions";
 import { Trailer } from "@/hooks/useTrailers";
+import { formatManifestTimestamp } from "@/lib/manifestTimestamps";
 import {
   Package,
   PackageOpen,
@@ -18,6 +19,8 @@ import {
   Loader2,
   ChevronDown,
   Plus,
+  FileText,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +31,7 @@ interface GuidedStopEventsProps {
   locationId?: string;
   plannedEvents: PlannedEvent[];
   completedEvents: { event_type: string; trailer_id: string }[];
+  stopEvents?: StopTrailerEvent[];
   trailers: Trailer[];
   onEventCompleted: () => void;
 }
@@ -57,6 +61,7 @@ export function GuidedStopEvents({
   locationId,
   plannedEvents,
   completedEvents,
+  stopEvents = [],
   trailers,
   onEventCompleted,
 }: GuidedStopEventsProps) {
@@ -68,6 +73,12 @@ export function GuidedStopEvents({
   const isCompleted = (pe: PlannedEvent) =>
     completedEvents.some(
       (ce) => ce.event_type === pe.event_type && ce.trailer_id === pe.trailer_id
+    );
+
+  // Find the full event record for a completed planned event
+  const getEventRecord = (pe: PlannedEvent): StopTrailerEvent | undefined =>
+    stopEvents.find(
+      (se) => se.event_type === pe.event_type && se.trailer_id === pe.trailer_id
     );
 
   const allPlannedDone = plannedEvents.every(isCompleted);
@@ -113,6 +124,7 @@ export function GuidedStopEvents({
       <div className="space-y-2">
         {plannedEvents.map((pe, idx) => {
           const done = isCompleted(pe);
+          const eventRecord = done ? getEventRecord(pe) : undefined;
           const Icon = EVENT_ICONS[pe.event_type] || Package;
           const label = EVENT_LABELS[pe.event_type] || pe.event_type;
           const isLoading = completeEvent.isPending && activeEvent === pe;
@@ -140,29 +152,47 @@ export function GuidedStopEvents({
                       <div className="text-xs text-muted-foreground">
                         Trailer #{pe.trailer_number}
                       </div>
+                      {/* Timestamp for completed events */}
+                      {done && eventRecord && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                          <Clock className="h-3 w-3" />
+                          {formatManifestTimestamp(eventRecord.timestamp)}
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  {done ? (
-                    <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-400 dark:border-green-700">
-                      Done
-                    </Badge>
-                  ) : (
-                    <Button
-                      size="sm"
-                      className="min-h-[44px] min-w-[44px] px-4"
-                      onClick={() => handleTap(pe)}
-                      disabled={isLoading}
-                    >
-                      {isLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : SIGNATURE_REQUIRED.includes(pe.event_type) ? (
-                        "Sign & Complete"
-                      ) : (
-                        "Complete"
-                      )}
-                    </Button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {done ? (
+                      <div className="flex items-center gap-2">
+                        {/* Manifest badge for signed events */}
+                        {eventRecord?.manifest_number && (
+                          <Badge variant="outline" className="text-xs gap-1 bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700">
+                            <FileText className="h-3 w-3" />
+                            {eventRecord.manifest_number}
+                          </Badge>
+                        )}
+                        <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-400 dark:border-green-700">
+                          Done
+                        </Badge>
+                      </div>
+                    ) : (
+                      <Button
+                        size="sm"
+                        className="min-h-[44px] min-w-[44px] px-4"
+                        onClick={() => handleTap(pe)}
+                        disabled={isLoading}
+                      >
+                        {isLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : SIGNATURE_REQUIRED.includes(pe.event_type) ? (
+                          "Sign & Complete"
+                        ) : (
+                          "Complete"
+                        )}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
