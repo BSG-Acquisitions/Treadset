@@ -23,7 +23,7 @@ import { usePendingBookingCount } from '@/hooks/useBookingRequests';
 import { ViewerModeBadge } from '@/components/ViewerModeBadge';
 
 import { LiveSearch } from '@/components/LiveSearch';
-import { EnhancedNotificationCenter } from '@/components/notifications/EnhancedNotificationCenter';
+
 
 interface TopNavProps {
   onMenuToggle?: () => void;
