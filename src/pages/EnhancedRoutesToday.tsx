@@ -588,33 +588,90 @@ export default function EnhancedRoutesToday() {
             />
           )}
 
-          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Remove Stop</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Are you sure you want to permanently remove this pickup for{' '}
-                  <span className="font-semibold">{pickupToDelete?.client?.company_name}</span>?
-                  This action cannot be undone and will delete all associated assignments.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setPickupToDelete(null)}>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  onClick={() => {
-                    if (pickupToDelete?.id) {
-                      deletePickup.mutate(pickupToDelete.id);
-                    }
-                    setDeleteDialogOpen(false);
-                    setPickupToDelete(null);
-                  }}
-                >
-                  Remove Stop
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          {/* Delete confirmation dialog */}
+          {pickupToDelete && (() => {
+            const hasManifest = pickupToDelete.status === 'completed' && pickupToDelete.manifest_id;
+            const companyName = pickupToDelete?.client?.company_name || '';
+            const confirmMatch = deleteConfirmText.trim().toLowerCase() === companyName.trim().toLowerCase();
+
+            const handleDelete = async () => {
+              if (!pickupToDelete?.id) return;
+              // Void manifest first if one exists
+              if (hasManifest) {
+                const manifestIds = pickupToDelete.manifests?.map((m: any) => m.id) || 
+                  (pickupToDelete.manifest_id ? [pickupToDelete.manifest_id] : []);
+                for (const mid of manifestIds) {
+                  await voidManifest.mutateAsync(mid);
+                }
+              }
+              deletePickup.mutate(pickupToDelete.id);
+              setDeleteDialogOpen(false);
+              setPickupToDelete(null);
+              setDeleteConfirmText("");
+            };
+
+            return hasManifest ? (
+              <Dialog open={deleteDialogOpen} onOpenChange={(open) => {
+                setDeleteDialogOpen(open);
+                if (!open) { setPickupToDelete(null); setDeleteConfirmText(""); }
+              }}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle className="text-destructive">Delete Completed Pickup</DialogTitle>
+                    <DialogDescription>
+                      This pickup for <span className="font-semibold">{companyName}</span> has a completed manifest. 
+                      The manifest will be voided and all associated data will be permanently deleted. This action cannot be undone.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-2 py-2">
+                    <label className="text-sm font-medium">
+                      Type <span className="font-bold text-destructive">{companyName}</span> to confirm
+                    </label>
+                    <Input
+                      value={deleteConfirmText}
+                      onChange={(e) => setDeleteConfirmText(e.target.value)}
+                      placeholder={companyName}
+                      autoComplete="off"
+                    />
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => { setDeleteDialogOpen(false); setPickupToDelete(null); setDeleteConfirmText(""); }}>
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      disabled={!confirmMatch || deletePickup.isPending || voidManifest.isPending}
+                      onClick={handleDelete}
+                    >
+                      {(deletePickup.isPending || voidManifest.isPending) ? "Deleting..." : "Delete Pickup"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            ) : (
+              <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Pickup</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to delete this pickup for{' '}
+                      <span className="font-semibold">{companyName}</span>?
+                      This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setPickupToDelete(null)}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      onClick={() => handleDelete()}
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            );
+          })()}
           
           <LocationGeocodeDialog 
             open={geocodeDialogOpen} 
