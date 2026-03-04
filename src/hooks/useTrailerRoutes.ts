@@ -54,6 +54,7 @@ export interface TrailerRouteStop {
   instructions: string | null;
   completed_at: string | null;
   planned_events: PlannedEvent[];
+  client_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -207,6 +208,7 @@ export const useAddRouteStop = () => {
       contact_phone?: string;
       instructions?: string;
       planned_events?: PlannedEvent[];
+      client_id?: string;
     }) => {
       const { data: stop, error } = await supabase
         .from('trailer_route_stops')

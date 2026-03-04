@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useDriverTrailerRoutes, useUpdateTrailerRoute, TrailerRouteStop, PlannedEvent } from "@/hooks/useTrailerRoutes";
 import { useTrailers } from "@/hooks/useTrailers";
 import { useRouteStopEvents } from "@/hooks/useStopTrailerEvents";
 import { useHasSemiHaulerCapability } from "@/hooks/useDriverCapabilities";
 import { GuidedStopEvents } from "@/components/trailers/GuidedStopEvents";
 import { DriverStopEventActions } from "@/components/trailers/DriverStopEventActions";
+import { deriveOnTruckTrailerIds } from "@/lib/trailerFilterUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -222,6 +223,13 @@ function RouteCard({
 }: RouteCardProps) {
   const { data: routeEvents = [] } = useRouteStopEvents(route.id);
   
+  // Derive which trailers are currently "on the truck"
+  const onTruckTrailerIds = useMemo(() => {
+    return deriveOnTruckTrailerIds(
+      routeEvents.map(e => ({ event_type: e.event_type, trailer_id: e.trailer_id }))
+    );
+  }, [routeEvents]);
+  
   const completedStops = route.stops?.filter((s: TrailerRouteStop) => s.completed_at).length || 0;
   const totalStops = route.stops?.length || 0;
   const allStopsCompleted = completedStops === totalStops && totalStops > 0;
@@ -348,6 +356,7 @@ function RouteCard({
                     routeStatus={route.status}
                     trailers={trailers}
                     stopEvents={getStopEvents(stop.id)}
+                    onTruckTrailerIds={onTruckTrailerIds}
                     expanded={expandedStops.has(stop.id)}
                     onToggle={() => onToggleStop(stop.id)}
                     onStopComplete={() => onStopComplete(stop.id)}
@@ -369,6 +378,7 @@ interface StopCardProps {
   routeStatus: string;
   trailers: any[];
   stopEvents: any[];
+  onTruckTrailerIds: Set<string>;
   expanded: boolean;
   onToggle: () => void;
   onStopComplete: () => void;
@@ -382,6 +392,7 @@ function StopCard({
   routeStatus,
   trailers,
   stopEvents,
+  onTruckTrailerIds,
   expanded,
   onToggle,
   onStopComplete,
@@ -532,6 +543,7 @@ function StopCard({
                   }))}
                   stopEvents={stopEvents}
                   trailers={trailers}
+                  onTruckTrailerIds={onTruckTrailerIds}
                   onEventCompleted={handleEventCompleted}
                 />
               ) : (
@@ -545,6 +557,7 @@ function StopCard({
                     event_type: e.event_type,
                     trailer_id: e.trailer_id,
                   }))}
+                  onTruckTrailerIds={onTruckTrailerIds}
                   onEventCompleted={handleEventCompleted}
                 />
               )}

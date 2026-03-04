@@ -1,0 +1,1 @@
+ALTER TABLE public.trailer_route_stops ADD COLUMN IF NOT EXISTS client_id UUID REFERENCES public.clients(id);

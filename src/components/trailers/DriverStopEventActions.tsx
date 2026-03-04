@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -10,6 +11,7 @@ import { DriverManifestCreationWizard } from "@/components/driver/DriverManifest
 import { useCompleteTrailerEvent } from "@/hooks/useStopTrailerEvents";
 import { TrailerEventType, EVENT_TYPE_LABELS } from "@/hooks/useTrailerEvents";
 import { Trailer } from "@/hooks/useTrailers";
+import { getFilteredTrailers } from "@/lib/trailerFilterUtils";
 import { 
   Package, 
   PackageOpen, 
@@ -29,6 +31,7 @@ interface DriverStopEventActionsProps {
   locationId?: string;
   trailers: Trailer[];
   completedEvents: { event_type: string; trailer_id: string }[];
+  onTruckTrailerIds?: Set<string>;
   onEventCompleted: () => void;
 }
 
@@ -114,6 +117,7 @@ export function DriverStopEventActions({
   locationId,
   trailers,
   completedEvents,
+  onTruckTrailerIds = new Set(),
   onEventCompleted,
 }: DriverStopEventActionsProps) {
   const [selectedEventType, setSelectedEventType] = useState<TrailerEventType | null>(null);
@@ -277,51 +281,93 @@ export function DriverStopEventActions({
               <>
                 <div>
                   <Label>Drop Empty Trailer</Label>
-                  <Select value={swapDropTrailerId} onValueChange={setSwapDropTrailerId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select trailer to drop..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {trailers.map(trailer => (
-                        <SelectItem key={trailer.id} value={trailer.id}>
-                          {trailer.trailer_number} ({trailer.current_status})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {(() => {
+                    const { suggested, other } = getFilteredTrailers('drop_empty', locationName, locationId, trailers, onTruckTrailerIds);
+                    return (
+                      <Select value={swapDropTrailerId} onValueChange={setSwapDropTrailerId}>
+                        <SelectTrigger><SelectValue placeholder="Select trailer to drop..." /></SelectTrigger>
+                        <SelectContent>
+                          {suggested.length > 0 && (
+                            <SelectGroup>
+                              <SelectLabel className="text-xs">On your truck</SelectLabel>
+                              {suggested.map(t => <SelectItem key={t.id} value={t.id}>{t.trailer_number} ({t.current_status})</SelectItem>)}
+                            </SelectGroup>
+                          )}
+                          {suggested.length > 0 && other.length > 0 && <Separator className="my-1" />}
+                          {other.length > 0 && (
+                            <SelectGroup>
+                              <SelectLabel className="text-xs">Other trailers</SelectLabel>
+                              {other.map(t => <SelectItem key={t.id} value={t.id}>{t.trailer_number} ({t.current_status})</SelectItem>)}
+                            </SelectGroup>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    );
+                  })()}
                 </div>
                 
                 <div>
                   <Label>Pick Up Full Trailer</Label>
-                  <Select value={swapPickupTrailerId} onValueChange={setSwapPickupTrailerId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select trailer to pick up..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {trailers.filter(t => t.id !== swapDropTrailerId).map(trailer => (
-                        <SelectItem key={trailer.id} value={trailer.id}>
-                          {trailer.trailer_number} ({trailer.current_status})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {(() => {
+                    const { suggested, other } = getFilteredTrailers('pickup_full', locationName, locationId, trailers, onTruckTrailerIds);
+                    const filtered = { suggested: suggested.filter(t => t.id !== swapDropTrailerId), other: other.filter(t => t.id !== swapDropTrailerId) };
+                    return (
+                      <Select value={swapPickupTrailerId} onValueChange={setSwapPickupTrailerId}>
+                        <SelectTrigger><SelectValue placeholder="Select trailer to pick up..." /></SelectTrigger>
+                        <SelectContent>
+                          {filtered.suggested.length > 0 && (
+                            <SelectGroup>
+                              <SelectLabel className="text-xs">At this location</SelectLabel>
+                              {filtered.suggested.map(t => <SelectItem key={t.id} value={t.id}>{t.trailer_number} ({t.current_status})</SelectItem>)}
+                            </SelectGroup>
+                          )}
+                          {filtered.suggested.length > 0 && filtered.other.length > 0 && <Separator className="my-1" />}
+                          {filtered.other.length > 0 && (
+                            <SelectGroup>
+                              <SelectLabel className="text-xs">Other trailers</SelectLabel>
+                              {filtered.other.map(t => <SelectItem key={t.id} value={t.id}>{t.trailer_number} ({t.current_status})</SelectItem>)}
+                            </SelectGroup>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    );
+                  })()}
                 </div>
               </>
             ) : (
               <div>
                 <Label>Select Trailer</Label>
-                <Select value={selectedTrailerId} onValueChange={setSelectedTrailerId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose trailer..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {trailers.map(trailer => (
-                      <SelectItem key={trailer.id} value={trailer.id}>
-                        {trailer.trailer_number} ({trailer.current_status})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {(() => {
+                  const { suggested, other } = getFilteredTrailers(
+                    selectedEventType || 'pickup_empty',
+                    locationName,
+                    locationId,
+                    trailers,
+                    onTruckTrailerIds
+                  );
+                  return (
+                    <Select value={selectedTrailerId} onValueChange={setSelectedTrailerId}>
+                      <SelectTrigger><SelectValue placeholder="Choose trailer..." /></SelectTrigger>
+                      <SelectContent>
+                        {suggested.length > 0 && (
+                          <SelectGroup>
+                            <SelectLabel className="text-xs">
+                              {selectedEventType?.includes('drop') ? 'On your truck' : 'At this location'}
+                            </SelectLabel>
+                            {suggested.map(t => <SelectItem key={t.id} value={t.id}>{t.trailer_number} ({t.current_status})</SelectItem>)}
+                          </SelectGroup>
+                        )}
+                        {suggested.length > 0 && other.length > 0 && <Separator className="my-1" />}
+                        {other.length > 0 && (
+                          <SelectGroup>
+                            <SelectLabel className="text-xs">Other trailers</SelectLabel>
+                            {other.map(t => <SelectItem key={t.id} value={t.id}>{t.trailer_number} ({t.current_status})</SelectItem>)}
+                          </SelectGroup>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  );
+                })()}
               </div>
             )}
 

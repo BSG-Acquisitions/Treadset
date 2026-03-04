@@ -5144,6 +5144,7 @@ export type Database = {
       }
       trailer_route_stops: {
         Row: {
+          client_id: string | null
           completed_at: string | null
           contact_name: string | null
           contact_phone: string | null
@@ -5159,6 +5160,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          client_id?: string | null
           completed_at?: string | null
           contact_name?: string | null
           contact_phone?: string | null
@@ -5174,6 +5176,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          client_id?: string | null
           completed_at?: string | null
           contact_name?: string | null
           contact_phone?: string | null
@@ -5189,6 +5192,27 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "trailer_route_stops_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trailer_route_stops_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_monthly_entity_rollup"
+            referencedColumns: ["entity_id"]
+          },
+          {
+            foreignKeyName: "trailer_route_stops_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "mv_revenue_summary"
+            referencedColumns: ["entity_id"]
+          },
           {
             foreignKeyName: "trailer_route_stops_location_id_fkey"
             columns: ["location_id"]
