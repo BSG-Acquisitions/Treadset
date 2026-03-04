@@ -149,6 +149,19 @@ Deno.serve(async (req) => {
       const notificationsToCreate: any[] = [];
       const processedClientIds = new Set<string>();
 
+      // Check per-user unread cap (100 max)
+      const { data: unreadCounts } = await supabase
+        .from('notifications')
+        .select('user_id')
+        .in('user_id', userIds)
+        .eq('is_read', false);
+      
+      const unreadByUser = new Map<string, number>();
+      for (const n of unreadCounts || []) {
+        unreadByUser.set(n.user_id, (unreadByUser.get(n.user_id) || 0) + 1);
+      }
+      const userAtCap = (userId: string) => (unreadByUser.get(userId) || 0) >= 100;
+
       // Helper to check if notification already exists
       const hasRecentNotif = (userId: string, title: string) => {
         return existingNotifKeys.has(`${userId}::${title}`);
