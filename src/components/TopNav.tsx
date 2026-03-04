@@ -129,7 +129,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                   </Link>
                 </DropdownMenuItem>
               )}
-              {hasAnyRole(['admin', 'ops_manager', 'viewer']) && (
+              {hasAnyRole(['admin', 'ops_manager', 'dispatcher', 'viewer']) && (
                 <DropdownMenuItem asChild>
                   <Link to="/service-zones" className="flex items-center gap-2">
                     <Map className="h-4 w-4" />
