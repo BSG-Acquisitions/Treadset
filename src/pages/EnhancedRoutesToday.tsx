@@ -393,14 +393,6 @@ export default function EnhancedRoutesToday() {
                                     </div>
                                    )}
                                    
-                                   {/* Trailer Assignment */}
-                                   {assignment && (
-                                     <TrailerAssignmentDropdown
-                                       vehicleId={assignment.vehicle_id}
-                                       routeDate={activeDay}
-                                       currentTrailerId={assignment.trailer_id}
-                                     />
-                                   )}
                                   
                                   {/* PTE and Revenue for completed pickups */}
                                   {(() => {
