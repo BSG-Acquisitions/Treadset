@@ -143,36 +143,6 @@ export const useCompleteTrailerEvent = () => {
           .eq('id', data.trailer_id);
       }
 
-      // Auto-generate manifest for signed events (pickup_full, drop_full)
-      const requiresManifest = ['pickup_full', 'drop_full'].includes(data.event_type);
-      if (requiresManifest && data.signature_path) {
-        console.log('[CompleteTrailerEvent] Generating manifest for signed event:', event.id);
-        
-        try {
-          const { data: manifestData, error: manifestError } = await supabase.functions.invoke(
-            'generate-trailer-manifest',
-            {
-              body: {
-                event_id: event.id,
-                organization_id: orgId,
-                send_email: !!data.contact_email,
-                recipient_email: data.contact_email,
-                recipient_name: data.contact_name || signerName,
-              },
-            }
-          );
-
-          if (manifestError) {
-            console.error('[CompleteTrailerEvent] Manifest generation failed:', manifestError);
-          } else {
-            console.log('[CompleteTrailerEvent] Manifest generated:', manifestData);
-          }
-        } catch (manifestErr) {
-          console.error('[CompleteTrailerEvent] Manifest generation error:', manifestErr);
-          // Don't fail the event completion if manifest generation fails
-        }
-      }
-
       return event;
     },
     onSuccess: () => {
