@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { formatManifestTimestamp } from "@/lib/manifestTimestamps";
 import { 
   Truck, 
   MapPin, 
@@ -21,7 +22,8 @@ import {
   ChevronRight,
   PlayCircle,
   Flag,
-  Clock
+  Clock,
+  FileText,
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
