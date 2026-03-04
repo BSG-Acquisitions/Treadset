@@ -4,7 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { TrailerSignatureDialog } from "./TrailerSignatureDialog";
+import { DriverManifestCreationWizard } from "@/components/driver/DriverManifestCreationWizard";
 import { useCompleteTrailerEvent, StopTrailerEvent } from "@/hooks/useStopTrailerEvents";
 import { TrailerEventType, EVENT_TYPE_LABELS } from "@/hooks/useTrailerEvents";
 import { PlannedEvent } from "@/hooks/useTrailerRoutes";
@@ -54,6 +56,7 @@ const EVENT_LABELS: Record<string, string> = {
   stage_empty: 'Stage Empty',
 };
 
+const MANIFEST_EVENTS = ['pickup_full', 'drop_full'];
 const SIGNATURE_REQUIRED = ['pickup_full', 'drop_full'];
 
 export function GuidedStopEvents({
@@ -70,6 +73,7 @@ export function GuidedStopEvents({
   const [activeEvent, setActiveEvent] = useState<PlannedEvent | null>(null);
   const [showSignature, setShowSignature] = useState(false);
   const [showUnplanned, setShowUnplanned] = useState(false);
+  const [showManifestWizard, setShowManifestWizard] = useState(false);
   // For "Any" trailer events — driver picks the trailer
   const [driverSelectedTrailer, setDriverSelectedTrailer] = useState<Record<number, string>>({});
   const completeEvent = useCompleteTrailerEvent();
@@ -139,7 +143,10 @@ export function GuidedStopEvents({
 
     setActiveEvent(pe);
 
-    if (SIGNATURE_REQUIRED.includes(pe.event_type)) {
+    if (MANIFEST_EVENTS.includes(pe.event_type)) {
+      // Open the full manifest wizard for pickup_full/drop_full
+      setShowManifestWizard(true);
+    } else if (SIGNATURE_REQUIRED.includes(pe.event_type)) {
       setShowSignature(true);
     } else {
       const overrideId = !pe.trailer_id ? driverSelectedTrailer[idx] : undefined;
@@ -300,8 +307,38 @@ export function GuidedStopEvents({
         </CollapsibleContent>
       </Collapsible>
 
-      {/* Signature dialog for full pickup/drop */}
-      {activeEvent && showSignature && (
+      {/* Full manifest wizard dialog for pickup_full/drop_full */}
+      {activeEvent && showManifestWizard && (
+        <Dialog
+          open={showManifestWizard}
+          onOpenChange={(open) => {
+            if (!open) {
+              setShowManifestWizard(false);
+              setActiveEvent(null);
+            }
+          }}
+        >
+          <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto p-0" hideClose>
+            <DriverManifestCreationWizard
+              locationName={locationName}
+              trailerNumber={
+                activeEvent.trailer_number ||
+                trailers.find(t => t.id === driverSelectedTrailer[plannedEvents.indexOf(activeEvent)])?.trailer_number
+              }
+              onComplete={async () => {
+                const overrideId = !activeEvent.trailer_id
+                  ? driverSelectedTrailer[plannedEvents.indexOf(activeEvent)]
+                  : undefined;
+                await handleComplete(activeEvent, overrideId);
+                setShowManifestWizard(false);
+              }}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Signature dialog fallback for non-manifest signature events */}
+      {activeEvent && showSignature && !showManifestWizard && (
         <TrailerSignatureDialog
           open={showSignature}
           onOpenChange={(open) => {
