@@ -82,6 +82,7 @@ export default function EnhancedRoutesToday() {
   const { data: vehicles = [] } = useVehicles();
   const { toast } = useToast();
   const deletePickup = useDeletePickup();
+  const voidManifest = useVoidManifest();
   const queryClient = useQueryClient();
   const { geocodeLocation, isLoading: isGeocoding } = useGeocodeLocations();
   const ensureManifestPdf = useEnsureManifestPdf();
