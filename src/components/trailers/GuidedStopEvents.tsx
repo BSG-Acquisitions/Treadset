@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { TrailerSignatureDialog } from "./TrailerSignatureDialog";
 import { DriverManifestCreationWizard } from "@/components/driver/DriverManifestCreationWizard";
@@ -12,6 +13,7 @@ import { TrailerEventType, EVENT_TYPE_LABELS } from "@/hooks/useTrailerEvents";
 import { PlannedEvent } from "@/hooks/useTrailerRoutes";
 import { DriverStopEventActions } from "./DriverStopEventActions";
 import { Trailer } from "@/hooks/useTrailers";
+import { getFilteredTrailers } from "@/lib/trailerFilterUtils";
 import { formatManifestTimestamp } from "@/lib/manifestTimestamps";
 import {
   Package,
@@ -37,6 +39,7 @@ interface GuidedStopEventsProps {
   completedEvents: { event_type: string; trailer_id: string }[];
   stopEvents?: StopTrailerEvent[];
   trailers: Trailer[];
+  onTruckTrailerIds?: Set<string>;
   onEventCompleted: () => void;
 }
 
@@ -68,6 +71,7 @@ export function GuidedStopEvents({
   completedEvents,
   stopEvents = [],
   trailers,
+  onTruckTrailerIds = new Set(),
   onEventCompleted,
 }: GuidedStopEventsProps) {
   const [activeEvent, setActiveEvent] = useState<PlannedEvent | null>(null);
@@ -238,21 +242,54 @@ export function GuidedStopEvents({
                       <div className="flex items-center gap-2">
                         {/* Trailer selector for "Any" events */}
                         {isAnyTrailer && (
-                          <Select
-                            value={selectedTrailerForAny || ''}
-                            onValueChange={(v) => setDriverSelectedTrailer(prev => ({ ...prev, [idx]: v }))}
-                          >
-                            <SelectTrigger className="w-[120px] h-9 text-xs">
-                              <SelectValue placeholder="Select trailer" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {trailers.map(t => (
-                                <SelectItem key={t.id} value={t.id}>
-                                  {t.trailer_number}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          (() => {
+                            const { suggested, other } = getFilteredTrailers(
+                              pe.event_type,
+                              locationName,
+                              locationId,
+                              trailers,
+                              onTruckTrailerIds
+                            );
+                            // Auto-select if only one suggestion
+                            if (suggested.length === 1 && !selectedTrailerForAny) {
+                              setTimeout(() => setDriverSelectedTrailer(prev => ({ ...prev, [idx]: suggested[0].id })), 0);
+                            }
+                            return (
+                              <Select
+                                value={selectedTrailerForAny || ''}
+                                onValueChange={(v) => setDriverSelectedTrailer(prev => ({ ...prev, [idx]: v }))}
+                              >
+                                <SelectTrigger className="w-[140px] h-9 text-xs">
+                                  <SelectValue placeholder="Select trailer" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {suggested.length > 0 && (
+                                    <SelectGroup>
+                                      <SelectLabel className="text-xs">At this location</SelectLabel>
+                                      {suggested.map(t => (
+                                        <SelectItem key={t.id} value={t.id}>
+                                          {t.trailer_number} ({t.current_status})
+                                        </SelectItem>
+                                      ))}
+                                    </SelectGroup>
+                                  )}
+                                  {suggested.length > 0 && other.length > 0 && (
+                                    <Separator className="my-1" />
+                                  )}
+                                  {other.length > 0 && (
+                                    <SelectGroup>
+                                      <SelectLabel className="text-xs">Other trailers</SelectLabel>
+                                      {other.map(t => (
+                                        <SelectItem key={t.id} value={t.id}>
+                                          {t.trailer_number} ({t.current_status})
+                                        </SelectItem>
+                                      ))}
+                                    </SelectGroup>
+                                  )}
+                                </SelectContent>
+                              </Select>
+                            );
+                          })()
                         )}
                         <Button
                           size="sm"
@@ -302,6 +339,7 @@ export function GuidedStopEvents({
             locationId={locationId}
             trailers={trailers}
             completedEvents={completedEvents}
+            onTruckTrailerIds={onTruckTrailerIds}
             onEventCompleted={onEventCompleted}
           />
         </CollapsibleContent>

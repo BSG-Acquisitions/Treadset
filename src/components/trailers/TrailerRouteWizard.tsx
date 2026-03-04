@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useCreateTrailerRoute, useAddRouteStop } from "@/hooks/useTrailerRoutes";
 import { useCreateTrailerEvent, TrailerEventType, EVENT_TYPE_LABELS } from "@/hooks/useTrailerEvents";
 import { supabase } from "@/integrations/supabase/client";
 import { useSemiHaulerDrivers } from "@/hooks/useDriverCapabilities";
 import { useTrailerVehicles } from "@/hooks/useTrailerVehicles";
 import { useTrailers } from "@/hooks/useTrailers";
+import { SearchableDropdown } from "@/components/SearchableDropdown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +15,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CalendarIcon, Plus, Trash2, ChevronLeft, ChevronRight, Check, MapPin, Container } from "lucide-react";
+import { CalendarIcon, Plus, Trash2, ChevronLeft, ChevronRight, Check, MapPin, Container, Building2, Edit } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -25,6 +26,8 @@ interface StopData {
   contact_name: string;
   contact_phone: string;
   instructions: string;
+  client_id: string | null;
+  location_id: string | null;
   events: EventData[];
 }
 
@@ -54,12 +57,16 @@ export function TrailerRouteWizard({ onComplete, onCancel }: TrailerRouteWizardP
   
   // Step 2 data
   const [stops, setStops] = useState<StopData[]>([]);
+  const [isCustomLocation, setIsCustomLocation] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<any>(null);
   const [newStop, setNewStop] = useState<Omit<StopData, 'id' | 'events'>>({
     location_name: '',
     location_address: '',
     contact_name: '',
     contact_phone: '',
     instructions: '',
+    client_id: null,
+    location_id: null,
   });
   
   // Hooks
@@ -79,6 +86,49 @@ export function TrailerRouteWizard({ onComplete, onCancel }: TrailerRouteWizardP
   // Step 3 validation - each stop should have at least one event
   const isStep3Valid = stops.every(stop => stop.events.length > 0);
 
+  // Client search function for SearchableDropdown
+  const searchClients = useCallback(async (search: string) => {
+    const { data, error } = await supabase
+      .from('clients')
+      .select('id, company_name, contact_name, phone, email, physical_address, physical_city, physical_state, physical_zip')
+      .ilike('company_name', `%${search}%`)
+      .limit(20);
+    
+    if (error) return [];
+    return data || [];
+  }, []);
+
+  const handleClientSelect = (client: any) => {
+    if (!client) {
+      setSelectedClient(null);
+      setNewStop(prev => ({
+        ...prev,
+        location_name: '',
+        location_address: '',
+        contact_name: '',
+        contact_phone: '',
+        client_id: null,
+        location_id: null,
+      }));
+      return;
+    }
+    
+    setSelectedClient(client);
+    const address = [client.physical_address, client.physical_city, client.physical_state, client.physical_zip]
+      .filter(Boolean)
+      .join(', ');
+    
+    setNewStop(prev => ({
+      ...prev,
+      location_name: client.company_name,
+      location_address: address,
+      contact_name: client.contact_name || '',
+      contact_phone: client.phone || '',
+      client_id: client.id,
+      location_id: null, // Could be enhanced with location picker
+    }));
+  };
+
   const addNewStop = () => {
     if (!newStop.location_name.trim()) {
       toast.error('Location name is required');
@@ -91,13 +141,18 @@ export function TrailerRouteWizard({ onComplete, onCancel }: TrailerRouteWizardP
       events: [],
     }]);
     
+    // Reset form
     setNewStop({
       location_name: '',
       location_address: '',
       contact_name: '',
       contact_phone: '',
       instructions: '',
+      client_id: null,
+      location_id: null,
     });
+    setSelectedClient(null);
+    setIsCustomLocation(false);
   };
 
   const removeStop = (stopId: string) => {
@@ -167,10 +222,12 @@ export function TrailerRouteWizard({ onComplete, onCancel }: TrailerRouteWizardP
           route_id: route.id,
           location_name: stopData.location_name,
           location_address: stopData.location_address || undefined,
+          location_id: stopData.location_id || undefined,
           sequence_number: i + 1,
           contact_name: stopData.contact_name || undefined,
           contact_phone: stopData.contact_phone || undefined,
           instructions: stopData.instructions || undefined,
+          client_id: stopData.client_id || undefined,
         });
         
         // Update stop with planned events (don't fire real events yet)
@@ -328,7 +385,10 @@ export function TrailerRouteWizard({ onComplete, onCancel }: TrailerRouteWizardP
                         {index + 1}
                       </div>
                       <div className="flex-1">
-                        <div className="font-medium">{stop.location_name}</div>
+                        <div className="font-medium flex items-center gap-1.5">
+                          {stop.client_id && <Building2 className="h-3.5 w-3.5 text-primary" />}
+                          {stop.location_name}
+                        </div>
                         {stop.location_address && (
                           <div className="text-sm text-muted-foreground flex items-center gap-1">
                             <MapPin className="h-3 w-3" />
@@ -353,41 +413,103 @@ export function TrailerRouteWizard({ onComplete, onCancel }: TrailerRouteWizardP
           {/* Add stop form */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Add Stop</CardTitle>
+              <CardTitle className="text-base flex items-center justify-between">
+                Add Stop
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs gap-1"
+                  onClick={() => {
+                    setIsCustomLocation(!isCustomLocation);
+                    setSelectedClient(null);
+                    setNewStop(prev => ({
+                      ...prev,
+                      location_name: '',
+                      location_address: '',
+                      contact_name: '',
+                      contact_phone: '',
+                      client_id: null,
+                      location_id: null,
+                    }));
+                  }}
+                >
+                  {isCustomLocation ? (
+                    <><Building2 className="h-3.5 w-3.5" /> Search Client</>
+                  ) : (
+                    <><Edit className="h-3.5 w-3.5" /> Custom Location</>
+                  )}
+                </Button>
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Location Name *</Label>
-                  <Input
-                    value={newStop.location_name}
-                    onChange={(e) => setNewStop(prev => ({ ...prev, location_name: e.target.value }))}
-                    placeholder="e.g., Warehouse A"
-                  />
-                </div>
-                <div>
-                  <Label>Address</Label>
-                  <Input
-                    value={newStop.location_address}
-                    onChange={(e) => setNewStop(prev => ({ ...prev, location_address: e.target.value }))}
-                    placeholder="123 Main St"
-                  />
-                </div>
-                <div>
-                  <Label>Contact Name (Optional)</Label>
-                  <Input
-                    value={newStop.contact_name}
-                    onChange={(e) => setNewStop(prev => ({ ...prev, contact_name: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label>Contact Phone (Optional)</Label>
-                  <Input
-                    value={newStop.contact_phone}
-                    onChange={(e) => setNewStop(prev => ({ ...prev, contact_phone: e.target.value }))}
-                  />
-                </div>
-              </div>
+              {!isCustomLocation ? (
+                <>
+                  {/* Client search mode */}
+                  <div>
+                    <Label>Search Client *</Label>
+                    <SearchableDropdown
+                      placeholder="Search for client..."
+                      searchFunction={searchClients}
+                      onSelect={handleClientSelect}
+                      displayField="company_name"
+                      selected={selectedClient}
+                    />
+                  </div>
+
+                  {selectedClient && (
+                    <div className="rounded-lg border bg-muted/30 p-3 space-y-1.5">
+                      <div className="text-sm font-medium">{selectedClient.company_name}</div>
+                      {newStop.location_address && (
+                        <div className="text-xs text-muted-foreground flex items-center gap-1">
+                          <MapPin className="h-3 w-3" /> {newStop.location_address}
+                        </div>
+                      )}
+                      {newStop.contact_name && (
+                        <div className="text-xs text-muted-foreground">
+                          Contact: {newStop.contact_name} {newStop.contact_phone && `• ${newStop.contact_phone}`}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  {/* Custom location mode */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>Location Name *</Label>
+                      <Input
+                        value={newStop.location_name}
+                        onChange={(e) => setNewStop(prev => ({ ...prev, location_name: e.target.value }))}
+                        placeholder="e.g., BSG Yard"
+                      />
+                    </div>
+                    <div>
+                      <Label>Address</Label>
+                      <Input
+                        value={newStop.location_address}
+                        onChange={(e) => setNewStop(prev => ({ ...prev, location_address: e.target.value }))}
+                        placeholder="123 Main St"
+                      />
+                    </div>
+                    <div>
+                      <Label>Contact Name (Optional)</Label>
+                      <Input
+                        value={newStop.contact_name}
+                        onChange={(e) => setNewStop(prev => ({ ...prev, contact_name: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <Label>Contact Phone (Optional)</Label>
+                      <Input
+                        value={newStop.contact_phone}
+                        onChange={(e) => setNewStop(prev => ({ ...prev, contact_phone: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+              
               <div>
                 <Label>Special Instructions</Label>
                 <Textarea
@@ -396,7 +518,11 @@ export function TrailerRouteWizard({ onComplete, onCancel }: TrailerRouteWizardP
                   placeholder="Gate code, contact info, etc."
                 />
               </div>
-              <Button onClick={addNewStop} className="w-full gap-2">
+              <Button
+                onClick={addNewStop}
+                className="w-full gap-2"
+                disabled={!isCustomLocation && !selectedClient}
+              >
                 <Plus className="h-4 w-4" />
                 Add Stop
               </Button>
