@@ -46,11 +46,9 @@ export function TrailerRouteWizard({ onComplete, onCancel }: TrailerRouteWizardP
   
   // Step 1 data
   const [routeDetails, setRouteDetails] = useState({
-    route_name: '',
     scheduled_date: new Date(),
     driver_id: '',
     vehicle_id: '',
-    trailer_id: '',
     notes: '',
   });
   
@@ -72,8 +70,8 @@ export function TrailerRouteWizard({ onComplete, onCancel }: TrailerRouteWizardP
   const addStop = useAddRouteStop();
   const createEvent = useCreateTrailerEvent();
 
-  // Step 1 validation
-  const isStep1Valid = routeDetails.route_name.trim() !== '';
+  // Step 1 validation - date is always set
+  const isStep1Valid = true;
   
   // Step 2 validation
   const isStep2Valid = stops.length > 0;
@@ -155,13 +153,13 @@ export function TrailerRouteWizard({ onComplete, onCancel }: TrailerRouteWizardP
     setIsSubmitting(true);
     
     try {
-      // Create the route
+      // Create the route with auto-generated name
+      const autoName = `Trailer Route — ${format(routeDetails.scheduled_date, 'MMM d, yyyy')}`;
       const route = await createRoute.mutateAsync({
-        route_name: routeDetails.route_name,
+        route_name: autoName,
         scheduled_date: format(routeDetails.scheduled_date, 'yyyy-MM-dd'),
         driver_id: routeDetails.driver_id || undefined,
         vehicle_id: routeDetails.vehicle_id || undefined,
-        trailer_id: routeDetails.trailer_id || undefined,
         notes: routeDetails.notes || undefined,
       });
       
@@ -248,15 +246,6 @@ export function TrailerRouteWizard({ onComplete, onCancel }: TrailerRouteWizardP
       {step === 1 && (
         <div className="space-y-4">
           <div>
-            <Label>Route Name *</Label>
-            <Input
-              value={routeDetails.route_name}
-              onChange={(e) => setRouteDetails(prev => ({ ...prev, route_name: e.target.value }))}
-              placeholder="e.g., Downtown Trailer Swap"
-            />
-          </div>
-          
-          <div>
             <Label>Scheduled Date *</Label>
             <Popover>
               <PopoverTrigger asChild>
@@ -300,7 +289,7 @@ export function TrailerRouteWizard({ onComplete, onCancel }: TrailerRouteWizardP
           </div>
           
           <div>
-            <Label>Assign Vehicle</Label>
+            <Label>Assign Vehicle (Optional)</Label>
             <Select
               value={routeDetails.vehicle_id}
               onValueChange={(value) => setRouteDetails(prev => ({ ...prev, vehicle_id: value }))}
@@ -317,33 +306,13 @@ export function TrailerRouteWizard({ onComplete, onCancel }: TrailerRouteWizardP
               </SelectContent>
             </Select>
           </div>
-          
-          <div>
-            <Label>Assign Trailer</Label>
-            <Select
-              value={routeDetails.trailer_id}
-              onValueChange={(value) => setRouteDetails(prev => ({ ...prev, trailer_id: value === 'none' ? '' : value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select trailer..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">No trailer assigned</SelectItem>
-                {trailers?.map(trailer => (
-                  <SelectItem key={trailer.id} value={trailer.id}>
-                    {trailer.trailer_number} — {trailer.current_status || 'unknown'}{trailer.current_location ? ` • ${trailer.current_location}` : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
 
           <div>
             <Label>Notes</Label>
             <Textarea
               value={routeDetails.notes}
               onChange={(e) => setRouteDetails(prev => ({ ...prev, notes: e.target.value }))}
-              placeholder="Any special instructions..."
+              placeholder="Any special instructions for the driver..."
             />
           </div>
         </div>
