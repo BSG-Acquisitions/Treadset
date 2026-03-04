@@ -58,6 +58,8 @@ type ManifestFormData = z.infer<typeof manifestSchema>;
 interface DriverManifestCreationWizardProps {
   pickupId?: string;
   clientId?: string;
+  locationName?: string;
+  trailerNumber?: string;
   onComplete?: () => void;
 }
 
@@ -76,38 +78,28 @@ const steps = [
 export function DriverManifestCreationWizard({ 
   pickupId, 
   clientId,
+  locationName,
+  trailerNumber,
   onComplete 
 }: DriverManifestCreationWizardProps) {
-  // Guard for missing pickupId - render error state
-  if (!pickupId) {
-    return (
-      <Card className="max-w-4xl mx-auto">
-        <CardContent className="flex items-center justify-center p-12">
-          <div className="text-center">
-            <div className="font-semibold mb-2">Missing Pickup ID</div>
-            <div className="text-muted-foreground text-sm">
-              Cannot create a manifest without a valid pickup.
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return <DriverManifestCreationWizardInner pickupId={pickupId} clientId={clientId} onComplete={onComplete} />;
+  return <DriverManifestCreationWizardInner pickupId={pickupId} clientId={clientId} locationName={locationName} trailerNumber={trailerNumber} onComplete={onComplete} />;
 }
 
 function DriverManifestCreationWizardInner({ 
   pickupId, 
   clientId,
+  locationName: initialLocationName,
+  trailerNumber: initialTrailerNumber,
   onComplete 
-}: { pickupId: string; clientId?: string; onComplete?: () => void }) {
+}: { pickupId?: string; clientId?: string; locationName?: string; trailerNumber?: string; onComplete?: () => void }) {
+  const isStandalone = !pickupId; // Standalone mode: no pickup, manual entry
   const [step, setStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pickupData, setPickupData] = useState<any>(null);
   const [haulerData, setHaulerData] = useState<any>(null);
   const [assignmentData, setAssignmentData] = useState<any>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [standaloneGeneratorName, setStandaloneGeneratorName] = useState<string>(initialLocationName || '');
   const [resolvedClientId, setResolvedClientId] = useState<string | null>(null);
   const [manualWeightOverride, setManualWeightOverride] = useState<boolean>(false);
   const [manifestCreated, setManifestCreated] = useState(false);
@@ -262,15 +254,25 @@ function DriverManifestCreationWizardInner({
     }
   }, [pteOffRimRate, pteOnRimRate, commercial_17_5_19_5_off_rate, commercial_17_5_19_5_on_rate, commercial_22_5_off_rate, commercial_22_5_on_rate, otrRate, step, form]);
 
-  // Fetch pickup, assignment, and hauler data on mount
+  // Fetch pickup, assignment, and hauler data on mount (only in pickup mode)
   useEffect(() => {
+    if (isStandalone) {
+      // In standalone mode, pre-fill hauler name and mark as ready
+      if (user?.firstName && user?.lastName) {
+        form.setValue('hauler_print_name', `${user.firstName} ${user.lastName}`);
+      }
+      // Set a minimal pickupData so the loading screen doesn't block
+      setPickupData({ standalone: true });
+      return;
+    }
+
     const fetchData = async () => {
       try {
         // Get pickup only (no implicit joins)
         const { data: pickupRow, error: pickupError } = await supabase
           .from('pickups')
           .select('*')
-          .eq('id', pickupId)
+          .eq('id', pickupId!)
           .maybeSingle();
 
         if (pickupError) throw pickupError;
@@ -308,7 +310,7 @@ function DriverManifestCreationWizardInner({
             ),
             vehicle:vehicles(id, name, license_plate)
           `)
-          .eq('pickup_id', pickupId)
+          .eq('pickup_id', pickupId!)
           .maybeSingle();
 
         if (assignmentError) throw assignmentError;
@@ -335,7 +337,7 @@ function DriverManifestCreationWizardInner({
     };
 
     fetchData();
-  }, [pickupId, user, form, toast]);
+  }, [pickupId, user, form, toast, isStandalone]);
 
   // If assignment didn't provide hauler, and there is exactly one active hauler, auto-select it
   useEffect(() => {
@@ -440,6 +442,16 @@ function DriverManifestCreationWizardInner({
       }
       
       console.log('[MANIFEST_WIZARD] Info step validation passed - hauler is valid:', haulerData.company_name);
+      
+      // In standalone mode, require generator name
+      if (isStandalone && !standaloneGeneratorName.trim()) {
+        toast({
+          title: "Generator Name Required",
+          description: "Please enter a generator/location name before continuing",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     // Validate current step before proceeding
@@ -692,8 +704,8 @@ function DriverManifestCreationWizardInner({
         return;
       }
       
-      // Ensure we have a valid client
-      if (!pickupData.client || !pickupData.client.company_name) {
+      // Ensure we have a valid client (only in pickup mode)
+      if (!isStandalone && (!pickupData.client || !pickupData.client.company_name)) {
         toast({
           title: "Error",
           description: "Client information is missing. Please refresh and try again.",
@@ -793,26 +805,28 @@ function DriverManifestCreationWizardInner({
       return;
     }
 
-    // Check if a manifest already exists for this pickup (prevents duplicates)
-    const { data: existingManifests, error: checkError } = await supabase
-      .from('manifests')
-      .select('id, manifest_number, status')
-      .eq('pickup_id', pickupId)
-      .limit(1);
-
+    // Check if a manifest already exists for this pickup (prevents duplicates) - only in pickup mode
     let manifest: any = null;
     let isExistingManifest = false;
 
-    if (checkError) {
-      console.error('[DRIVER_WIZARD] Error checking for existing manifests:', checkError);
-    } else if (existingManifests && existingManifests.length > 0) {
-      manifest = existingManifests[0];
-      isExistingManifest = true;
-      console.log('[DRIVER_WIZARD] Using existing manifest:', manifest);
-      toast({
-        title: "Using Existing Manifest",
-        description: `Found existing manifest (${manifest.manifest_number}). Completing the pickup...`,
-      });
+    if (pickupId) {
+      const { data: existingManifests, error: checkError } = await supabase
+        .from('manifests')
+        .select('id, manifest_number, status')
+        .eq('pickup_id', pickupId)
+        .limit(1);
+
+      if (checkError) {
+        console.error('[DRIVER_WIZARD] Error checking for existing manifests:', checkError);
+      } else if (existingManifests && existingManifests.length > 0) {
+        manifest = existingManifests[0];
+        isExistingManifest = true;
+        console.log('[DRIVER_WIZARD] Using existing manifest:', manifest);
+        toast({
+          title: "Using Existing Manifest",
+          description: `Found existing manifest (${manifest.manifest_number}). Completing the pickup...`,
+        });
+      }
     }
 
     // Set both state and ref to prevent race conditions
@@ -898,8 +912,8 @@ function DriverManifestCreationWizardInner({
         ? Number(data.weight_tons_manual)
         : (tonsFromNet > 0 ? tonsFromNet : tonsFromPte);
 
-      // Validate client_id before creating manifest
-      if (!resolvedClientId) {
+      // Validate client_id before creating manifest (not required in standalone mode)
+      if (!isStandalone && !resolvedClientId) {
         toast({
           title: 'Missing Client Information',
           description: 'Cannot create manifest without a valid client ID.',
@@ -910,10 +924,10 @@ function DriverManifestCreationWizardInner({
       }
 
       const manifestData = {
-        client_id: resolvedClientId,
-        location_id: pickupData.location_id,
-        pickup_id: pickupId,
-        driver_id: assignmentData?.driver_id,
+        client_id: resolvedClientId || undefined,
+        location_id: isStandalone ? undefined : pickupData.location_id,
+        pickup_id: pickupId || undefined,
+        driver_id: isStandalone ? user?.id : assignmentData?.driver_id,
         vehicle_id: assignmentData?.vehicle_id,
         hauler_id: haulerData.id,
         pte_off_rim: data.pte_off_rim,
@@ -978,14 +992,14 @@ function DriverManifestCreationWizardInner({
       await manifestIntegration.mutateAsync({
         manifestId: manifest.id,
         overrides: {
-          // Generator info from client
-          generator_name: pickupData.client.company_name,
-          generator_mail_address: pickupData.client.physical_address || pickupData.client.mailing_address,
-          generator_city: pickupData.client.physical_city || pickupData.client.city,
-          generator_state: pickupData.client.physical_state || pickupData.client.state,
-          generator_zip: pickupData.client.physical_zip || pickupData.client.zip,
-          generator_county: pickupData.client.county || '',
-          generator_phone: pickupData.client.phone || '',
+          // Generator info - from client data or standalone manual entry
+          generator_name: isStandalone ? standaloneGeneratorName : pickupData.client?.company_name,
+          generator_mail_address: isStandalone ? '' : (pickupData.client?.physical_address || pickupData.client?.mailing_address),
+          generator_city: isStandalone ? '' : (pickupData.client?.physical_city || pickupData.client?.city),
+          generator_state: isStandalone ? '' : (pickupData.client?.physical_state || pickupData.client?.state),
+          generator_zip: isStandalone ? '' : (pickupData.client?.physical_zip || pickupData.client?.zip),
+          generator_county: isStandalone ? '' : (pickupData.client?.county || ''),
+          generator_phone: isStandalone ? '' : (pickupData.client?.phone || ''),
           // Signature paths (both domain and template keys to be safe)
           generator_signature: generatorSigPath,
           
@@ -1039,8 +1053,8 @@ function DriverManifestCreationWizardInner({
         console.log('[DRIVER_WIZARD] Saved initial PDF path:', pdfPathData.acroform_pdf_path);
       }
 
-      // 5. Email the initial manifest to client
-      if (pickupData.client.email) {
+      // 5. Email the initial manifest to client (only in pickup mode with email)
+      if (!isStandalone && pickupData.client?.email) {
         console.log('📧 Attempting to send manifest email to:', pickupData.client.email);
         try {
           await sendEmail.mutateAsync({
@@ -1058,11 +1072,11 @@ function DriverManifestCreationWizardInner({
             variant: "destructive",
           });
         }
-      } else {
-        console.warn('⚠️ No email address for client:', pickupData.client.company_name);
+      } else if (!isStandalone) {
+        console.warn('⚠️ No email address for client:', pickupData.client?.company_name);
         toast({
           title: "No Email Address",
-          description: `Manifest created but ${pickupData.client.company_name} has no email address configured.`,
+          description: `Manifest created but ${pickupData.client?.company_name || 'client'} has no email address configured.`,
           variant: "destructive",
         });
       }
@@ -1074,22 +1088,24 @@ function DriverManifestCreationWizardInner({
           : "Manifest created successfully with generator and hauler signatures",
       });
 
-      // Update pickup status to completed AND save revenue and payment info
-      const { error: pickupUpdateError } = await supabase
-        .from('pickups')
-        .update({ 
-          status: 'completed',
-          manifest_id: manifest.id,
-          computed_revenue: calculatedTotal,
-          final_revenue: calculatedTotal,
-          payment_method: paymentMethod,
-          payment_status: paymentMethod === 'CASH' || paymentMethod === 'CHECK' ? 'SUCCEEDED' : 'PENDING',
-          ...(paymentMethod === 'CHECK' && checkNumber.trim() ? { check_number: checkNumber.trim() } : {}),
-        })
-        .eq('id', pickupId);
+      // Update pickup status to completed AND save revenue and payment info (only in pickup mode)
+      if (pickupId) {
+        const { error: pickupUpdateError } = await supabase
+          .from('pickups')
+          .update({ 
+            status: 'completed',
+            manifest_id: manifest.id,
+            computed_revenue: calculatedTotal,
+            final_revenue: calculatedTotal,
+            payment_method: paymentMethod,
+            payment_status: paymentMethod === 'CASH' || paymentMethod === 'CHECK' ? 'SUCCEEDED' : 'PENDING',
+            ...(paymentMethod === 'CHECK' && checkNumber.trim() ? { check_number: checkNumber.trim() } : {}),
+          })
+          .eq('id', pickupId);
 
-      if (pickupUpdateError) {
-        console.error('Error updating pickup status:', pickupUpdateError);
+        if (pickupUpdateError) {
+          console.error('Error updating pickup status:', pickupUpdateError);
+        }
       }
 
       // Update assignment status to completed
@@ -1151,24 +1167,26 @@ function DriverManifestCreationWizardInner({
       queryClient.invalidateQueries({ queryKey: ['client', resolvedClientId] });
       console.log('✅ Queries invalidated - UI should refresh');
 
-      // Ensure manifest PDF is generated and linked
-      console.log('🔧 Ensuring manifest PDF is generated for pickup:', pickupId);
-      try {
-        const { data: pdfData, error: pdfError } = await supabase.functions.invoke(
-          'ensure-manifest-pdf',
-          {
-            body: { pickup_id: pickupId }
+      // Ensure manifest PDF is generated and linked (only in pickup mode)
+      if (pickupId) {
+        console.log('🔧 Ensuring manifest PDF is generated for pickup:', pickupId);
+        try {
+          const { data: pdfData, error: pdfError } = await supabase.functions.invoke(
+            'ensure-manifest-pdf',
+            {
+              body: { pickup_id: pickupId }
+            }
+          );
+          
+          if (pdfError) {
+            console.error('❌ ensure-manifest-pdf error:', pdfError);
+          } else {
+            console.log('✅ Manifest PDF ensured:', pdfData);
           }
-        );
-        
-        if (pdfError) {
-          console.error('❌ ensure-manifest-pdf error:', pdfError);
-        } else {
-          console.log('✅ Manifest PDF ensured:', pdfData);
+        } catch (pdfErr) {
+          console.error('❌ Failed to ensure manifest PDF:', pdfErr);
+          // Don't block the flow if this fails
         }
-      } catch (pdfErr) {
-        console.error('❌ Failed to ensure manifest PDF:', pdfErr);
-        // Don't block the flow if this fails
       }
 
       // Store manifest ID and mark as created
@@ -1244,11 +1262,11 @@ function DriverManifestCreationWizardInner({
             {
               body: {
                 line_items: lineItems,
-                customer_email: pickupData.client.email,
-                customer_name: pickupData.client.company_name,
-                pickup_id: pickupId,
+                customer_email: isStandalone ? undefined : pickupData.client?.email,
+                customer_name: isStandalone ? standaloneGeneratorName : pickupData.client?.company_name,
+                pickup_id: pickupId || undefined,
                 manifest_id: manifest.id,
-                client_id: resolvedClientId,
+                client_id: resolvedClientId || undefined,
               }
             }
           );
@@ -1317,20 +1335,42 @@ function DriverManifestCreationWizardInner({
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-4">
               <Building className="h-5 w-5 text-primary" />
-              <h3 className="text-lg font-semibold">Review Generator & Hauler Info</h3>
+              <h3 className="text-lg font-semibold">{isStandalone ? 'Enter Generator & Hauler Info' : 'Review Generator & Hauler Info'}</h3>
             </div>
             
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Generator (Client)</CardTitle>
+                <CardTitle className="text-base">Generator {isStandalone ? '(Location/Company)' : '(Client)'}</CardTitle>
                 <CardDescription>This information will appear on the manifest</CardDescription>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
-                <div><strong>Company:</strong> {pickupData?.client?.company_name || 'N/A'}</div>
-                <div><strong>Address:</strong> {pickupData?.client?.physical_address || pickupData?.client?.mailing_address || 'N/A'}</div>
-                <div><strong>City, State ZIP:</strong> {pickupData?.client?.physical_city || pickupData?.client?.city}, {pickupData?.client?.physical_state || pickupData?.client?.state} {pickupData?.client?.physical_zip || pickupData?.client?.zip}</div>
-                <div><strong>Phone:</strong> {pickupData?.client?.phone || 'N/A'}</div>
-                <div><strong>Contact:</strong> {pickupData?.client?.contact_name || 'N/A'}</div>
+                {isStandalone ? (
+                  <div className="space-y-3">
+                    <div>
+                      <Label htmlFor="standalone-generator">Generator Name *</Label>
+                      <Input
+                        id="standalone-generator"
+                        value={standaloneGeneratorName}
+                        onChange={(e) => setStandaloneGeneratorName(e.target.value)}
+                        placeholder="Enter generator/location name"
+                        className="mt-1"
+                      />
+                    </div>
+                    {initialTrailerNumber && (
+                      <div className="text-xs text-muted-foreground">
+                        Trailer: #{initialTrailerNumber}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <div><strong>Company:</strong> {pickupData?.client?.company_name || 'N/A'}</div>
+                    <div><strong>Address:</strong> {pickupData?.client?.physical_address || pickupData?.client?.mailing_address || 'N/A'}</div>
+                    <div><strong>City, State ZIP:</strong> {pickupData?.client?.physical_city || pickupData?.client?.city}, {pickupData?.client?.physical_state || pickupData?.client?.state} {pickupData?.client?.physical_zip || pickupData?.client?.zip}</div>
+                    <div><strong>Phone:</strong> {pickupData?.client?.phone || 'N/A'}</div>
+                    <div><strong>Contact:</strong> {pickupData?.client?.contact_name || 'N/A'}</div>
+                  </>
+                )}
               </CardContent>
             </Card>
 
@@ -2602,13 +2642,15 @@ function DriverManifestCreationWizardInner({
           }
 
           try {
-            // Update the pickup with computed_revenue
-            const { error } = await supabase
-              .from('pickups')
-              .update({ computed_revenue: calculatedTotal })
-              .eq('id', pickupId);
+            // Update the pickup with computed_revenue (only in pickup mode)
+            if (pickupId) {
+              const { error } = await supabase
+                .from('pickups')
+                .update({ computed_revenue: calculatedTotal })
+                .eq('id', pickupId);
 
-            if (error) throw error;
+              if (error) throw error;
+            }
 
             // Show payment dialog
             setShowPaymentDialog(true);
@@ -2709,16 +2751,18 @@ function DriverManifestCreationWizardInner({
                     disabled={calculatedTotal <= 0}
                     onClick={async () => {
                       try {
-                        const { error } = await supabase
-                          .from('pickups')
-                          .update({
-                            computed_revenue: calculatedTotal,
-                            final_revenue: calculatedTotal,
-                            payment_method: offlineMethod,
-                            payment_status: 'SUCCEEDED'
-                          })
-                          .eq('id', pickupId);
-                        if (error) throw error;
+                        if (pickupId) {
+                          const { error } = await supabase
+                            .from('pickups')
+                            .update({
+                              computed_revenue: calculatedTotal,
+                              final_revenue: calculatedTotal,
+                              payment_method: offlineMethod,
+                              payment_status: 'SUCCEEDED'
+                            })
+                            .eq('id', pickupId);
+                          if (error) throw error;
+                        }
                         toast({ title: 'Marked Paid', description: `Recorded ${offlineMethod.toLowerCase()} payment.` });
                         if (onComplete) onComplete(); else navigate('/driver/manifests');
                       } catch (err: any) {
@@ -2741,7 +2785,9 @@ function DriverManifestCreationWizardInner({
                   // Save check number to both tables if CHECK was selected
                   if (paymentMethod === 'CHECK' && checkNumber.trim() && createdManifestId) {
                     await supabase.from('manifests').update({ check_number: checkNumber.trim() }).eq('id', createdManifestId);
-                    await supabase.from('pickups').update({ check_number: checkNumber.trim() }).eq('id', pickupId);
+                    if (pickupId) {
+                      await supabase.from('pickups').update({ check_number: checkNumber.trim() }).eq('id', pickupId);
+                    }
                   }
                   if (onComplete) {
                     onComplete();
@@ -2864,7 +2910,7 @@ function DriverManifestCreationWizardInner({
       <CollectPaymentWithCard
         open={showPaymentDialog}
         onOpenChange={setShowPaymentDialog}
-        pickupId={pickupId}
+        pickupId={pickupId || ''}
         amount={calculatedTotal}
         onSuccess={() => {
           setShowPaymentDialog(false);

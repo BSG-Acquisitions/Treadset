@@ -26,11 +26,13 @@ export default function DriverManifestCreate() {
   
   const pickupId = searchParams.get('pickup');
   const clientId = searchParams.get('client');
+  const locationName = searchParams.get('location');
+  const trailerNumber = searchParams.get('trailer');
   
   const [pickup, setPickup] = useState<PickupData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!!pickupId); // Only load if we have a pickupId
 
-  // Fetch pickup data
+  // Fetch pickup data (only when pickupId exists)
   useEffect(() => {
     const fetchPickup = async () => {
       if (!pickupId) {
@@ -83,13 +85,15 @@ export default function DriverManifestCreate() {
           </Button>
           <div>
             <h1 className="text-xl md:text-3xl font-bold">Create Manifest</h1>
-            <p className="text-sm text-muted-foreground">Complete the manifest wizard</p>
+            <p className="text-sm text-muted-foreground">
+              {pickupId ? 'Complete the manifest wizard' : 'Create a standalone manifest'}
+            </p>
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-4 gap-6">
+        <div className={pickup ? "grid lg:grid-cols-4 gap-6" : ""}>
           
-          {/* Pickup Info Sidebar */}
+          {/* Pickup Info Sidebar - only show if we have pickup data */}
           {pickup && (
             <Card className="lg:col-span-1">
               <CardHeader>
@@ -130,10 +134,12 @@ export default function DriverManifestCreate() {
           )}
 
           {/* Wizard */}
-          <div className="lg:col-span-3">
+          <div className={pickup ? "lg:col-span-3" : "max-w-4xl mx-auto"}>
             <DriverManifestCreationWizard
               pickupId={pickupId || undefined}
               clientId={clientId || undefined}
+              locationName={locationName || undefined}
+              trailerNumber={trailerNumber || undefined}
               onComplete={() => navigate("/driver/manifests")}
             />
           </div>

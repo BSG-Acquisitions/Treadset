@@ -22,6 +22,7 @@ import {
   FileText,
   Clock,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 interface GuidedStopEventsProps {
@@ -69,6 +70,7 @@ export function GuidedStopEvents({
   const [showSignature, setShowSignature] = useState(false);
   const [showUnplanned, setShowUnplanned] = useState(false);
   const completeEvent = useCompleteTrailerEvent();
+  const navigate = useNavigate();
 
   const isCompleted = (pe: PlannedEvent) =>
     completedEvents.some(
@@ -162,20 +164,38 @@ export function GuidedStopEvents({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    {done ? (
-                      <div className="flex items-center gap-2">
-                        {/* Manifest badge for signed events */}
-                        {eventRecord?.manifest_number && (
-                          <Badge variant="outline" className="text-xs gap-1 bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700">
-                            <FileText className="h-3 w-3" />
-                            {eventRecord.manifest_number}
-                          </Badge>
-                        )}
-                        <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-400 dark:border-green-700">
-                          Done
-                        </Badge>
-                      </div>
+                   <div className="flex items-center gap-2">
+                     {done ? (
+                       <div className="flex items-center gap-2">
+                         {/* Manifest badge for signed events */}
+                         {eventRecord?.manifest_number && (
+                           <Badge variant="outline" className="text-xs gap-1 bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700">
+                             <FileText className="h-3 w-3" />
+                             {eventRecord.manifest_number}
+                           </Badge>
+                         )}
+                         {/* Create Manifest button for signed events without a manifest */}
+                         {SIGNATURE_REQUIRED.includes(pe.event_type) && !eventRecord?.manifest_number && (
+                           <Button
+                             size="sm"
+                             variant="outline"
+                             className="text-xs gap-1 min-h-[36px]"
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               const params = new URLSearchParams();
+                               if (locationName) params.set('location', locationName);
+                               if (pe.trailer_number) params.set('trailer', pe.trailer_number);
+                               navigate(`/driver/manifest/new?${params.toString()}`);
+                             }}
+                           >
+                             <FileText className="h-3 w-3" />
+                             Create Manifest
+                           </Button>
+                         )}
+                         <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-400 dark:border-green-700">
+                           Done
+                         </Badge>
+                       </div>
                     ) : (
                       <Button
                         size="sm"
