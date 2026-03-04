@@ -433,14 +433,29 @@ function StopCard({
                   </div>
                 )}
 
-                {/* Show completed events summary */}
+                {/* Completed events timeline */}
                 {hasEvents && (
-                  <div className="mt-2 flex flex-wrap gap-1">
+                  <div className="mt-2 space-y-1.5">
                     {stopEvents.map((event: any) => (
-                      <Badge key={event.id} variant="secondary" className="text-xs">
-                        <CheckCircle className="h-3 w-3 mr-1 text-green-600" />
-                        {event.trailer?.trailer_number}: {event.event_type.replace('_', ' ')}
-                      </Badge>
+                      <div key={event.id} className="flex items-center gap-2 text-xs">
+                        <CheckCircle className="h-3 w-3 text-green-600 flex-shrink-0" />
+                        <span className="font-medium">
+                          {event.event_type.replace('_', ' ')}
+                        </span>
+                        <span className="text-muted-foreground">
+                          #{event.trailer?.trailer_number}
+                        </span>
+                        <span className="text-muted-foreground flex items-center gap-0.5 ml-auto">
+                          <Clock className="h-3 w-3" />
+                          {formatManifestTimestamp(event.timestamp)}
+                        </span>
+                        {event.manifest_number && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-0.5 bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700">
+                            <FileText className="h-2.5 w-2.5" />
+                            {event.manifest_number}
+                          </Badge>
+                        )}
+                      </div>
                     ))}
                   </div>
                 )}
