@@ -68,8 +68,6 @@ const OutboundSchedule = lazy(() => import('./pages/OutboundSchedule'));
 const Manifests = lazy(() => import('./pages/Manifests'));
 const BackfillManifestPdfs = lazy(() => import('./pages/BackfillManifestPdfs'));
 const DeploymentDashboard = lazy(() => import('./pages/DeploymentDashboard'));
-const NotificationTest = lazy(() => import('./pages/NotificationTest'));
-const ManifestRemindersTest = lazy(() => import('./pages/ManifestRemindersTest'));
 const DataQuality = lazy(() => import('./pages/DataQuality'));
 const IntelligenceDashboard = lazy(() => import('./pages/IntelligenceDashboard'));
 const TrailerInventory = lazy(() => import('./pages/TrailerInventory'));
@@ -418,20 +416,6 @@ const App = () => (
                 <ProtectedRoute roles={['super_admin']}>
                   <AppLayout>
                     <DeploymentDashboard />
-                  </AppLayout>
-                </ProtectedRoute>
-              } />
-              <Route path="/test/notifications" element={
-                <ProtectedRoute roles={['super_admin']}>
-                  <AppLayout>
-                    <NotificationTest />
-                  </AppLayout>
-                </ProtectedRoute>
-              } />
-              <Route path="/test/manifest-reminders" element={
-                <ProtectedRoute roles={['super_admin']}>
-                  <AppLayout>
-                    <ManifestRemindersTest />
                   </AppLayout>
                 </ProtectedRoute>
               } />

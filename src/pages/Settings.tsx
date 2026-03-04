@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { User, Bell, Shield, Palette, Database, Key, Loader2, Save, X, FileText, PenTool, Users, CalendarClock, Mail } from "lucide-react";
+import { User, Shield, Palette, Database, Key, Loader2, Save, X, FileText, PenTool, Users, CalendarClock, Mail } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { FadeIn } from "@/components/motion/FadeIn";
@@ -248,14 +248,6 @@ if (preferencesLoading) {
                 <Button 
                   variant="ghost" 
                   className="w-full justify-start"
-                  onClick={() => scrollToSection('notifications-section')}
-                >
-                  <Bell className="h-4 w-4 mr-2" />
-                  Notifications
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-start"
                   onClick={() => scrollToSection('appearance-section')}
                 >
                   <Palette className="h-4 w-4 mr-2" />
@@ -463,75 +455,6 @@ if (preferencesLoading) {
             {/* Signature Manager */}
             <SignatureManager />
 
-            {/* Notification Settings */}
-            <Card id="notifications-section">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Bell className="h-5 w-5" />
-                  Notification Preferences
-                </CardTitle>
-                <CardDescription>
-                  Control when and how you receive notifications
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Email Notifications</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Receive notifications via email
-                    </p>
-                  </div>
-                  <Switch 
-                    checked={preferences?.email_notifications || false}
-                    onCheckedChange={(checked) => handlePreferenceChange("email_notifications", checked)}
-                    disabled={updatePreferences.isPending}
-                  />
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Route Updates</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Get notified about route changes and assignments
-                    </p>
-                  </div>
-                  <Switch 
-                    checked={preferences?.route_updates || false}
-                    onCheckedChange={(checked) => handlePreferenceChange("route_updates", checked)}
-                    disabled={updatePreferences.isPending}
-                  />
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Client Alerts</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Receive alerts about client capacity and pickups
-                    </p>
-                  </div>
-                  <Switch 
-                    checked={preferences?.client_alerts || false}
-                    onCheckedChange={(checked) => handlePreferenceChange("client_alerts", checked)}
-                    disabled={updatePreferences.isPending}
-                  />
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>System Maintenance</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Get notified about scheduled maintenance
-                    </p>
-                  </div>
-                  <Switch 
-                    checked={preferences?.system_maintenance || false}
-                    onCheckedChange={(checked) => handlePreferenceChange("system_maintenance", checked)}
-                    disabled={updatePreferences.isPending}
-                  />
-                </div>
-              </CardContent>
-            </Card>
 
             {/* Appearance Settings */}
             <Card id="appearance-section">
