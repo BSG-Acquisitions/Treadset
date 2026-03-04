@@ -511,37 +511,18 @@ export default function EnhancedRoutesToday() {
                                         Move to Different Date
                                       </DropdownMenuItem>
                                       
-                                      {pickup.status === 'scheduled' && (
-                                        <AlertDialog>
-                                          <AlertDialogTrigger asChild>
-                                            <DropdownMenuItem 
-                                              onSelect={(e) => e.preventDefault()}
-                                              className="text-destructive focus:text-destructive"
-                                            >
-                                              <Trash2 className="h-4 w-4 mr-2" />
-                                              Delete Pickup
-                                            </DropdownMenuItem>
-                                          </AlertDialogTrigger>
-                                          <AlertDialogContent className="bg-card border z-50">
-                                            <AlertDialogHeader>
-                                              <AlertDialogTitle>Delete Pickup</AlertDialogTitle>
-                                              <AlertDialogDescription>
-                                                Are you sure you want to delete this pickup for {pickup.client?.company_name}? 
-                                                This action cannot be undone.
-                                              </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                              <AlertDialogAction
-                                                onClick={() => deletePickup.mutate(pickup.id)}
-                                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                              >
-                                                Delete
-                                              </AlertDialogAction>
-                                            </AlertDialogFooter>
-                                          </AlertDialogContent>
-                                        </AlertDialog>
-                                      )}
+                                      <DropdownMenuItem 
+                                        onSelect={(e) => {
+                                          e.preventDefault();
+                                          setPickupToDelete(pickup);
+                                          setDeleteConfirmText("");
+                                          setDeleteDialogOpen(true);
+                                        }}
+                                        className="text-destructive focus:text-destructive"
+                                      >
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Delete Pickup
+                                      </DropdownMenuItem>
                                     </DropdownMenuContent>
                                   </DropdownMenu>
                                 </div>
