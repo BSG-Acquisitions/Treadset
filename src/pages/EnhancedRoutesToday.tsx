@@ -4,6 +4,7 @@ import { useVehicles } from "@/hooks/useVehicles";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEnsureManifestPdf } from "@/hooks/useEnsureManifestPdf";
+import { useVoidManifest } from "@/hooks/useVoidManifest";
 import { CompletePickupDialog } from "@/components/CompletePickupDialog";
 import { MovePickupDialog } from "@/components/MovePickupDialog";
 import { DriverAssignmentDropdown } from "@/components/DriverAssignmentDropdown";
