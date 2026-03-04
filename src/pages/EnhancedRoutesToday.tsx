@@ -7,7 +7,7 @@ import { useEnsureManifestPdf } from "@/hooks/useEnsureManifestPdf";
 import { CompletePickupDialog } from "@/components/CompletePickupDialog";
 import { MovePickupDialog } from "@/components/MovePickupDialog";
 import { DriverAssignmentDropdown } from "@/components/DriverAssignmentDropdown";
-import { TrailerAssignmentDropdown } from "@/components/TrailerAssignmentDropdown";
+
 import { VehicleManagementDialog } from "@/components/VehicleManagementDialog";
 import { SchedulePickupDialog } from "@/components/SchedulePickupDialog";
 import { useGeocodeLocations } from "@/hooks/useGeocodeLocations";
