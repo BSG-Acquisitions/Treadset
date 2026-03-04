@@ -107,6 +107,7 @@ export const useDriverTrailerRoutes = () => {
         .select(`
           *,
           vehicle:trailer_vehicles(id, vehicle_number),
+          trailer:trailers(id, trailer_number, current_status, current_location),
           stops:trailer_route_stops(*)
         `)
         .eq('driver_id', user.id)

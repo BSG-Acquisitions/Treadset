@@ -373,7 +373,7 @@ function StopCard({
         )}
       >
         <CollapsibleTrigger asChild disabled={!canInteract}>
-          <div className="p-3 sm:p-4" onClick={canInteract ? onToggle : undefined}>
+          <div className="p-3 sm:p-4" onClick={(e) => { e.stopPropagation(); if (canInteract) onToggle(); }}>
             <div className="flex items-start gap-3">
               <div className={cn(
                 "flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium flex-shrink-0",
