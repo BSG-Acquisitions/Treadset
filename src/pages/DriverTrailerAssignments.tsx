@@ -229,6 +229,25 @@ function RouteCard({
                     </span>
                   )}
                 </div>
+
+                {route.trailer && (
+                  <div className="mt-2 p-2 rounded-md bg-accent/50 border border-accent">
+                    <span className="text-sm font-semibold flex items-center gap-1.5">
+                      <Truck className="h-4 w-4 text-primary" />
+                      Trailer: {route.trailer.trailer_number}
+                      {route.trailer.current_status && (
+                        <Badge variant="outline" className="text-xs ml-1">
+                          {route.trailer.current_status}
+                        </Badge>
+                      )}
+                    </span>
+                    {route.trailer.current_location && (
+                      <span className="text-xs text-muted-foreground mt-0.5 block">
+                        Currently at: {route.trailer.current_location}
+                      </span>
+                    )}
+                  </div>
+                )}
                 
                 <div className="flex flex-wrap items-center gap-2 mt-2">
                   <Badge variant={route.status === 'in_progress' ? 'default' : 'secondary'}>
