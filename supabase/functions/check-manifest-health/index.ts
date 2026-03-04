@@ -153,8 +153,24 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Create notifications for each user and each issue (deduplicated)
+      // Create notifications for each user and each issue (deduplicated + capped)
+      // Check per-user unread cap
+      const allUserIds = orgUsers.map(u => u.user_id);
+      const { data: unreadCounts } = await supabase
+        .from('notifications')
+        .select('user_id')
+        .in('user_id', allUserIds)
+        .eq('is_read', false);
+
+      const unreadByUser = new Map<string, number>();
+      for (const n of unreadCounts || []) {
+        unreadByUser.set(n.user_id, (unreadByUser.get(n.user_id) || 0) + 1);
+      }
+
       for (const user of orgUsers) {
+        // Skip if user already at 100 unread cap
+        if ((unreadByUser.get(user.user_id) || 0) >= 100) continue;
+
         const notificationsToInsert = [];
 
         for (const issue of issues) {

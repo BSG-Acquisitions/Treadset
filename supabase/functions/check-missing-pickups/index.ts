@@ -54,9 +54,9 @@ Deno.serve(async (req) => {
     const endDate = new Date(today);
     endDate.setDate(today.getDate() + 7);
     const endDateStr = endDate.toISOString().split('T')[0];
-    const threeDaysAgo = new Date(today);
-    threeDaysAgo.setDate(today.getDate() - 3);
-    const threeDaysAgoStr = threeDaysAgo.toISOString();
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(today.getDate() - 7);
+    const sevenDaysAgoStr = sevenDaysAgo.toISOString();
     
     for (const org of orgs || []) {
       const orgId = org.id;
@@ -128,7 +128,7 @@ Deno.serve(async (req) => {
         .select('user_id, title')
         .eq('organization_id', orgId)
         .eq('type', 'missing_pickup')
-        .gte('created_at', threeDaysAgoStr)
+        .gte('created_at', sevenDaysAgoStr)
         .in('user_id', userIds);
       
       // Build a Set of "userId::clientName" for fast dedup
@@ -148,6 +148,19 @@ Deno.serve(async (req) => {
 
       const notificationsToCreate: any[] = [];
       const processedClientIds = new Set<string>();
+
+      // Check per-user unread cap (100 max)
+      const { data: unreadCounts } = await supabase
+        .from('notifications')
+        .select('user_id')
+        .in('user_id', userIds)
+        .eq('is_read', false);
+      
+      const unreadByUser = new Map<string, number>();
+      for (const n of unreadCounts || []) {
+        unreadByUser.set(n.user_id, (unreadByUser.get(n.user_id) || 0) + 1);
+      }
+      const userAtCap = (userId: string) => (unreadByUser.get(userId) || 0) >= 100;
 
       // Helper to check if notification already exists
       const hasRecentNotif = (userId: string, title: string) => {
@@ -224,6 +237,7 @@ Deno.serve(async (req) => {
         const notificationTitle = `${client.company_name} may need scheduling`;
 
         for (const userId of userIds) {
+          if (userAtCap(userId)) continue;
           if (hasRecentNotif(userId, notificationTitle)) continue;
           
           notificationsToCreate.push({
@@ -282,6 +296,7 @@ Deno.serve(async (req) => {
         const notificationTitle = `${client.company_name} hasn't been serviced in ${daysSinceLastPickup} days`;
 
         for (const userId of userIds) {
+          if (userAtCap(userId)) continue;
           if (hasRecentNotif(userId, notificationTitle)) continue;
 
           notificationsToCreate.push({

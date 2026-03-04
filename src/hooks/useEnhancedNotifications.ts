@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSystemUpdates } from './useSystemUpdates';
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 
 export interface EnhancedNotification {
   id: string;
@@ -42,52 +42,50 @@ export const useEnhancedNotifications = () => {
   const queryClient = useQueryClient();
   const { user, session } = useAuth();
   const { createUpdate } = useSystemUpdates();
-  const triggeredRef = useRef(false);
-  
   // Use internal users.id (NOT session.user.id which is the auth UUID)
   // Edge functions store notifications using internal users.id from user_organization_roles
   const internalUserId = user?.id ?? null;
 
-  // Auto-trigger notification checks once per session
+  // Auto-trigger notification checks once per 6 hours (persisted across page reloads)
   useEffect(() => {
+    const THROTTLE_KEY = 'notification_checks_last_triggered';
+    const THROTTLE_MS = 6 * 60 * 60 * 1000; // 6 hours
+
     const triggerNotificationChecks = async () => {
-      if (!user?.id || triggeredRef.current || isQuietHours()) return;
-      
-      // user.id is already the internal users table PK
+      if (!user?.id || isQuietHours()) return;
+
       const orgId = user.currentOrganization?.id;
       if (!orgId) return;
 
-      triggeredRef.current = true;
+      // Check localStorage throttle
+      const lastTriggered = localStorage.getItem(THROTTLE_KEY);
+      if (lastTriggered && Date.now() - parseInt(lastTriggered, 10) < THROTTLE_MS) {
+        console.log('[Notifications] Skipping auto-trigger (throttled, last:', new Date(parseInt(lastTriggered, 10)).toLocaleTimeString(), ')');
+        return;
+      }
+
+      localStorage.setItem(THROTTLE_KEY, Date.now().toString());
       console.log('[Notifications] Auto-triggering notification checks...');
 
       try {
-        // Trigger missing pickups check
         await supabase.functions.invoke('check-missing-pickups', {
           body: { organization_id: orgId }
         });
-
-        // Trigger manifest reminders check
         await supabase.functions.invoke('check-manifest-reminders', {
           body: {}
         });
-
-        // Trigger trailer alerts check (if trailer feature is enabled)
         await supabase.functions.invoke('check-trailer-alerts', {
           body: {}
         });
-
-        // Trigger manifest health/compliance check
         await supabase.functions.invoke('check-manifest-health', {
           body: { organization_id: orgId }
         });
-
         console.log('[Notifications] Auto-trigger complete');
       } catch (error) {
         console.error('[Notifications] Auto-trigger error:', error);
       }
     };
 
-    // Run after a short delay to not block initial render
     const timer = setTimeout(triggerNotificationChecks, 5000);
     return () => clearTimeout(timer);
   }, [user?.id]);
