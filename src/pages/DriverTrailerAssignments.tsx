@@ -494,6 +494,7 @@ function StopCard({
                     event_type: e.event_type,
                     trailer_id: e.trailer_id,
                   }))}
+                  stopEvents={stopEvents}
                   trailers={trailers}
                   onEventCompleted={handleEventCompleted}
                 />
