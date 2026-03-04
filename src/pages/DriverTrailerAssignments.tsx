@@ -229,6 +229,25 @@ function RouteCard({
                     </span>
                   )}
                 </div>
+
+                {route.trailer && (
+                  <div className="mt-2 p-2 rounded-md bg-accent/50 border border-accent">
+                    <span className="text-sm font-semibold flex items-center gap-1.5">
+                      <Truck className="h-4 w-4 text-primary" />
+                      Trailer: {route.trailer.trailer_number}
+                      {route.trailer.current_status && (
+                        <Badge variant="outline" className="text-xs ml-1">
+                          {route.trailer.current_status}
+                        </Badge>
+                      )}
+                    </span>
+                    {route.trailer.current_location && (
+                      <span className="text-xs text-muted-foreground mt-0.5 block">
+                        Currently at: {route.trailer.current_location}
+                      </span>
+                    )}
+                  </div>
+                )}
                 
                 <div className="flex flex-wrap items-center gap-2 mt-2">
                   <Badge variant={route.status === 'in_progress' ? 'default' : 'secondary'}>
@@ -354,7 +373,7 @@ function StopCard({
         )}
       >
         <CollapsibleTrigger asChild disabled={!canInteract}>
-          <div className="p-3 sm:p-4" onClick={canInteract ? onToggle : undefined}>
+          <div className="p-3 sm:p-4" onClick={(e) => { e.stopPropagation(); if (canInteract) onToggle(); }}>
             <div className="flex items-start gap-3">
               <div className={cn(
                 "flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium flex-shrink-0",
@@ -391,6 +410,18 @@ function StopCard({
                         {stop.contact_phone}
                       </a>
                     )}
+                  </div>
+                )}
+
+                {/* Show planned events preview (always visible) */}
+                {(stop as any).planned_events && (stop as any).planned_events.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {((stop as any).planned_events as PlannedEvent[]).map((pe, i) => (
+                      <div key={i} className="flex items-center gap-1.5 text-sm font-medium text-primary">
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                        {pe.event_type.replace('_', ' ')} — #{pe.trailer_number}
+                      </div>
+                    ))}
                   </div>
                 )}
 
