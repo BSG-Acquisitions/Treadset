@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { formatManifestTimestamp } from "@/lib/manifestTimestamps";
 import { 
   Truck, 
   MapPin, 
@@ -21,7 +22,8 @@ import {
   ChevronRight,
   PlayCircle,
   Flag,
-  Clock
+  Clock,
+  FileText,
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -85,11 +87,32 @@ export default function DriverTrailerAssignments() {
     toast.success('Route completed successfully!');
   };
 
-  const markStopComplete = async (stopId: string) => {
+  const markStopComplete = async (stopId: string, routeId: string) => {
     await supabase
       .from('trailer_route_stops')
       .update({ completed_at: new Date().toISOString() })
       .eq('id', stopId);
+    
+    // Auto-advance: expand next incomplete stop
+    const route = routes?.find(r => r.id === routeId);
+    const sortedStops = route?.stops?.sort((a, b) => a.sequence_number - b.sequence_number) || [];
+    const currentIdx = sortedStops.findIndex(s => s.id === stopId);
+    const nextStop = sortedStops.slice(currentIdx + 1).find(s => !s.completed_at);
+    if (nextStop) {
+      setExpandedStops(prev => {
+        const next = new Set(prev);
+        next.delete(stopId);
+        next.add(nextStop.id);
+        return next;
+      });
+    } else {
+      setExpandedStops(prev => {
+        const next = new Set(prev);
+        next.delete(stopId);
+        return next;
+      });
+    }
+    
     refetch();
   };
 
@@ -149,7 +172,7 @@ export default function DriverTrailerAssignments() {
               onToggleStop={toggleStop}
               onStartRoute={() => handleStartRoute(route.id)}
               onCompleteRoute={() => handleCompleteRoute(route.id)}
-              onStopComplete={markStopComplete}
+              onStopComplete={(stopId) => markStopComplete(stopId, route.id)}
               onEventCompleted={refetch}
             />
           ))}
@@ -357,7 +380,6 @@ function StopCard({
 
   const handleMarkComplete = () => {
     onStopComplete();
-    onToggle(); // Collapse after completing
   };
 
   return (
@@ -431,14 +453,29 @@ function StopCard({
                   </div>
                 )}
 
-                {/* Show completed events summary */}
+                {/* Completed events timeline */}
                 {hasEvents && (
-                  <div className="mt-2 flex flex-wrap gap-1">
+                  <div className="mt-2 space-y-1.5">
                     {stopEvents.map((event: any) => (
-                      <Badge key={event.id} variant="secondary" className="text-xs">
-                        <CheckCircle className="h-3 w-3 mr-1 text-green-600" />
-                        {event.trailer?.trailer_number}: {event.event_type.replace('_', ' ')}
-                      </Badge>
+                      <div key={event.id} className="flex items-center gap-2 text-xs">
+                        <CheckCircle className="h-3 w-3 text-green-600 flex-shrink-0" />
+                        <span className="font-medium">
+                          {event.event_type.replace('_', ' ')}
+                        </span>
+                        <span className="text-muted-foreground">
+                          #{event.trailer?.trailer_number}
+                        </span>
+                        <span className="text-muted-foreground flex items-center gap-0.5 ml-auto">
+                          <Clock className="h-3 w-3" />
+                          {formatManifestTimestamp(event.timestamp)}
+                        </span>
+                        {event.manifest_number && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-0.5 bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700">
+                            <FileText className="h-2.5 w-2.5" />
+                            {event.manifest_number}
+                          </Badge>
+                        )}
+                      </div>
                     ))}
                   </div>
                 )}
@@ -477,6 +514,7 @@ function StopCard({
                     event_type: e.event_type,
                     trailer_id: e.trailer_id,
                   }))}
+                  stopEvents={stopEvents}
                   trailers={trailers}
                   onEventCompleted={handleEventCompleted}
                 />
