@@ -70,15 +70,19 @@ export default function DriverTrailerAssignments() {
   };
 
   const handleStartRoute = async (routeId: string) => {
-    await updateRoute.mutateAsync({ id: routeId, status: 'in_progress' });
-    setExpandedRoutes(prev => new Set([...prev, routeId]));
-    // Auto-expand the first stop so Jody sees what to do
-    const route = routes?.find(r => r.id === routeId);
-    const firstStop = route?.stops
-      ?.sort((a, b) => a.sequence_number - b.sequence_number)
-      ?.find(s => !s.completed_at);
-    if (firstStop) {
-      setExpandedStops(prev => new Set([...prev, firstStop.id]));
+    try {
+      await updateRoute.mutateAsync({ id: routeId, status: 'in_progress' });
+      setExpandedRoutes(prev => new Set([...prev, routeId]));
+      // Auto-expand the first stop so Jody sees what to do
+      const route = routes?.find(r => r.id === routeId);
+      const firstStop = route?.stops
+        ?.sort((a, b) => a.sequence_number - b.sequence_number)
+        ?.find(s => !s.completed_at);
+      if (firstStop) {
+        setExpandedStops(prev => new Set([...prev, firstStop.id]));
+      }
+    } catch (err) {
+      // Toast already shown by mutation onError
     }
   };
 
