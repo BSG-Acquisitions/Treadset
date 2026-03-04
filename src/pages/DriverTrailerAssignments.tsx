@@ -87,11 +87,32 @@ export default function DriverTrailerAssignments() {
     toast.success('Route completed successfully!');
   };
 
-  const markStopComplete = async (stopId: string) => {
+  const markStopComplete = async (stopId: string, routeId: string) => {
     await supabase
       .from('trailer_route_stops')
       .update({ completed_at: new Date().toISOString() })
       .eq('id', stopId);
+    
+    // Auto-advance: expand next incomplete stop
+    const route = routes?.find(r => r.id === routeId);
+    const sortedStops = route?.stops?.sort((a, b) => a.sequence_number - b.sequence_number) || [];
+    const currentIdx = sortedStops.findIndex(s => s.id === stopId);
+    const nextStop = sortedStops.slice(currentIdx + 1).find(s => !s.completed_at);
+    if (nextStop) {
+      setExpandedStops(prev => {
+        const next = new Set(prev);
+        next.delete(stopId);
+        next.add(nextStop.id);
+        return next;
+      });
+    } else {
+      setExpandedStops(prev => {
+        const next = new Set(prev);
+        next.delete(stopId);
+        return next;
+      });
+    }
+    
     refetch();
   };
 
