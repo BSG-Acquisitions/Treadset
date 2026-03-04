@@ -19,9 +19,6 @@ import { Link, useLocation } from 'react-router-dom';
 
 import { TreadSetLogo } from '@/components/TreadSetLogo';
 import { OrganizationSwitcher } from '@/components/auth/OrganizationSwitcher';
-import { useEnhancedNotifications } from '@/hooks/useEnhancedNotifications';
-import { useContextualNotifications } from '@/hooks/useContextualNotifications';
-import { useManifestReminders } from '@/hooks/useManifestReminders';
 import { usePendingBookingCount } from '@/hooks/useBookingRequests';
 import { ViewerModeBadge } from '@/components/ViewerModeBadge';
 
