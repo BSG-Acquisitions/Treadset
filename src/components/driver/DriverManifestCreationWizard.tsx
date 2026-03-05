@@ -154,6 +154,7 @@ function DriverManifestCreationWizardInner({
   const createManifest = useCreateManifest({ toastOnSuccess: false });
   const updateManifest = useUpdateManifest();
   const manifestIntegration = useManifestIntegration();
+  const createShipmentFromManifest = useCreateShipmentFromManifest();
   const sendEmail = useSendManifestEmail();
   const { data: haulers = [] } = useHaulers();
 
