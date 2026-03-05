@@ -64,6 +64,7 @@ export default function EnhancedRoutesToday() {
   const todayMonth = String(today.getMonth() + 1).padStart(2, '0');
   const todayDay = String(today.getDate()).padStart(2, '0');
   const [activeDay, setActiveDay] = useState(`${todayYear}-${todayMonth}-${todayDay}`);
+  const [activeTab, setActiveTab] = useState("today");
   
   // Local date object for header/labels to avoid UTC shift
   const [ay, am, ad] = activeDay.split('-').map(Number);
