@@ -53,6 +53,14 @@ export function PublicFooter() {
                   </Link>
                 </li>
               ))}
+              <li>
+                <a
+                  href={CLIENT_PORTAL_URL}
+                  className="text-sm text-background/70 hover:text-background transition-colors"
+                >
+                  Client Portal Login
+                </a>
+              </li>
             </ul>
           </div>
 

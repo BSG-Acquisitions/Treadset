@@ -67,13 +67,24 @@ export function CTASection() {
               whileInView={{ opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.4 }}
               viewport={{ once: true }}
-              className="mt-10 flex items-center justify-center gap-2 text-primary-foreground/80"
+              className="mt-10 space-y-3"
             >
-              <Phone className="h-5 w-5" />
-              <span>Questions? Call us at </span>
-              <a href="tel:3137310817" className="font-semibold text-white hover:underline">
-                (313) 731-0817
-              </a>
+              <div className="flex items-center justify-center gap-2 text-primary-foreground/80">
+                <Phone className="h-5 w-5" />
+                <span>Questions? Call us at </span>
+                <a href="tel:3137310817" className="font-semibold text-white hover:underline">
+                  (313) 731-0817
+                </a>
+              </div>
+              <p className="text-sm text-primary-foreground/60">
+                Already a customer?{" "}
+                <a
+                  href="https://app.treadset.co/client-login"
+                  className="text-white/80 hover:text-white underline underline-offset-2 transition-colors"
+                >
+                  Sign in to your portal
+                </a>
+              </p>
             </motion.div>
           </div>
         </motion.div>
