@@ -237,7 +237,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
               </Link>
             )}
 
-            {/* Routes Dropdown */}
+            {/* Pickups Dropdown */}
             {hasAnyRole(['admin', 'ops_manager', 'dispatcher', 'viewer']) && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -264,40 +264,15 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
               </DropdownMenu>
             )}
 
-            {/* Inventory Dropdown */}
-            {FEATURE_FLAGS.INVENTORY && hasAnyRole(['admin', 'ops_manager', 'dispatcher', 'viewer']) && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <div className={navItemClass(activeSection === 'inventory')}>
-                    <Boxes className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    <span>Inventory</span>
-                    <ChevronDown className="h-3 w-3 opacity-60" />
-                  </div>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-48">
-                  <DropdownMenuItem asChild>
-                    <Link to="/inventory" className={dropdownItemClass(location.pathname === '/inventory')}>
-                      <Package className="h-4 w-4" />
-                      Stock Levels
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/inventory/products" className={dropdownItemClass(location.pathname === '/inventory/products')}>
-                      <Boxes className="h-4 w-4" />
-                      Products
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/shipments" className={dropdownItemClass(location.pathname === '/shipments')}>
-                      <Truck className="h-4 w-4" />
-                      Shipments
-                    </Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+            {/* Drop-offs - Direct link */}
+            {hasAnyRole(['admin', 'ops_manager', 'sales', 'viewer']) && (
+              <Link to="/dropoffs" className={navItemClass(activeSection === 'dropoffs')}>
+                <PackageOpen className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span>Drop-offs</span>
+              </Link>
             )}
 
-            {/* Trailers Dropdown - Already exists, keeping same structure */}
+            {/* Trailers Dropdown */}
             {FEATURE_FLAGS.TRAILERS && hasAnyRole(['admin', 'ops_manager', 'dispatcher', 'viewer']) && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -342,6 +317,39 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
               </DropdownMenu>
             )}
 
+            {/* Inventory Dropdown */}
+            {FEATURE_FLAGS.INVENTORY && hasAnyRole(['admin', 'ops_manager', 'dispatcher', 'viewer']) && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <div className={navItemClass(activeSection === 'inventory')}>
+                    <Boxes className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    <span>Inventory</span>
+                    <ChevronDown className="h-3 w-3 opacity-60" />
+                  </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-48">
+                  <DropdownMenuItem asChild>
+                    <Link to="/inventory" className={dropdownItemClass(location.pathname === '/inventory')}>
+                      <Package className="h-4 w-4" />
+                      Stock Levels
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/inventory/products" className={dropdownItemClass(location.pathname === '/inventory/products')}>
+                      <Boxes className="h-4 w-4" />
+                      Products
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/shipments" className={dropdownItemClass(location.pathname === '/shipments')}>
+                      <Truck className="h-4 w-4" />
+                      Shipments
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
             {/* Reports Dropdown */}
             {hasAnyRole(['admin', 'ops_manager', 'viewer']) && (
               <DropdownMenu>
@@ -373,14 +381,6 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            )}
-
-            {/* Drop-offs - Direct link (was "More" dropdown) */}
-            {hasAnyRole(['admin', 'ops_manager', 'sales', 'viewer']) && (
-              <Link to="/dropoffs" className={navItemClass(activeSection === 'dropoffs')}>
-                <PackageOpen className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                <span>Drop-offs</span>
-              </Link>
             )}
           </nav>
         </div>
