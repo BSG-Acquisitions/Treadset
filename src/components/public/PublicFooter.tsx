@@ -10,6 +10,8 @@ const quickLinks = [
   { href: "/contact", label: "Contact" },
 ];
 
+const CLIENT_PORTAL_URL = "https://app.treadset.co/client-login";
+
 export function PublicFooter() {
   const currentYear = new Date().getFullYear();
 
