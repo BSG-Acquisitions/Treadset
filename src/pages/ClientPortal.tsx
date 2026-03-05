@@ -19,7 +19,8 @@ import { useClientUserRole, useClientUsers } from "@/hooks/useClientUsers";
 export default function ClientPortal() {
   const { user, signOut, hasRole } = useAuth();
   const navigate = useNavigate();
-  const isAdmin = hasRole('admin') || hasRole('ops_manager');
+  const isClient = hasRole('client');
+  const isAdmin = !isClient && (hasRole('admin') || hasRole('ops_manager'));
   const [previewClientId, setPreviewClientId] = useState<string | null>(null);
   
   // PDF viewer state
