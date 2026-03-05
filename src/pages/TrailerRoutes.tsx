@@ -310,6 +310,13 @@ export default function TrailerRoutes() {
           </Card>
         )}
       </div>
+      {editingRoute && (
+        <EditTrailerRouteDialog
+          route={editingRoute}
+          open={!!editingRoute}
+          onOpenChange={(open) => !open && setEditingRoute(null)}
+        />
+      )}
     </div>
   );
 }
