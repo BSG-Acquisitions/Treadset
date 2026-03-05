@@ -58,17 +58,6 @@ export default function Index() {
     }
   }, [user?.id, navigate, hasAnyRole]);
   
-  // Don't render admin content for pure drivers while redirecting
-  if (user && user.roles?.includes('driver') && !hasAnyRole(['admin', 'ops_manager', 'dispatcher', 'sales'])) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-lg">Loading your assigned routes...</div>
-        </div>
-      </div>
-    );
-  }
-  
   // Enable real-time updates for auto-refreshing tiles
   useRealtimeUpdates();
   
@@ -78,7 +67,6 @@ export default function Index() {
   const { data: todaysDropoffs = [] } = useTodaysDropoffs();
   
   // ============= SINGLE HOOK REPLACES ALL 13 INLINE QUERIES =============
-  // useDashboardData uses optimized RPC calls with sensible poll intervals (2-15 min)
   const {
     todayPTEStats,
     yesterdayPTEStats,
@@ -114,9 +102,20 @@ export default function Index() {
       return data || [];
     },
     enabled: !!user?.currentOrganization?.id,
-    refetchInterval: 5 * 60 * 1000, // 5 minutes
+    refetchInterval: 5 * 60 * 1000,
     staleTime: 5 * 60 * 1000,
   });
+
+  // Don't render admin content for pure drivers while redirecting
+  if (user && user.roles?.includes('driver') && !hasAnyRole(['admin', 'ops_manager', 'dispatcher', 'sales'])) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-lg">Loading your assigned routes...</div>
+        </div>
+      </div>
+    );
+  }
 
   const pickupsThisMonthMap = (pickupsThisMonth || []).reduce((acc: Record<string, number>, p: any) => {
     if (!p.client_id) return acc;
