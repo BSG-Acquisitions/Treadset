@@ -99,11 +99,35 @@ Deno.serve(async (req) => {
       // Process a single client
       const { data: client, error: clientError } = await supabase
         .from('clients')
-        .select('id, company_name, physical_city, physical_zip')
+        .select('id, company_name, city, zip, state, physical_city, physical_zip, physical_state')
         .eq('id', clientId)
         .single();
 
       if (clientError) throw clientError;
+
+      // If client already has city/zip in legacy fields, copy to physical_* and return
+      if ((client.city || client.zip) && (!client.physical_city || !client.physical_zip)) {
+        const copyUpdates: Record<string, any> = { updated_at: new Date().toISOString() };
+        if (client.city && !client.physical_city) copyUpdates.physical_city = client.city;
+        if (client.zip && !client.physical_zip) copyUpdates.physical_zip = client.zip;
+        if (client.state && !client.physical_state) copyUpdates.physical_state = client.state;
+
+        const { error: copyError } = await supabase
+          .from('clients')
+          .update(copyUpdates)
+          .eq('id', clientId);
+
+        if (!copyError) {
+          console.log(`✅ Copied legacy city/zip for ${client.company_name}: ${client.city}, ${client.zip}`);
+          return new Response(
+            JSON.stringify({
+              message: 'Client geographic data copied from existing fields',
+              client: { id: client.id, company_name: client.company_name, city: client.city, zip: client.zip }
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
 
       // Get the client's primary location with coordinates
       const { data: location, error: locError } = await supabase
