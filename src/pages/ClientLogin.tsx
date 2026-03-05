@@ -19,14 +19,20 @@ export default function ClientLogin() {
   const navigate = useNavigate();
   const hasRedirected = useRef(false);
 
+  const { signIn, user, loading, hasRole } = useAuth();
+  const navigate = useNavigate();
+  const hasRedirected = useRef(false);
+  const isClient = user ? hasRole('client') : false;
+  const isStaff = user ? (hasRole('admin') || hasRole('super_admin') || hasRole('ops_manager') || hasRole('dispatcher') || hasRole('sales')) : false;
+
   useEffect(() => {
     document.title = "Client Portal – Sign In – TreadSet";
     if (loading) return;
-    if (user && !hasRedirected.current) {
+    if (user && isClient && !hasRedirected.current) {
       hasRedirected.current = true;
       navigate('/client-portal', { replace: true });
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, navigate, isClient]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
