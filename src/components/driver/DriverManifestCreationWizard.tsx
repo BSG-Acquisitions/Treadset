@@ -1214,6 +1214,52 @@ function DriverManifestCreationWizardInner({
           : "Manifest created successfully with generator and hauler signatures",
       });
 
+      // 5b. Auto-create shipment record for processor drops (outbound tracking)
+      if (isDropToProcessor && manifest.id) {
+        try {
+          // Look up BSG (origin) and processor (destination) entity IDs
+          const { data: ownEntity } = await supabase
+            .from('entities')
+            .select('id')
+            .eq('organization_id', user?.currentOrganization?.id || '')
+            .eq('entity_type', 'origin')
+            .limit(1)
+            .single();
+
+          const processorName = standaloneClientData?.company_name || '';
+          const { data: destEntity } = await supabase
+            .from('entities')
+            .select('id')
+            .ilike('legal_name', `%${processorName}%`)
+            .limit(1)
+            .single();
+
+          if (ownEntity && destEntity) {
+            const totalPte = (data.pte_off_rim || 0) + (data.pte_on_rim || 0) +
+              5 * ((data.commercial_17_5_19_5_off || 0) + (data.commercial_17_5_19_5_on || 0) +
+                   (data.commercial_22_5_off || 0) + (data.commercial_22_5_on || 0) +
+                   (data.tractor_count || 0)) +
+              15 * (data.otr_count || 0);
+
+            await createShipmentFromManifest.mutateAsync({
+              manifestId: manifest.id,
+              originEntityId: ownEntity.id,
+              destinationEntityId: destEntity.id,
+              materialForm: 'whole_tires' as any,
+              quantityPte: totalPte,
+              departedAt: new Date().toISOString(),
+              arrivedAt: new Date().toISOString(),
+            });
+            console.log('✅ Shipment record created for processor drop:', manifest.id);
+          } else {
+            console.warn('⚠️ Could not find entities for shipment creation. Origin:', !!ownEntity, 'Dest:', !!destEntity);
+          }
+        } catch (shipmentError) {
+          console.error('Failed to create shipment record for processor drop:', shipmentError);
+          // Don't fail the manifest — shipment is supplementary
+        }
+      }
+
       // Update pickup status to completed AND save revenue and payment info (only in pickup mode)
       if (pickupId) {
         const { error: pickupUpdateError } = await supabase
