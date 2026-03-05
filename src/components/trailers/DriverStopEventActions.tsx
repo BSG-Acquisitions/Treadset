@@ -110,6 +110,13 @@ const DRIVER_EVENT_TYPES: TrailerEventType[] = [
   'stage_empty',
 ];
 
+const NEXT_EVENT_SUGGESTION: Partial<Record<TrailerEventType, TrailerEventType>> = {
+  pickup_empty: 'drop_empty',
+  drop_empty: 'pickup_full',
+  pickup_full: 'drop_full',
+  drop_full: 'pickup_empty',
+};
+
 export function DriverStopEventActions({
   stopId,
   routeId,
