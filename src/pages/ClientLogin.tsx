@@ -15,18 +15,20 @@ export default function ClientLogin() {
   const [error, setError] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { signIn, user, loading } = useAuth();
+  const { signIn, user, loading, hasRole } = useAuth();
   const navigate = useNavigate();
   const hasRedirected = useRef(false);
+  const isClient = user ? hasRole('client') : false;
+  const isStaff = user ? (hasRole('admin') || hasRole('super_admin') || hasRole('ops_manager') || hasRole('dispatcher') || hasRole('sales')) : false;
 
   useEffect(() => {
     document.title = "Client Portal – Sign In – TreadSet";
     if (loading) return;
-    if (user && !hasRedirected.current) {
+    if (user && isClient && !hasRedirected.current) {
       hasRedirected.current = true;
       navigate('/client-portal', { replace: true });
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, navigate, isClient]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,6 +64,14 @@ export default function ClientLogin() {
             <p className="text-muted-foreground">Sign in to view your manifests and manage pickups</p>
           </div>
         </div>
+        {user && isStaff && (
+          <Alert className="mb-4">
+            <AlertDescription>
+              You're signed in as staff.{' '}
+              <Link to="/dashboard" className="text-primary hover:underline font-medium">Go to Dashboard</Link>
+            </AlertDescription>
+          </Alert>
+        )}
 
         <Card>
           <CardHeader>
