@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTrailerRoutes, TrailerRoute } from "@/hooks/useTrailerRoutes";
 import { useDeleteTrailerRoute, useUpdateTrailerRouteStatus } from "@/hooks/useTrailerRouteActions";
+import { EditTrailerRouteDialog } from "@/components/trailers/EditTrailerRouteDialog";
 import { TrailerRouteWizard } from "@/components/trailers/TrailerRouteWizard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
