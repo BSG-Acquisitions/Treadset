@@ -8,21 +8,12 @@ export const useDeleteTrailerRoute = () => {
 
   return useMutation({
     mutationFn: async (routeId: string) => {
-      // Get all stop IDs for this route
-      const { data: stops } = await supabase
-        .from('trailer_route_stops')
-        .select('id')
+      // Delete trailer_events by route_id (covers all FK paths)
+      const { error: eventsError } = await supabase
+        .from('trailer_events')
+        .delete()
         .eq('route_id', routeId);
-
-      // Delete trailer_events referencing these stops
-      if (stops && stops.length > 0) {
-        const stopIds = stops.map(s => s.id);
-        const { error: eventsError } = await supabase
-          .from('trailer_events')
-          .delete()
-          .in('stop_id', stopIds);
-        if (eventsError) throw eventsError;
-      }
+      if (eventsError) throw eventsError;
 
       // Delete all stops
       const { error: stopsError } = await supabase
