@@ -243,7 +243,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                 <DropdownMenuTrigger asChild>
                   <div className={navItemClass(activeSection === 'routes')}>
                     <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    <span>Routes</span>
+                    <span>Pickups</span>
                     <ChevronDown className="h-3 w-3 opacity-60" />
                   </div>
                 </DropdownMenuTrigger>
