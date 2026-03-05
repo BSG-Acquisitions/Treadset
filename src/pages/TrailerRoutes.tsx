@@ -214,8 +214,7 @@ export default function TrailerRoutes() {
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
-                    </AlertDialog>
-                  )}
+                  </AlertDialog>
                 </div>
               </div>
               <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2">
