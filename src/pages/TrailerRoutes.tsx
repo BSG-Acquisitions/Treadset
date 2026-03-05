@@ -21,7 +21,7 @@ import {
   AlertDialogTitle, 
   AlertDialogTrigger 
 } from "@/components/ui/alert-dialog";
-import { Plus, CalendarIcon, Truck, MapPin, User, Play, CheckCircle, Trash2, Eye, XCircle, Container } from "lucide-react";
+import { Plus, CalendarIcon, Truck, MapPin, User, Play, CheckCircle, Trash2, Eye, XCircle, Container, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { isFeatureEnabled } from "@/lib/featureFlags";
