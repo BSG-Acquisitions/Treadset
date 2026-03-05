@@ -190,9 +190,8 @@ export default function TrailerRoutes() {
                     </Button>
                   )}
                   
-                  {/* Delete (only for draft) */}
-                  {route.status === 'draft' && (
-                    <AlertDialog>
+                  {/* Delete */}
+                  <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button size="sm" variant="ghost">
                           <Trash2 className="h-4 w-4 text-destructive" />
