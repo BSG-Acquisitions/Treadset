@@ -18,6 +18,7 @@ import { FEATURE_FLAGS } from "./lib/featureFlags";
 // Only eagerly load pages that are entry points or always needed
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+const ClientLogin = lazy(() => import('./pages/ClientLogin'));
 
 // Lazy-load all other pages
 const Index = lazy(() => import('./pages/Index'));
@@ -148,6 +149,7 @@ const App = () => (
               {/* Auth Routes */}
               <Route path="/auth" element={<Auth />} />
               <Route path="/auth/sign-in" element={<Auth />} />
+              <Route path="/client-login" element={<ClientLogin />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               
               {/* Protected Routes with Layout */}

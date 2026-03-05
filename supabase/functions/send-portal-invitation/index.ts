@@ -205,6 +205,10 @@ const handler = async (req: Request): Promise<Response> => {
                     <a href="${trackedInviteUrl}" style="display: inline-block; background: white; color: #1A4314; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; border: 2px solid #1A4314;">
                       🔐 Set Up Your Portal Account
                     </a>
+                    
+                    <div style="margin: 15px 0 0 0;">
+                      <p style="font-size: 13px; color: #94a3b8;">Already have an account? <a href="https://app.treadset.co/client-login" style="color: #1A4314; text-decoration: underline;">Sign in here</a></p>
+                    </div>
                   </div>
 
                   <!-- Important note about email -->

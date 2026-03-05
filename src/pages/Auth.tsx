@@ -35,8 +35,12 @@ export default function Auth() {
     // Only redirect once per mount, and only if user is authenticated
     if (user && !hasRedirected.current) {
       hasRedirected.current = true;
-      console.log('User detected, redirecting to dashboard:', user);
-      navigate('/dashboard', { replace: true });
+      // Clients should go to client portal, not dashboard
+      const isClientOnly = user.roles.includes('client') && 
+        !user.roles.includes('admin') && !user.roles.includes('ops_manager');
+      const destination = isClientOnly ? '/client-portal' : '/dashboard';
+      console.log('User detected, redirecting to:', destination, user);
+      navigate(destination, { replace: true });
     }
   }, [user, loading, navigate]);
 
@@ -70,8 +74,9 @@ export default function Auth() {
         console.log('Sign in error:', result.error);
         setError(result.error.message || 'An error occurred during sign in');
       } else {
-        console.log('Sign in successful, navigating to dashboard...');
-        navigate('/dashboard');
+        console.log('Sign in successful, checking roles for redirect...');
+        // Will be handled by the useEffect redirect after auth state updates
+        // The useEffect checks roles and routes to /client-portal or /dashboard
       }
     } catch (error: any) {
       console.error('Sign in catch block error:', error);
