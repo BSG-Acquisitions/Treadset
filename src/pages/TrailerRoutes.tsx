@@ -38,6 +38,7 @@ export default function TrailerRoutes() {
   const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [showCreateWizard, setShowCreateWizard] = useState(false);
+  const [editingRoute, setEditingRoute] = useState<TrailerRoute | null>(null);
   
   const { data: routes, isLoading } = useTrailerRoutes(selectedDate?.toISOString().split('T')[0]);
   const deleteRoute = useDeleteTrailerRoute();
