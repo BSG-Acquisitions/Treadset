@@ -1224,14 +1224,14 @@ function DriverManifestCreationWizardInner({
           const originEntity = ownEntity;
 
           const processorName = standaloneClientData?.company_name || '';
-          const { data: destEntity } = await (supabase as any)
+          const { data: destEntity } = await supabase
             .from('entities')
             .select('id')
             .ilike('legal_name', `%${processorName}%`)
             .limit(1)
             .single();
 
-          if (ownEntity && destEntity) {
+          if (originEntity && destEntity) {
             const totalPte = (data.pte_off_rim || 0) + (data.pte_on_rim || 0) +
               5 * ((data.commercial_17_5_19_5_off || 0) + (data.commercial_17_5_19_5_on || 0) +
                    (data.commercial_22_5_off || 0) + (data.commercial_22_5_on || 0) +
@@ -1240,7 +1240,7 @@ function DriverManifestCreationWizardInner({
 
             await createShipmentFromManifest.mutateAsync({
               manifestId: manifest.id,
-              originEntityId: ownEntity.id,
+              originEntityId: originEntity.id,
               destinationEntityId: destEntity.id,
               materialForm: 'whole_tires' as any,
               quantityPte: totalPte,
