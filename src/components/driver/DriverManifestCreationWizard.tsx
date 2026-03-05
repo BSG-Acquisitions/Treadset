@@ -1249,7 +1249,7 @@ function DriverManifestCreationWizardInner({
             });
             console.log('✅ Shipment record created for processor drop:', manifest.id);
           } else {
-            console.warn('⚠️ Could not find entities for shipment creation. Origin:', !!ownEntity, 'Dest:', !!destEntity);
+            console.warn('⚠️ Could not find entities for shipment creation. Origin:', !!originEntity, 'Dest:', !!destEntity);
           }
         } catch (shipmentError) {
           console.error('Failed to create shipment record for processor drop:', shipmentError);
