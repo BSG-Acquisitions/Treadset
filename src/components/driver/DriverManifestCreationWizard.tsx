@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCreateManifest, useUpdateManifest } from "@/hooks/useManifests";
 import { useCreateShipmentFromManifest } from "@/hooks/useCreateShipmentFromManifest";
+import { useOwnEntity } from "@/hooks/useEntities";
 import { useManifestIntegration } from "@/hooks/useManifestIntegration";
 import { useSendManifestEmail } from "@/hooks/useSendManifestEmail";
 import { useHaulers } from "@/hooks/useHaulers";
