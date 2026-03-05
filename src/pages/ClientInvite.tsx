@@ -103,7 +103,7 @@ export default function ClientInvite() {
         email,
         password,
         options: {
-          emailRedirectTo: 'https://treadset.lovable.app/client-portal',
+          emailRedirectTo: 'https://app.treadset.co/client-portal',
           data: {
             first_name: firstName,
             last_name: lastName,

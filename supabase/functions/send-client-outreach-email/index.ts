@@ -3,7 +3,7 @@ import { Resend } from 'npm:resend@2.0.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 Deno.serve(async (req) => {
@@ -133,7 +133,7 @@ Deno.serve(async (req) => {
 
     // Generate suggested dates
     const suggestedDates = generateSuggestedDates(pattern?.typical_day_of_week ?? null);
-    const bookingUrl = `https://bsgtires.com/public-book?client=${client.id}`;
+    const bookingUrl = `https://app.treadset.co/public-book?client=${client.id}`;
     const contactName = client.contact_name || 'there';
     
     // Create tracking pixel URL for open tracking
