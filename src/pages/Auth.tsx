@@ -35,8 +35,12 @@ export default function Auth() {
     // Only redirect once per mount, and only if user is authenticated
     if (user && !hasRedirected.current) {
       hasRedirected.current = true;
-      console.log('User detected, redirecting to dashboard:', user);
-      navigate('/dashboard', { replace: true });
+      // Clients should go to client portal, not dashboard
+      const isClientOnly = user.roles.includes('client') && 
+        !user.roles.includes('admin') && !user.roles.includes('ops_manager');
+      const destination = isClientOnly ? '/client-portal' : '/dashboard';
+      console.log('User detected, redirecting to:', destination, user);
+      navigate(destination, { replace: true });
     }
   }, [user, loading, navigate]);
 
