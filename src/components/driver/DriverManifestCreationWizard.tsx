@@ -1218,21 +1218,21 @@ function DriverManifestCreationWizardInner({
       if (isDropToProcessor && manifest.id) {
         try {
           // Look up BSG (origin) and processor (destination) entity IDs
-          const { data: ownEntity } = await (supabase
+          const { data: ownEntity } = await (supabase as any)
             .from('entities')
             .select('id')
             .eq('organization_id', user?.currentOrganization?.id || '')
             .eq('entity_type', 'origin')
             .limit(1)
-            .single() as any);
+            .single();
 
           const processorName = standaloneClientData?.company_name || '';
-          const { data: destEntity } = await (supabase
+          const { data: destEntity } = await (supabase as any)
             .from('entities')
             .select('id')
             .ilike('legal_name', `%${processorName}%`)
             .limit(1)
-            .single() as any);
+            .single();
 
           if (ownEntity && destEntity) {
             const totalPte = (data.pte_off_rim || 0) + (data.pte_on_rim || 0) +
