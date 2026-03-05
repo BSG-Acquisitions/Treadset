@@ -10,6 +10,8 @@ const quickLinks = [
   { href: "/contact", label: "Contact" },
 ];
 
+const CLIENT_PORTAL_URL = "https://app.treadset.co/client-login";
+
 export function PublicFooter() {
   const currentYear = new Date().getFullYear();
 
@@ -51,6 +53,14 @@ export function PublicFooter() {
                   </Link>
                 </li>
               ))}
+              <li>
+                <a
+                  href={CLIENT_PORTAL_URL}
+                  className="text-sm text-background/70 hover:text-background transition-colors"
+                >
+                  Client Portal Login
+                </a>
+              </li>
             </ul>
           </div>
 

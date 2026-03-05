@@ -57,6 +57,11 @@ export function PublicNavbar() {
               <Phone className="h-4 w-4" />
               <span>(313) 731-0817</span>
             </a>
+            <a href="https://app.treadset.co/client-login">
+              <Button variant="outline" className="border-primary/30 text-primary hover:bg-primary/5">
+                Client Portal
+              </Button>
+            </a>
             <Link to="/public-book">
               <Button className="bg-primary hover:bg-primary-hover text-primary-foreground shadow-elevation-primary">
                 Schedule Pickup
@@ -117,6 +122,12 @@ export function PublicNavbar() {
                   <span>(313) 731-0817</span>
                 </a>
                 
+                <a href="https://app.treadset.co/client-login" className="block">
+                  <Button variant="outline" className="w-full border-primary/30 text-primary hover:bg-primary/5">
+                    Client Portal
+                  </Button>
+                </a>
+
                 <Link to="/public-book" onClick={() => setIsOpen(false)}>
                   <Button className="w-full bg-primary hover:bg-primary-hover text-primary-foreground">
                     Schedule Pickup
