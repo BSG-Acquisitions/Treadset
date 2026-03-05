@@ -208,6 +208,13 @@ function guessState(address: string): string | null {
   return null;
 }
 
+function isOutOfStateAddress(address: string, clientState?: string): boolean {
+  // Check if the address or client state indicates a non-Michigan location
+  const state = guessState(address) || clientState?.toUpperCase();
+  if (!state) return false;
+  return state !== 'MI' && state !== 'MICHIGAN';
+}
+
 function isWithinDetroitMetro(lat: number, lng: number): boolean {
   return lat >= DETROIT_BOUNDS.minLat &&
          lat <= DETROIT_BOUNDS.maxLat &&
