@@ -501,7 +501,45 @@ Deno.serve(async (req) => {
       const clientCity = (location as any).clients?.city;
       const clientState = (location as any).clients?.state || 'MI';
 
-      // Enhance address with Detroit context
+      // Detect out-of-state addresses — skip Detroit-specific bounds and enhancement
+      const outOfState = isOutOfStateAddress(addressToGeocode, clientState);
+      
+      if (outOfState) {
+        console.log(`🌍 Out-of-state address detected (state: ${guessState(addressToGeocode) || clientState}), skipping Detroit bounds`);
+        
+        // Geocode without Detroit-specific bbox/proximity/enhancement
+        let coordinates = await geocodeAddressUnbounded(`${location.name}, ${addressToGeocode}`, mapboxToken);
+        if (!coordinates) {
+          coordinates = await geocodeAddressUnbounded(addressToGeocode, mapboxToken);
+        }
+        if (!coordinates) {
+          throw new Error(`Failed to geocode out-of-state address: ${addressToGeocode}`);
+        }
+        
+        // Update the location
+        const { error: updateError } = await supabase
+          .from('locations')
+          .update({
+            latitude: coordinates.lat,
+            longitude: coordinates.lng,
+            geocode_confidence: coordinates.confidence,
+            geocoded_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', locationId);
+
+        if (updateError) throw updateError;
+
+        return new Response(
+          JSON.stringify({
+            message: `Out-of-state location geocoded successfully`,
+            location: { id: location.id, name: location.name, latitude: coordinates.lat, longitude: coordinates.lng, confidence: coordinates.confidence }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Michigan address — use Detroit-specific enhancement and bounds
       const enhancedAddress = enhanceAddress(addressToGeocode, clientCity, clientState);
       console.log(`🔍 Original: "${addressToGeocode}" -> Enhanced: "${enhancedAddress}"`);
 
