@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTrailerRoutes, TrailerRoute } from "@/hooks/useTrailerRoutes";
 import { useDeleteTrailerRoute, useUpdateTrailerRouteStatus } from "@/hooks/useTrailerRouteActions";
+import { EditTrailerRouteDialog } from "@/components/trailers/EditTrailerRouteDialog";
 import { TrailerRouteWizard } from "@/components/trailers/TrailerRouteWizard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,7 @@ import {
   AlertDialogTitle, 
   AlertDialogTrigger 
 } from "@/components/ui/alert-dialog";
-import { Plus, CalendarIcon, Truck, MapPin, User, Play, CheckCircle, Trash2, Eye, XCircle, Container } from "lucide-react";
+import { Plus, CalendarIcon, Truck, MapPin, User, Play, CheckCircle, Trash2, Eye, XCircle, Container, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { isFeatureEnabled } from "@/lib/featureFlags";
@@ -37,6 +38,7 @@ export default function TrailerRoutes() {
   const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [showCreateWizard, setShowCreateWizard] = useState(false);
+  const [editingRoute, setEditingRoute] = useState<TrailerRoute | null>(null);
   
   const { data: routes, isLoading } = useTrailerRoutes(selectedDate?.toISOString().split('T')[0]);
   const deleteRoute = useDeleteTrailerRoute();
@@ -135,6 +137,17 @@ export default function TrailerRoutes() {
                   </Badge>
                 </div>
                 <div className="flex items-center gap-2">
+                  {/* Edit */}
+                  {(route.status === 'draft' || route.status === 'scheduled') && (
+                    <Button 
+                      size="sm" 
+                      variant="ghost"
+                      onClick={() => setEditingRoute(route)}
+                    >
+                      <Pencil className="h-4 w-4 mr-1" />
+                      Edit
+                    </Button>
+                  )}
                   {/* View Details */}
                   <Button 
                     size="sm" 
@@ -297,6 +310,13 @@ export default function TrailerRoutes() {
           </Card>
         )}
       </div>
+      {editingRoute && (
+        <EditTrailerRouteDialog
+          route={editingRoute}
+          open={!!editingRoute}
+          onOpenChange={(open) => !open && setEditingRoute(null)}
+        />
+      )}
     </div>
   );
 }
