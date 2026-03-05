@@ -263,15 +263,21 @@ export function DriverStopEventActions({
           const Icon = config.icon;
           const completed = isEventCompleted(eventType);
           
+          const isSuggested = suggestedEventType === eventType;
+          
           return (
             <Button
               key={eventType}
-              variant={completed ? "secondary" : "outline"}
+              variant={completed ? "secondary" : isSuggested ? "default" : "outline"}
               className={cn(
-                "justify-start h-auto py-3 min-h-[44px]",
-                completed && "opacity-50"
+                "justify-start h-auto py-3 min-h-[44px] relative",
+                completed && "opacity-50",
+                isSuggested && "ring-2 ring-primary ring-offset-1 animate-pulse"
               )}
-              onClick={() => handleEventSelect(eventType)}
+              onClick={() => {
+                setSuggestedEventType(null);
+                handleEventSelect(eventType);
+              }}
               disabled={completed}
             >
               {completed ? (
@@ -280,6 +286,11 @@ export function DriverStopEventActions({
                 <Icon className={cn("h-4 w-4 mr-2", config.color)} />
               )}
               <span className="text-xs">{config.buttonText}</span>
+              {isSuggested && (
+                <Badge variant="secondary" className="absolute -top-2 -right-2 text-[10px] px-1.5 py-0">
+                  Next
+                </Badge>
+              )}
             </Button>
           );
         })}
