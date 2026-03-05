@@ -274,17 +274,39 @@ export default function EnhancedRoutesToday() {
               </div>
               
               <div className="flex flex-wrap gap-2">
-                <div className="flex gap-1">
-                  <Button variant="outline" size="sm" onClick={goToPreviousDay} title="Previous day">
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={goToToday} className="min-w-[80px]">
-                    {format(activeDateLocal, 'MMM d') === format(new Date(), 'MMM d') ? 'Today' : format(activeDateLocal, 'MMM d')}
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={goToNextDay} title="Next day">
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
+                {activeTab === "today" ? (
+                  <div className="flex gap-1">
+                    <Button variant="outline" size="sm" onClick={goToPreviousDay} title="Previous day">
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={goToToday} className="min-w-[80px]">
+                      {format(activeDateLocal, 'MMM d') === format(new Date(), 'MMM d') ? 'Today' : format(activeDateLocal, 'MMM d')}
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={goToNextDay} title="Next day">
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : activeTab === "week" ? (
+                  <div className="flex gap-1 items-center">
+                    <Button variant="outline" size="sm" onClick={goToPreviousWeek} title="Previous week">
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="sm" className="min-w-[140px] font-medium">
+                      Week of {format(currentWeek, 'MMM d, yyyy')}
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={goToNextWeek} title="Next week">
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-xs h-8"
+                      onClick={() => setCurrentWeek(startOfWeek(new Date(), { weekStartsOn: 0 }))}
+                    >
+                      This Week
+                    </Button>
+                  </div>
+                ) : null}
                 
                 <SchedulePickupDialog
                   trigger={
