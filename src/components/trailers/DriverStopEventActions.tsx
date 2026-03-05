@@ -135,6 +135,7 @@ export function DriverStopEventActions({
   const [showDialog, setShowDialog] = useState(false);
   const [showSignatureDialog, setShowSignatureDialog] = useState(false);
   const [showManifestWizard, setShowManifestWizard] = useState(false);
+  const [suggestedEventType, setSuggestedEventType] = useState<TrailerEventType | null>(null);
   
   const completeEvent = useCompleteTrailerEvent();
 
