@@ -74,8 +74,9 @@ export default function Auth() {
         console.log('Sign in error:', result.error);
         setError(result.error.message || 'An error occurred during sign in');
       } else {
-        console.log('Sign in successful, navigating to dashboard...');
-        navigate('/dashboard');
+        console.log('Sign in successful, checking roles for redirect...');
+        // Will be handled by the useEffect redirect after auth state updates
+        // The useEffect checks roles and routes to /client-portal or /dashboard
       }
     } catch (error: any) {
       console.error('Sign in catch block error:', error);

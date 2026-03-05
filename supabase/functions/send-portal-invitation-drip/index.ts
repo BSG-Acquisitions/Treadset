@@ -309,6 +309,7 @@ function generateEmailHtml(
           </div>
 
           <p style="font-size: 14px; color: #64748b;">This invitation link is valid for 30 days. After signing up, you'll have instant access to your portal.</p>
+          <p style="font-size: 13px; color: #94a3b8;">Already have an account? <a href="https://app.treadset.co/client-login" style="color: #1A4314; text-decoration: underline;">Sign in to your portal</a></p>
         </div>
 
         <!-- Footer -->
