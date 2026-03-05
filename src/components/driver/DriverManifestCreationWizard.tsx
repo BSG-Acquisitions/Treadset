@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCreateManifest, useUpdateManifest } from "@/hooks/useManifests";
 import { useCreateShipmentFromManifest } from "@/hooks/useCreateShipmentFromManifest";
+import { useOwnEntity } from "@/hooks/useEntities";
 import { useManifestIntegration } from "@/hooks/useManifestIntegration";
 import { useSendManifestEmail } from "@/hooks/useSendManifestEmail";
 import { useHaulers } from "@/hooks/useHaulers";
@@ -157,6 +158,7 @@ function DriverManifestCreationWizardInner({
   const createShipmentFromManifest = useCreateShipmentFromManifest();
   const sendEmail = useSendManifestEmail();
   const { data: haulers = [] } = useHaulers();
+  const { data: ownEntity } = useOwnEntity();
 
   // Signature refs
   const generatorSigRef = useRef<SignatureCanvas>(null);
@@ -1218,23 +1220,18 @@ function DriverManifestCreationWizardInner({
       if (isDropToProcessor && manifest.id) {
         try {
           // Look up BSG (origin) and processor (destination) entity IDs
-          const { data: ownEntity } = await (supabase as any)
-            .from('entities')
-            .select('id')
-            .eq('organization_id', user?.currentOrganization?.id || '')
-            .eq('entity_type', 'origin')
-            .limit(1)
-            .single();
+          // Use the ownEntity hook data (BSG as origin processor)
+          const originEntity = ownEntity;
 
           const processorName = standaloneClientData?.company_name || '';
-          const { data: destEntity } = await (supabase as any)
+          const { data: destEntity } = await supabase
             .from('entities')
             .select('id')
             .ilike('legal_name', `%${processorName}%`)
             .limit(1)
             .single();
 
-          if (ownEntity && destEntity) {
+          if (originEntity && destEntity) {
             const totalPte = (data.pte_off_rim || 0) + (data.pte_on_rim || 0) +
               5 * ((data.commercial_17_5_19_5_off || 0) + (data.commercial_17_5_19_5_on || 0) +
                    (data.commercial_22_5_off || 0) + (data.commercial_22_5_on || 0) +
@@ -1243,7 +1240,7 @@ function DriverManifestCreationWizardInner({
 
             await createShipmentFromManifest.mutateAsync({
               manifestId: manifest.id,
-              originEntityId: ownEntity.id,
+              originEntityId: originEntity.id,
               destinationEntityId: destEntity.id,
               materialForm: 'whole_tires' as any,
               quantityPte: totalPte,
@@ -1252,7 +1249,7 @@ function DriverManifestCreationWizardInner({
             });
             console.log('✅ Shipment record created for processor drop:', manifest.id);
           } else {
-            console.warn('⚠️ Could not find entities for shipment creation. Origin:', !!ownEntity, 'Dest:', !!destEntity);
+            console.warn('⚠️ Could not find entities for shipment creation. Origin:', !!originEntity, 'Dest:', !!destEntity);
           }
         } catch (shipmentError) {
           console.error('Failed to create shipment record for processor drop:', shipmentError);
