@@ -57,6 +57,11 @@ export function PublicNavbar() {
               <Phone className="h-4 w-4" />
               <span>(313) 731-0817</span>
             </a>
+            <a href="https://app.treadset.co/client-login">
+              <Button variant="outline" className="border-primary/30 text-primary hover:bg-primary/5">
+                Client Portal
+              </Button>
+            </a>
             <Link to="/public-book">
               <Button className="bg-primary hover:bg-primary-hover text-primary-foreground shadow-elevation-primary">
                 Schedule Pickup
