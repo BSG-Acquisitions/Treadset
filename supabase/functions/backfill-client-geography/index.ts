@@ -291,7 +291,7 @@ Deno.serve(async (req) => {
           if (geo.city) updates.physical_city = geo.city;
           if (geo.zip) updates.physical_zip = geo.zip;
           if (geo.state) updates.physical_state = geo.state;
-          if (geo.county) updates.county = geo.county;
+          // Do NOT overwrite user-entered county field
 
           const { error: updateError } = await supabase
             .from('clients')
