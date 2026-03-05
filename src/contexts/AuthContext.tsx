@@ -175,7 +175,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email: authUser.email || '',
           firstName: authUser.user_metadata?.first_name || 'User',
           lastName: authUser.user_metadata?.last_name || '',
-          roles: ['admin'],
+          roles: [],
           currentOrganization: {
             id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
             name: 'BSG Logistics',
@@ -198,7 +198,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email: authUser.email || '',
           firstName: authUser.user_metadata?.first_name || 'User',
           lastName: authUser.user_metadata?.last_name || '',
-          roles: ['admin'],
+          roles: [],
           currentOrganization: {
             id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
             name: 'BSG Logistics',
@@ -233,7 +233,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         lastName: userData.last_name,
         phone: userData.phone,
         signatureDataUrl: userData.signature_data_url,
-        roles: roles.length > 0 ? roles : ['admin'], // Ensure at least one role
+        roles: roles, // No fallback to admin - empty roles = no access
         currentOrganization: currentOrg || {
           id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
           name: 'BSG Logistics',
@@ -259,7 +259,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             email: authUser.email || '',
             firstName: authUser.user_metadata?.first_name || 'User',
             lastName: authUser.user_metadata?.last_name || '',
-            roles: ['admin'],
+            roles: [],
             currentOrganization: {
               id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
               name: 'BSG Logistics',
@@ -272,7 +272,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             email: authUser.email || '',
             firstName: authUser.user_metadata?.first_name || 'User',
             lastName: authUser.user_metadata?.last_name || '',
-            roles: ['admin'],
+            roles: [],
             currentOrganization: {
               id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
               name: 'BSG Logistics',
