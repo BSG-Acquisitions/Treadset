@@ -158,6 +158,7 @@ function DriverManifestCreationWizardInner({
   const createShipmentFromManifest = useCreateShipmentFromManifest();
   const sendEmail = useSendManifestEmail();
   const { data: haulers = [] } = useHaulers();
+  const { data: ownEntity } = useOwnEntity();
 
   // Signature refs
   const generatorSigRef = useRef<SignatureCanvas>(null);
