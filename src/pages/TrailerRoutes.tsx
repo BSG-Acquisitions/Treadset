@@ -137,6 +137,17 @@ export default function TrailerRoutes() {
                   </Badge>
                 </div>
                 <div className="flex items-center gap-2">
+                  {/* Edit */}
+                  {(route.status === 'draft' || route.status === 'scheduled') && (
+                    <Button 
+                      size="sm" 
+                      variant="ghost"
+                      onClick={() => setEditingRoute(route)}
+                    >
+                      <Pencil className="h-4 w-4 mr-1" />
+                      Edit
+                    </Button>
+                  )}
                   {/* View Details */}
                   <Button 
                     size="sm" 
