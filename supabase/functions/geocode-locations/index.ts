@@ -435,7 +435,47 @@ async function geocodeAddress(
   }
 }
 
-Deno.serve(async (req) => {
+// Unbounded geocoding for out-of-state addresses — no Detroit metro filtering
+async function geocodeAddressUnbounded(
+  address: string,
+  mapboxToken: string
+): Promise<{ lat: number; lng: number; confidence: number } | null> {
+  try {
+    const encodedAddress = encodeURIComponent(address.trim());
+    const params = new URLSearchParams({
+      access_token: mapboxToken,
+      limit: '3',
+      types: 'address,poi',
+      autocomplete: 'false',
+      country: 'us',
+    });
+
+    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodedAddress}.json?${params.toString()}`;
+    console.log(`🌍 Unbounded geocoding: "${address}"`);
+    const response = await fetch(url);
+    const data: MapboxGeocodeResponse = await response.json();
+
+    if (data.features && data.features.length > 0) {
+      const feature = data.features[0];
+      const [lng, lat] = feature.center;
+      const relevance = feature.relevance || 0;
+      const placeTypes = feature.place_type || [];
+      let confidence = Math.round(relevance * 50);
+      if (placeTypes.includes('address')) confidence += 30;
+      
+      console.log(`📍 Unbounded result: (${lat.toFixed(6)}, ${lng.toFixed(6)}) confidence=${confidence}%`);
+      return { lat, lng, confidence };
+    }
+
+    console.log(`❌ No unbounded results for: ${address}`);
+    return null;
+  } catch (error) {
+    console.error('Error in unbounded geocoding:', error);
+    return null;
+  }
+}
+
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
