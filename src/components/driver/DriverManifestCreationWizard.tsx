@@ -1220,13 +1220,8 @@ function DriverManifestCreationWizardInner({
       if (isDropToProcessor && manifest.id) {
         try {
           // Look up BSG (origin) and processor (destination) entity IDs
-          const { data: ownEntity } = await (supabase as any)
-            .from('entities')
-            .select('id')
-            .eq('organization_id', user?.currentOrganization?.id || '')
-            .eq('entity_type', 'origin')
-            .limit(1)
-            .single();
+          // Use the ownEntity hook data (BSG as origin processor)
+          const originEntity = ownEntity;
 
           const processorName = standaloneClientData?.company_name || '';
           const { data: destEntity } = await (supabase as any)
