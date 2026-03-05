@@ -300,8 +300,11 @@ export function DriverStopEventActions({
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
               {selectedEventType && EVENT_CONFIG[selectedEventType]?.label}
+              {suggestedEventType && selectedEventType === suggestedEventType && (
+                <Badge variant="outline" className="text-xs font-normal">Suggested next step</Badge>
+              )}
             </DialogTitle>
           </DialogHeader>
           
