@@ -105,12 +105,12 @@ Deno.serve(async (req) => {
 
       if (clientError) throw clientError;
 
-      // If client already has city/zip in legacy fields, copy to physical_* and return
-      if ((client.city || client.zip) && (!client.physical_city || !client.physical_zip)) {
+      // ALWAYS prefer user-entered city/zip over reverse-geocoded data
+      if (client.city || client.zip) {
         const copyUpdates: Record<string, any> = { updated_at: new Date().toISOString() };
-        if (client.city && !client.physical_city) copyUpdates.physical_city = client.city;
-        if (client.zip && !client.physical_zip) copyUpdates.physical_zip = client.zip;
-        if (client.state && !client.physical_state) copyUpdates.physical_state = client.state;
+        if (client.city) copyUpdates.physical_city = client.city;
+        if (client.zip) copyUpdates.physical_zip = client.zip;
+        if (client.state) copyUpdates.physical_state = client.state;
 
         const { error: copyError } = await supabase
           .from('clients')
