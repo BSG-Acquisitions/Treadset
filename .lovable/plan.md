@@ -1,92 +1,80 @@
 
 
-# Tire Movement Tracking: Current State + Gaps
+## Plan: Smart Context-Aware Trailer System — Dispatcher + Driver Intelligence
 
-## What's Currently Tracking Inbound Tires
+### Current Gaps Identified
 
-Your system has solid inbound tracking through two channels:
+After a full system review, here are the critical gaps:
 
-```text
-INBOUND TIRE SOURCES
-├─ Manifests (direction = 'inbound' or NULL)
-│   ├─ Driver pickup manifests (DriverManifestCreationWizard)
-│   ├─ Standalone manifests (trailer route pickups)
-│   └─ All granular counts: PTE on/off rim, commercial sizes, OTR, tractor
-│
-├─ Drop-offs (hauler/walk-in deliveries)
-│   └─ pte_count, otr_count, tractor_count
-│
-└─ Reporting consumers:
-    ├─ get_ytd_pte_totals() — combines manifests + dropoffs, deduplicates
-    ├─ _compute_manifest_ptes() — daily/weekly dashboard PTE
-    ├─ Michigan State Reports (useMichiganReporting) — inbound manifests only
-    ├─ Client analytics (get_live_client_analytics)
-    └─ Raw material projections
-```
+**Dispatcher Side (Route Scheduling)**
+1. **No client linkage on stops**: `trailer_route_stops` has no `client_id` — stops are just free-text location names. The system has a full clients table with addresses, contacts, emails, locations, but the wizard ignores it completely. The dispatcher types "Tire Disposal" manually instead of selecting the client.
+2. **No auto-fill from client data**: Address, contact name, contact phone are all manually typed even though this data exists in the `clients` and `locations` tables.
+3. **No location_id linkage**: The stop has a `location_id` column but the wizard never populates it — meaning the driver-side can't match trailers by location.
 
-## What's Currently Tracking Outbound Tires
+**Driver Side (Trailer Selection)**
+4. **Flat trailer list**: Every Select dropdown shows all trailers regardless of status, location, or route context. Driver scrolls through the entire inventory.
+5. **No route-session awareness**: If Jody picks up trailer #5 at Stop 1, the system doesn't track that #5 is "on his truck" for Stop 2's drop event.
+6. **No status filtering**: `pickup_empty` shows full trailers too; `pickup_full` shows empty trailers.
 
-```text
-OUTBOUND TIRE SOURCES
-├─ Outbound Manifests (direction = 'outbound')
-│   └─ Created via OutboundManifestWizard (dedicated outbound hauler flow)
-│   └─ Creates shipment records via useCreateShipmentFromManifest
-│
-├─ Shipments table (manual entry via Shipments page)
-│   └─ ShipmentDialog — manual outbound shipment recording
-│
-└─ Reporting consumers:
-    ├─ Shipments page — summary cards (total PTE out, tons out)
-    ├─ useOutboundSummary — feeds State Compliance Reports OutboundTab
-    └─ Michigan EGLE annual report
-```
+**Trailer Inventory Intelligence**
+7. **No "trailers at location" inference**: The `current_location` field on trailers is updated by events, but nobody uses it to filter the selection list.
+8. **`current_location` is free-text**: Location matching depends on exact string match, which is fragile. Should use `current_location_id` when available.
 
-## GAP FOUND: Trailer Route Drops at Processors Are NOT Tracked as Outbound
+### Changes
 
-When Jody does a `drop_full` at a processor (NTech) via the trailer route flow:
-- A manifest IS created via `DriverManifestCreationWizard` in `drop_to_processor` mode
-- But `direction` is **never set** — it defaults to NULL/inbound
-- **No shipment record** is created in the `shipments` table
-- These tires are being **counted as inbound** in your PTE totals and state reports
+#### 1. Add `client_id` column to `trailer_route_stops` (Migration)
+- `ALTER TABLE trailer_route_stops ADD COLUMN client_id UUID REFERENCES clients(id)`
+- This links each stop to a client record, enabling auto-fill and downstream intelligence
 
-This means trailer drops at processors are invisible on the outbound side and are inflating your inbound numbers.
+#### 2. Upgrade `TrailerRouteWizard.tsx` — Client-Powered Stop Creation
+Replace the manual text inputs with a **searchable client dropdown** (reuse existing `SearchableDropdown` pattern):
+- Dispatcher searches/selects a client → locations for that client load
+- If client has one location, auto-select it; if multiple, show a location picker
+- Auto-fill: `location_name` from client name, `location_address` from location address, `contact_name` and `contact_phone` from client record
+- Store `client_id` and `location_id` on the stop
+- Keep a "Custom Location" option for non-client stops (BSG Yard, NTech, etc.) — falls back to manual entry
+- Also add known fixed locations (BSG Yard, NTech) as quick-select options since these are used on nearly every route
 
-## Fix Plan
+#### 3. Smart Trailer Filtering in `GuidedStopEvents.tsx`
+Add a `getFilteredTrailers()` helper that returns trailers grouped by relevance:
 
-### 1. Set `direction = 'outbound'` on processor drop manifests
+| Event Type | Primary Group ("Suggested") | Fallback ("All Others") |
+|---|---|---|
+| `pickup_empty` | Trailers where `current_status = 'empty'` AND (`current_location_id = stop.location_id` OR `current_location` matches stop name) | All other `empty` trailers |
+| `pickup_full` | Trailers where `current_status = 'full'` AND location matches | All other `full` trailers |
+| `drop_empty` / `drop_full` | Trailers picked up earlier in this route session (on the truck) | All trailers |
+| `stage_empty` | Empty trailers at this location | All empty trailers |
 
-**File: `src/components/driver/DriverManifestCreationWizard.tsx`**
+The Select dropdown will show grouped options with `SelectGroup` + `SelectLabel` headers: "At this location" and "Other trailers".
 
-In the `manifestData` object (~line 1013), add:
-```ts
-direction: isDropToProcessor ? 'outbound' : 'inbound',
-```
+#### 4. Route-Session Trailer Tracking
+In `DriverTrailerAssignments.tsx`, derive an `onTruckTrailerIds` set from all completed events across all stops in the route:
+- Scan completed events: pickups add to set, drops remove from set
+- Pass this set down to `GuidedStopEvents` and `DriverStopEventActions`
+- For drop events, auto-select the trailer if only one is on the truck
 
-This ensures processor drop manifests are correctly categorized and excluded from inbound PTE totals (since `_compute_manifest_ptes` and `get_ytd_pte_totals` already filter by direction or exclude outbound).
+#### 5. Apply Same Filtering to `DriverStopEventActions.tsx`
+The unplanned "Add Other Event" flow gets the same smart filtering:
+- Accept `locationId`, `locationName`, and `onTruckTrailerIds` as props
+- Filter the trailer Select by event type + location + on-truck context
+- Group into "Suggested" and "All Trailers"
 
-### 2. Auto-create shipment record when processor drop manifest completes
+### Files to Edit
 
-**File: `src/components/driver/DriverManifestCreationWizard.tsx`**
-
-After the manifest is created and PDF generated in `drop_to_processor` mode, call `useCreateShipmentFromManifest` to create a matching shipment record — same pattern already used in `OutboundManifestWizard` and `OutboundReceiverDialog`. This makes the drop appear on the Shipments page and in outbound compliance reporting.
-
-### 3. Ensure `get_ytd_pte_totals` excludes outbound manifests
-
-The current function already excludes manifests linked to dropoffs, but does NOT filter by `direction`. Adding `AND direction != 'outbound'` (or `AND (direction IS NULL OR direction = 'inbound')`) to the manifest query ensures processor drops don't inflate inbound PTE counts.
-
-**Database function: `get_ytd_pte_totals`** — add direction filter to the manifest subqueries.
-
-### 4. Ensure `_compute_manifest_ptes` excludes outbound manifests
-
-Same fix: add `AND (m.direction IS NULL OR m.direction = 'inbound')` to prevent outbound processor drops from being counted as daily inbound PTE.
-
-### Summary of Changes
-
-| File/Function | Change |
+| File | Change |
 |---|---|
-| `DriverManifestCreationWizard.tsx` | Add `direction: isDropToProcessor ? 'outbound' : 'inbound'` to manifest data; call `useCreateShipmentFromManifest` after processor drop completion |
-| `get_ytd_pte_totals` (DB function) | Add `AND (direction IS NULL OR direction = 'inbound')` to manifest queries |
-| `_compute_manifest_ptes` (DB function) | Add same direction filter |
+| New migration SQL | Add `client_id` column to `trailer_route_stops` |
+| `src/components/trailers/TrailerRouteWizard.tsx` | Replace manual stop entry with client search + location auto-fill; store `client_id` and `location_id` |
+| `src/hooks/useTrailerRoutes.ts` | Add `client_id` to `TrailerRouteStop` interface and `useAddRouteStop` mutation |
+| `src/pages/DriverTrailerAssignments.tsx` | Derive `onTruckTrailerIds` from route events; pass to stop components |
+| `src/components/trailers/GuidedStopEvents.tsx` | Add `getFilteredTrailers()` helper; use grouped Select for "Any" trailer events |
+| `src/components/trailers/DriverStopEventActions.tsx` | Accept filter props; apply smart filtering to unplanned event trailer selectors |
 
-This closes the loop: every tire entering BSG is tracked inbound, every tire leaving to a processor is tracked outbound, and the numbers stay accurate across all dashboards and compliance reports.
+### What This Enables
+- Dispatcher types "Tire" → selects "Tire Disposal Inc" → address, phone, contact auto-fill → `client_id` and `location_id` stored on stop
+- Driver at BSG Yard sees only empty trailers located at BSG Yard
+- Driver at Tire Disposal dropping empty sees the trailer he just picked up from BSG
+- Driver at Tire Disposal picking up full sees only full trailers at Tire Disposal
+- Driver at NTech dropping full sees the trailer he picked up from Tire Disposal
+- If only one trailer matches, it's auto-selected
 
