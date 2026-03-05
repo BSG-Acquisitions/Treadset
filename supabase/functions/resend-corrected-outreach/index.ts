@@ -172,7 +172,7 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      const bookingUrl = `https://bsgtires.com/public-book?client=${client.id}`;
+      const bookingUrl = `https://app.treadset.co/public-book?client=${client.id}`;
       const suggestedDates = generateSuggestedDates(null);
       const contactName = client.contact_name || 'there';
 

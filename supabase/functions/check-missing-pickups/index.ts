@@ -390,7 +390,7 @@ async function sendOutreachEmail(
     }
 
     const suggestedDates = generateSuggestedDates(typicalDay);
-    const bookingUrl = `https://treadset.lovable.app/public-book?client=${client.id}`;
+    const bookingUrl = `https://app.treadset.co/public-book?client=${client.id}`;
     const trackingPixelUrl = `https://wvjehbozyxhmgdljwsiz.supabase.co/functions/v1/track-email-event?type=open&client=${client.id}&source=${emailType}`;
     const contactName = client.contact_name || 'there';
     

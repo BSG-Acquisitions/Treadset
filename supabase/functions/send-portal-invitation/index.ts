@@ -134,7 +134,7 @@ const handler = async (req: Request): Promise<Response> => {
         }
 
         // Build tracking and invite URLs
-        const appUrl = "https://bsgtires.com";
+        const appUrl = "https://app.treadset.co";
         const trackingBaseUrl = `${supabaseUrl}/functions/v1/track-email-event`;
         
         // Open tracking pixel URL

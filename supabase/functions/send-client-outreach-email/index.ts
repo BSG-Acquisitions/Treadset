@@ -133,7 +133,7 @@ Deno.serve(async (req) => {
 
     // Generate suggested dates
     const suggestedDates = generateSuggestedDates(pattern?.typical_day_of_week ?? null);
-    const bookingUrl = `https://bsgtires.com/public-book?client=${client.id}`;
+    const bookingUrl = `https://app.treadset.co/public-book?client=${client.id}`;
     const contactName = client.contact_name || 'there';
     
     // Create tracking pixel URL for open tracking
