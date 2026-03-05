@@ -210,8 +210,22 @@ export function DriverStopEventActions({
     setShowDialog(false);
     setShowSignatureDialog(false);
     setShowManifestWizard(false);
+    
+    // Auto-suggest next event
+    const justCompleted = selectedEventType;
     setSelectedEventType(null);
     onEventCompleted();
+
+    if (justCompleted) {
+      const nextSuggestion = NEXT_EVENT_SUGGESTION[justCompleted];
+      if (nextSuggestion && !isEventCompleted(nextSuggestion)) {
+        setSuggestedEventType(nextSuggestion);
+        // Small delay so the user sees the completion before the next suggestion
+        setTimeout(() => {
+          handleEventSelect(nextSuggestion);
+        }, 600);
+      }
+    }
   };
 
   const handleProceed = () => {
