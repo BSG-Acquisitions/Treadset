@@ -175,7 +175,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email: authUser.email || '',
           firstName: authUser.user_metadata?.first_name || 'User',
           lastName: authUser.user_metadata?.last_name || '',
-          roles: ['admin'],
+          roles: [],
           currentOrganization: {
             id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
             name: 'BSG Logistics',
@@ -198,7 +198,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email: authUser.email || '',
           firstName: authUser.user_metadata?.first_name || 'User',
           lastName: authUser.user_metadata?.last_name || '',
-          roles: ['admin'],
+          roles: [],
           currentOrganization: {
             id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
             name: 'BSG Logistics',
