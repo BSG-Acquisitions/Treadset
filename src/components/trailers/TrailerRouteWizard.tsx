@@ -90,7 +90,7 @@ export function TrailerRouteWizard({ onComplete, onCancel }: TrailerRouteWizardP
   const searchClients = useCallback(async (search: string) => {
     const { data, error } = await supabase
       .from('clients')
-      .select('id, company_name, contact_name, phone, email, physical_address, physical_city, physical_state, physical_zip')
+      .select('id, company_name, contact_name, phone, email, mailing_address, city, state, zip')
       .ilike('company_name', `%${search}%`)
       .limit(20);
     
@@ -114,7 +114,7 @@ export function TrailerRouteWizard({ onComplete, onCancel }: TrailerRouteWizardP
     }
     
     setSelectedClient(client);
-    const address = [client.physical_address, client.physical_city, client.physical_state, client.physical_zip]
+    const address = [client.mailing_address, client.city, client.state, client.zip]
       .filter(Boolean)
       .join(', ');
     

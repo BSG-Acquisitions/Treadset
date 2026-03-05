@@ -99,11 +99,35 @@ Deno.serve(async (req) => {
       // Process a single client
       const { data: client, error: clientError } = await supabase
         .from('clients')
-        .select('id, company_name, physical_city, physical_zip')
+        .select('id, company_name, city, zip, state, physical_city, physical_zip, physical_state')
         .eq('id', clientId)
         .single();
 
       if (clientError) throw clientError;
+
+      // ALWAYS prefer user-entered city/zip over reverse-geocoded data
+      if (client.city || client.zip) {
+        const copyUpdates: Record<string, any> = { updated_at: new Date().toISOString() };
+        if (client.city) copyUpdates.physical_city = client.city;
+        if (client.zip) copyUpdates.physical_zip = client.zip;
+        if (client.state) copyUpdates.physical_state = client.state;
+
+        const { error: copyError } = await supabase
+          .from('clients')
+          .update(copyUpdates)
+          .eq('id', clientId);
+
+        if (!copyError) {
+          console.log(`✅ Copied legacy city/zip for ${client.company_name}: ${client.city}, ${client.zip}`);
+          return new Response(
+            JSON.stringify({
+              message: 'Client geographic data copied from existing fields',
+              client: { id: client.id, company_name: client.company_name, city: client.city, zip: client.zip }
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
 
       // Get the client's primary location with coordinates
       const { data: location, error: locError } = await supabase
@@ -144,7 +168,7 @@ Deno.serve(async (req) => {
         if (geo.city) updates.physical_city = geo.city;
         if (geo.zip) updates.physical_zip = geo.zip;
         if (geo.state) updates.physical_state = geo.state;
-        if (geo.county) updates.county = geo.county;
+        // Do NOT overwrite user-entered county field - only write to physical fields
 
         const { error: updateError } = await supabase
           .from('clients')
@@ -267,7 +291,7 @@ Deno.serve(async (req) => {
           if (geo.city) updates.physical_city = geo.city;
           if (geo.zip) updates.physical_zip = geo.zip;
           if (geo.state) updates.physical_state = geo.state;
-          if (geo.county) updates.county = geo.county;
+          // Do NOT overwrite user-entered county field
 
           const { error: updateError } = await supabase
             .from('clients')

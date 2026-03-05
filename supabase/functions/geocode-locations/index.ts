@@ -208,6 +208,13 @@ function guessState(address: string): string | null {
   return null;
 }
 
+function isOutOfStateAddress(address: string, clientState?: string): boolean {
+  // Check if the address or client state indicates a non-Michigan location
+  const state = guessState(address) || clientState?.toUpperCase();
+  if (!state) return false;
+  return state !== 'MI' && state !== 'MICHIGAN';
+}
+
 function isWithinDetroitMetro(lat: number, lng: number): boolean {
   return lat >= DETROIT_BOUNDS.minLat &&
          lat <= DETROIT_BOUNDS.maxLat &&
@@ -428,8 +435,48 @@ async function geocodeAddress(
   }
 }
 
-Deno.serve(async (req) => {
-  // Handle CORS preflight requests
+// Unbounded geocoding for out-of-state addresses — no Detroit metro filtering
+async function geocodeAddressUnbounded(
+  address: string,
+  mapboxToken: string
+): Promise<{ lat: number; lng: number; confidence: number } | null> {
+  try {
+    const encodedAddress = encodeURIComponent(address.trim());
+    const params = new URLSearchParams({
+      access_token: mapboxToken,
+      limit: '3',
+      types: 'address,poi',
+      autocomplete: 'false',
+      country: 'us',
+    });
+
+    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodedAddress}.json?${params.toString()}`;
+    console.log(`🌍 Unbounded geocoding: "${address}"`);
+    const response = await fetch(url);
+    const data: MapboxGeocodeResponse = await response.json();
+
+    if (data.features && data.features.length > 0) {
+      const feature = data.features[0];
+      const [lng, lat] = feature.center;
+      const relevance = feature.relevance || 0;
+      const placeTypes = feature.place_type || [];
+      let confidence = Math.round(relevance * 50);
+      if (placeTypes.includes('address')) confidence += 30;
+      
+      console.log(`📍 Unbounded result: (${lat.toFixed(6)}, ${lng.toFixed(6)}) confidence=${confidence}%`);
+      return { lat, lng, confidence };
+    }
+
+    console.log(`❌ No unbounded results for: ${address}`);
+    return null;
+  } catch (error) {
+    console.error('Error in unbounded geocoding:', error);
+    return null;
+  }
+}
+
+
+  Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -494,7 +541,45 @@ Deno.serve(async (req) => {
       const clientCity = (location as any).clients?.city;
       const clientState = (location as any).clients?.state || 'MI';
 
-      // Enhance address with Detroit context
+      // Detect out-of-state addresses — skip Detroit-specific bounds and enhancement
+      const outOfState = isOutOfStateAddress(addressToGeocode, clientState);
+      
+      if (outOfState) {
+        console.log(`🌍 Out-of-state address detected (state: ${guessState(addressToGeocode) || clientState}), skipping Detroit bounds`);
+        
+        // Geocode without Detroit-specific bbox/proximity/enhancement
+        let coordinates = await geocodeAddressUnbounded(`${location.name}, ${addressToGeocode}`, mapboxToken);
+        if (!coordinates) {
+          coordinates = await geocodeAddressUnbounded(addressToGeocode, mapboxToken);
+        }
+        if (!coordinates) {
+          throw new Error(`Failed to geocode out-of-state address: ${addressToGeocode}`);
+        }
+        
+        // Update the location
+        const { error: updateError } = await supabase
+          .from('locations')
+          .update({
+            latitude: coordinates.lat,
+            longitude: coordinates.lng,
+            geocode_confidence: coordinates.confidence,
+            geocoded_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', locationId);
+
+        if (updateError) throw updateError;
+
+        return new Response(
+          JSON.stringify({
+            message: `Out-of-state location geocoded successfully`,
+            location: { id: location.id, name: location.name, latitude: coordinates.lat, longitude: coordinates.lng, confidence: coordinates.confidence }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Michigan address — use Detroit-specific enhancement and bounds
       const enhancedAddress = enhanceAddress(addressToGeocode, clientCity, clientState);
       console.log(`🔍 Original: "${addressToGeocode}" -> Enhanced: "${enhancedAddress}"`);
 
