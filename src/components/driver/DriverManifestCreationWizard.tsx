@@ -1036,6 +1036,7 @@ function DriverManifestCreationWizardInner({
         payment_method: paymentMethod as 'CARD' | 'CASH' | 'CHECK' | 'INVOICE',
         payment_status: (paymentMethod === 'CASH' || paymentMethod === 'CHECK') ? ('SUCCEEDED' as const) : ('PENDING' as const),
         status: isDropToProcessor ? 'COMPLETED' as const : 'AWAITING_RECEIVER_SIGNATURE' as const,
+        direction: isDropToProcessor ? 'outbound' : 'inbound',
       };
 
       // Only create a new manifest if one doesn't exist
