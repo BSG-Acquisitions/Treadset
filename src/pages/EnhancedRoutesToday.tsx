@@ -552,8 +552,23 @@ export default function EnhancedRoutesToday() {
             <TabsContent value="week">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-base font-semibold">Week of {format(currentWeek, 'MMM d, yyyy')}</h2>
-                  <div className="text-xs text-muted-foreground">All pickups by day</div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={goToPreviousWeek}>
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <h2 className="text-base font-semibold">Week of {format(currentWeek, 'MMM d, yyyy')}</h2>
+                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={goToNextWeek}>
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-xs h-7"
+                    onClick={() => setCurrentWeek(startOfWeek(new Date(), { weekStartsOn: 0 }))}
+                  >
+                    This Week
+                  </Button>
                 </div>
                 <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen overflow-x-hidden">
                   <div className="px-2 sm:px-4">
