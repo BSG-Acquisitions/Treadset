@@ -341,7 +341,7 @@ export default function ClientPortal() {
   }
 
   if (!clientInfo) {
-    const isStaff = hasAnyRole(['admin', 'super_admin', 'ops_manager', 'dispatcher', 'sales']);
+    const isStaff = hasRole('admin') || hasRole('super_admin') || hasRole('ops_manager') || hasRole('dispatcher') || hasRole('sales');
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-6">
         <Card className="max-w-md">
