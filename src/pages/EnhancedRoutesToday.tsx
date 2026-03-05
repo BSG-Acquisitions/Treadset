@@ -352,7 +352,7 @@ export default function EnhancedRoutesToday() {
         </div>
 
         <div className="py-3 px-2 sm:px-4">
-          <Tabs defaultValue="today" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-3 mb-3">
               <TabsTrigger value="today">Day View</TabsTrigger>
               <TabsTrigger value="week">Week View</TabsTrigger>
