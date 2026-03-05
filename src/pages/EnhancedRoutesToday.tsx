@@ -122,6 +122,13 @@ export default function EnhancedRoutesToday() {
     document.title = "Route Planning – TreadSet";
   }, []);
 
+  // Sync week view when active day changes
+  useEffect(() => {
+    const [y, m, d] = activeDay.split('-').map(Number);
+    const dayDate = new Date(y, m - 1, d);
+    setCurrentWeek(startOfWeek(dayDate, { weekStartsOn: 0 }));
+  }, [activeDay]);
+
   const goToPreviousWeek = () => setCurrentWeek(prev => subWeeks(prev, 1));
   const goToNextWeek = () => setCurrentWeek(prev => addWeeks(prev, 1));
   
