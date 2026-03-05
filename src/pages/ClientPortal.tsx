@@ -341,20 +341,29 @@ export default function ClientPortal() {
   }
 
   if (!clientInfo) {
+    const isStaff = hasAnyRole(['admin', 'super_admin', 'ops_manager', 'dispatcher', 'sales']);
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-6">
         <Card className="max-w-md">
           <CardHeader>
             <CardTitle>No Client Account Found</CardTitle>
             <CardDescription>
-              Your login is not linked to a client account. Please contact BSG Tire Recycling to set up your client portal access.
+              {isStaff
+                ? "You're signed in as staff. This portal is for client accounts only."
+                : "Your login is not linked to a client account. Please contact BSG Tire Recycling to set up your client portal access."}
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Button onClick={() => signOut()} variant="outline" className="w-full">
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
-            </Button>
+          <CardContent className="space-y-2">
+            {isStaff ? (
+              <Button onClick={() => navigate('/dashboard')} className="w-full">
+                Go to Dashboard
+              </Button>
+            ) : (
+              <Button onClick={() => signOut()} variant="outline" className="w-full">
+                <LogOut className="w-4 h-4 mr-2" />
+                Sign Out
+              </Button>
+            )}
           </CardContent>
         </Card>
       </div>

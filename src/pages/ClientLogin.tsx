@@ -64,6 +64,14 @@ export default function ClientLogin() {
             <p className="text-muted-foreground">Sign in to view your manifests and manage pickups</p>
           </div>
         </div>
+        {user && isStaff && (
+          <Alert className="mb-4">
+            <AlertDescription>
+              You're signed in as staff.{' '}
+              <Link to="/dashboard" className="text-primary hover:underline font-medium">Go to Dashboard</Link>
+            </AlertDescription>
+          </Alert>
+        )}
 
         <Card>
           <CardHeader>
