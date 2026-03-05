@@ -1222,7 +1222,7 @@ function DriverManifestCreationWizardInner({
             .from('entities')
             .select('id')
             .eq('organization_id', user?.currentOrganization?.id || '')
-            .eq('entity_type', 'origin')
+            .eq('entity_type', 'origin' as any)
             .limit(1)
             .single();
 
@@ -1230,7 +1230,7 @@ function DriverManifestCreationWizardInner({
           const { data: destEntity } = await supabase
             .from('entities')
             .select('id')
-            .ilike('legal_name', `%${processorName}%`)
+            .ilike('legal_name', `%${processorName}%` as any)
             .limit(1)
             .single();
 
