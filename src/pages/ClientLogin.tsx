@@ -15,9 +15,6 @@ export default function ClientLogin() {
   const [error, setError] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const navigate = useNavigate();
-  const hasRedirected = useRef(false);
-
   const { signIn, user, loading, hasRole } = useAuth();
   const navigate = useNavigate();
   const hasRedirected = useRef(false);
