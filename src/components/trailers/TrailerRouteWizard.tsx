@@ -114,7 +114,7 @@ export function TrailerRouteWizard({ onComplete, onCancel }: TrailerRouteWizardP
     }
     
     setSelectedClient(client);
-    const address = [client.physical_address, client.physical_city, client.physical_state, client.physical_zip]
+    const address = [client.mailing_address, client.city, client.state, client.zip]
       .filter(Boolean)
       .join(', ');
     
