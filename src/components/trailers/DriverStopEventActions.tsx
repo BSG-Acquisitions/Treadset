@@ -110,6 +110,13 @@ const DRIVER_EVENT_TYPES: TrailerEventType[] = [
   'stage_empty',
 ];
 
+const NEXT_EVENT_SUGGESTION: Partial<Record<TrailerEventType, TrailerEventType>> = {
+  pickup_empty: 'drop_empty',
+  drop_empty: 'pickup_full',
+  pickup_full: 'drop_full',
+  drop_full: 'pickup_empty',
+};
+
 export function DriverStopEventActions({
   stopId,
   routeId,
@@ -128,6 +135,7 @@ export function DriverStopEventActions({
   const [showDialog, setShowDialog] = useState(false);
   const [showSignatureDialog, setShowSignatureDialog] = useState(false);
   const [showManifestWizard, setShowManifestWizard] = useState(false);
+  const [suggestedEventType, setSuggestedEventType] = useState<TrailerEventType | null>(null);
   
   const completeEvent = useCompleteTrailerEvent();
 
@@ -202,8 +210,22 @@ export function DriverStopEventActions({
     setShowDialog(false);
     setShowSignatureDialog(false);
     setShowManifestWizard(false);
+    
+    // Auto-suggest next event
+    const justCompleted = selectedEventType;
     setSelectedEventType(null);
     onEventCompleted();
+
+    if (justCompleted) {
+      const nextSuggestion = NEXT_EVENT_SUGGESTION[justCompleted];
+      if (nextSuggestion && !isEventCompleted(nextSuggestion)) {
+        setSuggestedEventType(nextSuggestion);
+        // Small delay so the user sees the completion before the next suggestion
+        setTimeout(() => {
+          handleEventSelect(nextSuggestion);
+        }, 600);
+      }
+    }
   };
 
   const handleProceed = () => {
@@ -241,15 +263,21 @@ export function DriverStopEventActions({
           const Icon = config.icon;
           const completed = isEventCompleted(eventType);
           
+          const isSuggested = suggestedEventType === eventType;
+          
           return (
             <Button
               key={eventType}
-              variant={completed ? "secondary" : "outline"}
+              variant={completed ? "secondary" : isSuggested ? "default" : "outline"}
               className={cn(
-                "justify-start h-auto py-3 min-h-[44px]",
-                completed && "opacity-50"
+                "justify-start h-auto py-3 min-h-[44px] relative",
+                completed && "opacity-50",
+                isSuggested && "ring-2 ring-primary ring-offset-1 animate-pulse"
               )}
-              onClick={() => handleEventSelect(eventType)}
+              onClick={() => {
+                setSuggestedEventType(null);
+                handleEventSelect(eventType);
+              }}
               disabled={completed}
             >
               {completed ? (
@@ -258,6 +286,11 @@ export function DriverStopEventActions({
                 <Icon className={cn("h-4 w-4 mr-2", config.color)} />
               )}
               <span className="text-xs">{config.buttonText}</span>
+              {isSuggested && (
+                <Badge variant="secondary" className="absolute -top-2 -right-2 text-[10px] px-1.5 py-0">
+                  Next
+                </Badge>
+              )}
             </Button>
           );
         })}
@@ -267,8 +300,11 @@ export function DriverStopEventActions({
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
               {selectedEventType && EVENT_CONFIG[selectedEventType]?.label}
+              {suggestedEventType && selectedEventType === suggestedEventType && (
+                <Badge variant="outline" className="text-xs font-normal">Suggested next step</Badge>
+              )}
             </DialogTitle>
           </DialogHeader>
           
