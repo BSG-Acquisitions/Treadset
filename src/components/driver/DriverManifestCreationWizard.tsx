@@ -606,6 +606,17 @@ function DriverManifestCreationWizardInner({
       }
     }
 
+    if (currentStep.key === "payment-method") {
+      if (paymentMethod === 'CHECK' && !checkNumber.trim()) {
+        toast({
+          title: "Check Number Required",
+          description: "Please enter the check number before continuing. This is required for all check payments.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     if (currentStep.key === "signatures") {
       const hasGeneratorSig = generatorSigRef.current && !generatorSigRef.current.isEmpty();
       const hasHaulerSig = haulerSigRef.current && !haulerSigRef.current.isEmpty();
