@@ -485,10 +485,11 @@ function generateReminderEmailHtml(
       <!-- Unsubscribe footer -->
       <div style="text-align: center; margin-top: 20px;">
         <p style="font-size: 12px; color: #94a3b8;">
-          BSG Tire Recycling • 2971 Bellevue, Detroit, Michigan<br>
+          ${orgDisplayName}<br>
           <a href="${unsubscribeUrl}" style="color: #94a3b8; text-decoration: underline;">
             Stop receiving these reminders
-          </a>
+          </a><br>
+          <span style="font-size: 11px;">Powered by <a href="https://treadset.co" style="color: #94a3b8;">TreadSet</a></span>
         </p>
       </div>
 
