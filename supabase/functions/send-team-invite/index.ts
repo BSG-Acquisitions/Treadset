@@ -139,6 +139,10 @@ const handler = async (req: Request): Promise<Response> => {
             If you weren't expecting this invitation, you can safely ignore this email.<br>
             <a href="${inviteUrl}" style="color: #1A4314; word-break: break-all;">${inviteUrl}</a>
           </p>
+          
+          <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+            <p style="color: #9ca3af; font-size: 11px;">Powered by <a href="https://treadset.co" style="color: #9ca3af;">TreadSet</a></p>
+          </div>
         </body>
         </html>
       `,

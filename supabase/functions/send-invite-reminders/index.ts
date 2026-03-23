@@ -426,7 +426,7 @@ function generateReminderEmailHtml(
         
         <!-- Header -->
         <div style="background: linear-gradient(135deg, ${isDay7 ? '#1A4314 0%, #2d5a1e 100%' : '#b45309 0%, #d97706 100%'}); color: white; padding: 40px 30px; text-align: center;">
-          <h2 style="margin: 0 0 10px 0; font-size: 16px; font-weight: 500; opacity: 0.9;">BSG Tire Recycling</h2>
+          <h2 style="margin: 0 0 10px 0; font-size: 16px; font-weight: 500; opacity: 0.9;">${orgDisplayName}</h2>
           <h1 style="margin: 0 0 10px 0; font-size: 28px; font-weight: 700;">${headerText}</h1>
           <p style="margin: 0; font-size: 16px; opacity: 0.9;">${subHeader}</p>
         </div>

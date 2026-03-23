@@ -233,6 +233,7 @@ Deno.serve(async (req) => {
                 <p style="color: #6b7280; font-size: 12px; margin: 0;">
                   ${org.name} • Professional Tire Recycling Services
                 </p>
+                <p style="color: #9ca3af; font-size: 11px; margin: 10px 0 0 0;">Powered by <a href="https://treadset.co" style="color: #9ca3af;">TreadSet</a></p>
                 <p style="color: #9ca3af; font-size: 11px; margin: 10px 0 0 0;">
                   Questions? Reply to this email or call us directly.
                 </p>
