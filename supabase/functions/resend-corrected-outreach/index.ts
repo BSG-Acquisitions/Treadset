@@ -256,7 +256,7 @@ Deno.serve(async (req) => {
       } else {
         try {
           const emailResult = await resend.emails.send({
-            from: `${org.name} <onboarding@resend.dev>`,
+            from: `${org.name} <noreply@bsgtires.com>`,
             to: [client.email],
             subject: `CORRECTED: ${client.company_name} - Schedule Your Tire Pickup`,
             html: emailHtml,
