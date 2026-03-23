@@ -128,7 +128,7 @@ serve(async (req) => {
           <body>
             <div class="container">
               <div class="header">
-                <h1>BSG Tire Recycling</h1>
+                <h1>${orgName}</h1>
                 <p>Sustainable Tire Solutions</p>
               </div>
               
