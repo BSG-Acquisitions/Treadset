@@ -13,6 +13,7 @@ import { useOwnEntity } from "@/hooks/useEntities";
 import { useManifestIntegration } from "@/hooks/useManifestIntegration";
 import { useSendManifestEmail } from "@/hooks/useSendManifestEmail";
 import { useHaulers } from "@/hooks/useHaulers";
+import { useReceivers } from "@/hooks/useReceivers";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -158,6 +159,7 @@ function DriverManifestCreationWizardInner({
   const createShipmentFromManifest = useCreateShipmentFromManifest();
   const sendEmail = useSendManifestEmail();
   const { data: haulers = [] } = useHaulers();
+  const { data: receivers = [] } = useReceivers();
   const { data: ownEntity } = useOwnEntity();
 
   // Signature refs
@@ -1161,6 +1163,18 @@ function DriverManifestCreationWizardInner({
             receiver_signature: receiverSigPath,
             receiver_print_name: `${receiverPrintName} - ${new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}`,
             receiver_date: new Date().toLocaleDateString('en-US'),
+          } : {}),
+
+          // Pre-populate Part 3 left side (Receiver static info) from org's default receiver
+          // Required by Michigan compliance: receiver name, address, phone, site reg must be on the manifest at time of pickup
+          ...(!isDropToProcessor && receivers.length > 0 ? {
+            receiver_name: receivers[0].receiver_name || '',
+            receiver_physical_address: receivers[0].receiver_mailing_address || '',
+            receiver_city: receivers[0].receiver_city || '',
+            receiver_state: receivers[0].receiver_state || '',
+            receiver_zip: receivers[0].receiver_zip || '',
+            receiver_phone: receivers[0].receiver_phone || '',
+            receiver_mi_reg: receivers[0].collection_site_reg || '',
           } : {}),
         }
       });
@@ -2631,12 +2645,12 @@ function DriverManifestCreationWizardInner({
                   name="generator_print_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs sm:text-sm">Printed Name *</FormLabel>
+                      <FormLabel className="text-xs sm:text-sm">Person's Name (who is signing) *</FormLabel>
                       <FormControl>
                         <Input 
                           {...field} 
                           value={field.value || ""} 
-                          placeholder="Full name"
+                          placeholder="First and last name of the person signing"
                           type="text"
                           autoComplete="off"
                           autoCorrect="off"
@@ -2646,6 +2660,7 @@ function DriverManifestCreationWizardInner({
                         />
                       </FormControl>
                       <FormMessage />
+                      <p className="text-[10px] text-muted-foreground">Enter the individual's name, not the company name</p>
                     </FormItem>
                   )}
                 />
@@ -2717,12 +2732,12 @@ function DriverManifestCreationWizardInner({
                   name="hauler_print_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs sm:text-sm">Printed Name *</FormLabel>
+                      <FormLabel className="text-xs sm:text-sm">Driver's Name (who is signing) *</FormLabel>
                       <FormControl>
                         <Input 
                           {...field} 
                           value={field.value || ""} 
-                          placeholder="Full name"
+                          placeholder="First and last name of driver"
                           type="text"
                           autoComplete="off"
                           autoCorrect="off"
