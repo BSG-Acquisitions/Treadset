@@ -364,7 +364,7 @@ async function sendReminderEmail(
   );
 
   const emailResponse = await resend.emails.send({
-    from: "BSG Tire Recycling <onboarding@resend.dev>",
+    from: `${orgName} <noreply@bsgtires.com>`,
     to: [client.email],
     subject,
     html: emailHtml,
