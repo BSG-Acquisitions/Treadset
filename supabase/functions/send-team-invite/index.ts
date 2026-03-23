@@ -97,7 +97,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send the email
     const emailResponse = await resend.emails.send({
-      from: "TreadSet <onboarding@resend.dev>",
+      from: `${org.name} via TreadSet <noreply@bsgtires.com>`,
       to: [email],
       subject: `You've been invited to join ${org.name} on TreadSet`,
       html: `
