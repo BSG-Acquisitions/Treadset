@@ -62,9 +62,11 @@ serve(async (req) => {
     // Get the default organization (BSG)
     const { data: orgs, error: orgError } = await supabase
       .from('organizations')
-      .select('id')
+      .select('id, name')
       .limit(1)
       .single();
+
+    const orgName = orgs?.name || 'TreadSet';
 
     if (orgError || !orgs) {
       console.error('Error fetching organization:', orgError);
