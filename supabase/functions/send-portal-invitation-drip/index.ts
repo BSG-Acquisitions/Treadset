@@ -257,7 +257,8 @@ function generateEmailHtml(
   client: { company_name: string; contact_name: string | null },
   inviteUrl: string,
   unsubscribeUrl: string,
-  isReminder: boolean
+  isReminder: boolean,
+  orgName: string = 'Your Service Provider'
 ): string {
   const greeting = client.contact_name ? `Hi ${client.contact_name}` : 'Hi there';
   const introText = isReminder
