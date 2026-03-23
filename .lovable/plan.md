@@ -1,73 +1,50 @@
 
 
-## Standardize All Emails to treadset.co with Multi-Tenant Branding
+## Fix Multi-Tenant Email Branding & Deliverability
 
-### The Current State (Messy)
+### What's Already Right
+Most outreach/booking emails already dynamically use the org name from the database. The "Powered by TreadSet" footer pattern exists in 4 functions. This is the correct model — org brands the email, TreadSet gets a subtle footer credit.
 
-There are **18 edge functions** sending emails through Resend, using **4 different sender domains**:
-- `noreply@bsgtires.com` — most functions (manifests, bookings, outreach, etc.)
-- `onboarding@resend.dev` — team invites, weekly reminders, portal drip (Resend sandbox — likely hitting spam)
-- `noreply@treadset.com` — password reset only
-- `noreply@bsgtirerecycling.com` — public contact form
+### What Needs Fixing
 
-All emails are hardcoded with "BSG Tire Recycling" branding. No multi-tenant support — when Kyle at Granulum starts using TreadSet, his clients would get emails saying "BSG Tire Recycling."
+#### 1. Fix 5 functions using `onboarding@resend.dev` (URGENT — emails hitting spam)
+These functions send from a Resend sandbox domain. They need to use the verified `bsgtires.com` domain (and later `treadset.co` when verified):
+- `send-team-invite`
+- `resend-corrected-outreach`
+- `send-invite-reminders`
+- `send-weekly-pickup-reminders`
+- `send-portal-invitation-drip`
 
-No email domain is configured in Lovable's email system yet.
+Change from `onboarding@resend.dev` → `noreply@bsgtires.com` with dynamic org name.
 
-### What Needs to Happen
+#### 2. Replace hardcoded "BSG Tire Recycling" with dynamic org lookup in 7 functions
+These functions don't fetch the org name — they hardcode BSG. When Granulum or another company uses TreadSet, their clients would get emails saying "BSG Tire Recycling":
+- `send-manifest-email` — add org lookup from `manifest.organization_id`
+- `send-portal-invitation` — add org lookup
+- `send-client-team-invite` — add org lookup
+- `send-invite-reminders` — add org lookup
+- `send-weekly-pickup-reminders` — add org lookup
+- `send-portal-invitation-drip` — add org lookup
+- `public-contact-form` — this one can stay generic or use a passed org name
 
-#### Phase 1: Set Up treadset.co Email Domain
-- Configure `treadset.co` as the sending domain through Lovable's email settings
-- This handles DNS (SPF, DKIM) verification for deliverability
-- All emails will send from `noreply@treadset.co` (or a subdomain like `notify.treadset.co`)
+Each will query the `organizations` table using the available `organization_id` and use `org.name` as the sender display name.
 
-#### Phase 2: Create a Shared Email Utility
-Create a shared helper in `supabase/functions/_shared/email-sender.ts` that:
-- Centralizes the sender address (`noreply@treadset.co`)
-- Accepts org name for the "From" display name (e.g. `Granulum via TreadSet <noreply@treadset.co>`)
-- Wraps every email in a consistent, professional template with:
-  - Organization's name/branding at the top
-  - "Powered by TreadSet" footer on every email
-  - Consistent styling, responsive design
-- Logs every send attempt for monitoring
+#### 3. Add "Powered by TreadSet" footer to all email templates
+Standardize the footer across all 18 functions. Every email gets:
+```text
+{OrgName} • Professional Services
+Powered by TreadSet
+```
 
-#### Phase 3: Update All 18 Edge Functions
-Replace every hardcoded `from:` and inline HTML template across all functions to use the shared utility:
+#### 4. Sending domain strategy
+For now, keep `bsgtires.com` since it's verified in Resend. Once `treadset.co` is verified in your Resend dashboard, we can switch all functions to `noreply@treadset.co` — this is better for multi-tenant because every org sends from the same verified domain with their name as the display name (e.g., `Granulum <noreply@treadset.co>`).
 
-| Functions (13 using bsgtires.com) | Change |
-|---|---|
-| send-manifest-email, send-client-outreach-email, send-booking-confirmation, process-booking-request, send-diagnostic-email, check-missing-pickups, send-rate-increase-email, send-test-outreach-email, generate-trailer-manifest, send-client-team-invite, send-portal-invitation | `from` → org name via TreadSet `<noreply@treadset.co>` |
+### Implementation Order
+1. Fix the 5 `resend.dev` functions first (deliverability emergency)
+2. Add dynamic org name to the 7 hardcoded functions
+3. Add "Powered by TreadSet" footer to all remaining functions
+4. Deploy all updated functions
 
-| Functions (5 using resend.dev) | Change |
-|---|---|
-| send-invite-reminders, send-weekly-pickup-reminders, resend-corrected-outreach, send-team-invite, send-portal-invitation-drip | Same — plus fixes the sandbox domain issue |
-
-| Other | Change |
-|---|---|
-| send-password-reset (treadset.com) | → treadset.co |
-| public-contact-form (bsgtirerecycling.com) | → treadset.co |
-
-#### Phase 4: Multi-Tenant Branding
-Each email will dynamically brand based on the organization sending it:
-- **From name**: `{Org Name} via TreadSet` (e.g. "Granulum via TreadSet")
-- **Header**: Shows the org's name prominently
-- **Footer**: "Powered by TreadSet" with TreadSet logo/link
-- The sending domain stays `treadset.co` for all orgs (shared infrastructure)
-
-#### Phase 5: Delivery Monitoring
-- Leverage the existing `email_events` table and Resend webhook (`resend-webhook` function) to track delivered/bounced/complained
-- Ensure every send logs to a central email log for audit
-- The existing Email Health Dashboard shows success/bounce/complaint rates
-
-### Technical Summary
-
-| Item | Detail |
-|---|---|
-| Domain setup | Configure treadset.co via Lovable email settings dialog |
-| Shared utility | `_shared/email-sender.ts` — centralized from address, template wrapper, logging |
-| Functions to update | 18 edge functions |
-| Branding model | `{OrgName} via TreadSet <noreply@treadset.co>` + "Powered by TreadSet" footer |
-| Monitoring | Existing resend-webhook + email_events table + health dashboard |
-
-This is a large but systematic change — each function gets the same treatment: swap the from address, wrap content in the branded template, use the shared utility. The result is every email from every org on TreadSet looks professional, sends from a verified domain, and is tracked for delivery.
+### Files Modified
+All 18 edge functions under `supabase/functions/` — each gets the same treatment: dynamic org name in `from`, consistent "Powered by TreadSet" footer, no more sandbox domain.
 
