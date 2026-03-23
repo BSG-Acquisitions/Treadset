@@ -177,7 +177,7 @@ const handler = async (req: Request): Promise<Response> => {
                 <div style="padding: 30px;">
                   <p style="font-size: 16px;">Hi${client.contact_name ? ` ${client.contact_name}` : ''},</p>
                   
-                  <p style="font-size: 16px;">We're excited to introduce you to the <strong>BSG Tire Recycling Client Portal</strong> - a new way to access all your tire pickup records and manage your account online.</p>
+                  <p style="font-size: 16px;">We're excited to introduce you to the <strong>${org.name} Client Portal</strong> - a new way to access all your tire pickup records and manage your account online.</p>
                   
                   <!-- Features -->
                   <div style="background: #f0f7f0; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #1A4314;">
