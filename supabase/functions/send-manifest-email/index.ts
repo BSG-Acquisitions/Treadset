@@ -65,6 +65,14 @@ serve(async (req) => {
       if (error) throw error;
       if (!manifest) throw new Error("Manifest not found");
 
+      // Fetch org name for dynamic branding
+      const { data: orgData } = await supabase
+        .from("organizations")
+        .select("name")
+        .eq("id", manifest.organization_id)
+        .single();
+      if (orgData?.name) orgName = orgData.name;
+
       // Fetch client details separately to avoid reliance on embedded relationships
       const { data: client, error: clientErr } = await supabase
         .from("clients")
