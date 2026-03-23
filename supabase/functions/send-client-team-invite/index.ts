@@ -90,9 +90,17 @@ const handler = async (req: Request): Promise<Response> => {
                       invite.role === 'viewer' ? 'Viewer' : 
                       invite.role === 'primary' ? 'Primary Contact' : invite.role;
 
+    // Get org name for branding
+    const { data: orgData } = await supabase
+      .from("organizations")
+      .select("name")
+      .eq("id", invite.organization_id)
+      .single();
+    const orgName = orgData?.name || 'Your Service Provider';
+
     // Send the email
     const emailResponse = await resend.emails.send({
-      from: "BSG Tire Recycling <noreply@bsgtires.com>",
+      from: `${orgName} <noreply@bsgtires.com>`,
       to: [invite.invited_email],
       subject: `You've been invited to ${client.company_name}'s Client Portal`,
       html: `
