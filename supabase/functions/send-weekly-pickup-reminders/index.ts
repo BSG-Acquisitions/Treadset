@@ -220,7 +220,7 @@ const handler = async (req: Request): Promise<Response> => {
         const unsubscribeUrl = `${supabaseUrl}/functions/v1/portal-invite-unsubscribe?client=${client.id}&token=${unsubscribeToken}&type=reminder`;
 
         const emailResponse = await resend.emails.send({
-          from: "BSG Tire Recycling <onboarding@resend.dev>",
+          from: `${org?.name || 'Your Service Provider'} <noreply@bsgtires.com>`,
           to: [client.email],
           subject: "🗓️ Ready to schedule your tire pickup this week?",
           html: generateEmailHtml(client, bookingUrl, unsubscribeUrl, org?.name || 'BSG Tire Recycling'),
