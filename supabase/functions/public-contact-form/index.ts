@@ -142,7 +142,7 @@ serve(async (req) => {
                 <h1 style="color: white; margin: 0;">Thank You, ${name}!</h1>
               </div>
               <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px;">
-                <p>We've received your message and appreciate you reaching out to BSG Tire Recycling.</p>
+                <p>We've received your message and appreciate you reaching out to ${orgName}.</p>
                 
                 <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #16a34a;">
                   <p style="margin: 0 0 10px 0;"><strong>Subject:</strong> ${subject}</p>
