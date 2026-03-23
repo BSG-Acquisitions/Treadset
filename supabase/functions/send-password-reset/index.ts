@@ -29,7 +29,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Reset URL:", resetUrl);
 
     const emailResponse = await resend.emails.send({
-      from: `TreadSet <noreply@treadset.com>`,
+      from: `TreadSet <noreply@bsgtires.com>`,
       to: [email],
       subject: `Reset Your TreadSet Password`,
       html: `

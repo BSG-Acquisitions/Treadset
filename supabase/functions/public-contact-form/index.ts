@@ -152,14 +152,13 @@ serve(async (req) => {
                 
                 <p>Our team will review your inquiry and get back to you as soon as possible, typically within 1-2 business days.</p>
                 
-                <p style="margin-top: 30px;">Best regards,<br><strong>The BSG Tire Recycling Team</strong></p>
+                <p style="margin-top: 30px;">Best regards,<br><strong>The ${orgName} Team</strong></p>
                 
                 <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
                 
                 <p style="font-size: 12px; color: #9ca3af; text-align: center;">
-                  BSG Tire Recycling<br>
-                  2971 Bellevue St, Detroit, MI 48207<br>
-                  (313) 744-4139
+                  ${orgName}<br>
+                  <span style="font-size: 11px;">Powered by <a href="https://treadset.co" style="color: #9ca3af;">TreadSet</a></span>
                 </p>
               </div>
             </body>
