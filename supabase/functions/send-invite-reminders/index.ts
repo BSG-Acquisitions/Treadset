@@ -404,10 +404,10 @@ function generateReminderEmailHtml(
   let introText: string;
   if (isDay7) {
     introText = wasOpened
-      ? `We noticed you checked out our email about the <strong>BSG Client Portal</strong>. Setting up your account only takes a minute, and you'll get instant access to all your pickup records.`
-      : `We sent you an invitation to the <strong>BSG Client Portal</strong> last week. With your free account, you can view all your tire pickup manifests, download PDFs, and schedule new pickups online.`;
+      ? `We noticed you checked out our email about the <strong>${orgDisplayName} Client Portal</strong>. Setting up your account only takes a minute, and you'll get instant access to all your pickup records.`
+      : `We sent you an invitation to the <strong>${orgDisplayName} Client Portal</strong> last week. With your free account, you can view all your tire pickup manifests, download PDFs, and schedule new pickups online.`;
   } else {
-    introText = `This is a final reminder that your <strong>BSG Client Portal</strong> invitation is expiring soon. Once you sign up, you'll have 24/7 access to your complete tire pickup history and online scheduling.`;
+    introText = `This is a final reminder that your <strong>${orgDisplayName} Client Portal</strong> invitation is expiring soon. Once you sign up, you'll have 24/7 access to your complete tire pickup history and online scheduling.`;
   }
 
   const ctaText = isDay7 
