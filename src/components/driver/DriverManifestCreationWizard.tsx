@@ -2645,12 +2645,12 @@ function DriverManifestCreationWizardInner({
                   name="generator_print_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs sm:text-sm">Printed Name *</FormLabel>
+                      <FormLabel className="text-xs sm:text-sm">Person's Name (who is signing) *</FormLabel>
                       <FormControl>
                         <Input 
                           {...field} 
                           value={field.value || ""} 
-                          placeholder="Full name"
+                          placeholder="First and last name of the person signing"
                           type="text"
                           autoComplete="off"
                           autoCorrect="off"
