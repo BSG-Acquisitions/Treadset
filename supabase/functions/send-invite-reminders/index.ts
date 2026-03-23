@@ -341,9 +341,17 @@ async function sendReminderEmail(
   const unsubscribeToken = await generateSecurityToken(invite.client_id, client.email);
   const unsubscribeUrl = `${supabaseUrl}/functions/v1/portal-invite-unsubscribe?client=${invite.client_id}&token=${unsubscribeToken}`;
 
+  // Fetch org name for dynamic branding
+  const { data: orgData } = await supabase
+    .from("organizations")
+    .select("name")
+    .eq("id", invite.organization_id)
+    .single();
+  const orgName = orgData?.name || 'Your Service Provider';
+
   const subject = reminderType === 'day7'
-    ? `Quick Reminder: Your BSG Client Portal is Ready`
-    : `Last Chance: Activate Your BSG Client Portal`;
+    ? `Quick Reminder: Your ${orgName} Client Portal is Ready`
+    : `Last Chance: Activate Your ${orgName} Client Portal`;
 
   const emailHtml = generateReminderEmailHtml(
     client,
