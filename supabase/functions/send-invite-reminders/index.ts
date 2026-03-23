@@ -341,9 +341,17 @@ async function sendReminderEmail(
   const unsubscribeToken = await generateSecurityToken(invite.client_id, client.email);
   const unsubscribeUrl = `${supabaseUrl}/functions/v1/portal-invite-unsubscribe?client=${invite.client_id}&token=${unsubscribeToken}`;
 
+  // Fetch org name for dynamic branding
+  const { data: orgData } = await supabase
+    .from("organizations")
+    .select("name")
+    .eq("id", invite.organization_id)
+    .single();
+  const orgName = orgData?.name || 'Your Service Provider';
+
   const subject = reminderType === 'day7'
-    ? `Quick Reminder: Your BSG Client Portal is Ready`
-    : `Last Chance: Activate Your BSG Client Portal`;
+    ? `Quick Reminder: Your ${orgName} Client Portal is Ready`
+    : `Last Chance: Activate Your ${orgName} Client Portal`;
 
   const emailHtml = generateReminderEmailHtml(
     client,
@@ -356,7 +364,7 @@ async function sendReminderEmail(
   );
 
   const emailResponse = await resend.emails.send({
-    from: "BSG Tire Recycling <onboarding@resend.dev>",
+    from: `${orgName} <noreply@bsgtires.com>`,
     to: [client.email],
     subject,
     html: emailHtml,
@@ -387,18 +395,19 @@ function generateReminderEmailHtml(
   
   const isDay7 = reminderType === 'day7';
   const headerText = isDay7 ? 'Quick Reminder' : 'Last Chance';
-  const subHeader = isDay7 
+  const subHeader = isDay7
     ? "Your portal account is waiting for you!"
     : "Don't miss out on easy tire pickup scheduling";
+  const orgDisplayName = (client as any).orgName || 'Your Service Provider';
 
   // Personalize message based on whether they opened the first email
   let introText: string;
   if (isDay7) {
     introText = wasOpened
-      ? `We noticed you checked out our email about the <strong>BSG Client Portal</strong>. Setting up your account only takes a minute, and you'll get instant access to all your pickup records.`
-      : `We sent you an invitation to the <strong>BSG Client Portal</strong> last week. With your free account, you can view all your tire pickup manifests, download PDFs, and schedule new pickups online.`;
+      ? `We noticed you checked out our email about the <strong>${orgDisplayName} Client Portal</strong>. Setting up your account only takes a minute, and you'll get instant access to all your pickup records.`
+      : `We sent you an invitation to the <strong>${orgDisplayName} Client Portal</strong> last week. With your free account, you can view all your tire pickup manifests, download PDFs, and schedule new pickups online.`;
   } else {
-    introText = `This is a final reminder that your <strong>BSG Client Portal</strong> invitation is expiring soon. Once you sign up, you'll have 24/7 access to your complete tire pickup history and online scheduling.`;
+    introText = `This is a final reminder that your <strong>${orgDisplayName} Client Portal</strong> invitation is expiring soon. Once you sign up, you'll have 24/7 access to your complete tire pickup history and online scheduling.`;
   }
 
   const ctaText = isDay7 
@@ -417,7 +426,7 @@ function generateReminderEmailHtml(
         
         <!-- Header -->
         <div style="background: linear-gradient(135deg, ${isDay7 ? '#1A4314 0%, #2d5a1e 100%' : '#b45309 0%, #d97706 100%'}); color: white; padding: 40px 30px; text-align: center;">
-          <h2 style="margin: 0 0 10px 0; font-size: 16px; font-weight: 500; opacity: 0.9;">BSG Tire Recycling</h2>
+          <h2 style="margin: 0 0 10px 0; font-size: 16px; font-weight: 500; opacity: 0.9;">${orgDisplayName}</h2>
           <h1 style="margin: 0 0 10px 0; font-size: 28px; font-weight: 700;">${headerText}</h1>
           <p style="margin: 0; font-size: 16px; opacity: 0.9;">${subHeader}</p>
         </div>
@@ -476,10 +485,11 @@ function generateReminderEmailHtml(
       <!-- Unsubscribe footer -->
       <div style="text-align: center; margin-top: 20px;">
         <p style="font-size: 12px; color: #94a3b8;">
-          BSG Tire Recycling • 2971 Bellevue, Detroit, Michigan<br>
+          ${orgDisplayName}<br>
           <a href="${unsubscribeUrl}" style="color: #94a3b8; text-decoration: underline;">
             Stop receiving these reminders
-          </a>
+          </a><br>
+          <span style="font-size: 11px;">Powered by <a href="https://treadset.co" style="color: #94a3b8;">TreadSet</a></span>
         </p>
       </div>
 

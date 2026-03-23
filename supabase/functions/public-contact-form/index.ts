@@ -62,9 +62,11 @@ serve(async (req) => {
     // Get the default organization (BSG)
     const { data: orgs, error: orgError } = await supabase
       .from('organizations')
-      .select('id')
+      .select('id, name')
       .limit(1)
       .single();
+
+    const orgName = orgs?.name || 'TreadSet';
 
     if (orgError || !orgs) {
       console.error('Error fetching organization:', orgError);
@@ -129,7 +131,7 @@ serve(async (req) => {
     // Send confirmation email to the sender
     try {
       const emailResponse = await resend.emails.send({
-        from: "BSG Tire Recycling <noreply@bsgtirerecycling.com>",
+        from: `${orgName} <noreply@bsgtires.com>`,
         to: [email],
         subject: "We received your message!",
         html: `
@@ -140,7 +142,7 @@ serve(async (req) => {
                 <h1 style="color: white; margin: 0;">Thank You, ${name}!</h1>
               </div>
               <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px;">
-                <p>We've received your message and appreciate you reaching out to BSG Tire Recycling.</p>
+                <p>We've received your message and appreciate you reaching out to ${orgName}.</p>
                 
                 <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #16a34a;">
                   <p style="margin: 0 0 10px 0;"><strong>Subject:</strong> ${subject}</p>
@@ -150,14 +152,13 @@ serve(async (req) => {
                 
                 <p>Our team will review your inquiry and get back to you as soon as possible, typically within 1-2 business days.</p>
                 
-                <p style="margin-top: 30px;">Best regards,<br><strong>The BSG Tire Recycling Team</strong></p>
+                <p style="margin-top: 30px;">Best regards,<br><strong>The ${orgName} Team</strong></p>
                 
                 <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
                 
                 <p style="font-size: 12px; color: #9ca3af; text-align: center;">
-                  BSG Tire Recycling<br>
-                  2971 Bellevue St, Detroit, MI 48207<br>
-                  (313) 744-4139
+                  ${orgName}<br>
+                  <span style="font-size: 11px;">Powered by <a href="https://treadset.co" style="color: #9ca3af;">TreadSet</a></span>
                 </p>
               </div>
             </body>

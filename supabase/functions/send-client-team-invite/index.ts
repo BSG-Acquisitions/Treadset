@@ -90,9 +90,17 @@ const handler = async (req: Request): Promise<Response> => {
                       invite.role === 'viewer' ? 'Viewer' : 
                       invite.role === 'primary' ? 'Primary Contact' : invite.role;
 
+    // Get org name for branding
+    const { data: orgData } = await supabase
+      .from("organizations")
+      .select("name")
+      .eq("id", invite.organization_id)
+      .single();
+    const orgName = orgData?.name || 'Your Service Provider';
+
     // Send the email
     const emailResponse = await resend.emails.send({
-      from: "BSG Tire Recycling <noreply@bsgtires.com>",
+      from: `${orgName} <noreply@bsgtires.com>`,
       to: [invite.invited_email],
       subject: `You've been invited to ${client.company_name}'s Client Portal`,
       html: `
@@ -107,14 +115,14 @@ const handler = async (req: Request): Promise<Response> => {
             
             <!-- Header with BSG green gradient -->
             <div style="background: linear-gradient(135deg, #1A4314 0%, #2d5a1e 100%); color: white; padding: 40px 30px; text-align: center;">
-              <h2 style="margin: 0 0 20px 0; font-size: 24px; font-weight: 700; letter-spacing: 0.5px;">BSG Tire Recycling</h2>
+              <h2 style="margin: 0 0 20px 0; font-size: 24px; font-weight: 700; letter-spacing: 0.5px;">${orgName}</h2>
               <h1 style="margin: 0 0 10px 0; font-size: 24px; font-weight: 700;">You're Invited to Join</h1>
               <p style="margin: 0; opacity: 0.9; font-size: 18px;">${client.company_name}</p>
             </div>
 
             <!-- Content -->
             <div style="padding: 30px;">
-              <p style="font-size: 16px;"><strong>${inviterName}</strong> has invited you to access ${client.company_name}'s client portal at BSG Tire Recycling.</p>
+              <p style="font-size: 16px;"><strong>${inviterName}</strong> has invited you to access ${client.company_name}'s client portal at ${orgName}.</p>
               
               <div style="background: #f0f7f0; padding: 15px 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #1A4314;">
                 <p style="margin: 0; font-size: 14px;">
@@ -162,7 +170,8 @@ const handler = async (req: Request): Promise<Response> => {
           <!-- Footer note -->
           <div style="text-align: center; margin-top: 20px;">
             <p style="font-size: 12px; color: #94a3b8;">
-              BSG Tire Recycling • 2971 Bellevue, Detroit, Michigan
+              ${orgName}<br>
+              <span style="font-size: 11px;">Powered by <a href="https://treadset.co" style="color: #94a3b8;">TreadSet</a></span>
             </p>
           </div>
         </body>

@@ -175,17 +175,21 @@ const handler = async (req: Request): Promise<Response> => {
         const unsubscribeToken = await generateSecurityToken(client.id, client.email);
         const unsubscribeUrl = `${supabaseUrl}/functions/v1/portal-invite-unsubscribe?client=${client.id}&token=${unsubscribeToken}`;
 
+        // Get org name for branding
+        const { data: orgData } = await supabase.from("organizations").select("name").eq("id", client.organization_id).single();
+        const orgName = orgData?.name || 'Your Service Provider';
+
         const isReminder = !!lastInvite;
         const subject = isReminder 
-          ? `Reminder: Your BSG Tire Recycling Client Portal Awaits`
-          : `Welcome to Your BSG Tire Recycling Client Portal`;
+          ? `Reminder: Your ${orgName} Client Portal Awaits`
+          : `Welcome to Your ${orgName} Client Portal`;
 
         // Send the email
         const emailResponse = await resend.emails.send({
-          from: "BSG Tire Recycling <onboarding@resend.dev>",
+          from: `${orgName} <noreply@bsgtires.com>`,
           to: [client.email],
           subject,
-          html: generateEmailHtml(client, inviteUrl, unsubscribeUrl, isReminder),
+          html: generateEmailHtml(client, inviteUrl, unsubscribeUrl, isReminder, orgName),
         });
 
         console.log(`Email sent to ${client.email} (${client.company_name}):`, emailResponse);
@@ -253,12 +257,13 @@ function generateEmailHtml(
   client: { company_name: string; contact_name: string | null },
   inviteUrl: string,
   unsubscribeUrl: string,
-  isReminder: boolean
+  isReminder: boolean,
+  orgName: string = 'Your Service Provider'
 ): string {
   const greeting = client.contact_name ? `Hi ${client.contact_name}` : 'Hi there';
   const introText = isReminder
-    ? `Just a friendly reminder that your <strong>BSG Tire Recycling Client Portal</strong> is ready and waiting for you! Sign up to access all your tire pickup records online.`
-    : `We're excited to introduce you to the <strong>BSG Tire Recycling Client Portal</strong> - a new way to access all your tire pickup records and manage your account online.`;
+    ? `Just a friendly reminder that your <strong>${orgName} Client Portal</strong> is ready and waiting for you! Sign up to access all your tire pickup records online.`
+    : `We're excited to introduce you to the <strong>${orgName} Client Portal</strong> - a new way to access all your tire pickup records and manage your account online.`;
 
   return `
     <!DOCTYPE html>
@@ -272,7 +277,7 @@ function generateEmailHtml(
         
         <!-- Header with BSG green gradient -->
         <div style="background: linear-gradient(135deg, #1A4314 0%, #2d5a1e 100%); color: white; padding: 40px 30px; text-align: center;">
-          <h2 style="margin: 0 0 20px 0; font-size: 24px; font-weight: 700; letter-spacing: 0.5px;">BSG Tire Recycling</h2>
+          <h2 style="margin: 0 0 20px 0; font-size: 24px; font-weight: 700; letter-spacing: 0.5px;">${orgName}</h2>
           <h1 style="margin: 0 0 10px 0; font-size: 28px; font-weight: 700;">${isReminder ? 'Your Portal is Ready!' : 'Welcome to Your Client Portal'}</h1>
           <p style="margin: 0; opacity: 0.9; font-size: 16px;">${client.company_name}</p>
         </div>
@@ -325,10 +330,11 @@ function generateEmailHtml(
       <!-- Unsubscribe footer -->
       <div style="text-align: center; margin-top: 20px;">
         <p style="font-size: 12px; color: #94a3b8;">
-          BSG Tire Recycling • 2971 Bellevue, Detroit, Michigan<br>
+          ${orgName}<br>
           <a href="${unsubscribeUrl}" style="color: #94a3b8; text-decoration: underline;">
             Unsubscribe from portal invitations
-          </a>
+          </a><br>
+          <span style="font-size: 11px;">Powered by <a href="https://treadset.co" style="color: #94a3b8;">TreadSet</a></span>
         </p>
       </div>
     </body>

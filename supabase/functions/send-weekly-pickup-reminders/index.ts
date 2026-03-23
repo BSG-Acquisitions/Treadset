@@ -220,7 +220,7 @@ const handler = async (req: Request): Promise<Response> => {
         const unsubscribeUrl = `${supabaseUrl}/functions/v1/portal-invite-unsubscribe?client=${client.id}&token=${unsubscribeToken}&type=reminder`;
 
         const emailResponse = await resend.emails.send({
-          from: "BSG Tire Recycling <onboarding@resend.dev>",
+          from: `${org?.name || 'Your Service Provider'} <noreply@bsgtires.com>`,
           to: [client.email],
           subject: "🗓️ Ready to schedule your tire pickup this week?",
           html: generateEmailHtml(client, bookingUrl, unsubscribeUrl, org?.name || 'BSG Tire Recycling'),
@@ -358,10 +358,11 @@ function generateEmailHtml(
       <!-- Unsubscribe footer -->
       <div style="text-align: center; margin-top: 20px;">
         <p style="font-size: 12px; color: #94a3b8;">
-          ${orgName} • 2971 Bellevue, Detroit, Michigan<br>
+          ${orgName}<br>
           <a href="${unsubscribeUrl}" style="color: #94a3b8; text-decoration: underline;">
             Unsubscribe from weekly reminders
-          </a>
+          </a><br>
+          <span style="font-size: 11px;">Powered by <a href="https://treadset.co" style="color: #94a3b8;">TreadSet</a></span>
         </p>
       </div>
     </body>

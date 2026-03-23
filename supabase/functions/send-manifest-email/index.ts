@@ -50,6 +50,8 @@ serve(async (req) => {
     let pdfPath = body.pdf_path ?? null as string | null;
     let attachment: { filename: string; content: Uint8Array; contentType: string } | null = null;
 
+    // Track org name for dynamic branding
+    let orgName = 'Your Service Provider';
     // If manifest_id is provided, fetch details (client email, pdf_path, etc.)
     if (body.manifest_id) {
       const { data: manifest, error } = await supabase
@@ -62,6 +64,14 @@ serve(async (req) => {
 
       if (error) throw error;
       if (!manifest) throw new Error("Manifest not found");
+
+      // Fetch org name for dynamic branding
+      const { data: orgData } = await supabase
+        .from("organizations")
+        .select("name")
+        .eq("id", manifest.organization_id)
+        .single();
+      if (orgData?.name) orgName = orgData.name;
 
       // Fetch client details separately to avoid reliance on embedded relationships
       const { data: client, error: clientErr } = await supabase
@@ -118,7 +128,7 @@ serve(async (req) => {
           <body>
             <div class="container">
               <div class="header">
-                <h1>BSG Tire Recycling</h1>
+                <h1>${orgName}</h1>
                 <p>Sustainable Tire Solutions</p>
               </div>
               
@@ -154,12 +164,13 @@ serve(async (req) => {
                   </div>`
                 }
                 
-                <p>Thank you for choosing BSG Tire Recycling for your sustainable tire disposal needs.</p>
+                <p>Thank you for choosing ${orgName} for your sustainable tire disposal needs.</p>
                 
                 <div class="footer">
-                  <p><strong>BSG Tire Recycling</strong><br>
+                  <p><strong>${orgName}</strong><br>
                   Committed to environmental responsibility and sustainable practices.</p>
                   <p style="font-size: 12px; margin-top: 15px;">This is an automated message. Please contact us if you have any questions.</p>
+                  <p style="font-size: 11px; margin-top: 10px; color: #9ca3af;">Powered by <a href="https://treadset.co" style="color: #9ca3af;">TreadSet</a></p>
                 </div>
               </div>
             </div>
@@ -243,7 +254,7 @@ serve(async (req) => {
 
     // Send email via Resend
     const emailPayload: any = {
-      from: "BSG Tire Recycling <noreply@bsgtires.com>",
+      from: `${orgName} <noreply@bsgtires.com>`,
       to: toList,
       subject,
       html,

@@ -233,6 +233,7 @@ Deno.serve(async (req) => {
                 <p style="color: #6b7280; font-size: 12px; margin: 0;">
                   ${org.name} • Professional Tire Recycling Services
                 </p>
+                <p style="color: #9ca3af; font-size: 11px; margin: 10px 0 0 0;">Powered by <a href="https://treadset.co" style="color: #9ca3af;">TreadSet</a></p>
                 <p style="color: #9ca3af; font-size: 11px; margin: 10px 0 0 0;">
                   Questions? Reply to this email or call us directly.
                 </p>
@@ -256,7 +257,7 @@ Deno.serve(async (req) => {
       } else {
         try {
           const emailResult = await resend.emails.send({
-            from: `${org.name} <onboarding@resend.dev>`,
+            from: `${org.name} <noreply@bsgtires.com>`,
             to: [client.email],
             subject: `CORRECTED: ${client.company_name} - Schedule Your Tire Pickup`,
             html: emailHtml,
