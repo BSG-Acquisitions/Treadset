@@ -2660,6 +2660,7 @@ function DriverManifestCreationWizardInner({
                         />
                       </FormControl>
                       <FormMessage />
+                      <p className="text-[10px] text-muted-foreground">Enter the individual's name, not the company name</p>
                     </FormItem>
                   )}
                 />
