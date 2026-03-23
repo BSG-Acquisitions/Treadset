@@ -175,10 +175,14 @@ const handler = async (req: Request): Promise<Response> => {
         const unsubscribeToken = await generateSecurityToken(client.id, client.email);
         const unsubscribeUrl = `${supabaseUrl}/functions/v1/portal-invite-unsubscribe?client=${client.id}&token=${unsubscribeToken}`;
 
+        // Get org name for branding
+        const { data: orgData } = await supabase.from("organizations").select("name").eq("id", client.organization_id).single();
+        const orgName = orgData?.name || 'Your Service Provider';
+
         const isReminder = !!lastInvite;
         const subject = isReminder 
-          ? `Reminder: Your BSG Tire Recycling Client Portal Awaits`
-          : `Welcome to Your BSG Tire Recycling Client Portal`;
+          ? `Reminder: Your ${orgName} Client Portal Awaits`
+          : `Welcome to Your ${orgName} Client Portal`;
 
         // Send the email
         const emailResponse = await resend.emails.send({
