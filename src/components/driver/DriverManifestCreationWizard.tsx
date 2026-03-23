@@ -13,6 +13,7 @@ import { useOwnEntity } from "@/hooks/useEntities";
 import { useManifestIntegration } from "@/hooks/useManifestIntegration";
 import { useSendManifestEmail } from "@/hooks/useSendManifestEmail";
 import { useHaulers } from "@/hooks/useHaulers";
+import { useReceivers } from "@/hooks/useReceivers";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
