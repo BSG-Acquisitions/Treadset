@@ -437,7 +437,7 @@ async function sendOutreachEmail(
             <div style="background: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
               <p style="color: #9ca3af; font-size: 12px; margin: 0;">${orgName} • Professional Tire Recycling</p>
               <p style="color: #9ca3af; font-size: 11px; margin: 10px 0 0 0;"><a href="${bookingUrl}&unsubscribe=true" style="color: #9ca3af;">Unsubscribe from these emails</a></p>
-              <p style="color: #b0b0b0; font-size: 10px; margin: 15px 0 0 0;">Powered by <a href="https://treadset.com" style="color: #1A4314; text-decoration: none;">TreadSet</a></p>
+              <p style="color: #b0b0b0; font-size: 10px; margin: 15px 0 0 0;">Powered by <a href="https://treadset.co" style="color: #1A4314; text-decoration: none;">TreadSet</a></p>
               <img src="${trackingPixelUrl}" width="1" height="1" style="display:none;" alt="" />
             </div>
           </div>

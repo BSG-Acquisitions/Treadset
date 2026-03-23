@@ -198,7 +198,7 @@ Deno.serve(async (req) => {
                 <a href="${bookingUrl}&unsubscribe=true" style="color: #9ca3af;">Unsubscribe from these emails</a>
               </p>
               <p style="color: #b0b0b0; font-size: 10px; margin: 15px 0 0 0;">
-                Powered by <a href="https://treadset.com" style="color: #1A4314; text-decoration: none;">TreadSet</a>
+                Powered by <a href="https://treadset.co" style="color: #1A4314; text-decoration: none;">TreadSet</a>
               </p>
               <!-- Open tracking pixel -->
               <img src="${trackingPixelUrl}" width="1" height="1" style="display:none;" alt="" />
