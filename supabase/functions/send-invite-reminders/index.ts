@@ -395,9 +395,10 @@ function generateReminderEmailHtml(
   
   const isDay7 = reminderType === 'day7';
   const headerText = isDay7 ? 'Quick Reminder' : 'Last Chance';
-  const subHeader = isDay7 
+  const subHeader = isDay7
     ? "Your portal account is waiting for you!"
     : "Don't miss out on easy tire pickup scheduling";
+  const orgDisplayName = (client as any).orgName || 'Your Service Provider';
 
   // Personalize message based on whether they opened the first email
   let introText: string;
