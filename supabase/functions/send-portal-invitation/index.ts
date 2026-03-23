@@ -234,10 +234,11 @@ const handler = async (req: Request): Promise<Response> => {
               <!-- Unsubscribe footer -->
               <div style="text-align: center; margin-top: 20px;">
                 <p style="font-size: 12px; color: #94a3b8;">
-                  BSG Tire Recycling • 2971 Bellevue, Detroit, Michigan<br>
+                  ${org.name}<br>
                   <a href="${await generateUnsubscribeUrl(supabaseUrl, client.id, client.email || '')}" style="color: #94a3b8; text-decoration: underline;">
                     Unsubscribe from portal invitations
-                  </a>
+                  </a><br>
+                  <span style="font-size: 11px;">Powered by <a href="https://treadset.co" style="color: #94a3b8;">TreadSet</a></span>
                 </p>
               </div>
             </body>

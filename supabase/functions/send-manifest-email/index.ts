@@ -52,6 +52,7 @@ serve(async (req) => {
 
     // Track org name for dynamic branding
     let orgName = 'Your Service Provider';
+    // If manifest_id is provided, fetch details (client email, pdf_path, etc.)
     if (body.manifest_id) {
       const { data: manifest, error } = await supabase
         .from("manifests")
