@@ -122,7 +122,7 @@ const handler = async (req: Request): Promise<Response> => {
 
             <!-- Content -->
             <div style="padding: 30px;">
-              <p style="font-size: 16px;"><strong>${inviterName}</strong> has invited you to access ${client.company_name}'s client portal at BSG Tire Recycling.</p>
+              <p style="font-size: 16px;"><strong>${inviterName}</strong> has invited you to access ${client.company_name}'s client portal at ${orgName}.</p>
               
               <div style="background: #f0f7f0; padding: 15px 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #1A4314;">
                 <p style="margin: 0; font-size: 14px;">
