@@ -1164,6 +1164,18 @@ function DriverManifestCreationWizardInner({
             receiver_print_name: `${receiverPrintName} - ${new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}`,
             receiver_date: new Date().toLocaleDateString('en-US'),
           } : {}),
+
+          // Pre-populate Part 3 left side (Receiver static info) from org's default receiver
+          // Required by Michigan compliance: receiver name, address, phone, site reg must be on the manifest at time of pickup
+          ...(!isDropToProcessor && receivers.length > 0 ? {
+            receiver_name: receivers[0].receiver_name || '',
+            receiver_physical_address: receivers[0].receiver_mailing_address || '',
+            receiver_city: receivers[0].receiver_city || '',
+            receiver_state: receivers[0].receiver_state || '',
+            receiver_zip: receivers[0].receiver_zip || '',
+            receiver_phone: receivers[0].receiver_phone || '',
+            receiver_mi_reg: receivers[0].collection_site_reg || '',
+          } : {}),
         }
       });
 
