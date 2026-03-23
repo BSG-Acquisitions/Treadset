@@ -262,8 +262,8 @@ function generateEmailHtml(
 ): string {
   const greeting = client.contact_name ? `Hi ${client.contact_name}` : 'Hi there';
   const introText = isReminder
-    ? `Just a friendly reminder that your <strong>BSG Tire Recycling Client Portal</strong> is ready and waiting for you! Sign up to access all your tire pickup records online.`
-    : `We're excited to introduce you to the <strong>BSG Tire Recycling Client Portal</strong> - a new way to access all your tire pickup records and manage your account online.`;
+    ? `Just a friendly reminder that your <strong>${orgName} Client Portal</strong> is ready and waiting for you! Sign up to access all your tire pickup records online.`
+    : `We're excited to introduce you to the <strong>${orgName} Client Portal</strong> - a new way to access all your tire pickup records and manage your account online.`;
 
   return `
     <!DOCTYPE html>
