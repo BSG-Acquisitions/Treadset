@@ -150,9 +150,9 @@ const handler = async (req: Request): Promise<Response> => {
 
         // Send the email with tracking
         const emailResponse = await resend.emails.send({
-          from: "BSG Tire Recycling <noreply@bsgtires.com>",
+          from: `${org.name} <noreply@bsgtires.com>`,
           to: [recipientEmail],
-          subject: `Welcome to Your BSG Tire Recycling Client Portal`,
+          subject: `Welcome to Your ${org.name} Client Portal`,
           html: `
             <!DOCTYPE html>
             <html>
