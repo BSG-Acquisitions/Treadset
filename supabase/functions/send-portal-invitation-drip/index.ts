@@ -277,7 +277,7 @@ function generateEmailHtml(
         
         <!-- Header with BSG green gradient -->
         <div style="background: linear-gradient(135deg, #1A4314 0%, #2d5a1e 100%); color: white; padding: 40px 30px; text-align: center;">
-          <h2 style="margin: 0 0 20px 0; font-size: 24px; font-weight: 700; letter-spacing: 0.5px;">BSG Tire Recycling</h2>
+          <h2 style="margin: 0 0 20px 0; font-size: 24px; font-weight: 700; letter-spacing: 0.5px;">${orgName}</h2>
           <h1 style="margin: 0 0 10px 0; font-size: 28px; font-weight: 700;">${isReminder ? 'Your Portal is Ready!' : 'Welcome to Your Client Portal'}</h1>
           <p style="margin: 0; opacity: 0.9; font-size: 16px;">${client.company_name}</p>
         </div>
