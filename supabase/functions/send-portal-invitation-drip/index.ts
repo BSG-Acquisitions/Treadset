@@ -186,10 +186,10 @@ const handler = async (req: Request): Promise<Response> => {
 
         // Send the email
         const emailResponse = await resend.emails.send({
-          from: "BSG Tire Recycling <onboarding@resend.dev>",
+          from: `${orgName} <noreply@bsgtires.com>`,
           to: [client.email],
           subject,
-          html: generateEmailHtml(client, inviteUrl, unsubscribeUrl, isReminder),
+          html: generateEmailHtml(client, inviteUrl, unsubscribeUrl, isReminder, orgName),
         });
 
         console.log(`Email sent to ${client.email} (${client.company_name}):`, emailResponse);
