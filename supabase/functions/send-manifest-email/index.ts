@@ -50,7 +50,8 @@ serve(async (req) => {
     let pdfPath = body.pdf_path ?? null as string | null;
     let attachment: { filename: string; content: Uint8Array; contentType: string } | null = null;
 
-    // If manifest_id is provided, fetch details (client email, pdf_path, etc.)
+    // Track org name for dynamic branding
+    let orgName = 'Your Service Provider';
     if (body.manifest_id) {
       const { data: manifest, error } = await supabase
         .from("manifests")
