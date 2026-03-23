@@ -164,12 +164,13 @@ serve(async (req) => {
                   </div>`
                 }
                 
-                <p>Thank you for choosing BSG Tire Recycling for your sustainable tire disposal needs.</p>
+                <p>Thank you for choosing ${orgName} for your sustainable tire disposal needs.</p>
                 
                 <div class="footer">
-                  <p><strong>BSG Tire Recycling</strong><br>
+                  <p><strong>${orgName}</strong><br>
                   Committed to environmental responsibility and sustainable practices.</p>
                   <p style="font-size: 12px; margin-top: 15px;">This is an automated message. Please contact us if you have any questions.</p>
+                  <p style="font-size: 11px; margin-top: 10px; color: #9ca3af;">Powered by <a href="https://treadset.co" style="color: #9ca3af;">TreadSet</a></p>
                 </div>
               </div>
             </div>
