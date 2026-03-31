@@ -18,7 +18,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
-import { Building, MapPin, Calendar, CheckCircle2, Clock, AlertCircle, Package, Truck, MoreVertical, Move, Phone, Plus, TrendingUp, DollarSign, ChevronLeft, ChevronRight, Search, Route, Pencil, Save } from "lucide-react";
+import { Building, MapPin, Calendar, CheckCircle2, Clock, AlertCircle, Package, Truck, MoreVertical, Move, Phone, Plus, TrendingUp, DollarSign, ChevronLeft, ChevronRight, Search, Route, Pencil, Save, Navigation } from "lucide-react";
+import { useGPSTracking } from "@/hooks/useGPSTracking";
+import { GPSTrackingIndicator } from "@/components/driver/GPSTrackingIndicator";
 import { format, addWeeks, startOfWeek } from "date-fns";
 import { toast } from "sonner";
 
