@@ -14,6 +14,44 @@ export default defineConfig(({ mode }) => ({
     react(),
     mode === 'development' &&
     componentTagger(),
+    VitePWA({
+      registerType: "autoUpdate",
+      devOptions: {
+        enabled: false,
+      },
+      workbox: {
+        navigateFallbackDenylist: [/^\/~oauth/],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+      },
+      manifest: {
+        name: "TreadSet - Tire Recycling Management",
+        short_name: "TreadSet",
+        description: "Old Tires = New Possibilities",
+        theme_color: "#16a34a",
+        background_color: "#ffffff",
+        display: "standalone",
+        orientation: "portrait",
+        start_url: "/",
+        icons: [
+          {
+            src: "/pwa-icon-192.png",
+            sizes: "192x192",
+            type: "image/png",
+          },
+          {
+            src: "/pwa-icon-512.png",
+            sizes: "512x512",
+            type: "image/png",
+          },
+          {
+            src: "/pwa-icon-512.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "maskable",
+          },
+        ],
+      },
+    }),
   ].filter(Boolean),
   resolve: {
     alias: {
