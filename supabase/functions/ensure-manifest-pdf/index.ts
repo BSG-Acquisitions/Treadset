@@ -80,7 +80,7 @@ function buildDomainData(m: any, org?: any): Record<string, string> {
     hauler_state: m.hauler?.hauler_state || m.hauler?.state || '',
     hauler_zip: m.hauler?.hauler_zip || m.hauler?.zip || '',
     hauler_phone: m.hauler?.hauler_phone || m.hauler?.phone || '',
-    hauler_mi_reg: m.hauler?.hauler_mi_reg || '',
+    hauler_mi_reg: m.hauler?.hauler_mi_reg || org?.state_registration || '',
     hauler_other_id: '',
     receiver_name: '',
     receiver_physical_address: '',
