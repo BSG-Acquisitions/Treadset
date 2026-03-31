@@ -251,7 +251,7 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to fetch manifest: ${manifestFetchError.message}`);
     }
 
-    const domainData = buildDomainData(manifestRow || {});
+    const domainData = buildDomainData(manifestRow || {}, org);
     const v4Fields = applyFieldMapping(domainData, fieldMapping);
 
     const outputPath = `manifests/acroform-${manifestId}-${Date.now()}.pdf`;
