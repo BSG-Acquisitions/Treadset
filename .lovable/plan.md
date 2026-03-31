@@ -1,42 +1,138 @@
 
 
-## Fix Michigan Manifest Compliance Issues (Ann Vogen Requirements)
+# GPS Route Tracking + PWA Support — Implementation Plan
 
-Three problems identified on Hood's Tire manifests that violate state compliance requirements.
+## Overview
+Add real-time GPS tracking for drivers on active routes, an edge function to calculate route efficiency metrics, and PWA installability so drivers can add the app to their home screen.
 
-### Problem 1: Part 3 (Receiver) is blank at time of pickup
+---
 
-**Root cause**: Receiver information (BSG's name, address, phone, site registration) is only populated during Stage 2 (receiver signature at the office). The initial PDF generated at pickup time (Stage 1) has all Part 3 fields empty.
+## 1. Database: New `route_location_pings` Table
 
-**Ann's requirement**: At time of removal, Part 3 left side (Name, address, phone, site number) must already be filled in. Only the signature, printed name, date, and tire count get added later when tires reach BSG.
+Create a migration with:
 
-**Fix**: In `src/components/driver/DriverManifestCreationWizard.tsx` (around line 1096, the overrides block), add receiver info from the organization's default receiver. Query the `receivers` table for the org's active receiver and include `receiver_name`, `receiver_physical_address`, `receiver_city`, `receiver_state`, `receiver_zip`, `receiver_phone`, and `receiver_mi_reg` in the Stage 1 PDF overrides — even though there's no receiver signature yet.
+```sql
+create table public.route_location_pings (
+  id uuid primary key default gen_random_uuid(),
+  assignment_id uuid references public.assignments(id) on delete cascade not null,
+  user_id uuid not null,
+  organization_id uuid references public.organizations(id) on delete cascade not null,
+  latitude double precision not null,
+  longitude double precision not null,
+  accuracy double precision,
+  event_type text not null default 'ping',  -- 'ping', 'start', 'stop_completed', 'end'
+  recorded_at timestamptz not null default now(),
+  created_at timestamptz not null default now()
+);
 
-Also update `src/hooks/useManifestIntegration.ts` `convertManifestToAcroForm` (around line 129-136) to populate receiver fields from the organization's default receiver when no explicit receiver data is provided.
+create index idx_pings_assignment on route_location_pings(assignment_id, recorded_at);
+create index idx_pings_user_date on route_location_pings(user_id, recorded_at);
 
-### Problem 2: Part 1 Generator Print Name has company name or is blank
+alter table route_location_pings enable row level security;
 
-**Root cause**: The driver wizard clears `generator_print_name` on the signature step (line 388) and requires the driver to type it. If the driver types the company name (e.g., "Hood Tire Service") instead of the person's name, or skips it, it goes through as-is.
+-- Drivers can insert their own pings
+create policy "Users can insert own pings"
+  on route_location_pings for insert to authenticated
+  with check (auth.uid() = user_id);
 
-**Fix**: Add a validation hint/label in the signature step UI making it clear this must be the **person's name who is signing**, not the company name. In `DriverManifestCreationWizard.tsx`, update the `generator_print_name` form field label and placeholder (around line 2630) to say "Name of Person Signing (not company name)" with helper text.
+-- Users can read pings for their org
+create policy "Org members can read pings"
+  on route_location_pings for select to authenticated
+  using (organization_id in (
+    select organization_id from users where id = auth.uid()
+  ));
+```
 
-### Problem 3: Part 2 Hauler Print Name missing on some manifests
+---
 
-**Root cause**: Same issue — the `hauler_print_name` field is required by the form schema but if somehow bypassed or if the driver doesn't fill it, it can end up blank.
+## 2. Hook: `useGPSTracking`
 
-**Fix**: The existing validation (`form.trigger(['generator_print_name', 'hauler_print_name']`) at line 652 should catch this. Add an additional server-side check in the manifest completion flow — if `hauler_print_name` is empty, block submission. Also improve the label clarity on the hauler print name field.
+New file: `src/hooks/useGPSTracking.ts`
 
-### Files to modify
+- **State**: `isTracking`, `currentPosition`, `error`
+- **`startTracking(assignmentId)`**: Logs a `start` event, begins `watchPosition()` with high accuracy, inserts pings every ~15 seconds via Supabase client, requests Wake Lock if available
+- **`stopTracking()`**: Logs an `end` event, clears watch, releases Wake Lock
+- **`logStopCompleted(lat, lng)`**: Inserts a `stop_completed` event with current coordinates
+- Uses the existing `supabase` client and `useAuth` hook for `user_id` / `organization_id`
 
-| File | Change |
-|------|--------|
-| `src/components/driver/DriverManifestCreationWizard.tsx` | 1) Fetch default receiver for org and include receiver info fields in Stage 1 PDF overrides. 2) Update generator/hauler print name field labels to clarify "person's name, not company" |
-| `src/hooks/useManifestIntegration.ts` | Fetch org's default receiver to populate Part 3 left-side fields when no receiver data exists yet |
+---
 
-### What this achieves
+## 3. Edge Function: `calculate-route-efficiency`
 
-After this fix, the initial manifest PDF generated at pickup will have:
-- **Part 3 left side**: BSG's (or the org's receiver's) name, address, phone, and site registration pre-filled
-- **Part 3 right side**: Still blank (signature, print name, date added at Stage 2)
-- **Part 1 & 2 print names**: Clearer UI guidance ensuring drivers enter the actual person's name
+New file: `supabase/functions/calculate-route-efficiency/index.ts`
+
+- Accepts `{ assignment_id }` in POST body
+- Queries all `route_location_pings` for that assignment ordered by `recorded_at`
+- Calculates:
+  - **total_distance_miles**: Haversine sum between sequential pings, converted km to miles
+  - **total_duration_minutes**: time between first and last ping
+  - **stops_completed**: count of `stop_completed` events
+  - **average_time_per_stop_minutes**: duration / stops
+  - **efficiency_score**: `(stops_completed / total_duration_minutes) * 100`, capped at 100
+- Returns JSON with all metrics
+- Uses CORS headers, validates JWT in code
+
+---
+
+## 4. Driver Routes Page — Start/Stop Tracking
+
+Modify `src/pages/DriverRoutes.tsx`:
+
+- Import `useGPSTracking`
+- Add a **"Start Route" / "Stop Route"** toggle button at top of the day view header
+- When started, calls `startTracking(assignmentId)` for the first active assignment
+- Show a small **green pulsing dot** indicator while tracking is active (CSS animation)
+- When the driver marks a stop complete (existing flow), call `logStopCompleted()` with current lat/lng
+
+---
+
+## 5. Driver Dashboard — "Today's Efficiency" Card
+
+Modify `src/pages/DriverDashboard.tsx`:
+
+- After existing stats grid, add a new row with a `StatsCard` showing today's efficiency
+- On mount, call `calculate-route-efficiency` for each completed assignment today
+- Display aggregate `efficiency_score` as a percentage
+- Color: green (>80%), amber (50-80%), red (<50%)
+- Uses existing `StatsCard` component with appropriate variant
+
+---
+
+## 6. Manager Route View — "Route Efficiency" Tab
+
+Modify `src/pages/EnhancedRoutesToday.tsx`:
+
+- Add a new **"Efficiency"** tab alongside existing day/week tabs
+- Shows a table of today's drivers with columns: **Driver, Stops Completed, Miles Driven, Avg Time/Stop, Efficiency Score**
+- Calls `calculate-route-efficiency` for each of today's assignments
+- Groups results by driver (vehicle driver_email)
+
+---
+
+## 7. PWA Setup
+
+- Install `vite-plugin-pwa` 
+- Configure in `vite.config.ts` with manifest (name: "TreadSet", theme color, icons) and workbox settings
+- Add `navigateFallbackDenylist: [/^\/~oauth/]` to workbox config
+- Add PWA meta tags to `index.html` (apple-mobile-web-app-capable, theme-color, apple-touch-icon)
+- Create PWA icon files in `public/` (192x192, 512x512)
+- Basic service worker for caching static assets (no offline data sync)
+
+---
+
+## What Won't Be Touched
+
+- Manifest system, payment flow, auth logic — all unchanged
+- Existing Supabase client, `useAuth`, role checking patterns — reused as-is
+- No changes to feature flags (GPS tracking is always-on for drivers)
+
+---
+
+## Technical Notes
+
+- GPS `watchPosition` uses `enableHighAccuracy: true` with a 15-second throttle to balance accuracy vs battery
+- Wake Lock API (`navigator.wakeLock`) prevents screen sleep during active tracking — gracefully degrades if unsupported
+- Haversine distance reuses the pattern from `src/lib/geo.ts`
+- The edge function uses a service-role Supabase client to read pings across users
+- Pings table is append-only with no update/delete policies for integrity
 
