@@ -248,6 +248,25 @@ export default function DriverRoutes() {
               </p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
+              {viewMode === 'day' && dayAssignments.length > 0 && (
+                <Button
+                  size="sm"
+                  variant={isTracking ? "destructive" : "default"}
+                  onClick={() => {
+                    if (isTracking) {
+                      stopTracking();
+                    } else {
+                      const firstActive = dayAssignments.find(a => a.status !== 'completed');
+                      if (firstActive) startTracking(firstActive.id);
+                    }
+                  }}
+                  className={!isTracking ? '!bg-green-600 hover:!bg-green-700 text-white' : ''}
+                >
+                  <Navigation className="h-4 w-4 mr-2" />
+                  {isTracking ? 'Stop Route' : 'Start Route'}
+                </Button>
+              )}
+              <GPSTrackingIndicator isTracking={isTracking} />
               <DriverSchedulePickupDialog
                 trigger={
                   <Button size="sm" className="!bg-brand-primary hover:!bg-brand-primary-hover text-white">
