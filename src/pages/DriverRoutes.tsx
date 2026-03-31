@@ -18,7 +18,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
-import { Building, MapPin, Calendar, CheckCircle2, Clock, AlertCircle, Package, Truck, MoreVertical, Move, Phone, Plus, TrendingUp, DollarSign, ChevronLeft, ChevronRight, Search, Route, Pencil, Save } from "lucide-react";
+import { Building, MapPin, Calendar, CheckCircle2, Clock, AlertCircle, Package, Truck, MoreVertical, Move, Phone, Plus, TrendingUp, DollarSign, ChevronLeft, ChevronRight, Search, Route, Pencil, Save, Navigation } from "lucide-react";
+import { useGPSTracking } from "@/hooks/useGPSTracking";
+import { GPSTrackingIndicator } from "@/components/driver/GPSTrackingIndicator";
 import { format, addWeeks, startOfWeek } from "date-fns";
 import { toast } from "sonner";
 
@@ -71,6 +73,7 @@ export default function DriverRoutes() {
   
   const { user } = useAuth();
   const organizationId = user?.currentOrganization?.id;
+  const { isTracking, startTracking, stopTracking, logStopCompleted, currentPosition, error: gpsError } = useGPSTracking();
   const { getRouteSuggestions, isLoading: routeSuggestionsLoading } = useDriverRouteSuggestions();
   
   // Day view data
@@ -245,6 +248,25 @@ export default function DriverRoutes() {
               </p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
+              {viewMode === 'day' && dayAssignments.length > 0 && (
+                <Button
+                  size="sm"
+                  variant={isTracking ? "destructive" : "default"}
+                  onClick={() => {
+                    if (isTracking) {
+                      stopTracking();
+                    } else {
+                      const firstActive = dayAssignments.find(a => a.status !== 'completed');
+                      if (firstActive) startTracking(firstActive.id);
+                    }
+                  }}
+                  className={!isTracking ? '!bg-green-600 hover:!bg-green-700 text-white' : ''}
+                >
+                  <Navigation className="h-4 w-4 mr-2" />
+                  {isTracking ? 'Stop Route' : 'Start Route'}
+                </Button>
+              )}
+              <GPSTrackingIndicator isTracking={isTracking} />
               <DriverSchedulePickupDialog
                 trigger={
                   <Button size="sm" className="!bg-brand-primary hover:!bg-brand-primary-hover text-white">

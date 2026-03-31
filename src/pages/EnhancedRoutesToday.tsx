@@ -55,6 +55,7 @@ import { format, addDays, subDays, startOfWeek, addWeeks, subWeeks } from "date-
 import { WeeklyPickupsGrid } from "@/components/routes/WeeklyPickupsGrid";
 import { calculateManifestPTE } from "@/lib/michigan-conversions";
 import { LocationGeocodeDialog } from "@/components/locations/LocationGeocodeDialog";
+import { RouteEfficiencyTab } from "@/components/routes/RouteEfficiencyTab";
 
 export default function EnhancedRoutesToday() {
   // Initialize activeDay with current local date string to avoid timezone issues
@@ -353,9 +354,10 @@ export default function EnhancedRoutesToday() {
 
         <div className="py-3 px-2 sm:px-4">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-3">
+            <TabsList className="grid w-full grid-cols-4 mb-3">
               <TabsTrigger value="today">Day View</TabsTrigger>
               <TabsTrigger value="week">Week View</TabsTrigger>
+              <TabsTrigger value="efficiency">Efficiency</TabsTrigger>
               <TabsTrigger value="stats">Statistics</TabsTrigger>
             </TabsList>
 
@@ -593,6 +595,11 @@ export default function EnhancedRoutesToday() {
                   </div>
                 </div>
               </div>
+            </TabsContent>
+
+            {/* Route Efficiency Tab */}
+            <TabsContent value="efficiency">
+              <RouteEfficiencyTab assignments={allAssignments} />
             </TabsContent>
 
             {/* Statistics Tab - Now with real data */}

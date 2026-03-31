@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { RouteOptimizationTips } from '@/components/driver/RouteOptimizationTips';
 import { DriverOutboundAssignments } from '@/components/driver/DriverOutboundAssignments';
+import { TodayEfficiencyCard } from '@/components/driver/TodayEfficiencyCard';
 import { 
   Truck, 
   FileText, 
@@ -136,6 +137,11 @@ export default function DriverDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Today's Efficiency */}
+        <TodayEfficiencyCard 
+          completedAssignmentIds={completedToday.map(a => a.id)} 
+        />
 
         {/* Quick Actions */}
         <Card>

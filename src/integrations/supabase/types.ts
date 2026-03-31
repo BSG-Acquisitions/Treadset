@@ -4464,6 +4464,60 @@ export type Database = {
           },
         ]
       }
+      route_location_pings: {
+        Row: {
+          accuracy: number | null
+          assignment_id: string
+          created_at: string
+          event_type: string
+          id: string
+          latitude: number
+          longitude: number
+          organization_id: string
+          recorded_at: string
+          user_id: string
+        }
+        Insert: {
+          accuracy?: number | null
+          assignment_id: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          latitude: number
+          longitude: number
+          organization_id: string
+          recorded_at?: string
+          user_id: string
+        }
+        Update: {
+          accuracy?: number | null
+          assignment_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          latitude?: number
+          longitude?: number
+          organization_id?: string
+          recorded_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "route_location_pings_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "route_location_pings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_zones: {
         Row: {
           center_lat: number | null
