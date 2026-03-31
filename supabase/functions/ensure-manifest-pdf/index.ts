@@ -59,7 +59,7 @@ const MICHIGAN_TEMPLATE = 'Michigan_Manifest_Acroform_V4.pdf';
 /**
  * Build domain data from manifest row (state-agnostic)
  */
-function buildDomainData(m: any): Record<string, string> {
+function buildDomainData(m: any, org?: any): Record<string, string> {
   return {
     manifest_number: String(m.manifest_number || ''),
     vehicle_trailer: m.vehicle_trailer ? String(m.vehicle_trailer) : '',
