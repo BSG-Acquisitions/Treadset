@@ -171,7 +171,7 @@ export function HaulerForm({ initialData, onSubmit, onCancel, isLoading }: Haule
           name="hauler_mi_reg"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>State Registration</FormLabel>
+              <FormLabel>State Hauler Registration Number</FormLabel>
               <FormControl>
                 <Input placeholder="MI registration number" {...field} />
               </FormControl>

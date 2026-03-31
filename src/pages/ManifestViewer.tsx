@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useManifest } from '@/hooks/useManifests';
 import { ManifestPDFControls } from '@/components/ManifestPDFControls';
 import { format } from 'date-fns';
-import { ArrowLeft, FileText, User, MapPin, Package, Clock, CreditCard, CheckCircle } from 'lucide-react';
+import { ArrowLeft, FileText, User, MapPin, Package, Clock, CreditCard, CheckCircle, Truck } from 'lucide-react';
 
 export default function ManifestViewer() {
   const { id } = useParams<{ id: string }>();
@@ -137,7 +137,28 @@ export default function ManifestViewer() {
             </CardContent>
           </Card>
 
-          {/* Tire Counts */}
+          {/* Hauler Information */}
+          {manifest.hauler && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Truck className="h-5 w-5" />
+                  Hauler Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div>
+                  <div className="font-medium">{manifest.hauler.hauler_name}</div>
+                </div>
+                {manifest.hauler.hauler_mi_reg && (
+                  <div className="border-t pt-2">
+                    <div className="text-sm text-muted-foreground">State Hauler Registration Number</div>
+                    <div className="font-mono font-medium">{manifest.hauler.hauler_mi_reg}</div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

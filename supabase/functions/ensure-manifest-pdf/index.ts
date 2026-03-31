@@ -59,7 +59,7 @@ const MICHIGAN_TEMPLATE = 'Michigan_Manifest_Acroform_V4.pdf';
 /**
  * Build domain data from manifest row (state-agnostic)
  */
-function buildDomainData(m: any): Record<string, string> {
+function buildDomainData(m: any, org?: any): Record<string, string> {
   return {
     manifest_number: String(m.manifest_number || ''),
     vehicle_trailer: m.vehicle_trailer ? String(m.vehicle_trailer) : '',
@@ -80,7 +80,7 @@ function buildDomainData(m: any): Record<string, string> {
     hauler_state: m.hauler?.hauler_state || m.hauler?.state || '',
     hauler_zip: m.hauler?.hauler_zip || m.hauler?.zip || '',
     hauler_phone: m.hauler?.hauler_phone || m.hauler?.phone || '',
-    hauler_mi_reg: m.hauler?.hauler_mi_reg || '',
+    hauler_mi_reg: m.hauler?.hauler_mi_reg || org?.state_registration || '',
     hauler_other_id: '',
     receiver_name: '',
     receiver_physical_address: '',
@@ -166,7 +166,7 @@ Deno.serve(async (req) => {
     // 3. Look up the organization's state_code and state compliance config
     const { data: org } = await supabase
       .from('organizations')
-      .select('state_code')
+      .select('state_code, state_registration')
       .eq('id', pickup.organization_id)
       .single();
 
@@ -251,7 +251,7 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to fetch manifest: ${manifestFetchError.message}`);
     }
 
-    const domainData = buildDomainData(manifestRow || {});
+    const domainData = buildDomainData(manifestRow || {}, org);
     const v4Fields = applyFieldMapping(domainData, fieldMapping);
 
     const outputPath = `manifests/acroform-${manifestId}-${Date.now()}.pdf`;

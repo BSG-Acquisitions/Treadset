@@ -1,0 +1,1 @@
+UPDATE haulers SET hauler_mi_reg = '50-22-0002' WHERE id = '801bb0d9-9c46-4189-8b88-c99d5c7bbaa2';

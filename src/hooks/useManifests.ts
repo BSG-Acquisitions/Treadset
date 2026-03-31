@@ -83,6 +83,11 @@ export interface Manifest {
     id: string;
     pickup_date: string;
   };
+  hauler?: {
+    id: string;
+    hauler_name: string;
+    hauler_mi_reg: string | null;
+  };
 }
 
 export interface CreateManifestData {
@@ -175,7 +180,8 @@ export const useManifest = (id: string) => {
           *,
           client:clients(id, company_name, email),
           location:locations(id, name, address),
-          pickup:pickups!manifests_pickup_id_fkey(id, pickup_date)
+          pickup:pickups!manifests_pickup_id_fkey(id, pickup_date),
+          hauler:haulers(id, hauler_name, hauler_mi_reg)
         `)
         .eq('id', id)
         .maybeSingle();

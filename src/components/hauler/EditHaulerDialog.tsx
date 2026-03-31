@@ -17,13 +17,13 @@ export function EditHaulerDialog({ open, onOpenChange, hauler }: EditHaulerDialo
     await updateHauler.mutateAsync({
       id: hauler.id,
       data: {
-        hauler_name: data.company_name,
-        hauler_mailing_address: data.mailing_address,
-        hauler_city: data.city,
-        hauler_state: data.state,
-        hauler_zip: data.zip,
-        hauler_phone: data.phone,
-        hauler_mi_reg: data.michigan_registration,
+        hauler_name: data.hauler_name,
+        hauler_mailing_address: data.hauler_mailing_address,
+        hauler_city: data.hauler_city,
+        hauler_state: data.hauler_state,
+        hauler_zip: data.hauler_zip,
+        hauler_phone: data.hauler_phone,
+        hauler_mi_reg: data.hauler_mi_reg,
         email: data.email,
       },
     });
