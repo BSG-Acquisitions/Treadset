@@ -1,138 +1,105 @@
 
 
-# GPS Route Tracking + PWA Support — Implementation Plan
+# Hauler Registration Number Compliance Fix
 
-## Overview
-Add real-time GPS tracking for drivers on active routes, an edge function to calculate route efficiency metrics, and PWA installability so drivers can add the app to their home screen.
+## Audit Findings
+
+### AcroForm Field Source (Item 2)
+The `ensure-manifest-pdf` edge function at line 83 maps:
+```
+hauler_mi_reg: m.hauler?.hauler_mi_reg || ''
+```
+This **already pulls from the hauler record** via `manifests.hauler_id → haulers.hauler_mi_reg`. It does NOT fall back to the organization's registration number. So if a manifest has a `hauler_id` pointing to a hauler with `hauler_mi_reg` populated, it will use that value correctly.
+
+**The root problem is likely that Solo Richards' hauler record has no `hauler_mi_reg` value set**, so the field renders as empty on the PDF. There is also **no fallback to the organization's registration** — it just maps to empty string.
+
+### EditHaulerDialog Bug Found
+`EditHaulerDialog.handleSubmit` maps `data.company_name`, `data.michigan_registration`, etc. — but `HaulerForm` submits fields named `hauler_name`, `hauler_mi_reg`, etc. This means **edits to hauler_mi_reg via the Edit dialog are silently lost** because it reads `data.michigan_registration` (undefined) instead of `data.hauler_mi_reg`.
 
 ---
 
-## 1. Database: New `route_location_pings` Table
+## Plan
 
-Create a migration with:
+### 1. Data Update — Solo Richards → JNJ Tire Recycling
+Use the Supabase insert/update tool to find the hauler record matching "Solo Richards" and update it:
+- `hauler_name`: "JNJ Tire Recycling"
+- `hauler_mailing_address`: "4514 French Road"
+- `hauler_city`: "Detroit"
+- `hauler_state`: "MI"
+- `hauler_zip`: "48214"
+- `hauler_phone`: "313-790-6207"
+- `hauler_mi_reg`: "50-22-0002"
 
-```sql
-create table public.route_location_pings (
-  id uuid primary key default gen_random_uuid(),
-  assignment_id uuid references public.assignments(id) on delete cascade not null,
-  user_id uuid not null,
-  organization_id uuid references public.organizations(id) on delete cascade not null,
-  latitude double precision not null,
-  longitude double precision not null,
-  accuracy double precision,
-  event_type text not null default 'ping',  -- 'ping', 'start', 'stop_completed', 'end'
-  recorded_at timestamptz not null default now(),
-  created_at timestamptz not null default now()
-);
+No new record created. Query first to find the ID, then update.
 
-create index idx_pings_assignment on route_location_pings(assignment_id, recorded_at);
-create index idx_pings_user_date on route_location_pings(user_id, recorded_at);
+### 2. Fix EditHaulerDialog Field Mapping Bug
+In `src/components/hauler/EditHaulerDialog.tsx`, the `handleSubmit` function incorrectly maps field names. The form submits `hauler_name`, `hauler_mi_reg`, etc., but the handler reads `data.company_name`, `data.michigan_registration`. Fix:
 
-alter table route_location_pings enable row level security;
+```typescript
+// Before (broken)
+hauler_name: data.company_name,
+hauler_mi_reg: data.michigan_registration,
 
--- Drivers can insert their own pings
-create policy "Users can insert own pings"
-  on route_location_pings for insert to authenticated
-  with check (auth.uid() = user_id);
-
--- Users can read pings for their org
-create policy "Org members can read pings"
-  on route_location_pings for select to authenticated
-  using (organization_id in (
-    select organization_id from users where id = auth.uid()
-  ));
+// After (correct)
+hauler_name: data.hauler_name,
+hauler_mi_reg: data.hauler_mi_reg,
 ```
 
----
+Same fix for all other fields (`hauler_mailing_address`, `hauler_city`, etc.).
 
-## 2. Hook: `useGPSTracking`
+### 3. Add Organization Fallback to ensure-manifest-pdf
+Update `buildDomainData` in the edge function to accept an org registration fallback:
 
-New file: `src/hooks/useGPSTracking.ts`
+```typescript
+hauler_mi_reg: m.hauler?.hauler_mi_reg || org?.state_registration || '',
+```
 
-- **State**: `isTracking`, `currentPosition`, `error`
-- **`startTracking(assignmentId)`**: Logs a `start` event, begins `watchPosition()` with high accuracy, inserts pings every ~15 seconds via Supabase client, requests Wake Lock if available
-- **`stopTracking()`**: Logs an `end` event, clears watch, releases Wake Lock
-- **`logStopCompleted(lat, lng)`**: Inserts a `stop_completed` event with current coordinates
-- Uses the existing `supabase` client and `useAuth` hook for `user_id` / `organization_id`
+This requires passing the org data into `buildDomainData`. Minor change — add an `org` parameter and fetch `state_registration` alongside `state_code` in the existing org query.
 
----
+**File**: `supabase/functions/ensure-manifest-pdf/index.ts`
 
-## 3. Edge Function: `calculate-route-efficiency`
+### 4. Hauler Registration Visible on Manifest Detail View
+In `src/pages/ManifestViewer.tsx`, add a "Hauler Information" card showing:
+- Hauler name
+- State Hauler Registration Number (`hauler_mi_reg`)
 
-New file: `supabase/functions/calculate-route-efficiency/index.ts`
+This requires the manifest query to already join `hauler:haulers(*)` — checking `useManifest` hook to confirm.
 
-- Accepts `{ assignment_id }` in POST body
-- Queries all `route_location_pings` for that assignment ordered by `recorded_at`
-- Calculates:
-  - **total_distance_miles**: Haversine sum between sequential pings, converted km to miles
-  - **total_duration_minutes**: time between first and last ping
-  - **stops_completed**: count of `stop_completed` events
-  - **average_time_per_stop_minutes**: duration / stops
-  - **efficiency_score**: `(stops_completed / total_duration_minutes) * 100`, capped at 100
-- Returns JSON with all metrics
-- Uses CORS headers, validates JWT in code
+### 5. Label Update on HaulerForm
+In `src/components/forms/HaulerForm.tsx`, rename the `hauler_mi_reg` field label from "State Registration" to **"State Hauler Registration Number"** for clarity.
 
 ---
 
-## 4. Driver Routes Page — Start/Stop Tracking
+## What Will NOT Be Touched
+- RLS policies, `has_role()`, auth logic
+- Other AcroForm field mappings
+- Manifest status workflow
+- Driver interface
+- CreateHaulerDialog (already uses correct field names)
 
-Modify `src/pages/DriverRoutes.tsx`:
+## Files Modified
+| File | Change |
+|------|--------|
+| `src/components/hauler/EditHaulerDialog.tsx` | Fix field name mapping bug |
+| `src/components/forms/HaulerForm.tsx` | Update label to "State Hauler Registration Number" |
+| `supabase/functions/ensure-manifest-pdf/index.ts` | Add org fallback for `hauler_mi_reg` |
+| `src/pages/ManifestViewer.tsx` | Add hauler info card with registration number |
+| Database (data update only) | Update Solo Richards → JNJ Tire Recycling with reg number |
 
-- Import `useGPSTracking`
-- Add a **"Start Route" / "Stop Route"** toggle button at top of the day view header
-- When started, calls `startTracking(assignmentId)` for the first active assignment
-- Show a small **green pulsing dot** indicator while tracking is active (CSS animation)
-- When the driver marks a stop complete (existing flow), call `logStopCompleted()` with current lat/lng
+## Post-Build Verification Guide
 
----
+**New external hauler workflow**:
+1. Admin goes to /haulers → "Add Hauler"
+2. Fills in company name, address, phone, and **State Hauler Registration Number**
+3. Hauler appears in list with registration visible
 
-## 5. Driver Dashboard — "Today's Efficiency" Card
+**Driver manifest creation**:
+1. Driver creates manifest, selects hauler (e.g., JNJ Tire Recycling)
+2. Manifest record gets `hauler_id` pointing to JNJ
+3. PDF generation pulls `hauler_mi_reg` = "50-22-0002" from the hauler record
 
-Modify `src/pages/DriverDashboard.tsx`:
-
-- After existing stats grid, add a new row with a `StatsCard` showing today's efficiency
-- On mount, call `calculate-route-efficiency` for each completed assignment today
-- Display aggregate `efficiency_score` as a percentage
-- Color: green (>80%), amber (50-80%), red (<50%)
-- Uses existing `StatsCard` component with appropriate variant
-
----
-
-## 6. Manager Route View — "Route Efficiency" Tab
-
-Modify `src/pages/EnhancedRoutesToday.tsx`:
-
-- Add a new **"Efficiency"** tab alongside existing day/week tabs
-- Shows a table of today's drivers with columns: **Driver, Stops Completed, Miles Driven, Avg Time/Stop, Efficiency Score**
-- Calls `calculate-route-efficiency` for each of today's assignments
-- Groups results by driver (vehicle driver_email)
-
----
-
-## 7. PWA Setup
-
-- Install `vite-plugin-pwa` 
-- Configure in `vite.config.ts` with manifest (name: "TreadSet", theme color, icons) and workbox settings
-- Add `navigateFallbackDenylist: [/^\/~oauth/]` to workbox config
-- Add PWA meta tags to `index.html` (apple-mobile-web-app-capable, theme-color, apple-touch-icon)
-- Create PWA icon files in `public/` (192x192, 512x512)
-- Basic service worker for caching static assets (no offline data sync)
-
----
-
-## What Won't Be Touched
-
-- Manifest system, payment flow, auth logic — all unchanged
-- Existing Supabase client, `useAuth`, role checking patterns — reused as-is
-- No changes to feature flags (GPS tracking is always-on for drivers)
-
----
-
-## Technical Notes
-
-- GPS `watchPosition` uses `enableHighAccuracy: true` with a 15-second throttle to balance accuracy vs battery
-- Wake Lock API (`navigator.wakeLock`) prevents screen sleep during active tracking — gracefully degrades if unsupported
-- Haversine distance reuses the pattern from `src/lib/geo.ts`
-- The edge function uses a service-role Supabase client to read pings across users
-- Pings table is append-only with no update/delete policies for integrity
+**Verification**:
+1. Open any manifest tied to JNJ at `/manifests/:id`
+2. Hauler card shows "State Hauler Registration Number: 50-22-0002"
+3. Download the AcroForm PDF → check `MI_SCRAP_TIRE_HAULER_REG_` field = "50-22-0002"
 
