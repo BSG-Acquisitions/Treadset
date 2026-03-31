@@ -73,6 +73,7 @@ export default function DriverRoutes() {
   
   const { user } = useAuth();
   const organizationId = user?.currentOrganization?.id;
+  const { isTracking, startTracking, stopTracking, logStopCompleted, currentPosition, error: gpsError } = useGPSTracking();
   const { getRouteSuggestions, isLoading: routeSuggestionsLoading } = useDriverRouteSuggestions();
   
   // Day view data
