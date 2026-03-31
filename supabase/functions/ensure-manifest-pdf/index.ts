@@ -166,7 +166,7 @@ Deno.serve(async (req) => {
     // 3. Look up the organization's state_code and state compliance config
     const { data: org } = await supabase
       .from('organizations')
-      .select('state_code')
+      .select('state_code, state_registration')
       .eq('id', pickup.organization_id)
       .single();
 
