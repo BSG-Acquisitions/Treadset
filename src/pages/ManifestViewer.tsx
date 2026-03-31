@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useManifest } from '@/hooks/useManifests';
 import { ManifestPDFControls } from '@/components/ManifestPDFControls';
 import { format } from 'date-fns';
-import { ArrowLeft, FileText, User, MapPin, Package, Clock, CreditCard, CheckCircle } from 'lucide-react';
+import { ArrowLeft, FileText, User, MapPin, Package, Clock, CreditCard, CheckCircle, Truck } from 'lucide-react';
 
 export default function ManifestViewer() {
   const { id } = useParams<{ id: string }>();
