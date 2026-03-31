@@ -597,6 +597,11 @@ export default function EnhancedRoutesToday() {
               </div>
             </TabsContent>
 
+            {/* Route Efficiency Tab */}
+            <TabsContent value="efficiency">
+              <RouteEfficiencyTab assignments={allAssignments} />
+            </TabsContent>
+
             {/* Statistics Tab - Now with real data */}
             <TabsContent value="stats">
               <RouteStatisticsPanel activeDay={activeDay} />
