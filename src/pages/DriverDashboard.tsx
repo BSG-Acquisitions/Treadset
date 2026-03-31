@@ -138,6 +138,11 @@ export default function DriverDashboard() {
           </Card>
         </div>
 
+        {/* Today's Efficiency */}
+        <TodayEfficiencyCard 
+          completedAssignmentIds={completedToday.map(a => a.id)} 
+        />
+
         {/* Quick Actions */}
         <Card>
           <CardHeader>
