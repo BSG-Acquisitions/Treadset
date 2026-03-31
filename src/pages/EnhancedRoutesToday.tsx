@@ -55,6 +55,7 @@ import { format, addDays, subDays, startOfWeek, addWeeks, subWeeks } from "date-
 import { WeeklyPickupsGrid } from "@/components/routes/WeeklyPickupsGrid";
 import { calculateManifestPTE } from "@/lib/michigan-conversions";
 import { LocationGeocodeDialog } from "@/components/locations/LocationGeocodeDialog";
+import { RouteEfficiencyTab } from "@/components/routes/RouteEfficiencyTab";
 
 export default function EnhancedRoutesToday() {
   // Initialize activeDay with current local date string to avoid timezone issues
