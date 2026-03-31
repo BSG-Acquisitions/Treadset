@@ -175,7 +175,8 @@ export const useManifest = (id: string) => {
           *,
           client:clients(id, company_name, email),
           location:locations(id, name, address),
-          pickup:pickups!manifests_pickup_id_fkey(id, pickup_date)
+          pickup:pickups!manifests_pickup_id_fkey(id, pickup_date),
+          hauler:haulers(id, hauler_name, hauler_mi_reg)
         `)
         .eq('id', id)
         .maybeSingle();
