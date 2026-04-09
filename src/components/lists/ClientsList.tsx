@@ -173,13 +173,13 @@ export function ClientsList({ onCreateClick, onEditClick }: ClientsListProps) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => onEditClick(client)}
+                      onClick={(e) => { e.stopPropagation(); onEditClick(client); }}
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </AlertDialogTrigger>
