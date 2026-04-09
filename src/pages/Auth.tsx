@@ -39,26 +39,22 @@ export default function Auth() {
       const isClientOnly = user.roles.includes('client') && 
         !user.roles.includes('admin') && !user.roles.includes('ops_manager');
       const destination = isClientOnly ? '/client-portal' : '/dashboard';
-      console.log('User detected, redirecting to:', destination, user);
+      
       navigate(destination, { replace: true });
     }
   }, [user, loading, navigate]);
 
-  // Debug form state changes
-  useEffect(() => {
-    console.log('Form state changed:', { email, passwordLength: password.length });
-  }, [email, password]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('handleSignIn called with:', { email, password: password.length > 0 });
+    
     
     setIsLoading(true);
     setError('');
     setSuccess('');
 
     try {
-      console.log('Starting sign in process...');
+      
       
       // Add timeout to prevent infinite loading
       const signInPromise = signIn(email, password);
@@ -68,13 +64,13 @@ export default function Auth() {
       
       const result = await Promise.race([signInPromise, timeoutPromise]) as { error?: any };
       
-      console.log('Sign in completed with result:', result);
+      
       
       if (result?.error) {
-        console.log('Sign in error:', result.error);
+        
         setError(result.error.message || 'An error occurred during sign in');
       } else {
-        console.log('Sign in successful, checking roles for redirect...');
+        
         // Will be handled by the useEffect redirect after auth state updates
         // The useEffect checks roles and routes to /client-portal or /dashboard
       }
@@ -82,7 +78,7 @@ export default function Auth() {
       console.error('Sign in catch block error:', error);
       setError(error.message || 'Sign in failed');
     } finally {
-      console.log('Setting loading to false');
+      
       setIsLoading(false);
     }
   };
