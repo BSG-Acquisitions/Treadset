@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useClients, useDeleteClient } from "@/hooks/useClients";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,7 @@ interface ClientsListProps {
 }
 
 export function ClientsList({ onCreateClick, onEditClick }: ClientsListProps) {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("");
   const [sortBy, setSortBy] = useState<'updated_at' | 'lifetime_revenue' | 'company_name'>('updated_at');
@@ -154,7 +155,7 @@ export function ClientsList({ onCreateClick, onEditClick }: ClientsListProps) {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {clients.map((client) => (
-            <Card key={client.id} className="hover:shadow-md transition-shadow">
+            <Card key={client.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/clients/${client.id}`)}>
               <CardContent className="p-4">
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex-1">
@@ -172,13 +173,13 @@ export function ClientsList({ onCreateClick, onEditClick }: ClientsListProps) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => onEditClick(client)}
+                      onClick={(e) => { e.stopPropagation(); onEditClick(client); }}
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </AlertDialogTrigger>
