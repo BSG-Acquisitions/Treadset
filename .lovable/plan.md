@@ -1,105 +1,43 @@
 
 
-# Hauler Registration Number Compliance Fix
+# Fix PWA Icon — TreadSet Tire Mark
 
-## Audit Findings
-
-### AcroForm Field Source (Item 2)
-The `ensure-manifest-pdf` edge function at line 83 maps:
-```
-hauler_mi_reg: m.hauler?.hauler_mi_reg || ''
-```
-This **already pulls from the hauler record** via `manifests.hauler_id → haulers.hauler_mi_reg`. It does NOT fall back to the organization's registration number. So if a manifest has a `hauler_id` pointing to a hauler with `hauler_mi_reg` populated, it will use that value correctly.
-
-**The root problem is likely that Solo Richards' hauler record has no `hauler_mi_reg` value set**, so the field renders as empty on the PDF. There is also **no fallback to the organization's registration** — it just maps to empty string.
-
-### EditHaulerDialog Bug Found
-`EditHaulerDialog.handleSubmit` maps `data.company_name`, `data.michigan_registration`, etc. — but `HaulerForm` submits fields named `hauler_name`, `hauler_mi_reg`, etc. This means **edits to hauler_mi_reg via the Edit dialog are silently lost** because it reads `data.michigan_registration` (undefined) instead of `data.hauler_mi_reg`.
-
----
+## Problem
+The current `pwa-icon-192.png` and `pwa-icon-512.png` are placeholder/generic icons. iPhone home screen shows the wrong icon.
 
 ## Plan
 
-### 1. Data Update — Solo Richards → JNJ Tire Recycling
-Use the Supabase insert/update tool to find the hauler record matching "Solo Richards" and update it:
-- `hauler_name`: "JNJ Tire Recycling"
-- `hauler_mailing_address`: "4514 French Road"
-- `hauler_city`: "Detroit"
-- `hauler_state`: "MI"
-- `hauler_zip`: "48214"
-- `hauler_phone`: "313-790-6207"
-- `hauler_mi_reg`: "50-22-0002"
+### 1. Generate proper PWA icons
+Use AI image generation (Nano banana) to create two icons:
+- `public/icon-192x192.png` (192x192)
+- `public/icon-512x512.png` (512x512)
 
-No new record created. Query first to find the ID, then update.
+Design: Dark forest green (#1A3A1A) solid background, white circular tire tread mark centered, no text, clean app-icon style with rounded corners baked in.
 
-### 2. Fix EditHaulerDialog Field Mapping Bug
-In `src/components/hauler/EditHaulerDialog.tsx`, the `handleSubmit` function incorrectly maps field names. The form submits `hauler_name`, `hauler_mi_reg`, etc., but the handler reads `data.company_name`, `data.michigan_registration`. Fix:
+### 2. Update vite.config.ts manifest icons array
+Change all three icon entries from `/pwa-icon-192.png` and `/pwa-icon-512.png` to `/icon-192x192.png` and `/icon-512x512.png`.
 
-```typescript
-// Before (broken)
-hauler_name: data.company_name,
-hauler_mi_reg: data.michigan_registration,
-
-// After (correct)
-hauler_name: data.hauler_name,
-hauler_mi_reg: data.hauler_mi_reg,
+### 3. Update index.html apple-touch-icon
+Change line 12 from:
+```html
+<link rel="apple-touch-icon" href="/pwa-icon-192.png">
+```
+to:
+```html
+<link rel="apple-touch-icon" href="/icon-192x192.png">
 ```
 
-Same fix for all other fields (`hauler_mailing_address`, `hauler_city`, etc.).
-
-### 3. Add Organization Fallback to ensure-manifest-pdf
-Update `buildDomainData` in the edge function to accept an org registration fallback:
-
-```typescript
-hauler_mi_reg: m.hauler?.hauler_mi_reg || org?.state_registration || '',
-```
-
-This requires passing the org data into `buildDomainData`. Minor change — add an `org` parameter and fetch `state_registration` alongside `state_code` in the existing org query.
-
-**File**: `supabase/functions/ensure-manifest-pdf/index.ts`
-
-### 4. Hauler Registration Visible on Manifest Detail View
-In `src/pages/ManifestViewer.tsx`, add a "Hauler Information" card showing:
-- Hauler name
-- State Hauler Registration Number (`hauler_mi_reg`)
-
-This requires the manifest query to already join `hauler:haulers(*)` — checking `useManifest` hook to confirm.
-
-### 5. Label Update on HaulerForm
-In `src/components/forms/HaulerForm.tsx`, rename the `hauler_mi_reg` field label from "State Registration" to **"State Hauler Registration Number"** for clarity.
+### 4. Clean up old files
+Delete `public/pwa-icon-192.png` and `public/pwa-icon-512.png`.
 
 ---
 
-## What Will NOT Be Touched
-- RLS policies, `has_role()`, auth logic
-- Other AcroForm field mappings
-- Manifest status workflow
-- Driver interface
-- CreateHaulerDialog (already uses correct field names)
+## iPhone re-install process (confirmed)
+Yes — after publishing, you must:
+1. Delete the existing app from your iPhone home screen (long press → Remove App)
+2. Open the published URL in Safari
+3. Tap Share → "Add to Home Screen"
+4. The new icon will appear
 
-## Files Modified
-| File | Change |
-|------|--------|
-| `src/components/hauler/EditHaulerDialog.tsx` | Fix field name mapping bug |
-| `src/components/forms/HaulerForm.tsx` | Update label to "State Hauler Registration Number" |
-| `supabase/functions/ensure-manifest-pdf/index.ts` | Add org fallback for `hauler_mi_reg` |
-| `src/pages/ManifestViewer.tsx` | Add hauler info card with registration number |
-| Database (data update only) | Update Solo Richards → JNJ Tire Recycling with reg number |
-
-## Post-Build Verification Guide
-
-**New external hauler workflow**:
-1. Admin goes to /haulers → "Add Hauler"
-2. Fills in company name, address, phone, and **State Hauler Registration Number**
-3. Hauler appears in list with registration visible
-
-**Driver manifest creation**:
-1. Driver creates manifest, selects hauler (e.g., JNJ Tire Recycling)
-2. Manifest record gets `hauler_id` pointing to JNJ
-3. PDF generation pulls `hauler_mi_reg` = "50-22-0002" from the hauler record
-
-**Verification**:
-1. Open any manifest tied to JNJ at `/manifests/:id`
-2. Hauler card shows "State Hauler Registration Number: 50-22-0002"
-3. Download the AcroForm PDF → check `MI_SCRAP_TIRE_HAULER_REG_` field = "50-22-0002"
+iOS caches PWA icons aggressively — there is no way to update the icon without removing and re-adding. Clearing Safari website data (Settings → Safari → Clear History and Website Data) before re-adding can help if the old icon persists.
 
