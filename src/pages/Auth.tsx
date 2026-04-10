@@ -75,7 +75,6 @@ export default function Auth() {
         // The useEffect checks roles and routes to /client-portal or /dashboard
       }
     } catch (error: any) {
-      console.error('Sign in catch block error:', error);
       setError(error.message || 'Sign in failed');
     } finally {
       

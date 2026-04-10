@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Info, CalendarDays, Clock, Package, Recycle, BarChart3, CheckCircle2 } from "lucide-react";
+import { Info, CalendarDays, Clock, Package, Recycle, BarChart3, CheckCircle2, DollarSign } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, Tooltip as ChartTooltip, XAxis, YAxis, CartesianGrid, ReferenceLine, ResponsiveContainer } from "recharts";
 import { usePickups } from "@/hooks/usePickups";
 import { useClients } from "@/hooks/useClients";
@@ -363,6 +363,17 @@ export default function Index() {
               onClick={() => setBreakdownDialog({ open: true, title: 'Tires Recycled This Month', period: 'month' })}
             />
           </SlideUp>
+
+          {hasAnyRole(['admin', 'ops_manager', 'sales']) && (
+            <SlideUp>
+              <StatsCard
+                title="Revenue This Month"
+                value={thisMonthRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+                icon={<DollarSign className="w-5 h-5" />}
+                variant="primary"
+              />
+            </SlideUp>
+          )}
         </StaggerList>
 
         {/* Client Followups - Prominent section for sales team */}

@@ -40,6 +40,7 @@ export interface PlannedEvent {
   event_type: string;
   trailer_id: string | null;
   trailer_number: string;
+  stop_id: string | null;
 }
 
 export interface TrailerRouteStop {

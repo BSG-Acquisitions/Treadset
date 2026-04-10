@@ -19,6 +19,67 @@ interface ClientsQueryParams {
   limit?: number;
 }
 
+interface ClientTableState {
+  page: number;
+  pageSize: number;
+  search: string;
+  sortBy: string;
+  sortOrder: 'asc' | 'desc';
+  filters: Record<string, any>;
+}
+
+interface UseClientsWithTableOptions {
+  tableState: ClientTableState;
+}
+
+export const useClientsWithTable = ({ tableState }: UseClientsWithTableOptions) => {
+  const { user } = useAuth();
+  const orgId = user?.currentOrganization?.id;
+
+  return useQuery({
+    queryKey: ['clients-table', orgId, JSON.stringify(tableState)],
+    queryFn: async () => {
+      let query = supabase
+        .from('clients')
+        .select(`
+          *,
+          pricing_tier:pricing_tier_id(name, rate),
+          locations(id, address, access_notes),
+          pickups(count),
+          risk_score:client_risk_scores(risk_score, risk_level, pickup_frequency_decline, avg_payment_delay_days, contact_gap_ratio)
+        `, { count: 'exact' });
+
+      query = query.eq('organization_id', orgId!);
+
+      const search = (tableState.search || '').trim();
+      if (search) {
+        query = query.or(
+          `company_name.ilike.%${search}%,contact_name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`
+        );
+      }
+
+      if (tableState.sortBy) {
+        query = query.order(tableState.sortBy, { ascending: tableState.sortOrder === 'asc' });
+      }
+
+      query = query.range(
+        (tableState.page - 1) * tableState.pageSize,
+        tableState.page * tableState.pageSize - 1
+      );
+
+      const { data: clients, error, count } = await query;
+
+      if (error) throw error;
+
+      return {
+        data: clients || [],
+        totalCount: count || 0
+      };
+    },
+    enabled: !!orgId
+  });
+};
+
 export const useClients = (params: ClientsQueryParams = {}) => {
   const { user } = useAuth();
   const orgId = user?.currentOrganization?.id;

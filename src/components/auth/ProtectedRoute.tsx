@@ -56,8 +56,6 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Check if user has required roles
   if (roles.length > 0 && !hasAnyRole(roles)) {
-    console.log('Access denied - User:', user);
-    console.log('Access denied - User roles:', user?.roles, 'Required roles:', roles);
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center">
@@ -69,12 +67,6 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
             Your roles: {user?.roles?.join(', ') || 'None'}<br/>
             Required: {roles.join(', ')}
           </p>
-          <details className="mt-4 text-left">
-            <summary className="cursor-pointer">Debug Info</summary>
-            <pre className="mt-2 text-xs overflow-auto">
-              {JSON.stringify({ user: user, hasAnyRole: hasAnyRole(roles) }, null, 2)}
-            </pre>
-          </details>
         </div>
       </div>
     );

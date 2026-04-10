@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useDataTable } from "@/hooks/useDataTable";
-import { useClientsWithTable } from "@/hooks/useClientsWithTable";
-import { useDeleteClient } from "@/hooks/useClients";
+import { useClientsWithTable, useDeleteClient } from "@/hooks/useClients";
 import { DataTable, Column } from "@/components/DataTable";
 import { CSVImportDialog } from "@/components/csv/CSVImportDialog";
 import { CSVExportDialog } from "@/components/csv/CSVExportDialog";
