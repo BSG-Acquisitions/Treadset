@@ -143,6 +143,13 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedTruck]);
 
+  useEffect(() => {
+    if (open) {
+      refetchDrivers();
+      setDriverSearch("");
+    }
+  }, [open, refetchDrivers]);
+
   const onSubmit = async (data: ScheduleWithDriverFormData) => {
     try {
       // Parse the truck selection to determine if it's a vehicle or hauler
