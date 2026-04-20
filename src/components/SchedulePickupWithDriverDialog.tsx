@@ -7,6 +7,7 @@ import { useClients } from "@/hooks/useClients";
 import { useLocations } from "@/hooks/useLocations";
 import { useVehicles } from "@/hooks/useVehicles";
 import { useHaulers } from "@/hooks/useHaulers";
+import { useDrivers } from "@/hooks/useDrivers";
 import { useNearbySuggestions } from "@/hooks/useNearbySuggestions";
 import { NearbyClientSuggestions } from "./NearbyClientSuggestions";
 import { useAuth } from "@/contexts/AuthContext";
@@ -54,6 +55,7 @@ const scheduleWithDriverSchema = z.object({
   clientId: z.string().min(1, "Client is required"),
   locationId: z.string().optional(),
   truckSelection: z.string().min(1, "Truck/Hauler is required"),
+  driverId: z.string().min(1, "Driver is required"),
   pickupDate: z.date({
     required_error: "Pickup date is required",
   }),
@@ -87,6 +89,7 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
   const { data: locations } = useLocations(selectedClientId);
   const { data: vehicles } = useVehicles();
   const { data: haulers } = useHaulers();
+  const { data: drivers } = useDrivers();
   const schedulePickup = useSchedulePickupWithDriver();
 
   // Combine vehicles and haulers into one unified list
