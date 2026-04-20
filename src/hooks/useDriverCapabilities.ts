@@ -93,15 +93,35 @@ export const useSemiHaulerDrivers = () => {
         .in('id', userIds);
       
       if (usersError) throw usersError;
+
+      if (capData.length > 0 && (!users || users.length === 0)) {
+        console.warn(
+          '[useSemiHaulerDrivers] Found',
+          capData.length,
+          'semi_hauler capability rows but users query returned 0 rows. Likely an RLS issue on public.users for this role.',
+          { capabilityUserIds: userIds, orgId }
+        );
+      }
       
       // Filter to only users in the current org
-      const { data: orgUsers } = await supabase
+      const { data: orgUsers, error: orgUsersError } = await supabase
         .from('user_organization_roles')
         .select('user_id')
         .eq('organization_id', orgId);
-      
+
+      if (orgUsersError) {
+        console.warn('[useSemiHaulerDrivers] user_organization_roles query failed:', orgUsersError);
+      }
+
       const orgUserIds = new Set(orgUsers?.map(u => u.user_id) || []);
-      
+
+      if ((users?.length ?? 0) > 0 && orgUserIds.size === 0) {
+        console.warn(
+          '[useSemiHaulerDrivers] Users found but no org members visible. Likely RLS blocking user_organization_roles for this role.',
+          { orgId, userCount: users?.length }
+        );
+      }
+
       return (users || []).filter(u => orgUserIds.has(u.id)) as Array<{
         id: string;
         first_name: string | null;
