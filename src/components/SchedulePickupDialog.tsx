@@ -7,6 +7,7 @@ import { useClients } from "@/hooks/useClients";
 import { useLocations } from "@/hooks/useLocations";
 import { useVehicles } from "@/hooks/useVehicles";
 import { useHaulers } from "@/hooks/useHaulers";
+import { useDrivers } from "@/hooks/useDrivers";
 import { SchedulePickupWithDriverDialog } from "./SchedulePickupWithDriverDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useNearbySuggestions } from "@/hooks/useNearbySuggestions";
@@ -62,6 +63,7 @@ const scheduleSchema = z.object({
   tractorCount: z.number().min(0).default(0),
   preferredWindow: z.enum(["AM", "PM", "Any"]).default("Any"),
   truckSelection: z.string().min(1, "Truck/Hauler is required"),
+  driverId: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -97,6 +99,7 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
   const { data: locations } = useLocations(selectedClientId);
   const { data: vehicles } = useVehicles();
   const { data: haulers } = useHaulers();
+  const { data: drivers } = useDrivers();
   const schedulePickup = useSchedulePickup();
 
   // Combine vehicles and haulers into one unified list
@@ -130,9 +133,23 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
       tractorCount: 0,
       preferredWindow: "Any",
       truckSelection: "",
+      driverId: undefined,
       notes: "",
     },
   });
+
+  // When the user picks a vehicle that already has an assigned driver,
+  // pre-fill the driver dropdown — but the user can still override it.
+  const watchedTruck = form.watch("truckSelection");
+  const watchedDriver = form.watch("driverId");
+  useEffect(() => {
+    if (!watchedTruck) return;
+    const selected = allTrucks.find(t => t.id === watchedTruck);
+    if (selected?.type === 'vehicle' && selected.assignedDriverId && !watchedDriver) {
+      form.setValue("driverId", selected.assignedDriverId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedTruck]);
 
   const onSubmit = async (data: ScheduleFormData) => {
     try {
@@ -149,13 +166,14 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
       }
 
       const isVehicle = selectedTruck.type === 'vehicle';
-      
-      // For vehicles, use assignedDriverId if available (allows scheduling even without it)
-      let driverId = undefined;
-      if (isVehicle && selectedTruck.assignedDriverId) {
+
+      // Prefer the explicitly chosen driver from the dropdown.
+      // Fall back to the vehicle's assigned driver if nothing was picked.
+      let driverId: string | undefined = data.driverId || undefined;
+      if (!driverId && isVehicle && selectedTruck.assignedDriverId) {
         driverId = selectedTruck.assignedDriverId;
       }
-      
+
       await schedulePickup.mutateAsync({
         clientId: data.clientId,
         locationId: data.locationId || undefined,
