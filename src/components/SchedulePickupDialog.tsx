@@ -78,8 +78,10 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
   const [open, setOpen] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState(defaultClientId || "");
   const [clientSearch, setClientSearch] = useState("");
+  const [driverSearch, setDriverSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [clientComboOpen, setClientComboOpen] = useState(false);
+  const [driverComboOpen, setDriverComboOpen] = useState(false);
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [scheduledClientName, setScheduledClientName] = useState("");
@@ -99,7 +101,7 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
   const { data: locations } = useLocations(selectedClientId);
   const { data: vehicles } = useVehicles();
   const { data: haulers } = useHaulers();
-  const { data: drivers } = useDrivers();
+  const { data: drivers, refetch: refetchDrivers } = useDrivers();
   const schedulePickup = useSchedulePickup();
 
   // Combine vehicles and haulers into one unified list
@@ -150,6 +152,13 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedTruck]);
+
+  useEffect(() => {
+    if (open) {
+      refetchDrivers();
+      setDriverSearch("");
+    }
+  }, [open, refetchDrivers]);
 
   const onSubmit = async (data: ScheduleFormData) => {
     try {
@@ -458,41 +467,90 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
             <FormField
               control={form.control}
               name="driverId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Driver (Optional)</FormLabel>
-                  <Select
-                    onValueChange={(v) => field.onChange(v === "__none__" ? undefined : v)}
-                    value={field.value ?? "__none__"}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a driver" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className="z-50 bg-popover">
-                      <SelectItem value="__none__">
-                        <span className="text-muted-foreground">No driver assigned</span>
-                      </SelectItem>
-                      {drivers?.map((driver) => {
-                        const name = [driver.first_name, driver.last_name].filter(Boolean).join(" ").trim() || driver.email;
-                        return (
-                          <SelectItem key={driver.id} value={driver.id}>
-                            <div className="flex items-center gap-2">
-                              <User className="h-4 w-4 text-muted-foreground" />
-                              <div>
-                                <div className="font-medium">{name}</div>
-                                <div className="text-xs text-muted-foreground">{driver.email}</div>
-                              </div>
+              render={({ field }) => {
+                const filteredDrivers = (drivers || []).filter((driver) => {
+                  const name = [driver.first_name, driver.last_name].filter(Boolean).join(" ").trim();
+                  const haystack = `${name} ${driver.email}`.toLowerCase();
+                  return haystack.includes(driverSearch.toLowerCase());
+                });
+                const selectedDriver = drivers?.find((driver) => driver.id === field.value);
+                const selectedDriverLabel = selectedDriver
+                  ? ([selectedDriver.first_name, selectedDriver.last_name].filter(Boolean).join(" ").trim() || selectedDriver.email)
+                  : "Select a driver";
+
+                return (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Driver (Optional)</FormLabel>
+                    <Popover open={driverComboOpen} onOpenChange={setDriverComboOpen}>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={driverComboOpen}
+                            className={cn(
+                              "w-full justify-between",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            <div className="flex items-center gap-2 truncate">
+                              <User className="h-4 w-4 shrink-0" />
+                              <span className="truncate">{selectedDriverLabel}</span>
                             </div>
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0 z-50 bg-popover" align="start">
+                        <Command shouldFilter={false}>
+                          <CommandInput
+                            placeholder="Search drivers..."
+                            value={driverSearch}
+                            onValueChange={setDriverSearch}
+                          />
+                          <CommandList>
+                            <CommandGroup>
+                              <CommandItem
+                                value="__none__"
+                                onSelect={() => {
+                                  field.onChange(undefined);
+                                  setDriverComboOpen(false);
+                                  setDriverSearch("");
+                                }}
+                              >
+                                <Check className={cn("mr-2 h-4 w-4", !field.value ? "opacity-100" : "opacity-0")} />
+                                No driver assigned
+                              </CommandItem>
+                              {filteredDrivers.map((driver) => {
+                                const name = [driver.first_name, driver.last_name].filter(Boolean).join(" ").trim() || driver.email;
+                                return (
+                                  <CommandItem
+                                    key={driver.id}
+                                    value={`${name} ${driver.email}`}
+                                    onSelect={() => {
+                                      field.onChange(driver.id);
+                                      setDriverComboOpen(false);
+                                      setDriverSearch("");
+                                    }}
+                                  >
+                                    <Check className={cn("mr-2 h-4 w-4", field.value === driver.id ? "opacity-100" : "opacity-0")} />
+                                    <div className="flex flex-col min-w-0">
+                                      <span className="font-medium truncate">{name}</span>
+                                      <span className="text-xs text-muted-foreground truncate">{driver.email}</span>
+                                    </div>
+                                  </CommandItem>
+                                );
+                              })}
+                            </CommandGroup>
+                            <CommandEmpty>No matching drivers found.</CommandEmpty>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
