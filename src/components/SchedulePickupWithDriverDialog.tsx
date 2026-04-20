@@ -424,6 +424,45 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
               )}
             />
 
+            {/* Driver Selection — independent of vehicle assignment */}
+            <FormField
+              control={form.control}
+              name="driverId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Driver</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || undefined}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a driver" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="z-50 bg-popover">
+                      {drivers && drivers.length > 0 ? (
+                        drivers.map((driver) => {
+                          const name = [driver.first_name, driver.last_name].filter(Boolean).join(" ").trim() || driver.email;
+                          return (
+                            <SelectItem key={driver.id} value={driver.id}>
+                              <div className="flex items-center gap-2">
+                                <User className="h-4 w-4 text-muted-foreground" />
+                                <div>
+                                  <div className="font-medium">{name}</div>
+                                  <div className="text-xs text-muted-foreground">{driver.email}</div>
+                                </div>
+                              </div>
+                            </SelectItem>
+                          );
+                        })
+                      ) : (
+                        <div className="p-2 text-sm text-muted-foreground">No active drivers found</div>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             {/* Date & Time */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
