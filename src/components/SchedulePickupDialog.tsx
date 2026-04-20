@@ -78,8 +78,10 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
   const [open, setOpen] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState(defaultClientId || "");
   const [clientSearch, setClientSearch] = useState("");
+  const [driverSearch, setDriverSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [clientComboOpen, setClientComboOpen] = useState(false);
+  const [driverComboOpen, setDriverComboOpen] = useState(false);
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [scheduledClientName, setScheduledClientName] = useState("");
