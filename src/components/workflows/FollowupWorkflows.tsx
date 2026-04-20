@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar, Building, Clock, Truck, Mail } from "lucide-react";
+import { Calendar, Building, Clock, Truck, Mail, Info } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 export function FollowupWorkflows() {
