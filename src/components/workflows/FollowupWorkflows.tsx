@@ -4,13 +4,68 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar, Building, Clock, Truck, Mail, Info } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Calendar, Building, Clock, Truck, Mail, Info, CheckCheck } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 
 export function FollowupWorkflows() {
   const { data: followups, isLoading } = useActiveFollowups();
   const updateWorkflow = useUpdateWorkflow();
   const sendOutreachEmail = useSendOutreachEmail();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [isClearing, setIsClearing] = useState(false);
+
+  const handleClearAll = async () => {
+    if (!followups?.length) return;
+    setIsClearing(true);
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const updates = followups.map((w) => {
+        const intervalDays = w.contact_interval_days || 30;
+        const nextDate = new Date();
+        nextDate.setDate(nextDate.getDate() + intervalDays);
+        return supabase
+          .from('client_workflows')
+          .update({
+            last_contact_date: today,
+            next_contact_date: nextDate.toISOString().split('T')[0],
+            notes: 'Bulk marked as followed up',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', w.id);
+      });
+
+      const results = await Promise.all(updates);
+      const errors = results.filter((r) => r.error);
+      if (errors.length) throw new Error(`${errors.length} updates failed`);
+
+      await queryClient.invalidateQueries({ queryKey: ['client-workflows'] });
+      await queryClient.invalidateQueries({ queryKey: ['active-followups'] });
+      toast({
+        title: 'Followups cleared',
+        description: `Marked ${followups.length} client followups as complete.`,
+      });
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    } finally {
+      setIsClearing(false);
+    }
+  };
 
   const handleCompleteFollowup = async (workflowId: string, intervalDays: number = 30) => {
     const nextDate = new Date();
