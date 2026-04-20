@@ -1,52 +1,47 @@
 
 
-## Fix the Monday Resend blast (BSG)
+## Fix: Dispatchers can't see semi-hauler drivers in trailer route wizard
 
-### What's actually happening
+### Root cause
 
-Every Monday at 8:00 AM ET, a database cron job named `weekly-monday-pickup-reminders` automatically fires the `send-weekly-pickup-reminders` Edge Function. That function loops through all 197 active BSG clients with email addresses and sends each one a "🗓️ Ready to schedule your tire pickup this week?" email via Resend (the "We Miss You" style email).
+The RLS policy on `driver_capabilities` (`driver_capabilities_select`) only grants read access to:
+- The user's own capability rows
+- Users with role `admin` or `ops_manager`
 
-That single Monday burst exhausts the Resend daily/monthly send quota, which is why **manifest emails to clients silently fail for the rest of the week** — Resend rejects them as over-limit. This matches exactly what you're seeing.
+Your dispatch coordinator has the `dispatcher` role only, so when the **Create Trailer Route** wizard calls `useSemiHaulerDrivers()`, Supabase RLS returns an empty array — Jody Green (and any other semi-hauler driver) is invisible to them. You see Jody because you're an admin.
 
-### What I'll change
+This is the same pattern dispatchers need to do their job: assign drivers to routes. They must be able to read driver capabilities.
 
-**1. Disable the Monday cron job (stops the blast immediately)**
-- Run `cron.unschedule('weekly-monday-pickup-reminders')` in a migration so no automated bulk send ever fires again.
-- The Edge Function `send-weekly-pickup-reminders` itself stays in place — we just stop it from being triggered automatically. Staff can still trigger individual outreach manually.
+### What to change
 
-**2. Make the existing per-client "Send Email" the only path**
-- The dashboard already has a `FollowupWorkflows` widget that lists clients due for follow-up with a one-click **Send Email** button per row (`src/components/workflows/FollowupWorkflows.tsx` → `useSendOutreachEmail` → `send-client-outreach-email`). This already exists and is exactly the "manual by staff" workflow you're asking for.
-- No changes needed there — it's already manual, one client at a time, opt-in by staff click.
+**1. Database migration — extend the SELECT policy on `driver_capabilities`**
 
-**3. Protect manifest emails from ever being throttled by outreach again**
-- Add a hard guardrail in `send-weekly-pickup-reminders` and `send-client-outreach-email`: refuse to send if Resend's last response indicated rate limiting in the past hour, OR if more than N outreach emails have been sent in the current calendar day (configurable cap, default 25/day per org).
-- This means even if someone re-enables a bulk job later, or staff click "Send Email" 200 times in a row, manifest sending stays protected.
+Drop and recreate `driver_capabilities_select` to include `dispatcher` alongside `admin` and `ops_manager`. Dispatchers get read-only — they still can't grant or revoke capabilities (the `driver_capabilities_manage` ALL policy stays admin/ops_manager only, which is correct).
 
-**4. Add a clear UI banner if outreach is paused**
-- In the `FollowupWorkflows` card, show a small notice: *"Automated weekly emails are off — staff sends manually."* So nobody wonders why Monday is quiet.
+New SELECT policy logic:
+- A user can see their own capability rows, OR
+- A user can see all rows if they hold role `admin`, `ops_manager`, **or `dispatcher`** in any org
+
+**2. No frontend code changes needed**
+
+`useSemiHaulerDrivers`, `TrailerRouteWizard`, and `EditTrailerRouteDialog` already work correctly — they just need the RLS policy to return rows.
+
+### Why dispatcher and not also driver
+
+Drivers don't create or assign trailer routes, so they don't need to see the full org's capability list. Dispatchers do — that's literally their job. Admin/ops_manager already have it.
 
 ### Files touched
 
-- **New migration**: unschedule the `weekly-monday-pickup-reminders` cron job.
-- **`supabase/functions/send-weekly-pickup-reminders/index.ts`**: add a daily send cap + abort-if-recently-rate-limited check (defense-in-depth in case the function is invoked manually by mistake).
-- **`supabase/functions/send-client-outreach-email/index.ts`**: same daily cap so manual clicks can't accidentally drain quota.
-- **`src/components/workflows/FollowupWorkflows.tsx`**: small notice that automated sends are off + manual-only.
+- New migration: drop and recreate `driver_capabilities_select` policy with dispatcher added.
 
-### What this does NOT change
+### Verification after deploy
 
-- Manifest emails (`send-manifest-email`) — untouched, will start working reliably again on Tuesday-Sunday once Monday's blast is gone.
-- The per-client manual outreach button — still works exactly as today.
-- Client follow-up tracking, suppression lists, unsubscribe handling — all unchanged.
-- Other cron jobs (`check-missing-pickups`, `manifest-followup-automation`, `analyze-pickup-patterns`, `data-quality-scan`) — unchanged; none of them blast bulk client emails.
+- Dispatch coordinator logs out and back in (to refresh RLS context), opens **Routes → Trailer Routes → Create Route**, clicks **Assign Driver** — Jody Green appears.
+- Same check on `EditTrailerRouteDialog` (edit an existing route's driver).
+- Admins continue to see the same list (no regression).
 
-### Why not just lower the limit / spread sends across the week
+### Out of scope (call out if needed later)
 
-Two reasons:
-1. You asked for manual-only, which is the right call — it gives BSG full control over outreach cadence and protects manifest deliverability absolutely.
-2. Spreading bulk sends across the week still risks consuming the manifest quota on busy days. A hard cap + manual trigger eliminates that risk entirely.
-
-### Optional follow-up (not in this plan unless you say yes)
-
-- Move outreach to a dedicated Resend audience/domain so it can't ever share quota with manifests.
-- Or: switch transactional manifest emails to Lovable Emails (built-in, separate quota from Resend) and leave Resend exclusively for outreach. Happy to scope this if you want long-term separation.
+- The `useDrivers` and `useEmployees` hooks aren't affected — this is strictly the trailer/semi-hauler list.
+- If you want dispatchers to *grant* the semi-hauler capability (Trailer Driver Management page), that's a separate change to the `driver_capabilities_manage` policy. Not included unless you want it.
 
