@@ -437,39 +437,79 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
             <FormField
               control={form.control}
               name="driverId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Driver</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value || undefined}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a driver" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className="z-50 bg-popover">
-                      {drivers && drivers.length > 0 ? (
-                        drivers.map((driver) => {
-                          const name = [driver.first_name, driver.last_name].filter(Boolean).join(" ").trim() || driver.email;
-                          return (
-                            <SelectItem key={driver.id} value={driver.id}>
-                              <div className="flex items-center gap-2">
-                                <User className="h-4 w-4 text-muted-foreground" />
-                                <div>
-                                  <div className="font-medium">{name}</div>
-                                  <div className="text-xs text-muted-foreground">{driver.email}</div>
-                                </div>
-                              </div>
-                            </SelectItem>
-                          );
-                        })
-                      ) : (
-                        <div className="p-2 text-sm text-muted-foreground">No active drivers found</div>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
+              render={({ field }) => {
+                const filteredDrivers = (drivers || []).filter((driver) => {
+                  const name = [driver.first_name, driver.last_name].filter(Boolean).join(" ").trim();
+                  const haystack = `${name} ${driver.email}`.toLowerCase();
+                  return haystack.includes(driverSearch.toLowerCase());
+                });
+                const selectedDriver = drivers?.find((driver) => driver.id === field.value);
+                const selectedDriverLabel = selectedDriver
+                  ? ([selectedDriver.first_name, selectedDriver.last_name].filter(Boolean).join(" ").trim() || selectedDriver.email)
+                  : "Select a driver";
+
+                return (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Driver</FormLabel>
+                    <Popover open={driverComboOpen} onOpenChange={setDriverComboOpen}>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={driverComboOpen}
+                            className={cn(
+                              "w-full justify-between",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            <div className="flex items-center gap-2 truncate">
+                              <User className="h-4 w-4 shrink-0" />
+                              <span className="truncate">{selectedDriverLabel}</span>
+                            </div>
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0 z-50 bg-popover" align="start">
+                        <Command shouldFilter={false}>
+                          <CommandInput
+                            placeholder="Search drivers..."
+                            value={driverSearch}
+                            onValueChange={setDriverSearch}
+                          />
+                          <CommandList>
+                            <CommandGroup>
+                              {filteredDrivers.map((driver) => {
+                                const name = [driver.first_name, driver.last_name].filter(Boolean).join(" ").trim() || driver.email;
+                                return (
+                                  <CommandItem
+                                    key={driver.id}
+                                    value={`${name} ${driver.email}`}
+                                    onSelect={() => {
+                                      field.onChange(driver.id);
+                                      setDriverComboOpen(false);
+                                      setDriverSearch("");
+                                    }}
+                                  >
+                                    <Check className={cn("mr-2 h-4 w-4", field.value === driver.id ? "opacity-100" : "opacity-0")} />
+                                    <div className="flex flex-col min-w-0">
+                                      <span className="font-medium truncate">{name}</span>
+                                      <span className="text-xs text-muted-foreground truncate">{driver.email}</span>
+                                    </div>
+                                  </CommandItem>
+                                );
+                              })}
+                            </CommandGroup>
+                            <CommandEmpty>No matching drivers found.</CommandEmpty>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
 
             {/* Date & Time */}
