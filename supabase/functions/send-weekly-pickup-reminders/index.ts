@@ -46,6 +46,33 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Parameters: dry_run=${dryRun}, limit=${limit}`);
 
+    // ===== GUARDRAIL: Hard daily cap to protect manifest email quota =====
+    // The automated Monday cron job has been disabled. This bulk function should
+    // never run automatically. If invoked manually, cap total sends per UTC day
+    // across the org to prevent draining the Resend quota that manifests rely on.
+    const DAILY_OUTREACH_CAP = Number(Deno.env.get("OUTREACH_DAILY_CAP") ?? "25");
+    if (!dryRun) {
+      const todayStart = new Date();
+      todayStart.setUTCHours(0, 0, 0, 0);
+      const { count: sentToday } = await supabase
+        .from("client_email_preferences")
+        .select("id", { count: "exact", head: true })
+        .gte("last_outreach_sent_at", todayStart.toISOString());
+
+      if ((sentToday ?? 0) >= DAILY_OUTREACH_CAP) {
+        console.warn(`[GUARDRAIL] Daily outreach cap reached (${sentToday}/${DAILY_OUTREACH_CAP}). Aborting to protect manifest email quota.`);
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "daily_outreach_cap_reached",
+            message: `Daily outreach cap of ${DAILY_OUTREACH_CAP} reached. Bulk automated sending is disabled — staff should send outreach manually per-client.`,
+            sent_today: sentToday,
+          }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     // Get all active clients with email addresses who haven't opted out
     let clientsQuery = supabase
       .from("clients")
