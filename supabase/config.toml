@@ -102,9 +102,6 @@ verify_jwt = false
 [functions.verify-payment]
 verify_jwt = false
 
-[functions.delete-all-manifests]
-verify_jwt = false
-
 [functions.delete-hauler-and-manifests]
 verify_jwt = false
 
