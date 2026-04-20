@@ -119,6 +119,7 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
       clientId: defaultClientId || "",
       locationId: undefined,
       truckSelection: "",
+      driverId: "",
       pickupDate: new Date(),
       pteCount: 0,
       otrCount: 0,
@@ -127,6 +128,18 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
       notes: "",
     },
   });
+
+  // Pre-fill the driver dropdown from the vehicle's assigned driver, if any.
+  const watchedTruck = form.watch("truckSelection");
+  const watchedDriver = form.watch("driverId");
+  useEffect(() => {
+    if (!watchedTruck) return;
+    const selected = allTrucks.find(t => t.id === watchedTruck);
+    if (selected?.type === 'vehicle' && selected.assignedDriverId && !watchedDriver) {
+      form.setValue("driverId", selected.assignedDriverId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedTruck]);
 
   const onSubmit = async (data: ScheduleWithDriverFormData) => {
     try {
@@ -138,14 +151,11 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
       }
 
       const isVehicle = selectedTruck.type === 'vehicle';
-      
-      // Ensure we have a driver ID for vehicles
-      let driverId = '';
-      if (isVehicle && selectedTruck.assignedDriverId) {
-        driverId = selectedTruck.assignedDriverId;
-      } else if (isVehicle) {
-        throw new Error('Selected vehicle does not have an assigned driver. Please assign a driver to this vehicle first.');
-      }
+
+      // Driver is now selected explicitly via the dropdown.
+      // For external haulers, the driver is optional in the data model,
+      // but we keep the field required in the form for clarity.
+      const driverId = data.driverId;
       
       await schedulePickup.mutateAsync({
         clientId: data.clientId,
