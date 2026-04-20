@@ -454,6 +454,47 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
               )}
             />
 
+            {/* Driver Selection — independent of vehicle assignment */}
+            <FormField
+              control={form.control}
+              name="driverId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Driver (Optional)</FormLabel>
+                  <Select
+                    onValueChange={(v) => field.onChange(v === "__none__" ? undefined : v)}
+                    value={field.value ?? "__none__"}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a driver" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="z-50 bg-popover">
+                      <SelectItem value="__none__">
+                        <span className="text-muted-foreground">No driver assigned</span>
+                      </SelectItem>
+                      {drivers?.map((driver) => {
+                        const name = [driver.first_name, driver.last_name].filter(Boolean).join(" ").trim() || driver.email;
+                        return (
+                          <SelectItem key={driver.id} value={driver.id}>
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4 text-muted-foreground" />
+                              <div>
+                                <div className="font-medium">{name}</div>
+                                <div className="text-xs text-muted-foreground">{driver.email}</div>
+                              </div>
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
