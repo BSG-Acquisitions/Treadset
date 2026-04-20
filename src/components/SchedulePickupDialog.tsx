@@ -7,6 +7,7 @@ import { useClients } from "@/hooks/useClients";
 import { useLocations } from "@/hooks/useLocations";
 import { useVehicles } from "@/hooks/useVehicles";
 import { useHaulers } from "@/hooks/useHaulers";
+import { useDrivers } from "@/hooks/useDrivers";
 import { SchedulePickupWithDriverDialog } from "./SchedulePickupWithDriverDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useNearbySuggestions } from "@/hooks/useNearbySuggestions";
@@ -62,6 +63,7 @@ const scheduleSchema = z.object({
   tractorCount: z.number().min(0).default(0),
   preferredWindow: z.enum(["AM", "PM", "Any"]).default("Any"),
   truckSelection: z.string().min(1, "Truck/Hauler is required"),
+  driverId: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -76,8 +78,10 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
   const [open, setOpen] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState(defaultClientId || "");
   const [clientSearch, setClientSearch] = useState("");
+  const [driverSearch, setDriverSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [clientComboOpen, setClientComboOpen] = useState(false);
+  const [driverComboOpen, setDriverComboOpen] = useState(false);
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [scheduledClientName, setScheduledClientName] = useState("");
@@ -97,6 +101,7 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
   const { data: locations } = useLocations(selectedClientId);
   const { data: vehicles } = useVehicles();
   const { data: haulers } = useHaulers();
+  const { data: drivers, refetch: refetchDrivers } = useDrivers();
   const schedulePickup = useSchedulePickup();
 
   // Combine vehicles and haulers into one unified list
@@ -130,9 +135,30 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
       tractorCount: 0,
       preferredWindow: "Any",
       truckSelection: "",
+      driverId: undefined,
       notes: "",
     },
   });
+
+  // When the user picks a vehicle that already has an assigned driver,
+  // pre-fill the driver dropdown — but the user can still override it.
+  const watchedTruck = form.watch("truckSelection");
+  const watchedDriver = form.watch("driverId");
+  useEffect(() => {
+    if (!watchedTruck) return;
+    const selected = allTrucks.find(t => t.id === watchedTruck);
+    if (selected?.type === 'vehicle' && selected.assignedDriverId && !watchedDriver) {
+      form.setValue("driverId", selected.assignedDriverId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedTruck]);
+
+  useEffect(() => {
+    if (open) {
+      refetchDrivers();
+      setDriverSearch("");
+    }
+  }, [open, refetchDrivers]);
 
   const onSubmit = async (data: ScheduleFormData) => {
     try {
@@ -149,13 +175,14 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
       }
 
       const isVehicle = selectedTruck.type === 'vehicle';
-      
-      // For vehicles, use assignedDriverId if available (allows scheduling even without it)
-      let driverId = undefined;
-      if (isVehicle && selectedTruck.assignedDriverId) {
+
+      // Prefer the explicitly chosen driver from the dropdown.
+      // Fall back to the vehicle's assigned driver if nothing was picked.
+      let driverId: string | undefined = data.driverId || undefined;
+      if (!driverId && isVehicle && selectedTruck.assignedDriverId) {
         driverId = selectedTruck.assignedDriverId;
       }
-      
+
       await schedulePickup.mutateAsync({
         clientId: data.clientId,
         locationId: data.locationId || undefined,
@@ -434,6 +461,96 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
                   <FormMessage />
                 </FormItem>
               )}
+            />
+
+            {/* Driver Selection — independent of vehicle assignment */}
+            <FormField
+              control={form.control}
+              name="driverId"
+              render={({ field }) => {
+                const filteredDrivers = (drivers || []).filter((driver) => {
+                  const name = [driver.first_name, driver.last_name].filter(Boolean).join(" ").trim();
+                  const haystack = `${name} ${driver.email}`.toLowerCase();
+                  return haystack.includes(driverSearch.toLowerCase());
+                });
+                const selectedDriver = drivers?.find((driver) => driver.id === field.value);
+                const selectedDriverLabel = selectedDriver
+                  ? ([selectedDriver.first_name, selectedDriver.last_name].filter(Boolean).join(" ").trim() || selectedDriver.email)
+                  : "Select a driver";
+
+                return (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Driver (Optional)</FormLabel>
+                    <Popover open={driverComboOpen} onOpenChange={setDriverComboOpen}>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={driverComboOpen}
+                            className={cn(
+                              "w-full justify-between",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            <div className="flex items-center gap-2 truncate">
+                              <User className="h-4 w-4 shrink-0" />
+                              <span className="truncate">{selectedDriverLabel}</span>
+                            </div>
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0 z-50 bg-popover" align="start">
+                        <Command shouldFilter={false}>
+                          <CommandInput
+                            placeholder="Search drivers..."
+                            value={driverSearch}
+                            onValueChange={setDriverSearch}
+                          />
+                          <CommandList>
+                            <CommandGroup>
+                              <CommandItem
+                                value="__none__"
+                                onSelect={() => {
+                                  field.onChange(undefined);
+                                  setDriverComboOpen(false);
+                                  setDriverSearch("");
+                                }}
+                              >
+                                <Check className={cn("mr-2 h-4 w-4", !field.value ? "opacity-100" : "opacity-0")} />
+                                No driver assigned
+                              </CommandItem>
+                              {filteredDrivers.map((driver) => {
+                                const name = [driver.first_name, driver.last_name].filter(Boolean).join(" ").trim() || driver.email;
+                                return (
+                                  <CommandItem
+                                    key={driver.id}
+                                    value={`${name} ${driver.email}`}
+                                    onSelect={() => {
+                                      field.onChange(driver.id);
+                                      setDriverComboOpen(false);
+                                      setDriverSearch("");
+                                    }}
+                                  >
+                                    <Check className={cn("mr-2 h-4 w-4", field.value === driver.id ? "opacity-100" : "opacity-0")} />
+                                    <div className="flex flex-col min-w-0">
+                                      <span className="font-medium truncate">{name}</span>
+                                      <span className="text-xs text-muted-foreground truncate">{driver.email}</span>
+                                    </div>
+                                  </CommandItem>
+                                );
+                              })}
+                            </CommandGroup>
+                            <CommandEmpty>No matching drivers found.</CommandEmpty>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

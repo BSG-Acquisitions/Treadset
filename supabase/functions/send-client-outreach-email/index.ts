@@ -35,6 +35,29 @@ Deno.serve(async (req) => {
     }
     const resend = new Resend(resendApiKey);
 
+    // ===== GUARDRAIL: Hard daily cap to protect manifest email quota =====
+    // Even though staff sends manually one client at a time, prevent runaway clicks
+    // from draining the Resend quota that manifest emails rely on.
+    const DAILY_OUTREACH_CAP = Number(Deno.env.get("OUTREACH_DAILY_CAP") ?? "25");
+    const todayStart = new Date();
+    todayStart.setUTCHours(0, 0, 0, 0);
+    const { count: sentToday } = await supabase
+      .from("client_email_preferences")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", organizationId)
+      .gte("last_outreach_sent_at", todayStart.toISOString());
+
+    if ((sentToday ?? 0) >= DAILY_OUTREACH_CAP) {
+      console.warn(`[OUTREACH] Daily cap reached (${sentToday}/${DAILY_OUTREACH_CAP}) for org ${organizationId}. Blocking send to protect manifest quota.`);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Daily outreach limit reached (${DAILY_OUTREACH_CAP}/day). This protects manifest email delivery. Try again tomorrow.`,
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Get client info including opt-out status
     const { data: client, error: clientError } = await supabase
       .from('clients')

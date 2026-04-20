@@ -4,13 +4,68 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar, Building, Clock, Truck, Mail } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Calendar, Building, Clock, Truck, Mail, Info, CheckCheck } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 
 export function FollowupWorkflows() {
   const { data: followups, isLoading } = useActiveFollowups();
   const updateWorkflow = useUpdateWorkflow();
   const sendOutreachEmail = useSendOutreachEmail();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [isClearing, setIsClearing] = useState(false);
+
+  const handleClearAll = async () => {
+    if (!followups?.length) return;
+    setIsClearing(true);
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const updates = followups.map((w) => {
+        const intervalDays = w.contact_interval_days || 30;
+        const nextDate = new Date();
+        nextDate.setDate(nextDate.getDate() + intervalDays);
+        return supabase
+          .from('client_workflows')
+          .update({
+            last_contact_date: today,
+            next_contact_date: nextDate.toISOString().split('T')[0],
+            notes: 'Bulk marked as followed up',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', w.id);
+      });
+
+      const results = await Promise.all(updates);
+      const errors = results.filter((r) => r.error);
+      if (errors.length) throw new Error(`${errors.length} updates failed`);
+
+      await queryClient.invalidateQueries({ queryKey: ['client-workflows'] });
+      await queryClient.invalidateQueries({ queryKey: ['active-followups'] });
+      toast({
+        title: 'Followups cleared',
+        description: `Marked ${followups.length} client followups as complete.`,
+      });
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    } finally {
+      setIsClearing(false);
+    }
+  };
 
   const handleCompleteFollowup = async (workflowId: string, intervalDays: number = 30) => {
     const nextDate = new Date();
@@ -85,13 +140,50 @@ export function FollowupWorkflows() {
     <div className="space-y-4">
       <Card className="border-2 shadow-lg">
         <CardHeader className="bg-brand-success border-b">
-          <CardTitle className="flex items-center gap-2 text-white">
-            <Calendar className="h-5 w-5 text-white" />
-            Client Followups ({followups.length})
-          </CardTitle>
-          <CardDescription className="text-white/90">Clients scheduled for followup contact today</CardDescription>
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <CardTitle className="flex items-center gap-2 text-white">
+                <Calendar className="h-5 w-5 text-white" />
+                Client Followups ({followups.length})
+              </CardTitle>
+              <CardDescription className="text-white/90">Clients scheduled for followup contact today</CardDescription>
+            </div>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={isClearing || !followups.length}
+                  className="shrink-0"
+                >
+                  <CheckCheck className="h-4 w-4 mr-1" />
+                  {isClearing ? 'Clearing...' : 'Mark all done'}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Mark all {followups.length} followups as complete?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will reschedule each client's next followup based on their interval. No emails will be sent. You can still send emails individually afterwards.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleClearAll}>
+                    Yes, mark all done
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </CardHeader>
         <CardContent className="space-y-3 pt-4">
+          <div className="flex items-start gap-2 p-3 rounded-md border bg-muted/40 text-xs text-muted-foreground">
+            <Info className="h-4 w-4 mt-0.5 shrink-0" />
+            <span>
+              Automated weekly outreach is <strong>off</strong> — staff sends these emails manually to protect manifest email delivery. Daily cap: 25 sends.
+            </span>
+          </div>
           {followups.map((workflow) => {
             const lastPickup = workflow.clients?.last_pickup_at;
             const lastPickupDate = lastPickup ? new Date(lastPickup) : null;

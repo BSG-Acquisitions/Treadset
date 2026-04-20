@@ -7,6 +7,7 @@ import { useClients } from "@/hooks/useClients";
 import { useLocations } from "@/hooks/useLocations";
 import { useVehicles } from "@/hooks/useVehicles";
 import { useHaulers } from "@/hooks/useHaulers";
+import { useDrivers } from "@/hooks/useDrivers";
 import { useNearbySuggestions } from "@/hooks/useNearbySuggestions";
 import { NearbyClientSuggestions } from "./NearbyClientSuggestions";
 import { useAuth } from "@/contexts/AuthContext";
@@ -54,6 +55,7 @@ const scheduleWithDriverSchema = z.object({
   clientId: z.string().min(1, "Client is required"),
   locationId: z.string().optional(),
   truckSelection: z.string().min(1, "Truck/Hauler is required"),
+  driverId: z.string().min(1, "Driver is required"),
   pickupDate: z.date({
     required_error: "Pickup date is required",
   }),
@@ -75,7 +77,9 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
   const [open, setOpen] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState(defaultClientId || "");
   const [clientSearch, setClientSearch] = useState("");
+  const [driverSearch, setDriverSearch] = useState("");
   const [clientComboOpen, setClientComboOpen] = useState(false);
+  const [driverComboOpen, setDriverComboOpen] = useState(false);
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [scheduledClientName, setScheduledClientName] = useState("");
@@ -87,6 +91,7 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
   const { data: locations } = useLocations(selectedClientId);
   const { data: vehicles } = useVehicles();
   const { data: haulers } = useHaulers();
+  const { data: drivers, refetch: refetchDrivers } = useDrivers();
   const schedulePickup = useSchedulePickupWithDriver();
 
   // Combine vehicles and haulers into one unified list
@@ -116,6 +121,7 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
       clientId: defaultClientId || "",
       locationId: undefined,
       truckSelection: "",
+      driverId: "",
       pickupDate: new Date(),
       pteCount: 0,
       otrCount: 0,
@@ -124,6 +130,25 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
       notes: "",
     },
   });
+
+  // Pre-fill the driver dropdown from the vehicle's assigned driver, if any.
+  const watchedTruck = form.watch("truckSelection");
+  const watchedDriver = form.watch("driverId");
+  useEffect(() => {
+    if (!watchedTruck) return;
+    const selected = allTrucks.find(t => t.id === watchedTruck);
+    if (selected?.type === 'vehicle' && selected.assignedDriverId && !watchedDriver) {
+      form.setValue("driverId", selected.assignedDriverId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedTruck]);
+
+  useEffect(() => {
+    if (open) {
+      refetchDrivers();
+      setDriverSearch("");
+    }
+  }, [open, refetchDrivers]);
 
   const onSubmit = async (data: ScheduleWithDriverFormData) => {
     try {
@@ -135,14 +160,11 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
       }
 
       const isVehicle = selectedTruck.type === 'vehicle';
-      
-      // Ensure we have a driver ID for vehicles
-      let driverId = '';
-      if (isVehicle && selectedTruck.assignedDriverId) {
-        driverId = selectedTruck.assignedDriverId;
-      } else if (isVehicle) {
-        throw new Error('Selected vehicle does not have an assigned driver. Please assign a driver to this vehicle first.');
-      }
+
+      // Driver is now selected explicitly via the dropdown.
+      // For external haulers, the driver is optional in the data model,
+      // but we keep the field required in the form for clarity.
+      const driverId = data.driverId;
       
       await schedulePickup.mutateAsync({
         clientId: data.clientId,
@@ -409,6 +431,85 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
                   <FormMessage />
                 </FormItem>
               )}
+            />
+
+            {/* Driver Selection — independent of vehicle assignment */}
+            <FormField
+              control={form.control}
+              name="driverId"
+              render={({ field }) => {
+                const filteredDrivers = (drivers || []).filter((driver) => {
+                  const name = [driver.first_name, driver.last_name].filter(Boolean).join(" ").trim();
+                  const haystack = `${name} ${driver.email}`.toLowerCase();
+                  return haystack.includes(driverSearch.toLowerCase());
+                });
+                const selectedDriver = drivers?.find((driver) => driver.id === field.value);
+                const selectedDriverLabel = selectedDriver
+                  ? ([selectedDriver.first_name, selectedDriver.last_name].filter(Boolean).join(" ").trim() || selectedDriver.email)
+                  : "Select a driver";
+
+                return (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Driver</FormLabel>
+                    <Popover open={driverComboOpen} onOpenChange={setDriverComboOpen}>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={driverComboOpen}
+                            className={cn(
+                              "w-full justify-between",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            <div className="flex items-center gap-2 truncate">
+                              <User className="h-4 w-4 shrink-0" />
+                              <span className="truncate">{selectedDriverLabel}</span>
+                            </div>
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0 z-50 bg-popover" align="start">
+                        <Command shouldFilter={false}>
+                          <CommandInput
+                            placeholder="Search drivers..."
+                            value={driverSearch}
+                            onValueChange={setDriverSearch}
+                          />
+                          <CommandList>
+                            <CommandGroup>
+                              {filteredDrivers.map((driver) => {
+                                const name = [driver.first_name, driver.last_name].filter(Boolean).join(" ").trim() || driver.email;
+                                return (
+                                  <CommandItem
+                                    key={driver.id}
+                                    value={`${name} ${driver.email}`}
+                                    onSelect={() => {
+                                      field.onChange(driver.id);
+                                      setDriverComboOpen(false);
+                                      setDriverSearch("");
+                                    }}
+                                  >
+                                    <Check className={cn("mr-2 h-4 w-4", field.value === driver.id ? "opacity-100" : "opacity-0")} />
+                                    <div className="flex flex-col min-w-0">
+                                      <span className="font-medium truncate">{name}</span>
+                                      <span className="text-xs text-muted-foreground truncate">{driver.email}</span>
+                                    </div>
+                                  </CommandItem>
+                                );
+                              })}
+                            </CommandGroup>
+                            <CommandEmpty>No matching drivers found.</CommandEmpty>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
 
             {/* Date & Time */}

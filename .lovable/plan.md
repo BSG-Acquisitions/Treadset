@@ -1,43 +1,65 @@
 
 
-# Fix PWA Icon — TreadSet Tire Mark
+## Fix: Dispatcher driver dropdown is empty because of a second RLS gap
 
-## Problem
-The current `pwa-icon-192.png` and `pwa-icon-512.png` are placeholder/generic icons. iPhone home screen shows the wrong icon.
+### Why "Assign Driver" is still empty for him
 
-## Plan
+The `useSemiHaulerDrivers` hook does three separate Supabase reads, and **each** is filtered by RLS:
 
-### 1. Generate proper PWA icons
-Use AI image generation (Nano banana) to create two icons:
-- `public/icon-192x192.png` (192x192)
-- `public/icon-512x512.png` (512x512)
+1. `driver_capabilities` where capability = `semi_hauler` — ✅ already fixed, dispatchers can read this
+2. `public.users` for `id, first_name, last_name, email` of those drivers — ❌ likely blocked for dispatchers
+3. `public.user_organization_roles` filtered by current org — ❌ may also be restricted
 
-Design: Dark forest green (#1A3A1A) solid background, white circular tire tread mark centered, no text, clean app-icon style with rounded corners baked in.
+If step 2 returns zero rows for dispatchers (because RLS on `users` only lets them see themselves and admins/ops_managers see everyone), the dropdown is empty even though step 1 succeeded. That's why admins see Jody and dispatchers don't, on the same screen.
 
-### 2. Update vite.config.ts manifest icons array
-Change all three icon entries from `/pwa-icon-192.png` and `/pwa-icon-512.png` to `/icon-192x192.png` and `/icon-512x512.png`.
+The vehicle dropdown works because `vehicles` has a more permissive RLS policy.
 
-### 3. Update index.html apple-touch-icon
-Change line 12 from:
-```html
-<link rel="apple-touch-icon" href="/pwa-icon-192.png">
-```
-to:
-```html
-<link rel="apple-touch-icon" href="/icon-192x192.png">
-```
+### What I'll do
 
-### 4. Clean up old files
-Delete `public/pwa-icon-192.png` and `public/pwa-icon-512.png`.
+**1. Audit the RLS policies on `public.users` and `public.user_organization_roles`**
 
----
+I need to confirm exactly what dispatchers can currently SELECT on each table. Most likely findings:
+- `users` SELECT policy allows admin/ops_manager to read all rows but not dispatcher
+- `user_organization_roles` SELECT policy is similar
 
-## iPhone re-install process (confirmed)
-Yes — after publishing, you must:
-1. Delete the existing app from your iPhone home screen (long press → Remove App)
-2. Open the published URL in Safari
-3. Tap Share → "Add to Home Screen"
-4. The new icon will appear
+**2. Extend SELECT policies to include `dispatcher`**
 
-iOS caches PWA icons aggressively — there is no way to update the icon without removing and re-adding. Clearing Safari website data (Settings → Safari → Clear History and Website Data) before re-adding can help if the old icon persists.
+Dispatchers need to read other users in their organization to assign them to routes — that's a core dispatch function. The fix is the same pattern as the previous migration: add `dispatcher` to the role list on the SELECT policy(ies), scoped to **the same organization only**.
+
+Specifically:
+- `public.users` SELECT: a dispatcher can read users that share at least one organization with them (not all users globally — keeps multi-tenant isolation intact)
+- `public.user_organization_roles` SELECT: a dispatcher can read role rows for users in their own org
+
+No changes to INSERT/UPDATE/DELETE — dispatchers still cannot create or modify users or roles.
+
+**3. Harden the hook so this kind of failure is visible next time**
+
+Update `src/hooks/useDriverCapabilities.ts` `useSemiHaulerDrivers` to log a clear warning when:
+- Step 1 returns capability rows, but
+- Step 2 returns zero matching users
+
+That way if any future RLS regression silently empties the dropdown, we see it in the console immediately instead of debugging by phone again.
+
+### Files touched
+
+- New migration: extend SELECT policies on `public.users` and `public.user_organization_roles` to include `dispatcher`, scoped to same-organization rows only.
+- `src/hooks/useDriverCapabilities.ts`: add a console warning when capabilities exist but user lookup returns empty (diagnostic only, no behavior change).
+
+### What I am NOT changing
+
+- No write permissions for dispatchers on `users` or `user_organization_roles`.
+- No cross-organization access — dispatchers only see users in orgs they belong to.
+- No frontend logic changes to the wizard itself.
+
+### Verification after deploy
+
+1. Coordinator logs out, logs back in.
+2. Routes → Trailer Routes → Create Route → Assign Driver → **Jody Green appears**.
+3. Same check on `EditTrailerRouteDialog`.
+4. Admin view unchanged (no regression).
+5. Coordinator still cannot edit users or change roles (write-side untouched).
+
+### Out of scope
+
+- Refactoring the 3-query hook into a single RPC. Worth doing eventually for performance and easier RLS reasoning, but not required to unblock him today.
 
