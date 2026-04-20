@@ -17,7 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Settings, FileText, DollarSign, MoreVertical, Pencil, Trash2, Trash } from "lucide-react";
+import { Plus, Settings, FileText, DollarSign, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { useHaulers } from "@/hooks/useHaulers";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -53,7 +53,6 @@ export default function IndependentHaulers() {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteCascadeOpen, setDeleteCascadeOpen] = useState(false);
-  const [deleteAllOpen, setDeleteAllOpen] = useState(false);
   const [selectedHauler, setSelectedHauler] = useState<any>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -82,26 +81,6 @@ const handleDeleteCascadeClick = (hauler: any) => {
       setSelectedHauler(null);
     }
   };
-
-const handleDeleteAllManifests = async () => {
-  setIsDeleting(true);
-  try {
-    const { data, error } = await supabase.functions.invoke('delete-all-manifests', {
-      method: 'POST',
-    });
-
-    if (error) throw error;
-
-    toast.success('All manifests deleted successfully');
-    setDeleteAllOpen(false);
-    queryClient.invalidateQueries({ queryKey: ['haulers'] });
-  } catch (error: any) {
-    console.error('Error deleting manifests:', error);
-    toast.error(error.message || 'Failed to delete manifests');
-  } finally {
-    setIsDeleting(false);
-  }
-};
 
 const handleConfirmDeleteCascade = async () => {
   if (!selectedHauler) return;
@@ -138,14 +117,6 @@ const handleConfirmDeleteCascade = async () => {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => setDeleteAllOpen(true)}
-              className="text-destructive hover:text-destructive"
-            >
-              <Trash className="h-4 w-4 mr-2" />
-              Delete All Manifests
-            </Button>
             <Button variant="outline" onClick={() => navigate("/hauler-rates")}>
               <DollarSign className="h-4 w-4 mr-2" />
               Manage Rates
@@ -298,26 +269,6 @@ const handleConfirmDeleteCascade = async () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={deleteAllOpen} onOpenChange={setDeleteAllOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete All Manifests</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete ALL manifests in the system? This will remove all test data and allow you to delete haulers. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDeleteAllManifests} 
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={isDeleting}
-            >
-              {isDeleting ? 'Deleting...' : 'Delete All Manifests'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </AppLayout>
   );
 }
