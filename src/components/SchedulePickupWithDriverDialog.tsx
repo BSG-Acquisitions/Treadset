@@ -91,7 +91,7 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
   const { data: locations } = useLocations(selectedClientId);
   const { data: vehicles } = useVehicles();
   const { data: haulers } = useHaulers();
-  const { data: drivers } = useDrivers();
+  const { data: drivers, refetch: refetchDrivers } = useDrivers();
   const schedulePickup = useSchedulePickupWithDriver();
 
   // Combine vehicles and haulers into one unified list
