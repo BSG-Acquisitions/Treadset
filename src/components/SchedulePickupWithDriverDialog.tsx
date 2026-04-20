@@ -7,6 +7,7 @@ import { useClients } from "@/hooks/useClients";
 import { useLocations } from "@/hooks/useLocations";
 import { useVehicles } from "@/hooks/useVehicles";
 import { useHaulers } from "@/hooks/useHaulers";
+import { useDrivers } from "@/hooks/useDrivers";
 import { useNearbySuggestions } from "@/hooks/useNearbySuggestions";
 import { NearbyClientSuggestions } from "./NearbyClientSuggestions";
 import { useAuth } from "@/contexts/AuthContext";
@@ -54,6 +55,7 @@ const scheduleWithDriverSchema = z.object({
   clientId: z.string().min(1, "Client is required"),
   locationId: z.string().optional(),
   truckSelection: z.string().min(1, "Truck/Hauler is required"),
+  driverId: z.string().min(1, "Driver is required"),
   pickupDate: z.date({
     required_error: "Pickup date is required",
   }),
@@ -87,6 +89,7 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
   const { data: locations } = useLocations(selectedClientId);
   const { data: vehicles } = useVehicles();
   const { data: haulers } = useHaulers();
+  const { data: drivers } = useDrivers();
   const schedulePickup = useSchedulePickupWithDriver();
 
   // Combine vehicles and haulers into one unified list
@@ -116,6 +119,7 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
       clientId: defaultClientId || "",
       locationId: undefined,
       truckSelection: "",
+      driverId: "",
       pickupDate: new Date(),
       pteCount: 0,
       otrCount: 0,
@@ -124,6 +128,18 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
       notes: "",
     },
   });
+
+  // Pre-fill the driver dropdown from the vehicle's assigned driver, if any.
+  const watchedTruck = form.watch("truckSelection");
+  const watchedDriver = form.watch("driverId");
+  useEffect(() => {
+    if (!watchedTruck) return;
+    const selected = allTrucks.find(t => t.id === watchedTruck);
+    if (selected?.type === 'vehicle' && selected.assignedDriverId && !watchedDriver) {
+      form.setValue("driverId", selected.assignedDriverId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedTruck]);
 
   const onSubmit = async (data: ScheduleWithDriverFormData) => {
     try {
@@ -135,14 +151,11 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
       }
 
       const isVehicle = selectedTruck.type === 'vehicle';
-      
-      // Ensure we have a driver ID for vehicles
-      let driverId = '';
-      if (isVehicle && selectedTruck.assignedDriverId) {
-        driverId = selectedTruck.assignedDriverId;
-      } else if (isVehicle) {
-        throw new Error('Selected vehicle does not have an assigned driver. Please assign a driver to this vehicle first.');
-      }
+
+      // Driver is now selected explicitly via the dropdown.
+      // For external haulers, the driver is optional in the data model,
+      // but we keep the field required in the form for clarity.
+      const driverId = data.driverId;
       
       await schedulePickup.mutateAsync({
         clientId: data.clientId,
@@ -404,6 +417,45 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
                           </div>
                         </SelectItem>
                       ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Driver Selection — independent of vehicle assignment */}
+            <FormField
+              control={form.control}
+              name="driverId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Driver</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || undefined}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a driver" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="z-50 bg-popover">
+                      {drivers && drivers.length > 0 ? (
+                        drivers.map((driver) => {
+                          const name = [driver.first_name, driver.last_name].filter(Boolean).join(" ").trim() || driver.email;
+                          return (
+                            <SelectItem key={driver.id} value={driver.id}>
+                              <div className="flex items-center gap-2">
+                                <User className="h-4 w-4 text-muted-foreground" />
+                                <div>
+                                  <div className="font-medium">{name}</div>
+                                  <div className="text-xs text-muted-foreground">{driver.email}</div>
+                                </div>
+                              </div>
+                            </SelectItem>
+                          );
+                        })
+                      ) : (
+                        <div className="p-2 text-sm text-muted-foreground">No active drivers found</div>
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />
