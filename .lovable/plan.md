@@ -1,47 +1,65 @@
 
 
-## Fix: Dispatchers can't see semi-hauler drivers in trailer route wizard
+## Fix: Dispatcher driver dropdown is empty because of a second RLS gap
 
-### Root cause
+### Why "Assign Driver" is still empty for him
 
-The RLS policy on `driver_capabilities` (`driver_capabilities_select`) only grants read access to:
-- The user's own capability rows
-- Users with role `admin` or `ops_manager`
+The `useSemiHaulerDrivers` hook does three separate Supabase reads, and **each** is filtered by RLS:
 
-Your dispatch coordinator has the `dispatcher` role only, so when the **Create Trailer Route** wizard calls `useSemiHaulerDrivers()`, Supabase RLS returns an empty array — Jody Green (and any other semi-hauler driver) is invisible to them. You see Jody because you're an admin.
+1. `driver_capabilities` where capability = `semi_hauler` — ✅ already fixed, dispatchers can read this
+2. `public.users` for `id, first_name, last_name, email` of those drivers — ❌ likely blocked for dispatchers
+3. `public.user_organization_roles` filtered by current org — ❌ may also be restricted
 
-This is the same pattern dispatchers need to do their job: assign drivers to routes. They must be able to read driver capabilities.
+If step 2 returns zero rows for dispatchers (because RLS on `users` only lets them see themselves and admins/ops_managers see everyone), the dropdown is empty even though step 1 succeeded. That's why admins see Jody and dispatchers don't, on the same screen.
 
-### What to change
+The vehicle dropdown works because `vehicles` has a more permissive RLS policy.
 
-**1. Database migration — extend the SELECT policy on `driver_capabilities`**
+### What I'll do
 
-Drop and recreate `driver_capabilities_select` to include `dispatcher` alongside `admin` and `ops_manager`. Dispatchers get read-only — they still can't grant or revoke capabilities (the `driver_capabilities_manage` ALL policy stays admin/ops_manager only, which is correct).
+**1. Audit the RLS policies on `public.users` and `public.user_organization_roles`**
 
-New SELECT policy logic:
-- A user can see their own capability rows, OR
-- A user can see all rows if they hold role `admin`, `ops_manager`, **or `dispatcher`** in any org
+I need to confirm exactly what dispatchers can currently SELECT on each table. Most likely findings:
+- `users` SELECT policy allows admin/ops_manager to read all rows but not dispatcher
+- `user_organization_roles` SELECT policy is similar
 
-**2. No frontend code changes needed**
+**2. Extend SELECT policies to include `dispatcher`**
 
-`useSemiHaulerDrivers`, `TrailerRouteWizard`, and `EditTrailerRouteDialog` already work correctly — they just need the RLS policy to return rows.
+Dispatchers need to read other users in their organization to assign them to routes — that's a core dispatch function. The fix is the same pattern as the previous migration: add `dispatcher` to the role list on the SELECT policy(ies), scoped to **the same organization only**.
 
-### Why dispatcher and not also driver
+Specifically:
+- `public.users` SELECT: a dispatcher can read users that share at least one organization with them (not all users globally — keeps multi-tenant isolation intact)
+- `public.user_organization_roles` SELECT: a dispatcher can read role rows for users in their own org
 
-Drivers don't create or assign trailer routes, so they don't need to see the full org's capability list. Dispatchers do — that's literally their job. Admin/ops_manager already have it.
+No changes to INSERT/UPDATE/DELETE — dispatchers still cannot create or modify users or roles.
+
+**3. Harden the hook so this kind of failure is visible next time**
+
+Update `src/hooks/useDriverCapabilities.ts` `useSemiHaulerDrivers` to log a clear warning when:
+- Step 1 returns capability rows, but
+- Step 2 returns zero matching users
+
+That way if any future RLS regression silently empties the dropdown, we see it in the console immediately instead of debugging by phone again.
 
 ### Files touched
 
-- New migration: drop and recreate `driver_capabilities_select` policy with dispatcher added.
+- New migration: extend SELECT policies on `public.users` and `public.user_organization_roles` to include `dispatcher`, scoped to same-organization rows only.
+- `src/hooks/useDriverCapabilities.ts`: add a console warning when capabilities exist but user lookup returns empty (diagnostic only, no behavior change).
+
+### What I am NOT changing
+
+- No write permissions for dispatchers on `users` or `user_organization_roles`.
+- No cross-organization access — dispatchers only see users in orgs they belong to.
+- No frontend logic changes to the wizard itself.
 
 ### Verification after deploy
 
-- Dispatch coordinator logs out and back in (to refresh RLS context), opens **Routes → Trailer Routes → Create Route**, clicks **Assign Driver** — Jody Green appears.
-- Same check on `EditTrailerRouteDialog` (edit an existing route's driver).
-- Admins continue to see the same list (no regression).
+1. Coordinator logs out, logs back in.
+2. Routes → Trailer Routes → Create Route → Assign Driver → **Jody Green appears**.
+3. Same check on `EditTrailerRouteDialog`.
+4. Admin view unchanged (no regression).
+5. Coordinator still cannot edit users or change roles (write-side untouched).
 
-### Out of scope (call out if needed later)
+### Out of scope
 
-- The `useDrivers` and `useEmployees` hooks aren't affected — this is strictly the trailer/semi-hauler list.
-- If you want dispatchers to *grant* the semi-hauler capability (Trailer Driver Management page), that's a separate change to the `driver_capabilities_manage` policy. Not included unless you want it.
+- Refactoring the 3-query hook into a single RPC. Worth doing eventually for performance and easier RLS reasoning, but not required to unblock him today.
 
