@@ -1,58 +1,52 @@
 
 
-## Diagnosis: Why Khiyron and Moses don't appear in the route scheduling dropdown
+## Fix the Monday Resend blast (BSG)
 
-### What I found
+### What's actually happening
 
-Both drivers are correctly set up in the database:
+Every Monday at 8:00 AM ET, a database cron job named `weekly-monday-pickup-reminders` automatically fires the `send-weekly-pickup-reminders` Edge Function. That function loops through all 197 active BSG clients with email addresses and sends each one a "🗓️ Ready to schedule your tire pickup this week?" email via Resend (the "We Miss You" style email).
 
-| Name | Email | Org | Role | Active |
-|---|---|---|---|---|
-| Moses Odinma | makeaway96@gmail.com | BSG Logistics | driver | ✅ |
-| Khiyron Amerson | khiyronamersonbbt@gmail.com | BSG Logistics | driver + dispatcher | ✅ |
+That single Monday burst exhausts the Resend daily/monthly send quota, which is why **manifest emails to clients silently fail for the rest of the week** — Resend rejects them as over-limit. This matches exactly what you're seeing.
 
-So they exist as drivers — that's not the problem.
+### What I'll change
 
-### The actual bug
+**1. Disable the Monday cron job (stops the blast immediately)**
+- Run `cron.unschedule('weekly-monday-pickup-reminders')` in a migration so no automated bulk send ever fires again.
+- The Edge Function `send-weekly-pickup-reminders` itself stays in place — we just stop it from being triggered automatically. Staff can still trigger individual outreach manually.
 
-The "Schedule Pickup" dialog (`SchedulePickupDialog.tsx` and `SchedulePickupWithDriverDialog.tsx`) **does not have a driver dropdown at all**. It has a **truck/hauler dropdown**, and it pulls the driver implicitly from `vehicles.assigned_driver_id`.
+**2. Make the existing per-client "Send Email" the only path**
+- The dashboard already has a `FollowupWorkflows` widget that lists clients due for follow-up with a one-click **Send Email** button per row (`src/components/workflows/FollowupWorkflows.tsx` → `useSendOutreachEmail` → `send-client-outreach-email`). This already exists and is exactly the "manual by staff" workflow you're asking for.
+- No changes needed there — it's already manual, one client at a time, opt-in by staff click.
 
-Looking at your `vehicles` table for BSG Logistics, only 2 vehicles have an `assigned_driver_id` set:
-- Truck 002 - Test Driver
-- Truck 003 - Jody Green
+**3. Protect manifest emails from ever being throttled by outreach again**
+- Add a hard guardrail in `send-weekly-pickup-reminders` and `send-client-outreach-email`: refuse to send if Resend's last response indicated rate limiting in the past hour, OR if more than N outreach emails have been sent in the current calendar day (configurable cap, default 25/day per org).
+- This means even if someone re-enables a bulk job later, or staff click "Send Email" 200 times in a row, manifest sending stays protected.
 
-Khiyron and Moses are **not assigned to any vehicle**, so they'll never show up — there's literally no UI path that lists them when scheduling a normal pickup. Worse: in `SchedulePickupWithDriverDialog`, if a vehicle has no `assigned_driver_id` it throws "Selected vehicle does not have an assigned driver."
+**4. Add a clear UI banner if outreach is paused**
+- In the `FollowupWorkflows` card, show a small notice: *"Automated weekly emails are off — staff sends manually."* So nobody wonders why Monday is quiet.
 
-This is a structural problem, not a data problem. Drivers are coupled 1:1 to vehicles via `vehicles.assigned_driver_id`, which means:
-- A driver can't be scheduled until someone edits a vehicle and assigns them
-- A driver can only ever be tied to one vehicle
-- Day-to-day driver/vehicle swaps require editing vehicle records
+### Files touched
 
-### The fix — add a real driver picker to scheduling
+- **New migration**: unschedule the `weekly-monday-pickup-reminders` cron job.
+- **`supabase/functions/send-weekly-pickup-reminders/index.ts`**: add a daily send cap + abort-if-recently-rate-limited check (defense-in-depth in case the function is invoked manually by mistake).
+- **`supabase/functions/send-client-outreach-email/index.ts`**: same daily cap so manual clicks can't accidentally drain quota.
+- **`src/components/workflows/FollowupWorkflows.tsx`**: small notice that automated sends are off + manual-only.
 
-Decouple driver selection from vehicle selection. Let dispatchers pick **any active driver** in the org when scheduling a pickup, independent of which vehicle they're using that day.
+### What this does NOT change
 
-**Files to change:**
+- Manifest emails (`send-manifest-email`) — untouched, will start working reliably again on Tuesday-Sunday once Monday's blast is gone.
+- The per-client manual outreach button — still works exactly as today.
+- Client follow-up tracking, suppression lists, unsubscribe handling — all unchanged.
+- Other cron jobs (`check-missing-pickups`, `manifest-followup-automation`, `analyze-pickup-patterns`, `data-quality-scan`) — unchanged; none of them blast bulk client emails.
 
-1. **`src/components/SchedulePickupDialog.tsx`**
-   - Add a `useDrivers()` call (already exists in `src/hooks/useDrivers.ts` and already returns the right list — confirmed Khiyron and Moses would both appear).
-   - Add a "Driver" `<Select>` field below the truck selector, defaulting to the vehicle's `assigned_driver_id` if one exists, but always editable.
-   - Pass the chosen `driverId` into the `useSchedulePickup` mutation instead of deriving it from the vehicle.
+### Why not just lower the limit / spread sends across the week
 
-2. **`src/components/SchedulePickupWithDriverDialog.tsx`**
-   - Same change: add an explicit driver `<Select>`, remove the "Selected vehicle does not have an assigned driver" error, and let the user pick any active driver.
+Two reasons:
+1. You asked for manual-only, which is the right call — it gives BSG full control over outreach cadence and protects manifest deliverability absolutely.
+2. Spreading bulk sends across the week still risks consuming the manifest quota on busy days. A hard cap + manual trigger eliminates that risk entirely.
 
-3. **`src/hooks/useDrivers.ts`** — no change needed. It already filters by org + `role='driver'` + `is_active=true`, which correctly returns Khiyron, Moses, Gonzalo, Solo, etc.
+### Optional follow-up (not in this plan unless you say yes)
 
-4. **No DB migration needed.** `assignments.driver_id` already exists and is already what the mutation writes to.
-
-### Technical notes
-
-- The `useDrivers` hook joins `users` → `user_organization_roles` filtered by `role='driver'` and current org. I verified it would return both Khiyron (he has both `driver` and `dispatcher` rows — the `driver` row matches) and Moses.
-- `useSchedulePickupWithDriver` already accepts `driverId` and writes it to `assignments.driver_id` — we just need the UI to let the user pick it.
-- After this fix, the existing "assign driver to vehicle" feature in vehicle management still works as a *default*, but it's no longer a *gate*.
-
-### Quick unblock right now (no code change)
-
-If you need to schedule Khiyron or Moses today before the fix ships, go to **Vehicle Management** and set them as the `assigned_driver_id` on any active truck. They'll then appear when you pick that truck in the schedule dialog.
+- Move outreach to a dedicated Resend audience/domain so it can't ever share quota with manifests.
+- Or: switch transactional manifest emails to Lovable Emails (built-in, separate quota from Resend) and leave Resend exclusively for outreach. Happy to scope this if you want long-term separation.
 
