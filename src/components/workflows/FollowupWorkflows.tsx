@@ -92,6 +92,12 @@ export function FollowupWorkflows() {
           <CardDescription className="text-white/90">Clients scheduled for followup contact today</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 pt-4">
+          <div className="flex items-start gap-2 p-3 rounded-md border bg-muted/40 text-xs text-muted-foreground">
+            <Info className="h-4 w-4 mt-0.5 shrink-0" />
+            <span>
+              Automated weekly outreach is <strong>off</strong> — staff sends these emails manually to protect manifest email delivery. Daily cap: 25 sends.
+            </span>
+          </div>
           {followups.map((workflow) => {
             const lastPickup = workflow.clients?.last_pickup_at;
             const lastPickupDate = lastPickup ? new Date(lastPickup) : null;
