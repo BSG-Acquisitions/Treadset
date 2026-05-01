@@ -49,6 +49,7 @@ const manifestSchema = z.object({
   commercial_22_5_on: z.coerce.number().min(0).default(0),
   otr_count: z.coerce.number().min(0).default(0),
   tractor_count: z.coerce.number().min(0).default(0),
+  semi_count: z.coerce.number().min(0).default(0),
   // Optional weights
   gross_weight_lbs: z.coerce.number().min(0).optional().default(0),
   tare_weight_lbs: z.coerce.number().min(0).optional().default(0),
@@ -199,6 +200,7 @@ function DriverManifestCreationWizardInner({
       commercial_22_5_on: undefined,
       otr_count: undefined,
       tractor_count: undefined,
+      semi_count: undefined,
       gross_weight_lbs: 0,
       tare_weight_lbs: 0,
       weight_tons_manual: 0,
@@ -212,9 +214,10 @@ function DriverManifestCreationWizardInner({
     const passenger = ((vals.pte_off_rim || 0) + (vals.pte_on_rim || 0)) * MICHIGAN_CONVERSIONS.PASSENGER_TIRE_TO_PTE;
     const truckCount = (vals.commercial_17_5_19_5_off || 0) + (vals.commercial_17_5_19_5_on || 0) + (vals.commercial_22_5_off || 0) + (vals.commercial_22_5_on || 0);
     const truck = truckCount * MICHIGAN_CONVERSIONS.SEMI_TIRE_TO_PTE;
-    const tractor = (vals.tractor_count || 0) * MICHIGAN_CONVERSIONS.SEMI_TIRE_TO_PTE; // Tractor tires = semi tires (5 PTE)
-    const otr = (vals.otr_count || 0) * MICHIGAN_CONVERSIONS.OTR_TIRE_TO_PTE; // OTR tires = 15 PTE
-    return passenger + truck + tractor + otr;
+    const semi = (vals.semi_count || 0) * MICHIGAN_CONVERSIONS.SEMI_TIRE_TO_PTE; // Semi tires = 5 PTE each
+    const tractor = (vals.tractor_count || 0) * MICHIGAN_CONVERSIONS.OTR_TIRE_TO_PTE; // Farm tractor tires = OTR class, 15 PTE each
+    const otr = (vals.otr_count || 0) * MICHIGAN_CONVERSIONS.OTR_TIRE_TO_PTE; // OTR tires = 15 PTE each
+    return passenger + truck + semi + tractor + otr;
   };
 
   const calcTonsFromPTE = () => {
@@ -255,6 +258,7 @@ function DriverManifestCreationWizardInner({
     form.watch('commercial_22_5_on'),
     form.watch('otr_count'),
     form.watch('tractor_count'),
+    form.watch('semi_count'),
     manualWeightOverride,
     form
   ]);
@@ -1042,6 +1046,7 @@ function DriverManifestCreationWizardInner({
         commercial_22_5_on: data.commercial_22_5_on,
         otr_count: data.otr_count,
         tractor_count: data.tractor_count,
+        semi_count: data.semi_count,
         weight_tons: resolvedTons,
         // Store weights directly in manifest for PDF generation
         gross_weight_lbs: finalGross,
@@ -1128,8 +1133,9 @@ function DriverManifestCreationWizardInner({
           
           // Tire counts for PDF
           passenger_car_count: String((data.pte_off_rim || 0) + (data.pte_on_rim || 0)),
-          truck_count: String((data.commercial_17_5_19_5_off || 0) + (data.commercial_17_5_19_5_on || 0) + 
-                             (data.commercial_22_5_off || 0) + (data.commercial_22_5_on || 0)),
+          truck_count: String((data.commercial_17_5_19_5_off || 0) + (data.commercial_17_5_19_5_on || 0) +
+                             (data.commercial_22_5_off || 0) + (data.commercial_22_5_on || 0) +
+                             (data.semi_count || 0)),
           oversized_count: String((data.otr_count || 0) + (data.tractor_count || 0)),
           
           // Hauler info from assignment
@@ -1260,8 +1266,8 @@ function DriverManifestCreationWizardInner({
             const totalPte = (data.pte_off_rim || 0) + (data.pte_on_rim || 0) +
               5 * ((data.commercial_17_5_19_5_off || 0) + (data.commercial_17_5_19_5_on || 0) +
                    (data.commercial_22_5_off || 0) + (data.commercial_22_5_on || 0) +
-                   (data.tractor_count || 0)) +
-              15 * (data.otr_count || 0);
+                   (data.semi_count || 0)) +
+              15 * ((data.otr_count || 0) + (data.tractor_count || 0));
 
             await createShipmentFromManifest.mutateAsync({
               manifestId: manifest.id,
@@ -1873,7 +1879,30 @@ function DriverManifestCreationWizardInner({
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Oversized</CardTitle>
+                <CardTitle className="text-base">Semi (5 PTE each)</CardTitle>
+                <CardDescription>Heavy-truck / over-the-road semi tires.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <FormField
+                  control={form.control}
+                  name="semi_count"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Semi Count</FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value) || 0)} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Oversized (15 PTE each)</CardTitle>
+                <CardDescription>OTR (off-the-road) and farm-tractor tires.</CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-2 gap-4">
                 <FormField

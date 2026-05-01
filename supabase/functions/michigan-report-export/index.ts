@@ -58,7 +58,14 @@ const handler = async (req: Request): Promise<Response> => {
     const monthlyData: Record<number, { pte: number; pickups: number }> = {};
 
     pickups?.forEach(pickup => {
-      const pickupPTE = (pickup.pte_count || 0) + (pickup.otr_count || 0) * 15 + (pickup.tractor_count || 0) * 5;
+      // Michigan PTE multipliers: passenger = 1, semi/commercial = 5, OTR/farm-tractor = 15.
+      // Pre-2026-05 rows entered tractor as semi via the wizard; backfill migrated those
+      // values into semi_count, so tractor_count here is true farm-tractor (15 PTE class).
+      const pickupPTE =
+        (pickup.pte_count || 0) +
+        (pickup.semi_count || 0) * 5 +
+        (pickup.otr_count || 0) * 15 +
+        (pickup.tractor_count || 0) * 15;
       totalPTE += pickupPTE;
 
       const county = pickup.clients?.county || 'Unknown';
