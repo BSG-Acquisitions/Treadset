@@ -8,6 +8,17 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// pdf-lib's WinAnsi (CP-1252) font encoding can't render characters outside
+// 0x00–0xFF, which crashes updateFieldAppearances on inputs like "Birleşik".
+// We decompose accents (é→e, ş→s) and drop anything still outside ASCII.
+function sanitizeForPdf(value: unknown): string {
+  if (value == null) return '';
+  return String(value)
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^\x20-\x7E]/g, '');
+}
+
 // Input validation schema
 const AcroFormFillRequestSchema = z.object({
   templatePath: z.string()
@@ -431,8 +442,13 @@ const handler = async (req: Request): Promise<Response> => {
           const field = form.getField(fieldName);
           
           if (field instanceof PDFTextField) {
-            field.setText(String(value || ''));
-            console.log(`Set text field "${fieldName}" to: "${value}"`);
+            const safeValue = sanitizeForPdf(value);
+            field.setText(safeValue);
+            if (safeValue !== String(value ?? '')) {
+              console.log(`Set text field "${fieldName}" to: "${safeValue}" (sanitized from "${value}")`);
+            } else {
+              console.log(`Set text field "${fieldName}" to: "${safeValue}"`);
+            }
           } else {
             console.log(`Field "${fieldName}" is not a text field, type: ${field.constructor.name}`);
           }
