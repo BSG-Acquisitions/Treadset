@@ -219,10 +219,10 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
         </div>
       </div>
       
-      {/* Navigation Tabs - Only shown on desktop xl+ screens */}
-      <div className="hidden xl:block border-t border-border/20 bg-card/50">
+      {/* Navigation Tabs */}
+      <div className="border-t border-border/20 bg-card/50 overflow-x-auto">
         <div className="px-3 sm:px-6">
-          <nav className="flex items-center justify-evenly">
+          <nav className="flex items-center justify-evenly min-w-max xl:min-w-0">
             {/* Dashboard - Simple link */}
             <Link to="/dashboard" className={navItemClass(activeSection === 'dashboard')}>
               <Home className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
