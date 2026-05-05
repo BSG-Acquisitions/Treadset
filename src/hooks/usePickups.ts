@@ -112,8 +112,11 @@ export const usePickups = (date?: string) => {
 };
 
 export const useAssignments = (date?: string) => {
+  const { user } = useAuth();
+  const orgId = user?.currentOrganization?.id;
+
   return useQuery({
-    queryKey: ['assignments', date],
+    queryKey: ['assignments', date, orgId],
     queryFn: async () => {
       let query = supabase.from('assignments')
         .select(`
@@ -131,15 +134,21 @@ export const useAssignments = (date?: string) => {
             email
           )
         `);
-      
+
+      // Defense-in-depth: explicit org filter on top of RLS
+      if (orgId) {
+        query = query.eq('organization_id', orgId);
+      }
+
       if (date) {
         query = query.eq('scheduled_date', date);
       }
-      
+
       const { data, error } = await query.order('estimated_arrival', { ascending: true });
       if (error) throw error;
       return data || [];
     },
+    enabled: !!orgId,
     refetchInterval: 30000, // Refetch every 30 seconds (realtime channel handles instant updates)
     staleTime: 30 * 1000, // 30 second stale time
     gcTime: 60 * 1000,

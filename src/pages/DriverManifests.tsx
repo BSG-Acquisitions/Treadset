@@ -15,8 +15,9 @@ export default function DriverManifests() {
   const [selectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const { user } = useAuth();
   
-  const { data: manifests = [], isLoading: manifestsLoading } = useManifests(undefined, user?.id);
-  const { data: assignments = [], isLoading: assignmentsLoading } = useAssignments(selectedDate);
+  const { data: manifests = [], isLoading: manifestsLoading, error: manifestsError } = useManifests(undefined, user?.id);
+  const { data: assignments = [], isLoading: assignmentsLoading, error: assignmentsError } = useAssignments(selectedDate);
+  const queryError = manifestsError || assignmentsError;
 
   const todaysManifests = manifests.filter(manifest => 
     format(new Date(manifest.created_at), 'yyyy-MM-dd') === selectedDate
@@ -53,6 +54,26 @@ export default function DriverManifests() {
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
+
+  if (queryError) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto p-6">
+          <Card className="border-destructive">
+            <CardHeader>
+              <CardTitle className="text-destructive">Failed to load manifests</CardTitle>
+              <CardDescription>{(queryError as Error).message || 'Unknown error'}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={() => window.location.reload()} variant="outline">
+                Retry
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   if (manifestsLoading || assignmentsLoading) {
     return (

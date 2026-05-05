@@ -29,32 +29,40 @@ export function CollectPaymentWithCard({
   const { toast } = useToast();
 
   useEffect(() => {
-    if (open && pickupId) {
-      createPaymentIntent();
+    if (!open || !pickupId) {
+      // Reset clientSecret when dialog closes so a fresh intent is created on next open
+      setClientSecret(null);
+      return;
     }
-  }, [open, pickupId]);
 
-  const createPaymentIntent = async () => {
+    let cancelled = false;
     setLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("create-pickup-payment", {
-        body: { pickup_id: pickupId },
-      });
 
-      if (error) throw error;
+    (async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("create-pickup-payment", {
+          body: { pickup_id: pickupId },
+        });
+        if (cancelled) return;
+        if (error) throw error;
+        setClientSecret(data.clientSecret);
+      } catch (error: any) {
+        if (cancelled) return;
+        toast({
+          title: "Error",
+          description: error.message || "Failed to initialize payment",
+          variant: "destructive",
+        });
+        onOpenChange(false);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
 
-      setClientSecret(data.clientSecret);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to initialize payment",
-        variant: "destructive",
-      });
-      onOpenChange(false);
-    } finally {
-      setLoading(false);
-    }
-  };
+    return () => {
+      cancelled = true;
+    };
+  }, [open, pickupId, toast, onOpenChange]);
 
   const handleSuccess = async () => {
     // Update pickup payment status with new payment tracking columns

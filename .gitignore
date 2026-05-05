@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Internal review docs (operator-only, not for git history)
+REVIEWS/
+
+# Supabase CLI state
+supabase/.temp/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

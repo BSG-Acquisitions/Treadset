@@ -121,6 +121,7 @@ function DriverManifestCreationWizardInner({
   const [commercial_22_5_off_rate, setCommercial_22_5_OffRate] = useState<string>("");
   const [commercial_22_5_on_rate, setCommercial_22_5_OnRate] = useState<string>("");
   const [otrRate, setOtrRate] = useState<string>("");
+  const [semiRate, setSemiRate] = useState<string>("");
   const [calculatedTotal, setCalculatedTotal] = useState(0);
   const [offlineMethod, setOfflineMethod] = useState<'CASH' | 'CHECK'>('CASH');
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
@@ -131,6 +132,7 @@ function DriverManifestCreationWizardInner({
   // Timestamp locked at moment of signature save (not at submit time)
   const [generatorSignedAt, setGeneratorSignedAt] = useState<string | null>(null);
   const [haulerSignedAt, setHaulerSignedAt] = useState<string | null>(null);
+  const [receiverSignedAt, setReceiverSignedAt] = useState<string | null>(null);
   // Upload status tracking
   const [genSigUploading, setGenSigUploading] = useState(false);
   const [haulSigUploading, setHaulSigUploading] = useState(false);
@@ -146,7 +148,8 @@ function DriverManifestCreationWizardInner({
     commercial_17_5_19_5_onRim: ['10.00', '11.00', '12.00', '13.00', '14.00', '15.00', '16.00', '17.00'],
     commercial_22_5_offRim: ['12.00', '13.00', '14.00', '15.00', '16.00', '17.00', '18.00', '19.00', '20.00'],
     commercial_22_5_onRim: ['14.00', '15.00', '16.00', '17.00', '18.00', '19.00', '20.00', '21.00', '22.00'],
-    otr: ['50.00', '70.00', '90.00', '110.00', '130.00', '150.00']
+    otr: ['50.00', '70.00', '90.00', '110.00', '130.00', '150.00'],
+    semi: ['8.00', '10.00', '12.00', '14.00', '16.00', '18.00', '20.00']
   };
   
   const { toast } = useToast();
@@ -274,6 +277,7 @@ function DriverManifestCreationWizardInner({
       const commercial_22_5_off_count = formValues.commercial_22_5_off || 0;
       const commercial_22_5_on_count = formValues.commercial_22_5_on || 0;
       const otrTotalCount = (formValues.otr_count || 0) + (formValues.tractor_count || 0);
+      const semiCount = formValues.semi_count || 0;
 
       const pteOffRimAmount = pteOffRimCount * (parseFloat(pteOffRimRate) || 0);
       const pteOnRimAmount = pteOnRimCount * (parseFloat(pteOnRimRate) || 0);
@@ -282,10 +286,11 @@ function DriverManifestCreationWizardInner({
       const commercial_22_5_off_amount = commercial_22_5_off_count * (parseFloat(commercial_22_5_off_rate) || 0);
       const commercial_22_5_on_amount = commercial_22_5_on_count * (parseFloat(commercial_22_5_on_rate) || 0);
       const otrAmount = otrTotalCount * (parseFloat(otrRate) || 0);
-      
-      setCalculatedTotal(pteOffRimAmount + pteOnRimAmount + commercial_17_5_19_5_off_amount + commercial_17_5_19_5_on_amount + commercial_22_5_off_amount + commercial_22_5_on_amount + otrAmount);
+      const semiAmount = semiCount * (parseFloat(semiRate) || 0);
+
+      setCalculatedTotal(pteOffRimAmount + pteOnRimAmount + commercial_17_5_19_5_off_amount + commercial_17_5_19_5_on_amount + commercial_22_5_off_amount + commercial_22_5_on_amount + otrAmount + semiAmount);
     }
-  }, [pteOffRimRate, pteOnRimRate, commercial_17_5_19_5_off_rate, commercial_17_5_19_5_on_rate, commercial_22_5_off_rate, commercial_22_5_on_rate, otrRate, step, form]);
+  }, [pteOffRimRate, pteOnRimRate, commercial_17_5_19_5_off_rate, commercial_17_5_19_5_on_rate, commercial_22_5_off_rate, commercial_22_5_on_rate, otrRate, semiRate, step, form]);
 
   // Fetch pickup, assignment, and hauler data on mount (only in pickup mode)
   useEffect(() => {
@@ -511,11 +516,12 @@ function DriverManifestCreationWizardInner({
     // Validate current step before proceeding
     if (currentStep.key === "tires") {
       const values = form.getValues();
-      const totalTires = (values.pte_off_rim || 0) + (values.pte_on_rim || 0) + 
+      const totalTires = (values.pte_off_rim || 0) + (values.pte_on_rim || 0) +
                         (values.commercial_17_5_19_5_off || 0) + (values.commercial_17_5_19_5_on || 0) +
                         (values.commercial_22_5_off || 0) + (values.commercial_22_5_on || 0) +
-                        (values.otr_count || 0) + (values.tractor_count || 0);
-      
+                        (values.otr_count || 0) + (values.tractor_count || 0) +
+                        (values.semi_count || 0);
+
       if (totalTires === 0) {
         toast({
           title: "Missing Information",
@@ -600,7 +606,17 @@ function DriverManifestCreationWizardInner({
         });
         return;
       }
-      
+
+      const semiCount = values.semi_count || 0;
+      if (semiCount > 0 && (!semiRate || parseFloat(semiRate) <= 0)) {
+        toast({
+          title: "Pricing Required - Cannot Continue",
+          description: "Please enter a rate for Semi tires. Revenue entry is mandatory.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // FINAL CHECK: Total revenue MUST be greater than $0
       if (calculatedTotal <= 0) {
         toast({
@@ -763,7 +779,8 @@ function DriverManifestCreationWizardInner({
             throw new Error('Receiver signature upload returned no path.');
           }
           setReceiverSigPath(receiverFileName);
-          console.log('[DRIVER_WIZARD] Receiver signature saved:', receiverFileName);
+          setReceiverSignedAt(recvTimestamp);
+          console.log('[DRIVER_WIZARD] Receiver signature saved:', receiverFileName, 'at', recvTimestamp);
         }
 
         console.log('[DRIVER_WIZARD] All signatures saved successfully');
@@ -834,10 +851,11 @@ function DriverManifestCreationWizardInner({
 
       // Validate tire counts one more time
       const values = form.getValues();
-      const totalTires = (values.pte_off_rim || 0) + (values.pte_on_rim || 0) + 
+      const totalTires = (values.pte_off_rim || 0) + (values.pte_on_rim || 0) +
                         (values.commercial_17_5_19_5_off || 0) + (values.commercial_17_5_19_5_on || 0) +
                         (values.commercial_22_5_off || 0) + (values.commercial_22_5_on || 0) +
-                        (values.otr_count || 0) + (values.tractor_count || 0);
+                        (values.otr_count || 0) + (values.tractor_count || 0) +
+                        (values.semi_count || 0);
       
       if (totalTires === 0) {
         toast({
@@ -1064,9 +1082,12 @@ function DriverManifestCreationWizardInner({
         manifest = await createManifest.mutateAsync(manifestData);
       }
 
-      // 3. Update manifest with hauler, signatures, and timestamps (to-the-second precision)
-      const generatorSignedAt = new Date().toISOString();
-      const haulerSignedAt = new Date().toISOString();
+      // 3. Update manifest with hauler, signatures, and timestamps
+      // Use locked timestamps from when signatures were actually captured;
+      // fall back to now() only if state is unset (e.g., legacy/edge path)
+      const finalGeneratorSignedAt = generatorSignedAt ?? new Date().toISOString();
+      const finalHaulerSignedAt = haulerSignedAt ?? new Date().toISOString();
+      const finalReceiverSignedAt = receiverSignedAt ?? null;
 
       await updateManifest.mutateAsync({
         id: manifest.id,
@@ -1082,8 +1103,9 @@ function DriverManifestCreationWizardInner({
         .from('manifests')
         .update({
           hauler_id: haulerData.id,
-          generator_signed_at: generatorSignedAt,
-          hauler_signed_at: haulerSignedAt,
+          generator_signed_at: finalGeneratorSignedAt,
+          hauler_signed_at: finalHaulerSignedAt,
+          ...(isDropToProcessor && finalReceiverSignedAt ? { receiver_signed_at: finalReceiverSignedAt } : {}),
           signed_by_name: data.generator_print_name,
           signed_by_title: data.hauler_print_name, // Store hauler's print name in title field
           total: calculatedTotal, // MUST include total to ensure revenue is persisted
@@ -1126,9 +1148,9 @@ function DriverManifestCreationWizardInner({
           // Signature paths
           generator_signature: generatorSigPath,
           
-          generator_print_name: `${data.generator_print_name} - ${new Date(generatorSignedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}`,
-          generator_date: new Date(generatorSignedAt).toLocaleDateString('en-US'),
-          generator_time: new Date(generatorSignedAt).toLocaleTimeString('en-US', { hour12: false }),
+          generator_print_name: `${data.generator_print_name} - ${new Date(finalGeneratorSignedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}`,
+          generator_date: new Date(finalGeneratorSignedAt).toLocaleDateString('en-US'),
+          generator_time: new Date(finalGeneratorSignedAt).toLocaleTimeString('en-US', { hour12: false }),
           generator_volume_weight: String(totalPteForPdf),
           
           // Tire counts for PDF
@@ -1148,9 +1170,9 @@ function DriverManifestCreationWizardInner({
           hauler_mi_reg: haulerData.hauler_mi_reg || '',
           hauler_signature: haulerSigPath,
           
-          hauler_print_name: `${data.hauler_print_name} - ${new Date(haulerSignedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}`,
-          hauler_date: new Date(haulerSignedAt).toLocaleDateString('en-US'),
-          hauler_time: new Date(haulerSignedAt).toLocaleTimeString('en-US', { hour12: false }),
+          hauler_print_name: `${data.hauler_print_name} - ${new Date(finalHaulerSignedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}`,
+          hauler_date: new Date(finalHaulerSignedAt).toLocaleDateString('en-US'),
+          hauler_time: new Date(finalHaulerSignedAt).toLocaleTimeString('en-US', { hour12: false }),
           hauler_total_pte: String(totalPteForPdf),
           
           // Weight fields - send calculated values
@@ -1167,8 +1189,8 @@ function DriverManifestCreationWizardInner({
             receiver_zip: standaloneClientData?.physical_zip || standaloneClientData?.zip || '',
             receiver_phone: standaloneClientData?.phone || '',
             receiver_signature: receiverSigPath,
-            receiver_print_name: `${receiverPrintName} - ${new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}`,
-            receiver_date: new Date().toLocaleDateString('en-US'),
+            receiver_print_name: `${receiverPrintName} - ${new Date(finalReceiverSignedAt ?? new Date().toISOString()).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}`,
+            receiver_date: new Date(finalReceiverSignedAt ?? new Date().toISOString()).toLocaleDateString('en-US'),
           } : {}),
 
           // Pre-populate Part 3 left side (Receiver static info) from org's default receiver
@@ -1454,6 +1476,14 @@ function DriverManifestCreationWizardInner({
               description: 'OTR/Tractor Tires',
               quantity: otrTotal,
               unit_amount: Math.round(parseFloat(otrRate) * 100),
+            });
+          }
+
+          if ((data.semi_count || 0) > 0 && parseFloat(semiRate) > 0) {
+            lineItems.push({
+              description: 'Semi Tires',
+              quantity: data.semi_count || 0,
+              unit_amount: Math.round(parseFloat(semiRate) * 100),
             });
           }
           
@@ -2073,6 +2103,7 @@ function DriverManifestCreationWizardInner({
         const commercial_22_5_off_count = formValues.commercial_22_5_off || 0;
         const commercial_22_5_on_count = formValues.commercial_22_5_on || 0;
         const otrTotalCount = (formValues.otr_count || 0) + (formValues.tractor_count || 0);
+        const previewSemiCount = formValues.semi_count || 0;
 
         const pteOffRimAmount = pteOffRimCount * (parseFloat(pteOffRimRate) || 0);
         const pteOnRimAmount = pteOnRimCount * (parseFloat(pteOnRimRate) || 0);
@@ -2081,7 +2112,8 @@ function DriverManifestCreationWizardInner({
         const commercial_22_5_off_amount = commercial_22_5_off_count * (parseFloat(commercial_22_5_off_rate) || 0);
         const commercial_22_5_on_amount = commercial_22_5_on_count * (parseFloat(commercial_22_5_on_rate) || 0);
         const otrAmount = otrTotalCount * (parseFloat(otrRate) || 0);
-        const previewTotal = pteOffRimAmount + pteOnRimAmount + commercial_17_5_19_5_off_amount + commercial_17_5_19_5_on_amount + commercial_22_5_off_amount + commercial_22_5_on_amount + otrAmount;
+        const semiAmount = previewSemiCount * (parseFloat(semiRate) || 0);
+        const previewTotal = pteOffRimAmount + pteOnRimAmount + commercial_17_5_19_5_off_amount + commercial_17_5_19_5_on_amount + commercial_22_5_off_amount + commercial_22_5_on_amount + otrAmount + semiAmount;
 
         return (
           <div className="space-y-6">
@@ -2426,6 +2458,54 @@ function DriverManifestCreationWizardInner({
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-muted-foreground">Subtotal:</span>
                           <span className="font-semibold">${otrAmount.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {previewSemiCount > 0 && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">Semi Tires ({previewSemiCount} tires)</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Quick Select Rate</Label>
+                      <Select
+                        value={PRESET_RATES.semi.includes(semiRate) ? semiRate : ''}
+                        onValueChange={setSemiRate}
+                      >
+                        <SelectTrigger className="bg-background">
+                          <SelectValue placeholder="Select preset rate" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background z-50">
+                          {PRESET_RATES.semi.map((rate) => (
+                            <SelectItem key={rate} value={rate}>
+                              ${rate} per tire
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Or Enter Custom Rate</Label>
+                      <Input
+                        type="text"
+                        inputMode="decimal"
+                        pattern="[0-9]*\.?[0-9]*"
+                        placeholder="0.00"
+                        value={semiRate}
+                        onChange={(e) => setSemiRate(e.target.value)}
+                        className="text-base font-medium"
+                      />
+                    </div>
+                    {semiAmount > 0 && (
+                      <div className="pt-2 border-t">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground">Subtotal:</span>
+                          <span className="font-semibold">${semiAmount.toFixed(2)}</span>
                         </div>
                       </div>
                     )}
@@ -3009,6 +3089,7 @@ function DriverManifestCreationWizardInner({
         const payment_22_5_off_count = paymentFormValues.commercial_22_5_off || 0;
         const payment_22_5_on_count = paymentFormValues.commercial_22_5_on || 0;
         const paymentOtrTotalCount = (paymentFormValues.otr_count || 0) + (paymentFormValues.tractor_count || 0);
+        const paymentSemiCount = paymentFormValues.semi_count || 0;
 
         const handleCollectPayment = async () => {
           if (paymentMethod === 'CHECK' && !checkNumber.trim()) {
@@ -3107,6 +3188,12 @@ function DriverManifestCreationWizardInner({
                   <div className="flex justify-between items-center text-sm">
                     <span>OTR/Tractor ({paymentOtrTotalCount} × ${otrRate})</span>
                     <span className="font-medium">${(paymentOtrTotalCount * parseFloat(otrRate)).toFixed(2)}</span>
+                  </div>
+                )}
+                {paymentSemiCount > 0 && parseFloat(semiRate) > 0 && (
+                  <div className="flex justify-between items-center text-sm">
+                    <span>Semi ({paymentSemiCount} × ${semiRate})</span>
+                    <span className="font-medium">${(paymentSemiCount * parseFloat(semiRate)).toFixed(2)}</span>
                   </div>
                 )}
                 <div className="pt-3 border-t">

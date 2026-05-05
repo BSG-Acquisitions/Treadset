@@ -88,6 +88,11 @@ export const ReceiverSignatureDialog = ({ open, onOpenChange, manifestId, manife
 
   const completeReceiverSignature = useMutation({
     mutationFn: async () => {
+      if (isCompleting) {
+        // Idempotency guard: prevent double-submission while a previous run is in flight
+        throw new Error("Already submitting — please wait");
+      }
+
       if (!sigCanvas || sigCanvas.isEmpty()) {
         toast({ title: "Signature required", description: "Please provide a receiver signature.", variant: "destructive" });
         throw new Error("Please provide a signature");

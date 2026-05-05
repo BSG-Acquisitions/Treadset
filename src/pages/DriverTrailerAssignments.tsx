@@ -101,7 +101,7 @@ export default function DriverTrailerAssignments() {
       .single();
     
     if (error) {
-      toast.error('Failed to mark stop complete. You may not have permission.');
+      toast.error(`Failed to mark stop complete: ${error.message || 'You may not have permission.'}`);
       return;
     }
     

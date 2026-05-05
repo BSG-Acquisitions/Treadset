@@ -249,29 +249,29 @@ export default function DriverManifestView() {
             <CardContent className="space-y-4">
               <div>
                 <h4 className="font-medium mb-1">Client</h4>
-                <p>{manifest.clients?.company_name}</p>
-                <p className="text-sm text-muted-foreground">{manifest.clients?.email}</p>
+                <p>{manifest.clients?.company_name || 'Unknown Client'}</p>
+                <p className="text-sm text-muted-foreground">{manifest.clients?.email || '—'}</p>
               </div>
-              
+
               <Separator />
-              
+
               <div>
                 <h4 className="font-medium mb-1 flex items-center gap-2">
                   <MapPin className="h-4 w-4" />
                   Location
                 </h4>
-                <p className="font-medium">{manifest.locations?.name}</p>
-                <p className="text-sm text-muted-foreground">{manifest.locations?.address}</p>
+                <p className="font-medium">{manifest.locations?.name || 'No location'}</p>
+                <p className="text-sm text-muted-foreground">{manifest.locations?.address || '—'}</p>
               </div>
-              
+
               <Separator />
-              
+
               <div>
                 <h4 className="font-medium mb-1 flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
                   Pickup Date
                 </h4>
-                <p>{manifest.pickups?.pickup_date && new Date(manifest.pickups.pickup_date).toLocaleDateString()}</p>
+                <p>{manifest.pickups?.pickup_date ? new Date(manifest.pickups.pickup_date).toLocaleDateString() : '—'}</p>
               </div>
             </CardContent>
           </Card>
