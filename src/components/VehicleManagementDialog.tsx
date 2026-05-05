@@ -191,7 +191,7 @@ export const VehicleManagementDialog: React.FC<VehicleManagementDialogProps> = (
                     type="email"
                     value={newVehicle.driverEmail}
                     onChange={(e) => setNewVehicle(prev => ({ ...prev, driverEmail: e.target.value }))}
-                    placeholder="brenner.whitt@example.com"
+                    placeholder="driver@example.com"
                     className="mt-1"
                   />
                 </div>
@@ -263,7 +263,7 @@ export const VehicleManagementDialog: React.FC<VehicleManagementDialogProps> = (
                         type="email"
                         value={editValues.driverEmail}
                         onChange={(e) => setEditValues(prev => ({ ...prev, driverEmail: e.target.value }))}
-                        placeholder="brenner.whitt@example.com"
+                        placeholder="driver@example.com"
                         className="mt-1"
                       />
                     </div>

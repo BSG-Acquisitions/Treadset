@@ -142,7 +142,7 @@ export function EditTrailerDialog({ trailer, open, onOpenChange }: EditTrailerDi
               id="owner_name"
               value={formData.owner_name}
               onChange={(e) => setFormData(prev => ({ ...prev, owner_name: e.target.value }))}
-              placeholder="e.g., BSG Tire Recycling, ABC Rentals"
+              placeholder="e.g., Owner name or rental company"
             />
           </div>
 

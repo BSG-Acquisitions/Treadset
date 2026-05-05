@@ -151,14 +151,15 @@ export const useSchedulePickup = () => {
   const { toast } = useToast();
   const canWrite = useCanWrite();
 
+  const { user } = useAuth();
+
   return useMutation({
     mutationFn: async (data: SchedulePickupData): Promise<{ pickup: Pickup; assignment: Assignment; options?: RouteOption[] }> => {
       if (!canWrite) {
         throw new Error('Demo mode - changes are disabled');
       }
-      // Get current organization ID
-      const orgSlug = 'bsg'; // For now, default to BSG
-      const { data: orgData } = await supabase.rpc('get_current_user_organization', { org_slug: orgSlug });
+      const orgData = user?.currentOrganization?.id;
+      if (!orgData) throw new Error('No organization configured for current user');
       
       // Create the pickup
       const { data: pickup, error: pickupError } = await supabase

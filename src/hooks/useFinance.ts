@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import type { Database } from "@/integrations/supabase/types";
 
 type Invoice = Database["public"]["Tables"]["invoices"]["Row"];
@@ -66,6 +67,7 @@ export const useCompletedPickups = (clientId?: string) => {
 export const useCreateInvoice = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async (data: {
@@ -74,6 +76,11 @@ export const useCreateInvoice = () => {
       dueDate: string;
       notes?: string;
     }) => {
+      const organizationId = user?.currentOrganization?.id;
+      if (!organizationId) {
+        throw new Error("Your account is not assigned to an organization. Contact your admin.");
+      }
+
       // Get organization settings for tax rate
       const { data: orgSettings } = await supabase
         .from('organization_settings')
@@ -102,16 +109,12 @@ export const useCreateInvoice = () => {
       const taxAmount = subtotal * taxRate;
       const totalAmount = subtotal + taxAmount;
 
-      // Get current organization ID
-      const orgSlug = 'bsg'; // For now, default to BSG
-      const { data: orgData } = await supabase.rpc('get_current_user_organization', { org_slug: orgSlug });
-      
       // Create invoice
       const { data: invoice, error: invoiceError } = await supabase
         .from('invoices')
         .insert({
           client_id: data.clientId,
-          organization_id: orgData,
+          organization_id: organizationId,
           invoice_number: invoiceNumber,
           subtotal,
           tax_amount: taxAmount,
@@ -169,12 +172,17 @@ export const useCreateInvoice = () => {
 export const useCreatePayment = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async (payment: PaymentInsert) => {
+    mutationFn: async (payment: Omit<PaymentInsert, 'organization_id'>) => {
+      const organizationId = user?.currentOrganization?.id;
+      if (!organizationId) {
+        throw new Error("Your account is not assigned to an organization. Contact your admin.");
+      }
       const { data, error } = await supabase
         .from('payments')
-        .insert(payment)
+        .insert({ ...payment, organization_id: organizationId })
         .select()
         .single();
 

@@ -36,7 +36,39 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Resolve caller's organization from the request's JWT
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Missing authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const callerClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user: callerAuthUser } } = await callerClient.auth.getUser();
+    if (!callerAuthUser) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid session' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const { data: callerRow } = await supabase
+      .from('users')
+      .select('id, user_organization_roles(organization_id)')
+      .eq('auth_user_id', callerAuthUser.id)
+      .maybeSingle();
+    const organizationId = callerRow?.user_organization_roles?.[0]?.organization_id as string | undefined;
+    if (!organizationId) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Caller has no organization assigned' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const { csvData, dryRun = true } = await req.json();
     
@@ -187,7 +219,7 @@ Deno.serve(async (req) => {
         notes: row.notes?.trim() || null,
         tags: tags.length > 0 ? tags : null,
         pricing_tier_id: pricingTierId,
-        organization_id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73'
+        organization_id: organizationId
       };
 
       processedData.clients.push({ ...clientData, _rowNum: rowNum });
@@ -243,7 +275,8 @@ Deno.serve(async (req) => {
         .from('clients')
         .select('id')
         .eq('company_name', cleanClientData.company_name)
-        .single();
+        .eq('organization_id', organizationId)
+        .maybeSingle();
 
       if (existingClient) {
         // Update existing client
@@ -280,7 +313,7 @@ Deno.serve(async (req) => {
         const locationWithClientId = {
           ...cleanLocationData,
           client_id: clientId,
-          organization_id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73'
+          organization_id: organizationId
         };
 
         // Check if location exists for this client
@@ -289,7 +322,8 @@ Deno.serve(async (req) => {
           .select('id')
           .eq('client_id', clientId)
           .eq('address', cleanLocationData.address)
-          .single();
+          .eq('organization_id', organizationId)
+          .maybeSingle();
 
         if (existingLocation) {
           // Update existing location

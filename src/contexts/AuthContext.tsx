@@ -164,7 +164,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (userError) {
         console.error('Error loading user data:', userError);
-        // Look up real internal users.id before falling back to auth UUID
         const { data: basicUser } = await supabase
           .from('users')
           .select('id')
@@ -176,18 +175,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           firstName: authUser.user_metadata?.first_name || 'User',
           lastName: authUser.user_metadata?.last_name || '',
           roles: [],
-          currentOrganization: {
-            id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
-            name: 'BSG Logistics',
-            slug: 'bsg'
-          }
         });
         return;
       }
 
       if (!userData) {
-        console.log('No user data found, providing fallback');
-        // Look up real internal users.id before falling back to auth UUID
+        console.log('No user data found, no organization assigned');
         const { data: basicUser } = await supabase
           .from('users')
           .select('id')
@@ -199,11 +192,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           firstName: authUser.user_metadata?.first_name || 'User',
           lastName: authUser.user_metadata?.last_name || '',
           roles: [],
-          currentOrganization: {
-            id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
-            name: 'BSG Logistics',
-            slug: 'bsg'
-          }
         });
         return;
       }
@@ -226,7 +214,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         filter((uor: any) => uor.organization?.id === currentOrg?.id)
         .map((uor: any) => uor.role) || ['admin'];
 
-      const finalUser = {
+      const finalUser: AuthUser = {
         id: userData.id,
         email: userData.email,
         firstName: userData.first_name,
@@ -234,11 +222,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         phone: userData.phone,
         signatureDataUrl: userData.signature_data_url,
         roles: roles, // No fallback to admin - empty roles = no access
-        currentOrganization: currentOrg || {
-          id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
-          name: 'BSG Logistics',
-          slug: 'bsg'
-        }
+        ...(currentOrg ? { currentOrganization: currentOrg } : {}),
       };
 
       console.log('Setting final user:', finalUser);
@@ -246,7 +230,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     } catch (error) {
       console.error('Error loading user data:', error);
-      // Provide fallback user — look up real internal users.id first
+      // Fallback user with no organization — guards must enforce access
       if (authUser) {
         try {
           const { data: basicUser } = await supabase
@@ -260,11 +244,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             firstName: authUser.user_metadata?.first_name || 'User',
             lastName: authUser.user_metadata?.last_name || '',
             roles: [],
-            currentOrganization: {
-              id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
-              name: 'BSG Logistics',
-              slug: 'bsg'
-            }
           });
         } catch {
           setUserIfChanged({
@@ -273,11 +252,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             firstName: authUser.user_metadata?.first_name || 'User',
             lastName: authUser.user_metadata?.last_name || '',
             roles: [],
-            currentOrganization: {
-              id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
-              name: 'BSG Logistics',
-              slug: 'bsg'
-            }
           });
         }
       } else {

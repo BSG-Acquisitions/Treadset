@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { startOfWeek, startOfMonth, startOfQuarter, startOfYear, subWeeks, subMonths, subQuarters, subYears, format, differenceInDays } from "date-fns";
 
 // Test company names to exclude from analytics (case-insensitive patterns)
-const TEST_COMPANY_PATTERNS = ['bsg tire', 'test company'];
+const TEST_COMPANY_PATTERNS = ['test company'];
 
 // Helper function to check if a company is a test company
 const isTestCompany = (companyName: string | null | undefined): boolean => {

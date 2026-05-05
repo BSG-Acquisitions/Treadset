@@ -36,9 +36,13 @@ export async function createManifestSafely(
       throw new Error('Client is required for manifest creation');
     }
 
-    // Resolve organization
-    const { data: orgId, error: orgErr } = await supabase.rpc('get_current_user_organization', { org_slug: 'bsg' });
-    if (orgErr) throw orgErr;
+    // Resolve organization (caller must ensure manifestData.organization_id is set; falls back to RPC for legacy callers)
+    let orgId = manifestData.organization_id;
+    if (!orgId) {
+      const { data: rpcOrgId, error: orgErr } = await supabase.rpc('get_current_user_organization', { org_slug: '' });
+      if (orgErr) throw orgErr;
+      orgId = rpcOrgId as string | undefined;
+    }
     if (!orgId) throw new Error('No organization configured for current user');
 
     // Generate manifest number
