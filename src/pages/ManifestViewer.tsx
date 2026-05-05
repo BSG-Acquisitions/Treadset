@@ -200,6 +200,10 @@ export default function ManifestViewer() {
                   <div className="font-medium">Tractor Count</div>
                   <div className="text-2xl font-bold text-red-600">{manifest.tractor_count}</div>
                 </div>
+                <div>
+                  <div className="font-medium">Semi Count</div>
+                  <div className="text-2xl font-bold text-purple-600">{manifest.semi_count ?? 0}</div>
+                </div>
               </div>
               
               <div className="mt-4 pt-4 border-t">

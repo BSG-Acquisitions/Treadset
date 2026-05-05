@@ -305,6 +305,13 @@ export function calculateTotalPTE(tires: {
 
 /**
  * Calculate total PTE from manifest tire counts (includes all tire types)
+ *
+ * Post-2026-05-01 model: semi_count is its own field for whole semi tires (5 PTE).
+ * tractor_count and otr_count both fall in the OTR/Oversized class (15 PTE each).
+ * Commercial 17.5/19.5 and 22.5 (sidewalls) are 5 PTE each.
+ *
+ * Historical note: pre-2026-05-01, tractor_count was used as semi (5 PTE) because
+ * there was no semi_count field. Backfill of those rows is tracked separately.
  */
 export function calculateManifestPTE(manifest: {
   pte_on_rim?: number;
@@ -315,22 +322,24 @@ export function calculateManifestPTE(manifest: {
   commercial_22_5_on?: number;
   otr_count?: number;
   tractor_count?: number;
+  semi_count?: number;
 }): number {
   // Passenger tires (1 PTE each)
   const passengerPTE = ((manifest.pte_on_rim || 0) + (manifest.pte_off_rim || 0)) * MICHIGAN_CONVERSIONS.PASSENGER_TIRE_TO_PTE;
-  
-  // Commercial/Semi tires (5 PTE each)
-  const commercialCount = (manifest.commercial_17_5_19_5_off || 0) + 
-                          (manifest.commercial_17_5_19_5_on || 0) + 
-                          (manifest.commercial_22_5_off || 0) + 
-                          (manifest.commercial_22_5_on || 0);
-  const commercialPTE = commercialCount * MICHIGAN_CONVERSIONS.SEMI_TIRE_TO_PTE;
-  
-  // OTR and Tractor tires (15 PTE for OTR, 5 PTE for tractor which is semi-sized)
-  const otrPTE = (manifest.otr_count || 0) * MICHIGAN_CONVERSIONS.OTR_TIRE_TO_PTE;
-  const tractorPTE = (manifest.tractor_count || 0) * MICHIGAN_CONVERSIONS.SEMI_TIRE_TO_PTE;
-  
-  return passengerPTE + commercialPTE + otrPTE + tractorPTE;
+
+  // Commercial sidewalls / commercial tires + whole semi (5 PTE each)
+  const semiClassCount = (manifest.commercial_17_5_19_5_off || 0) +
+                         (manifest.commercial_17_5_19_5_on || 0) +
+                         (manifest.commercial_22_5_off || 0) +
+                         (manifest.commercial_22_5_on || 0) +
+                         (manifest.semi_count || 0);
+  const semiClassPTE = semiClassCount * MICHIGAN_CONVERSIONS.SEMI_TIRE_TO_PTE;
+
+  // OTR + Tractor — both 15 PTE (oversized class)
+  const oversizedCount = (manifest.otr_count || 0) + (manifest.tractor_count || 0);
+  const oversizedPTE = oversizedCount * MICHIGAN_CONVERSIONS.OTR_TIRE_TO_PTE;
+
+  return passengerPTE + semiClassPTE + oversizedPTE;
 }
 
 /**

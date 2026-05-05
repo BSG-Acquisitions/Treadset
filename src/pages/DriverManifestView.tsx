@@ -41,6 +41,7 @@ interface ManifestData {
   commercial_17_5_19_5_off: number;
   otr_count: number;
   tractor_count: number;
+  semi_count: number | null;
   weight_tons: number;
   volume_yards: number;
   notes: string | null;
@@ -179,15 +180,16 @@ export default function DriverManifestView() {
     );
   }
 
-  const totalTires = 
-    manifest.pte_on_rim + 
-    manifest.pte_off_rim + 
-    manifest.commercial_22_5_on + 
+  const totalTires =
+    manifest.pte_on_rim +
+    manifest.pte_off_rim +
+    manifest.commercial_22_5_on +
     manifest.commercial_22_5_off +
     manifest.commercial_17_5_19_5_on +
     manifest.commercial_17_5_19_5_off +
-    manifest.otr_count + 
-    manifest.tractor_count;
+    manifest.otr_count +
+    manifest.tractor_count +
+    (manifest.semi_count ?? 0);
 
   return (
     <div className="min-h-screen bg-background">
@@ -372,6 +374,10 @@ export default function DriverManifestView() {
                     <div className="flex justify-between">
                       <span>Tractor:</span>
                       <span>{manifest.tractor_count}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Semi:</span>
+                      <span>{manifest.semi_count ?? 0}</span>
                     </div>
                   </div>
                 </div>

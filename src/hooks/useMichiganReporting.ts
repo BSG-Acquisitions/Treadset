@@ -113,6 +113,7 @@ export const useMichiganReport = (year: number) => {
           commercial_22_5_on: manifest.commercial_22_5_on || 0,
           otr_count: manifest.otr_count || 0,
           tractor_count: manifest.tractor_count || 0,
+          semi_count: manifest.semi_count || 0,
         });
 
         totalPTE += manifestPTE;
@@ -120,15 +121,16 @@ export const useMichiganReport = (year: number) => {
         // By material form - passenger tires count as whole_off_rim
         const passengerTires = (manifest.pte_on_rim || 0) + (manifest.pte_off_rim || 0);
         byMaterialForm.whole_off_rim += passengerTires;
-        
-        // Commercial 22.5 and tractor count as semi tires (5 PTE each)
-        const semiTires = (manifest.commercial_22_5_off || 0) + 
-                          (manifest.commercial_22_5_on || 0) + 
-                          (manifest.tractor_count || 0);
+
+        // Semi class (5 PTE each): commercial 22.5 sidewalls + whole semi tires.
+        // Tractor moved to OTR/oversized class post-2026-05-01.
+        const semiTires = (manifest.commercial_22_5_off || 0) +
+                          (manifest.commercial_22_5_on || 0) +
+                          (manifest.semi_count || 0);
         byMaterialForm.semi += semiTires;
-        
-        // OTR tires
-        byMaterialForm.otr += manifest.otr_count || 0;
+
+        // OTR + tractor (oversized class, 15 PTE each)
+        byMaterialForm.otr += (manifest.otr_count || 0) + (manifest.tractor_count || 0);
 
         // By county
         const county = manifest.clients?.county || 'Unknown';
