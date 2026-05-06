@@ -35,25 +35,33 @@ export const useHaulerManifests = (haulerId?: string) => {
   const sendEmail = useSendManifestEmail();
   const { user } = useAuth();
 
+  const orgId = user?.currentOrganization?.id;
+
   // Fetch manifests created by this hauler
   const { data: manifests, isLoading } = useQuery({
-    queryKey: ['hauler-manifests', haulerId],
+    queryKey: ['hauler-manifests', haulerId, orgId],
     queryFn: async () => {
       if (!haulerId) return [];
-      
-      const { data, error } = await supabase
+
+      let query = supabase
         .from('manifests')
         .select(`
           *,
           clients:client_id(id, company_name, email)
         `)
-        .eq('hauler_id', haulerId)
-        .order('created_at', { ascending: false });
+        .eq('hauler_id', haulerId);
+
+      // Defense-in-depth: explicit org filter on top of RLS
+      if (orgId) {
+        query = query.eq('organization_id', orgId);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
       return data;
     },
-    enabled: !!haulerId
+    enabled: !!haulerId && !!orgId
   });
 
   // Create a new manifest from hauler

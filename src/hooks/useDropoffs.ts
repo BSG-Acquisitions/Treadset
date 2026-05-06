@@ -10,8 +10,11 @@ type DropoffInsert = Database["public"]["Tables"]["dropoffs"]["Insert"];
 type DropoffUpdate = Database["public"]["Tables"]["dropoffs"]["Update"];
 
 export const useDropoffs = (customerId?: string) => {
+  const { user } = useAuth();
+  const orgId = user?.currentOrganization?.id;
+
   return useQuery({
-    queryKey: ['dropoffs', customerId],
+    queryKey: ['dropoffs', orgId, customerId],
     queryFn: async () => {
       let query = supabase
         .from('dropoffs')
@@ -21,16 +24,22 @@ export const useDropoffs = (customerId?: string) => {
           users:processed_by(first_name, last_name, email),
           pricing_tiers(name)
         `);
-      
+
+      // Defense-in-depth: explicit org filter on top of RLS
+      if (orgId) {
+        query = query.eq('organization_id', orgId);
+      }
+
       if (customerId) {
         query = query.eq('client_id', customerId);
       }
-      
+
       const { data, error } = await query.order('dropoff_date', { ascending: false });
-      
+
       if (error) throw error;
       return data || [];
     },
+    enabled: !!orgId,
     refetchOnWindowFocus: false,
     staleTime: 5 * 60 * 1000
   });
