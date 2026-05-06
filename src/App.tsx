@@ -39,7 +39,6 @@ const DriverManifestCreate = lazy(() => import('./pages/DriverManifestCreate'));
 const DriverManifestView = lazy(() => import('./pages/DriverManifestView'));
 const DriverRoutes = lazy(() => import('./pages/DriverRoutes'));
 const DriverDashboard = lazy(() => import('./pages/DriverDashboard'));
-const DriverAssignmentHelper = lazy(() => import('./pages/DriverAssignmentHelper'));
 const DriverAssignmentView = lazy(() => import('./pages/DriverAssignmentView'));
 const PublicBook = lazy(() => import('./pages/PublicBook'));
 const PublicBookingConfirmation = lazy(() => import('./pages/PublicBookingConfirmation'));
@@ -291,14 +290,7 @@ const App = () => (
                   </AppLayout>
                 </ProtectedRoute>
               } />
-              <Route path="/driver-assignment-helper" element={
-                <ProtectedRoute roles={['admin']}>
-                  <AppLayout>
-                    <DriverAssignmentHelper />
-                  </AppLayout>
-                </ProtectedRoute>
-              } />
-              <Route path="/driver/dashboard" element={
+<Route path="/driver/dashboard" element={
                 <ProtectedRoute roles={['driver', 'admin']}>
                   <AppLayout>
                     <DriverDashboard />

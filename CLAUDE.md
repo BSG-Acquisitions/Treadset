@@ -85,8 +85,10 @@ Grep the repo first. Lovable shipped duplicate hooks, duplicate components, dead
 ### Every session STARTS with:
 
 1. Read this file (CLAUDE.md) in full
-2. Read SESSION_LOG.md and find the most recent entry
-3. Use the most recent entry's "Next session first move" as your starting point unless Z overrides it
+2. Read **TREADSET_BRAIN.md** in full — that is the system map (routes, auth, edge functions, schema, manifest workflow, known issues). Loaded at session start so you don't have to discover the codebase from scratch.
+3. Read SESSION_LOG.md and find the most recent entry
+4. Use the most recent entry's "Next session first move" as your starting point unless Z overrides it
+5. If TREADSET_BRAIN.md has a "Known Issues" item that is now relevant to Z's first prompt, surface it before answering.
 
 ### Every session ENDS with a Ship Report appended to SESSION_LOG.md.
 

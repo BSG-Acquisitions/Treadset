@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useManifestIntegration } from "@/hooks/useManifestIntegration";
 import { useSendManifestEmail } from "@/hooks/useSendManifestEmail";
+import { useAuth } from "@/contexts/AuthContext";
 import { MICHIGAN_CONVERSIONS } from "@/lib/michigan-conversions";
 import { sanitizeUUID } from "@/lib/uuidHelpers";
 
@@ -32,6 +33,7 @@ export const useHaulerManifests = (haulerId?: string) => {
   const { toast } = useToast();
   const manifestIntegration = useManifestIntegration();
   const sendEmail = useSendManifestEmail();
+  const { user } = useAuth();
 
   // Fetch manifests created by this hauler
   const { data: manifests, isLoading } = useQuery({
@@ -66,12 +68,9 @@ export const useHaulerManifests = (haulerId?: string) => {
 
       if (haulerError) throw haulerError;
 
-      // Get organization from current user
-      const { data: orgId, error: orgError } = await supabase
-        .rpc('get_current_user_organization', { org_slug: 'bsg' });
-      
-      if (orgError) throw orgError;
-      if (!orgId) throw new Error('No organization found');
+      // Resolve organization from auth context
+      const orgId = user?.currentOrganization?.id;
+      if (!orgId) throw new Error('No organization configured for current user');
 
       // 2. Get customer info
       const { data: customer, error: customerError } = await supabase

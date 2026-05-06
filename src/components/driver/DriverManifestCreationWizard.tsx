@@ -1586,7 +1586,7 @@ function DriverManifestCreationWizardInner({
                         id="standalone-generator"
                         value={standaloneGeneratorName}
                         onChange={(e) => setStandaloneGeneratorName(e.target.value)}
-                        placeholder="e.g., BSG Tire Recycling"
+                        placeholder="Generator company name"
                         className="mt-1"
                       />
                     </div>

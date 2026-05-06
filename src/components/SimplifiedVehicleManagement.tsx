@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useCreateVehicle, useVehicles, useUpdateVehicle, useDeleteVehicle } from "@/hooks/useVehicles";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { Truck, Plus, Edit, Trash2, User } from "lucide-react";
 
 interface VehicleFormData {
@@ -33,6 +34,7 @@ export function SimplifiedVehicleManagement() {
   const updateVehicle = useUpdateVehicle();
   const deleteVehicle = useDeleteVehicle();
   const { toast } = useToast();
+  const { user } = useAuth();
 
   // Filter to get only active drivers
   const drivers = employees?.filter(emp => 
@@ -41,7 +43,17 @@ export function SimplifiedVehicleManagement() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    const organizationId = user?.currentOrganization?.id;
+    if (!organizationId) {
+      toast({
+        title: "No organization",
+        description: "Your account is not assigned to an organization. Contact your admin.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const selectedDriver = drivers.find(d => d.id === formData.assigned_driver_id);
       const driverEmail = selectedDriver?.email || '';
@@ -70,7 +82,7 @@ export function SimplifiedVehicleManagement() {
           license_plate: formData.license_plate || undefined,
           capacity: formData.capacity,
           is_active: true,
-          organization_id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
+          organization_id: organizationId,
           assigned_driver_id: formData.assigned_driver_id && formData.assigned_driver_id !== 'none' ? formData.assigned_driver_id : null,
           driver_email: driverEmail || null,
         });
@@ -219,7 +231,7 @@ export function SimplifiedVehicleManagement() {
                         id="license_plate"
                         value={formData.license_plate}
                         onChange={(e) => setFormData(prev => ({ ...prev, license_plate: e.target.value }))}
-                        placeholder="e.g., BSG-003"
+                        placeholder="e.g., V-001"
                       />
                     </div>
                   </div>

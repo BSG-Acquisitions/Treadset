@@ -169,8 +169,9 @@ export function AppSidebar() {
     { id: 'sandbox', label: 'Sandbox Testing', icon: TestTube, path: '/sandbox', roles: ['admin'] as const },
   ];
 
-  // Super admin (creator) sees everything - no other user has this privilege
-  const isSuperAdmin = user?.email === 'zachdevon@bsgtires.com';
+  // Super admin (platform owner). Role-based check is the source of truth;
+  // legacy email check stays as fallback until super_admin role is confirmed assigned in DB.
+  const isSuperAdmin = user?.roles?.includes('super_admin') || user?.email === 'zachdevon@bsgtires.com';
 
   const filteredNavItems = isSuperAdmin 
     ? navigationItems.filter(item => {

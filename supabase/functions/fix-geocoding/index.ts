@@ -12,18 +12,49 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+    const supabase = createClient(supabaseUrl, serviceKey);
 
-    console.log('🔧 Starting geocoding fix for all locations...');
+    // Resolve caller's organization from the request's JWT
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const callerClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user: callerAuthUser } } = await callerClient.auth.getUser();
+    if (!callerAuthUser) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid session' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const { data: callerRow } = await supabase
+      .from('users')
+      .select('id, user_organization_roles(organization_id)')
+      .eq('auth_user_id', callerAuthUser.id)
+      .maybeSingle();
+    const organizationId = (callerRow as any)?.user_organization_roles?.[0]?.organization_id as string | undefined;
+    if (!organizationId) {
+      return new Response(
+        JSON.stringify({ error: 'Caller has no organization assigned' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('🔧 Starting geocoding fix for organization', organizationId);
 
     // Get all locations with bad coordinates (outside Detroit metro or missing coords)
     const { data: locations, error: fetchError } = await supabase
       .from('locations')
       .select('id, name, address, latitude, longitude, organization_id')
-      .eq('organization_id', 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73'); // BSG org
+      .eq('organization_id', organizationId);
 
     if (fetchError) throw fetchError;
 

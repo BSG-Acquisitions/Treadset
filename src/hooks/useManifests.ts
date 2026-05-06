@@ -198,15 +198,15 @@ export const useCreateManifest = (opts?: { toastOnSuccess?: boolean }) => {
   const { toast } = useToast();
   const toastOnSuccess = opts?.toastOnSuccess ?? true;
   const canWrite = useCanWrite();
+  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async (data: CreateManifestData) => {
       if (!canWrite) {
         throw new Error('Demo mode - changes are disabled');
       }
-      // Resolve organization once
-      const { data: orgId, error: orgErr } = await supabase.rpc('get_current_user_organization', { org_slug: 'bsg' });
-      if (orgErr) throw orgErr;
+      // Resolve organization from auth context
+      const orgId = user?.currentOrganization?.id;
       if (!orgId) throw new Error('No organization configured for current user');
 
       // Generate manifest number with resolved org

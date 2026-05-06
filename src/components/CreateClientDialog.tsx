@@ -6,6 +6,7 @@ import { useCreateLocation } from "@/hooks/useLocations";
 import { useGeocodeLocations } from "@/hooks/useGeocodeLocations";
 import { ClientFormData } from "@/lib/validations";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface CreateClientDialogProps {
   trigger?: React.ReactNode;
@@ -19,6 +20,7 @@ export function CreateClientDialog({ trigger, open: controlledOpen, onOpenChange
   const createLocation = useCreateLocation();
   const { geocodeLocation } = useGeocodeLocations();
   const { toast } = useToast();
+  const { user } = useAuth();
 
   // Support both controlled and uncontrolled modes
   const isControlled = controlledOpen !== undefined;
@@ -26,6 +28,15 @@ export function CreateClientDialog({ trigger, open: controlledOpen, onOpenChange
   const setOpen = isControlled ? (onOpenChange || (() => {})) : setInternalOpen;
 
   const handleSubmit = async (data: ClientFormData) => {
+    const organizationId = user?.currentOrganization?.id;
+    if (!organizationId) {
+      toast({
+        title: "No organization",
+        description: "Your account is not assigned to an organization. Contact your admin.",
+        variant: "destructive",
+      });
+      return;
+    }
     try {
       // Trim all text fields to prevent whitespace issues
       const clientData = {
@@ -39,7 +50,7 @@ export function CreateClientDialog({ trigger, open: controlledOpen, onOpenChange
         state: data.state?.trim() || null,
         zip: data.zip?.trim() || null,
         county: data.county?.trim() || null,
-        organization_id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73', // Default org ID
+        organization_id: organizationId,
       };
 
       const client = await createClient.mutateAsync(clientData);
@@ -59,7 +70,7 @@ export function CreateClientDialog({ trigger, open: controlledOpen, onOpenChange
           access_notes: null,
           pricing_tier_id: null,
           is_active: true,
-          organization_id: 'ba2e9dc3-ecc6-4b73-963b-efe668a03d73',
+          organization_id: organizationId,
         });
 
         // Trigger geocoding for the new location

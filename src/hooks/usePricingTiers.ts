@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import type { Database } from "@/integrations/supabase/types";
 
 type PricingTier = Database["public"]["Tables"]["pricing_tiers"]["Row"];
@@ -42,12 +43,17 @@ export const usePricingTier = (id: string) => {
 export const useCreatePricingTier = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async (pricingTier: PricingTierInsert) => {
+    mutationFn: async (pricingTier: Omit<PricingTierInsert, 'organization_id'>) => {
+      const organizationId = user?.currentOrganization?.id;
+      if (!organizationId) {
+        throw new Error("Your account is not assigned to an organization. Contact your admin.");
+      }
       const { data, error } = await supabase
         .from('pricing_tiers')
-        .insert(pricingTier)
+        .insert({ ...pricingTier, organization_id: organizationId })
         .select()
         .single();
 
