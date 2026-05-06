@@ -4,6 +4,48 @@ Newest entries at the top. Each session ends with a Ship Report appended here pe
 
 ---
 
+## 2026-05-06 — App-wide audit (6 zones, 79 findings) + Wave 1 PR #1 read-side defense-in-depth
+
+**Context:** Following yesterday's driver-UI audit, ran the same comprehensive audit against the rest of the app — admin/dispatcher, hauler, client portal, onboarding, outbound, public — using six parallel Explore agents. Then implemented Wave 1 PR #1 (read-side defense-in-depth across the hook layer).
+
+**Audit shipped (read-only, gitignored under REVIEWS/2026-05-06-app-audit/):**
+- 6 zone reports + `00-CONSOLIDATED.md` with severity-ranked findings
+- Totals: 24 CRITICAL, 21 HIGH, 22 MEDIUM, 12 LOW (~70 unique after de-dup)
+- Verdict: TreadSet not yet ready for tenant #2 launch; ~12 CRITICAL findings are direct blockers
+- Six themes surfaced: missing read-side org filters, hardcoded BSG routing on public surfaces, hauler hooks that will break the moment the tenant-scope migration runs, signature path tenant-scoping incomplete (PR #2 fixed 2 of 3), 5 critical onboarding entry-point bugs, semi_count ripple gap continuing into ClientPortal
+- One finding flagged NEEDS-VERIFICATION (PaymentSuccess.tsx Stripe callback) — verified separately in chat as **non-issue** (verify-payment + verify-pickup-payment both call Stripe API server-side, JWT-required, org-membership-checked)
+
+**Shipped to repo (PR #4 OPEN, NOT MERGED):**
+- **[PR #4 — fix/read-defense-in-depth](https://github.com/BSG-Acquisitions/Treadset/pull/4)** — Wave 1 PR #1
+- Adds `.eq('organization_id', orgId)` belt-and-suspenders filter to 6 list queries that previously relied on RLS alone. Mirrors the `useAssignments` pattern from PR #2.
+- Files: `useHaulers.ts`, `usePricingTiers.ts`, `useFinance.ts` (useInvoices + useCompletedPickups), `useDropoffs.ts`, `useHaulerManifests.ts`, `ClientPortal.tsx` (allClients preview + clientInfo admin path + manifests list)
+- 6 files changed, 126 insertions, 49 deletions. Commit `d05eb5b`.
+- TypeScript clean (`npx tsc --noEmit` passes)
+- Out of scope, flagged in PR description: `useReceivers.ts` requires a schema migration first (table has no `organization_id` column); `useManifest(id)` single-record fetch stays RLS-only per Z
+
+**Operational note:** macOS sandbox interaction caused git's `read()` to hang during index refresh in `git status`/`git diff`/`git commit`. Workaround: pass `-c core.checkStat=minimal -c core.fsmonitor=false -c core.preloadIndex=false`. Future commands in this repo on this machine should include those flags until root-caused.
+
+**Blocked / waiting:**
+- Z review of PR #4 before merge. CLAUDE.md §4 — multi-tenant boundary work, no direct push to main.
+- Wave 1 PR #2 (write-path org_id injection: `useHaulers.ts`, `useHaulerRelationships.ts`) — should ship before haulers tenant-scope migration `20260505180000_*.sql` is applied
+- Wave 1 PR #3 (signature path tenant-scoping: hauler + outbound receiver)
+- Wave 1 PR #4 (onboarding hardening: cookie default, slug collision, employee-invite email check, signup race, server-derived org)
+- Wave 1 PR #5 (public form endpoints: derive org from hostname, not hardcoded BSG slug)
+- Wave 2: BSG branding cleanup + per-tenant Resend sender domain
+- Open from before this session: PR #1 (`fix/remove-delete-all-manifests`, April 2026) — also still unmerged
+
+**Parked:**
+- Receivers schema migration (CRITICAL #2, blocked until table gets `organization_id`)
+- All MEDIUM and LOW findings (audit list)
+- Demo data seed for Denver tradeshow
+
+**Next session first move:**
+1. Z reviews and merges (or asks for changes on) [PR #4](https://github.com/BSG-Acquisitions/Treadset/pull/4).
+2. After merge, deploy is automatic via Vercel (no migrations or edge functions in this PR).
+3. Then proceed to Wave 1 PR #2 — write-path `organization_id` injection on hauler hooks. This unblocks applying the haulers tenant-scope migration without breaking hauler creation.
+
+---
+
 ## 2026-05-05 / 06 — Multi-tenant safety + driver-UI bug audit (15 fixes), system map built, deploy queued for after-hours
 
 **Context:** Z is licensing TreadSet to a second company on the same Supabase project. Driver Moses reported the app was "acting up." Session covered multi-tenant audit, driver-UI bug hunt, system mapping, and prep for after-hours ship.
