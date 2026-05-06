@@ -101,16 +101,21 @@ const PartnerApplications = lazy(() => import('./pages/PartnerApplications'));
 const ContactSubmissions = lazy(() => import('./pages/ContactSubmissions'));
 const ManifestHealth = lazy(() => import('./pages/ManifestHealth'));
 
-// Domain-based routing: show BSG marketing on bsgtires domains, TreadSet app landing elsewhere
+// Domain-based routing:
+//   bsg* hostnames → BSG marketing (legacy)
+//   app.* hostnames → straight to /auth (skip the landing)
+//   everything else (treadset.co, www.treadset.co, etc.) → TreadSet marketing landing
 function RootRoute() {
   const hostname = window.location.hostname;
-  
-  // BSG-specific domains show BSG marketing
+
   if (hostname.includes('bsg') || hostname.includes('bsgtires')) {
     return <PublicLanding />;
   }
-  
-  // All other domains (treadset, lovable, localhost) show TreadSet app landing
+
+  if (hostname.startsWith('app.')) {
+    return <Navigate to="/auth" replace />;
+  }
+
   return <AppLanding />;
 }
 
