@@ -221,16 +221,25 @@ export const OutboundManifestWizard: React.FC<OutboundManifestWizardProps> = ({
       return false;
     }
 
+    if (!ownEntity?.organization_id) {
+      toast({
+        title: "Error",
+        description: "Could not determine your organization. Please refresh and try again.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
     try {
       setLoading(true);
       const dataUrl = sigRef.current.toDataURL();
       const canvas = sigRef.current.getTrimmedCanvas();
       const blob = await new Promise<Blob>((resolve) => canvas.toBlob(resolve as BlobCallback, 'image/png'));
-      
-      // Use temp ID for now, will update after manifest creation
+
+      // Tenant-scoped path prevents cross-org collisions
       const tempId = `outbound-${Date.now()}`;
-      const fileName = `signatures/${tempId}/${type}.png`;
-      
+      const fileName = `${ownEntity.organization_id}/signatures/${tempId}/${type}.png`;
+
       const { error } = await supabase.storage
         .from('manifests')
         .upload(fileName, blob, { contentType: 'image/png', upsert: true });
@@ -346,9 +355,14 @@ export const OutboundManifestWizard: React.FC<OutboundManifestWizardProps> = ({
           arrivedAt: new Date().toISOString(),
         });
         console.log('Shipment record created for outbound manifest:', manifest.id);
-      } catch (shipmentError) {
-        // Don't fail the manifest creation if shipment fails
+      } catch (shipmentError: any) {
+        // Don't fail the manifest creation, but tell the user — silent fail = compliance gap
         console.error('Failed to create shipment record:', shipmentError);
+        toast({
+          title: "Manifest saved, but shipment record failed",
+          description: `Outbound tracking didn't write: ${shipmentError?.message || 'unknown error'}. Notify dispatch so the report can be reconciled.`,
+          variant: "destructive",
+        });
       }
 
       setCreatedManifestId(manifest.id);

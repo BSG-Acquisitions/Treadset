@@ -54,30 +54,20 @@ export default function Auth() {
     setSuccess('');
 
     try {
-      
-      
-      // Add timeout to prevent infinite loading
-      const signInPromise = signIn(email, password);
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Sign in timed out')), 5000)
-      );
-      
-      const result = await Promise.race([signInPromise, timeoutPromise]) as { error?: any };
-      
-      
-      
+      // Let supabase-js handle its own retry/timeout. The previous 5-second
+      // client-side race was rejecting "Sign in timed out" while Supabase
+      // server-side had already accepted the login, causing duplicate sessions
+      // when users retried (Moses, 2026-05-05 14:37 ET — 3 ghost logins in 7s).
+      const result = await signIn(email, password);
+
       if (result?.error) {
-        
         setError(result.error.message || 'An error occurred during sign in');
-      } else {
-        
-        // Will be handled by the useEffect redirect after auth state updates
-        // The useEffect checks roles and routes to /client-portal or /dashboard
       }
+      // On success the useEffect redirect (line 29-45) handles routing once
+      // auth state updates and roles are resolved.
     } catch (error: any) {
       setError(error.message || 'Sign in failed');
     } finally {
-      
       setIsLoading(false);
     }
   };

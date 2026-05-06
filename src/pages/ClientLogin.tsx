@@ -36,11 +36,9 @@ export default function ClientLogin() {
     setError('');
 
     try {
-      const signInPromise = signIn(email, password);
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Sign in timed out')), 5000)
-      );
-      const result = await Promise.race([signInPromise, timeoutPromise]) as { error?: any };
+      // No artificial timeout — supabase-js handles its own retries.
+      // See Auth.tsx for the 2026-05-05 incident behind this change.
+      const result = await signIn(email, password);
 
       if (result?.error) {
         setError(result.error.message || 'An error occurred during sign in');

@@ -18,7 +18,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
-import { Building, MapPin, Calendar, CheckCircle2, Clock, AlertCircle, Package, Truck, MoreVertical, Move, Phone, Plus, TrendingUp, DollarSign, ChevronLeft, ChevronRight, Search, Route, Pencil, Save, Navigation } from "lucide-react";
+import { Building, MapPin, Calendar, CheckCircle2, Clock, AlertCircle, Package, Truck, MoreVertical, Move, Phone, Plus, TrendingUp, DollarSign, ChevronLeft, ChevronRight, Search, Route, Pencil, Save, Navigation, X } from "lucide-react";
 import { useGPSTracking } from "@/hooks/useGPSTracking";
 import { GPSTrackingIndicator } from "@/components/driver/GPSTrackingIndicator";
 import { format, addWeeks, startOfWeek } from "date-fns";
@@ -173,6 +173,16 @@ export default function DriverRoutes() {
   useEffect(() => {
     document.title = "Driver Routes – TreadSet";
   }, []);
+
+  // Surface GPS permission/availability errors so drivers don't think tracking is on when it isn't
+  useEffect(() => {
+    if (gpsError) {
+      toast.error(`GPS tracking error: ${gpsError}`, {
+        description: 'Tracking will not record your route. Check location permission and try again.',
+        duration: 8000,
+      });
+    }
+  }, [gpsError]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -522,6 +532,19 @@ export default function DriverRoutes() {
                                           disabled={savingCheckNumber}
                                         >
                                           <Save className="h-3.5 w-3.5" />
+                                        </Button>
+                                        <Button
+                                          size="icon"
+                                          variant="ghost"
+                                          className="h-7 w-7 text-muted-foreground hover:bg-muted"
+                                          onClick={() => {
+                                            setEditingCheckPickupId(null);
+                                            setCheckNumberDraft('');
+                                          }}
+                                          disabled={savingCheckNumber}
+                                          aria-label="Cancel"
+                                        >
+                                          <X className="h-3.5 w-3.5" />
                                         </Button>
                                       </div>
                                     ) : (
