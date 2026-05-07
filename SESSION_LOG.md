@@ -4,6 +4,54 @@ Newest entries at the top. Each session ends with a Ship Report appended here pe
 
 ---
 
+## 2026-05-07 (latest) — Wave 1 PR #4 opened: 5 critical onboarding hardening findings (PR #7 also merged in this session)
+
+**Context:** After PR #7 merged earlier in the same session, took the next-session first move from the prior entry: onboarding hardening. The audit's `04-onboarding.md` lists 5 CRITICAL findings (cookie default, slug collision, employee invite email check, employee invite race, server-derived org_id) — exact match to the scope Z's prior brief had named.
+
+**Shipped (PR #7) — already merged earlier in this session:**
+- **[PR #7 — fix/signature-path-tenant-scoping](https://github.com/BSG-Acquisitions/Treadset/pull/7)** — Wave 1 PR #3. Org-prefixes every signature upload + deletes dead `manifestOperations.ts`. Merged as `04d2ffc`.
+
+**Shipped (PR #8) — OPEN, awaiting Z review and SQL apply:**
+- **[PR #8 — fix/onboarding-hardening](https://github.com/BSG-Acquisitions/Treadset/pull/8)** — Wave 1 PR #4. 5 critical onboarding fixes:
+  - **CRITICAL #1:** `AuthContext.getCurrentOrgSlug()` → `string | undefined` instead of hardcoded `'bsg'` default. Existing first-available-org fallback at line 210 keeps single-org users working.
+  - **CRITICAL #2:** New migration `20260507180000_fix_org_slug_collision.sql` — bumps slug suffix from 8 → 12 hex chars + adds retry-with-fresh-uuid loop on UNIQUE violation (capped at 3).
+  - **CRITICAL #3:** New migration `20260507180100_claim_invite_token_email_check.sql` — adds `claiming_email TEXT DEFAULT NULL` parameter + validates against `invite_record.email`. Default-NULL pattern keeps old 2-arg callers resolvable (controlled `Invitation email mismatch` exception, not "function not found"). `Invite.tsx` updated to pass email + frontend pre-check.
+  - **CRITICAL #4:** Added `await new Promise(resolve => setTimeout(resolve, 1500))` after `auth.signUp` in `Invite.tsx` (matches `ClientInvite.tsx:132` pattern) to let `handle_new_user_organization` settle before claim.
+  - **CRITICAL #5:** `create-employee` edge fn now derives `organizationId` from caller's `user_organization_roles WHERE role = 'admin'`. Single-org admin → use the only option. Multi-org admin (future) → body field required + validated. `useEmployees.ts` stops sending `organizationId`.
+- 6 files changed, 261 insertions, 23 deletions. Commit `ea52085`.
+- TypeScript clean (`npx tsc --noEmit`).
+
+**Operational note:** Another concurrent claude session ran on this repo during this work (third occurrence in two days). Symptoms: stuck `git checkout main` process held `.git/index.lock` for 5+ min on a 0% CPU process; an in-flight migration `20260507130948_clients_email_to_portal.sql` (not mine) appeared in worktree; `ClientLogin.tsx` showed up as M (also not mine). Z confirmed killing the stuck git process; lock cleared on its own (process had likely exited just before kill); my commit went through cleanly with only my 6 intended files. The other agent's untracked migration + `ClientLogin.tsx` modification remain in the worktree — Z's other session to handle. Multi-process collisions on this repo are now a recurring pattern; future-Z should `git stash list`, `git worktree list`, and look for unfamiliar untracked files at session start.
+
+**Deploy order Z must follow for PR #8:**
+1. Apply `20260507180000_fix_org_slug_collision.sql` — no risk window
+2. Apply `20260507180100_claim_invite_token_email_check.sql` — small risk window (apply during off-hours, brief pause for new employee invites until step 3)
+3. Merge PR #8
+4. Redeploy `create-employee` edge function in Supabase dashboard (Vercel does not deploy edge functions)
+
+**Blocked / waiting:**
+- Z review + SQL apply + edge fn redeploy for PR #8.
+- Migration `20260505180000_haulers_tenant_scope.sql` STILL not applied (PR #5 dependency).
+- Storage RLS state from PR #7 — Z's `pg_policies` query result still pending.
+- Wave 1 PR #5 (public form endpoints: derive org from hostname).
+
+**Parked:**
+- Audit's HIGH onboarding findings: client-signup role retry, `/onboarding` URL bypass, `state_code='MI'` default, regular signup race.
+- Audit's MEDIUM onboarding findings: hardcoded `/treadset-logo.png`, no company-name validation, no phone validation, depot lat/lng defaults to Austin TX.
+- Read-path gap: `useIndependentHaulers` SELECT has no `organization_id` filter.
+- 29 service-role edge functions with no JWT validation.
+- Receivers schema migration (CRITICAL #2 from audit, blocked until table gets `organization_id`).
+- BSG marketing pages still rendering on TreadSet domain.
+- Per-tenant Stripe sender + Resend domain.
+- Sentry / error tracking.
+
+**Next session first move:**
+1. Confirm PR #8 merged + both migrations applied + edge fn redeployed.
+2. If pending PR #5 storage-policy `pg_policies` check still outstanding, ask Z for the result and decide whether storage hardening becomes its own PR.
+3. Then proceed to Wave 1 PR #5 — public form endpoints (`public-booking`, `public-contact-form`, `public-partner-application` derive org from hostname instead of `.eq('slug', 'bsg')`).
+
+---
+
 ## 2026-05-07 (later) — Wave 1 PR #3 opened: signature path tenant-scoping, all 5 live upload sites + dead helper deleted
 
 **Context:** Per Z's mission brief, took the next-session first move from the prior entry: signature path tenant-scoping. Audit findings D10 (`useHaulerManifests.ts` hauler signature) and D11 (`OutboundReceiverDialog.tsx` outbound receiver) were the named scope, but a parallel exploration pass found three more upload sites with the same defect (one in `DriverManifestCreationWizard` adjacent to D10, plus a dead helper in `manifestOperations.ts`). Z approved expanding scope to all 5.
