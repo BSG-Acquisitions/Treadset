@@ -21,6 +21,7 @@ export default function ClientPortal() {
   const navigate = useNavigate();
   const isClient = hasRole('client');
   const isAdmin = !isClient && (hasRole('admin') || hasRole('ops_manager'));
+  const adminOrgId = user?.currentOrganization?.id;
   const [previewClientId, setPreviewClientId] = useState<string | null>(null);
   
   // PDF viewer state
@@ -30,18 +31,24 @@ export default function ClientPortal() {
 
   // Fetch all clients for admin preview mode
   const { data: allClients } = useQuery({
-    queryKey: ['all-clients-for-preview'],
+    queryKey: ['all-clients-for-preview', adminOrgId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('clients')
         .select('id, company_name, contact_name')
-        .eq('is_active', true)
-        .order('company_name');
-      
+        .eq('is_active', true);
+
+      // Defense-in-depth: scope admin preview to admin's org
+      if (adminOrgId) {
+        query = query.eq('organization_id', adminOrgId);
+      }
+
+      const { data, error } = await query.order('company_name');
+
       if (error) throw error;
       return data;
     },
-    enabled: isAdmin,
+    enabled: isAdmin && !!adminOrgId,
   });
 
   // Fetch client info - for regular clients use client_users junction table, for admin preview use selected client
@@ -50,35 +57,41 @@ export default function ClientPortal() {
     queryFn: async () => {
       if (isAdmin && previewClientId) {
         // Admin preview mode - fetch selected client
-        const { data, error } = await supabase
+        // Defense-in-depth: only allow admin to preview clients within their own org
+        let query = supabase
           .from('clients')
-          .select('id, company_name, contact_name, email, phone')
-          .eq('id', previewClientId)
-          .single();
-        
+          .select('id, organization_id, company_name, contact_name, email, phone')
+          .eq('id', previewClientId);
+
+        if (adminOrgId) {
+          query = query.eq('organization_id', adminOrgId);
+        }
+
+        const { data, error } = await query.single();
+
         if (error) throw error;
         return data;
       } else if (!isAdmin && user?.id) {
         // Regular client mode - fetch by client_users junction table
         const { data: clientUser, error: cuError } = await supabase
           .from('client_users')
-          .select('client_id, role, clients:client_id(id, company_name, contact_name, email, phone)')
+          .select('client_id, role, clients:client_id(id, organization_id, company_name, contact_name, email, phone)')
           .eq('user_id', user.id)
           .limit(1)
           .single();
-        
+
         if (cuError) {
           // Fallback to legacy clients.user_id lookup
           const { data, error } = await supabase
             .from('clients')
-            .select('id, company_name, contact_name, email, phone')
+            .select('id, organization_id, company_name, contact_name, email, phone')
             .eq('user_id', user.id)
             .single();
-          
+
           if (error) throw error;
           return data;
         }
-        
+
         return clientUser?.clients as any;
       }
       return null;
@@ -99,9 +112,9 @@ export default function ClientPortal() {
   // 'price_per_unit', etc. must NEVER be exposed to clients.
   // This is a client-facing portal - only show non-financial data.
   const { data: manifests, isLoading: manifestsLoading } = useQuery({
-    queryKey: ['client-portal-manifests', clientInfo?.id],
+    queryKey: ['client-portal-manifests', clientInfo?.id, (clientInfo as any)?.organization_id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('manifests')
         .select(`
           id,
@@ -118,10 +131,18 @@ export default function ClientPortal() {
           tractor_count,
           locations:location_id (name, address)
         `)
-        .eq('client_id', clientInfo?.id)
+        .eq('client_id', clientInfo?.id);
+
+      // Defense-in-depth: scope manifests to the client's own organization
+      const clientOrgId = (clientInfo as any)?.organization_id;
+      if (clientOrgId) {
+        query = query.eq('organization_id', clientOrgId);
+      }
+
+      const { data, error } = await query
         .order('created_at', { ascending: false })
         .limit(50);
-      
+
       if (error) throw error;
       return data;
     },

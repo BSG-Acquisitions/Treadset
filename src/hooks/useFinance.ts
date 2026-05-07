@@ -11,8 +11,11 @@ type Payment = Database["public"]["Tables"]["payments"]["Row"];
 type PaymentInsert = Database["public"]["Tables"]["payments"]["Insert"];
 
 export const useInvoices = (clientId?: string) => {
+  const { user } = useAuth();
+  const orgId = user?.currentOrganization?.id;
+
   return useQuery({
-    queryKey: ['invoices', clientId],
+    queryKey: ['invoices', orgId, clientId],
     queryFn: async () => {
       let query = supabase.from('invoices')
         .select(`
@@ -24,21 +27,30 @@ export const useInvoices = (clientId?: string) => {
           ),
           payments(amount, payment_date, payment_method)
         `);
-      
+
+      // Defense-in-depth: explicit org filter on top of RLS
+      if (orgId) {
+        query = query.eq('organization_id', orgId);
+      }
+
       if (clientId) {
         query = query.eq('client_id', clientId);
       }
-      
+
       const { data, error } = await query.order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];
-    }
+    },
+    enabled: !!orgId,
   });
 };
 
 export const useCompletedPickups = (clientId?: string) => {
+  const { user } = useAuth();
+  const orgId = user?.currentOrganization?.id;
+
   return useQuery({
-    queryKey: ['completed-pickups', clientId],
+    queryKey: ['completed-pickups', orgId, clientId],
     queryFn: async () => {
       let query = supabase.from('pickups')
         .select(`
@@ -48,19 +60,25 @@ export const useCompletedPickups = (clientId?: string) => {
           invoice_items(invoice_id)
         `)
         .eq('status', 'completed');
-      
+
+      // Defense-in-depth: explicit org filter on top of RLS
+      if (orgId) {
+        query = query.eq('organization_id', orgId);
+      }
+
       if (clientId) {
         query = query.eq('client_id', clientId);
       }
-      
+
       const { data, error } = await query.order('pickup_date', { ascending: false });
       if (error) throw error;
-      
+
       // Filter out pickups that are already invoiced
-      return (data || []).filter(pickup => 
+      return (data || []).filter(pickup =>
         !pickup.invoice_items || pickup.invoice_items.length === 0
       );
-    }
+    },
+    enabled: !!orgId,
   });
 };
 

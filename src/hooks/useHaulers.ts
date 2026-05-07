@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Interface matching the ACTUAL current database schema
 export interface Hauler {
@@ -41,15 +42,24 @@ export interface CreateHaulerData {
 }
 
 export const useHaulers = () => {
+  const { user } = useAuth();
+  const orgId = user?.currentOrganization?.id;
+
   return useQuery({
-    queryKey: ["haulers"],
+    queryKey: ["haulers", orgId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      let query = (supabase as any)
         .from("haulers")
         .select("*")
         .eq("is_active", true)
-        .eq("is_licensed_hauler", true)
-        .order("hauler_name");
+        .eq("is_licensed_hauler", true);
+
+      // Defense-in-depth: explicit org filter on top of RLS
+      if (orgId) {
+        query = query.eq("organization_id", orgId);
+      }
+
+      const { data, error } = await query.order("hauler_name");
 
       if (error) throw error;
       
@@ -65,6 +75,7 @@ export const useHaulers = () => {
         zip: hauler.zip || hauler.hauler_zip,
       })) as Hauler[];
     },
+    enabled: !!orgId,
   });
 };
 

@@ -9,17 +9,27 @@ type PricingTierInsert = Database["public"]["Tables"]["pricing_tiers"]["Insert"]
 type PricingTierUpdate = Database["public"]["Tables"]["pricing_tiers"]["Update"];
 
 export const usePricingTiers = () => {
+  const { user } = useAuth();
+  const orgId = user?.currentOrganization?.id;
+
   return useQuery({
-    queryKey: ['pricing-tiers'],
+    queryKey: ['pricing-tiers', orgId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('pricing_tiers')
-        .select('*')
-        .order('name');
+        .select('*');
+
+      // Defense-in-depth: explicit org filter on top of RLS
+      if (orgId) {
+        query = query.eq('organization_id', orgId);
+      }
+
+      const { data, error } = await query.order('name');
 
       if (error) throw error;
       return data || [];
-    }
+    },
+    enabled: !!orgId,
   });
 };
 
