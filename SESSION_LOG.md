@@ -4,6 +4,46 @@ Newest entries at the top. Each session ends with a Ship Report appended here pe
 
 ---
 
+## 2026-05-07 (later) — Wave 1 PR #3 opened: signature path tenant-scoping, all 5 live upload sites + dead helper deleted
+
+**Context:** Per Z's mission brief, took the next-session first move from the prior entry: signature path tenant-scoping. Audit findings D10 (`useHaulerManifests.ts` hauler signature) and D11 (`OutboundReceiverDialog.tsx` outbound receiver) were the named scope, but a parallel exploration pass found three more upload sites with the same defect (one in `DriverManifestCreationWizard` adjacent to D10, plus a dead helper in `manifestOperations.ts`). Z approved expanding scope to all 5.
+
+**Shipped (PR #7 OPEN, NOT MERGED):**
+- **[PR #7 — fix/signature-path-tenant-scoping](https://github.com/BSG-Acquisitions/Treadset/pull/7)** — Wave 1 PR #3
+- Org-prefixes every signature upload path: pattern is now `${organization_id}/signatures/...` matching PR #2's `OutboundManifestWizard` convention.
+- Files:
+  - `src/hooks/useHaulerManifests.ts` — generator + hauler uploads + manifest INSERT columns + PDF override (4 references aligned)
+  - `src/components/driver/OutboundReceiverDialog.tsx` — receiver upload + pre-upload guard
+  - `src/components/driver/DriverManifestCreationWizard.tsx` — generator + hauler + receiver uploads (single guard at top of save function)
+  - `src/lib/manifestOperations.ts` — DELETED (276 lines, zero callers — verified via grep, same pattern as PR #2's `ManifestWizard.tsx` deletion)
+- Net diff: **+27 / −294**. Commit `d97eb5b`.
+- TypeScript clean (`npx tsc --noEmit`).
+
+**Operational note flagged in PR description:** Storage policy history on the `manifests` bucket is contradictory — `20251111185923` added org-prefix-enforcing policies, `20251112193354` dropped them, `20251112184613` re-added them. Whether the prefix-enforcing policies are live in prod depends on apply order. If they ARE live, this PR also fixes silent upload failures (un-prefixed paths fail `(storage.foldername(name))[1]` check). If only the permissive policies are live, this PR is collision-fix only and storage-policy hardening is a separate Wave-1 follow-up. Recommend running `SELECT policyname, cmd, qual, with_check FROM pg_policies WHERE schemaname='storage' AND tablename='objects' AND (policyname ILIKE '%manifest%' OR policyname ILIKE '%sig%');` to confirm prod state.
+
+**Blocked / waiting:**
+- Z review of PR #7 before merge (CLAUDE.md §1 + §4 — multi-tenant boundary work).
+- Migration `20260505180000_haulers_tenant_scope.sql` STILL not applied to Supabase (PR #5 is merged but Z is doing the apply after-hours).
+- Wave 1 PR #4 (onboarding hardening: cookie default, slug collision, employee-invite email check, signup race, server-derived org).
+- Wave 1 PR #5 (public form endpoints: derive org from hostname).
+- PR #1 (`fix/remove-delete-all-manifests`, April 2026) — still open since April.
+
+**Parked:**
+- Storage RLS policy verification + hardening on `manifests` bucket (folded into a follow-up because it depends on Z's prod-state check).
+- Read-path gap from prior session: `useIndependentHaulers` SELECT has no `organization_id` filter (relies on RLS only).
+- Receivers schema migration (CRITICAL #2 from audit, blocked until table gets `organization_id`).
+- 29 service-role edge functions with no JWT validation.
+- BSG marketing pages still rendering on TreadSet domain.
+- Per-tenant Stripe sender + Resend domain.
+- Sentry / error tracking.
+
+**Next session first move:**
+1. Confirm PR #7 merged and Vercel deploy went green.
+2. Z runs the `pg_policies` query above to confirm storage-policy state; depending on result, either close the storage-RLS topic or open a follow-up PR.
+3. Then proceed to Wave 1 PR #4 — onboarding hardening.
+
+---
+
 ## 2026-05-07 — Wave 1 PR #2 (hauler write-path org_id) + auth cold-login race fix, both shipped via parallel sessions
 
 **Context:** Z opened a fresh session after losing macOS filesystem permissions to `~/Desktop/` between yesterday and today. Two prior Claude sessions were still alive on the same repo when this one started — one diagnosing the cold-start auth race that's been biting Khiyron and Moses, the other ready to ship the write-path tenant-scoping fix flagged in yesterday's audit. Both finished before being told to stop.
