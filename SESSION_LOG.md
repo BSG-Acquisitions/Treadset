@@ -4,6 +4,48 @@ Newest entries at the top. Each session ends with a Ship Report appended here pe
 
 ---
 
+## 2026-05-07 — Wave 1 PR #2 (hauler write-path org_id) + auth cold-login race fix, both shipped via parallel sessions
+
+**Context:** Z opened a fresh session after losing macOS filesystem permissions to `~/Desktop/` between yesterday and today. Two prior Claude sessions were still alive on the same repo when this one started — one diagnosing the cold-start auth race that's been biting Khiyron and Moses, the other ready to ship the write-path tenant-scoping fix flagged in yesterday's audit. Both finished before being told to stop.
+
+**Shipped (both MERGED to main):**
+- **[PR #5 — fix/write-path-org-id-haulers](https://github.com/BSG-Acquisitions/Treadset/pull/5)** — Wave 1 PR #2. Injects `organization_id` on the two `haulers` INSERT sites (`useCreateHauler` derives from auth context and throws if unset; `useInviteHauler` adds the param-already-in-scope). Companion to migration `20260505180000_haulers_tenant_scope.sql` which makes the column NOT NULL with tenant-isolated INSERT policy. Commit `e0404e3`, +6/-0. Without this, every hauler create breaks the moment that migration applies. Shipped via a separate worktree at `pr5-worktree/` to avoid colliding with the parallel auth-fix session.
+- **[PR #6 — fix/driver-auth-cold-login-race](https://github.com/BSG-Acquisitions/Treadset/pull/6)** — fixes the actual login bug Khiyron and Moses are hitting. Promise.race timeout fix in PR #2 (5/5) treated the symptom; the underlying race was deeper: `loading` flipped to `false` before `loadUserData` resolved, and ProtectedRoute's 500ms redirect timer fired against the un-hydrated user. Four logical changes in `AuthContext.tsx`: (1) `loadingUserData` state→ref so the `onAuthStateChange` closure doesn't always read `false`, (2) hold `loading=true` until profile resolves, (3) skip re-fetch on `TOKEN_REFRESHED` to stop spinner flicker every refresh window, (4) drop premature `setLoading(false)` in initial-session path. Commit `ea8c16e`, 1 file, +37/-21.
+
+**Operational notes (load these in the next session):**
+- macOS TCC: filesystem permissions to `~/Desktop/` were lost between sessions. Restoring required System Settings → Privacy & Security → Full Disk Access for Claude Code, then a relaunch. If it happens again, that's the first place to look.
+- Multi-process collision: three `claude` processes were live simultaneously on this repo. They raced on branch checkouts; one agent helpfully stashed a sibling's in-flight edits (`stash@{0}: WIP: hauler relationships/list edits — pre-existing, not part of auth fix`) and another set up `pr5-worktree/` to ship in isolation. Future-Z: if you see a `pr*-worktree/` next to `green-road-ui/` or stashes with messages like that, an agent set them aside on purpose — don't blow them away without checking diffs.
+- Git index hangs: the `-c core.checkStat=minimal -c core.fsmonitor=false -c core.preloadIndex=false` workaround from yesterday is still required on this machine. Calling out repeatedly until root-caused.
+
+**Cleanup applied this session:**
+- Both stashes dropped (one was duplicate of PR #5, one was a SESSION_LOG entry already on main).
+- `pr5-worktree/` removed.
+- Five locally-merged branches (`fix/driver-bugs`, `fix/read-defense-in-depth`, `fix/remove-hardcoded-bsg-org-id`, `fix/write-path-org-id-haulers`, `fix/driver-auth-cold-login-race`) left in place — harmless, can be pruned later with `git branch -d`.
+
+**Blocked / waiting:**
+- Migration `20260505180000_haulers_tenant_scope.sql` is still NOT applied to Supabase. PR #5 unblocks it: with org_id now injected on every INSERT, the migration's NOT NULL won't break hauler creation. Apply after-hours.
+- Wave 1 PR #3 (signature path tenant-scoping: hauler + outbound receiver).
+- Wave 1 PR #4 (onboarding hardening: cookie default, slug collision, employee-invite email check, signup race, server-derived org).
+- Wave 1 PR #5 (public form endpoints: derive org from hostname, not hardcoded BSG slug).
+- Read-path gap not in PR #4: `useIndependentHaulers` SELECT has no `organization_id` filter (relies on RLS only). Worth folding into a Wave 1 PR #1.5.
+- PR #1 (`fix/remove-delete-all-manifests`, April 2026) — still open since April.
+- Brittney Garlington (added 2026-05-06) and Jordan Caruthers-Love (added 2026-05-04) confirmed but never signed in. Auth fix doesn't help if they never tried — Z to check directly.
+
+**Parked:**
+- Receivers schema migration (CRITICAL #2, blocked until table gets `organization_id`).
+- 29 service-role edge functions with no JWT validation.
+- RLS UPDATE on `manifests` allowing 'driver' role (UI hides, SQL doesn't).
+- BSG marketing pages still rendering on TreadSet domain.
+- Per-tenant Stripe sender + Resend domain.
+- Sentry / error tracking.
+
+**Next session first move:**
+1. Confirm PR #5 + PR #6 actually deployed via Vercel (`https://app.treadset.co` + check git log on Vercel build).
+2. Apply `20260505180000_haulers_tenant_scope.sql` to Supabase after-hours (paste from `supabase/migrations/`).
+3. Then proceed to Wave 1 PR #3 — signature path tenant-scoping.
+
+---
+
 ## 2026-05-06 — App-wide audit (6 zones, 79 findings) + Wave 1 PR #1 read-side defense-in-depth
 
 **Context:** Following yesterday's driver-UI audit, ran the same comprehensive audit against the rest of the app — admin/dispatcher, hauler, client portal, onboarding, outbound, public — using six parallel Explore agents. Then implemented Wave 1 PR #1 (read-side defense-in-depth across the hook layer).
