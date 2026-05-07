@@ -676,6 +676,10 @@ function DriverManifestCreationWizardInner({
 
       // Persist signatures now so they survive navigation to Review step
       try {
+        const orgId = user?.currentOrganization?.id;
+        if (!orgId) {
+          throw new Error('No organization configured for current user. Please refresh and sign in again.');
+        }
         const now = new Date();
         const timestamp = now.toISOString().replace(/[:.]/g, '-');
 
@@ -702,7 +706,8 @@ function DriverManifestCreationWizardInner({
           const dataUrl = generatorSigRef.current.toDataURL();
           setGenSigDataUrl(dataUrl);
           const generatorBlob = dataURLtoBlob(dataUrl);
-          const generatorFileName = `signatures/${timestamp}-generator.png`;
+          // Tenant-scoped path prevents cross-org collisions
+          const generatorFileName = `${orgId}/signatures/${timestamp}-generator.png`;
           const { error: genUploadError, data: genUploadData } = await supabase.storage
             .from('manifests')
             .upload(generatorFileName, generatorBlob, { contentType: 'image/png', upsert: true });
@@ -735,7 +740,7 @@ function DriverManifestCreationWizardInner({
           const dataUrl = haulerSigRef.current.toDataURL();
           setHaulSigDataUrl(dataUrl);
           const haulerBlob = dataURLtoBlob(dataUrl);
-          const haulerFileName = `signatures/${timestamp}-hauler.png`;
+          const haulerFileName = `${orgId}/signatures/${timestamp}-hauler.png`;
           const { error: haulUploadError, data: haulUploadData } = await supabase.storage
             .from('manifests')
             .upload(haulerFileName, haulerBlob, { contentType: 'image/png', upsert: true });
@@ -767,7 +772,7 @@ function DriverManifestCreationWizardInner({
           const dataUrl = receiverSigRef.current.toDataURL();
           setReceiverSigDataUrl(dataUrl);
           const receiverBlob = dataURLtoBlob(dataUrl);
-          const receiverFileName = `signatures/${timestamp}-receiver.png`;
+          const receiverFileName = `${orgId}/signatures/${timestamp}-receiver.png`;
           const { error: recvUploadError, data: recvUploadData } = await supabase.storage
             .from('manifests')
             .upload(receiverFileName, receiverBlob, { contentType: 'image/png', upsert: true });

@@ -95,26 +95,26 @@ export const useHaulerManifests = (haulerId?: string) => {
 
       if (numberError) throw numberError;
 
-      // 4. Upload signatures to storage
+      // 4. Upload signatures to storage (tenant-scoped path prevents cross-org collisions)
       const timestamp = new Date().toISOString();
-      
+
       // Generator signature
       const genSigResponse = await fetch(data.generator_signature);
       const genSigBlob = await genSigResponse.blob();
-      const genSigFileName = `generator_signature_${Date.now()}.png`;
+      const genSigPath = `${orgId}/signatures/generator_signature_${Date.now()}.png`;
       const { error: genUploadError } = await supabase.storage
         .from('manifests')
-        .upload(`signatures/${genSigFileName}`, genSigBlob);
+        .upload(genSigPath, genSigBlob);
 
       if (genUploadError) throw genUploadError;
 
       // Hauler signature
       const haulSigResponse = await fetch(data.hauler_signature);
       const haulSigBlob = await haulSigResponse.blob();
-      const haulSigFileName = `hauler_signature_${Date.now()}.png`;
+      const haulSigPath = `${orgId}/signatures/hauler_signature_${Date.now()}.png`;
       const { error: haulUploadError } = await supabase.storage
         .from('manifests')
-        .upload(`signatures/${haulSigFileName}`, haulSigBlob);
+        .upload(haulSigPath, haulSigBlob);
 
       if (haulUploadError) throw haulUploadError;
 
@@ -185,8 +185,8 @@ export const useHaulerManifests = (haulerId?: string) => {
         signed_at: generatorSignedAt,
         generator_signed_at: generatorSignedAt,
         hauler_signed_at: haulerSignedAt,
-        customer_signature_png_path: `signatures/${genSigFileName}`,
-        driver_signature_png_path: `signatures/${haulSigFileName}`,
+        customer_signature_png_path: genSigPath,
+        driver_signature_png_path: haulSigPath,
         status: 'AWAITING_RECEIVER_SIGNATURE' as const
       };
 
@@ -219,7 +219,7 @@ export const useHaulerManifests = (haulerId?: string) => {
           generator_zip: customer.zip || '',
           generator_county: '',
           generator_phone: customer.phone || '',
-          generator_signature: `signatures/${genSigFileName}`,
+          generator_signature: genSigPath,
           generator_print_name: `${data.generator_print_name} - ${new Date(generatorSignedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}`,
           generator_date: new Date(generatorSignedAt).toLocaleDateString('en-US'),
           generator_time: new Date(generatorSignedAt).toLocaleTimeString('en-US', { hour12: false }),
@@ -238,7 +238,7 @@ export const useHaulerManifests = (haulerId?: string) => {
           hauler_zip: hauler.zip || '',
           hauler_phone: hauler.phone || '',
           hauler_mi_reg: hauler.hauler_mi_reg || '',
-          hauler_signature: `signatures/${haulSigFileName}`,
+          hauler_signature: haulSigPath,
           hauler_print_name: `${data.hauler_print_name} - ${new Date(haulerSignedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}`,
           hauler_date: new Date(haulerSignedAt).toLocaleDateString('en-US'),
           hauler_time: new Date(haulerSignedAt).toLocaleTimeString('en-US', { hour12: false }),
