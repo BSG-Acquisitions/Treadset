@@ -13,9 +13,10 @@ import { TreadSetLogo } from '@/components/TreadSetLogo';
 export default function ClientLogin() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { signIn, user, loading, hasRole } = useAuth();
+  const { signIn, signInWithMagicLink, user, loading, hasRole } = useAuth();
   const navigate = useNavigate();
   const hasRedirected = useRef(false);
   const isClient = user ? hasRole('client') : false;
@@ -30,10 +31,29 @@ export default function ClientLogin() {
     }
   }, [user, loading, navigate, isClient]);
 
+  const handleMagicLink = async () => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      setError('Enter your email above first.');
+      return;
+    }
+    setIsLoading(true);
+    setError('');
+    setSuccess('');
+    const { error } = await signInWithMagicLink(normalizedEmail);
+    if (error) {
+      setError(error.message || 'Could not send sign-in link.');
+    } else {
+      setSuccess(`Sign-in link sent to ${normalizedEmail}. Open it on this device to log in.`);
+    }
+    setIsLoading(false);
+  };
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+    setSuccess('');
 
     try {
       // No artificial timeout — supabase-js handles its own retries.
@@ -113,9 +133,34 @@ export default function ClientLogin() {
                 </Alert>
               )}
 
+              {success && (
+                <Alert>
+                  <AlertDescription>{success}</AlertDescription>
+                </Alert>
+              )}
+
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Sign In to Portal
+              </Button>
+
+              <div className="relative my-2">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-border" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">or</span>
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                disabled={isLoading || !email}
+                onClick={handleMagicLink}
+              >
+                Email me a sign-in link
               </Button>
 
               <div className="text-center mt-4">

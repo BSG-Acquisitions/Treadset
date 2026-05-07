@@ -26,6 +26,7 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error?: any }>;
+  signInWithMagicLink: (email: string) => Promise<{ error?: any }>;
   signUp: (email: string, password: string, firstName?: string, lastName?: string) => Promise<{ error?: any }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error?: any }>;
@@ -390,6 +391,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const signInWithMagicLink = async (email: string) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    const { error } = await supabase.auth.signInWithOtp({
+      email: normalizedEmail,
+      options: {
+        emailRedirectTo: 'https://app.treadset.co/',
+        // Drivers must already have an account; never auto-create from a typo.
+        shouldCreateUser: false,
+      },
+    });
+    return error ? { error } : {};
+  };
+
   const signUp = async (email: string, password: string, firstName?: string, lastName?: string) => {
     const redirectUrl = 'https://app.treadset.co/';
     
@@ -462,6 +476,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         session,
         loading,
         signIn,
+        signInWithMagicLink,
         signUp,
         signOut,
         resetPassword,

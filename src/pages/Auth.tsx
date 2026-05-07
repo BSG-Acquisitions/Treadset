@@ -16,7 +16,7 @@ export default function Auth() {
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
   const [activeTab, setActiveTab] = useState('login');
-  const { signIn, signUp, user, loading } = useAuth();
+  const { signIn, signInWithMagicLink, signUp, user, loading } = useAuth();
   const navigate = useNavigate();
   const hasRedirected = useRef(false);
 
@@ -70,6 +70,24 @@ export default function Auth() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleMagicLink = async () => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      setError('Enter your email above first.');
+      return;
+    }
+    setIsLoading(true);
+    setError('');
+    setSuccess('');
+    const { error } = await signInWithMagicLink(normalizedEmail);
+    if (error) {
+      setError(error.message || 'Could not send sign-in link.');
+    } else {
+      setSuccess(`Sign-in link sent to ${normalizedEmail}. Open it on this device to log in.`);
+    }
+    setIsLoading(false);
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -165,7 +183,26 @@ export default function Auth() {
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Sign In
                   </Button>
-                  
+
+                  <div className="relative my-2">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t border-border" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-background px-2 text-muted-foreground">or</span>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    disabled={isLoading || !email}
+                    onClick={handleMagicLink}
+                  >
+                    Email me a sign-in link
+                  </Button>
+
                   <div className="text-center mt-4">
                     <PasswordResetDialog />
                   </div>
