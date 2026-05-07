@@ -63,7 +63,11 @@ serve(async (req) => {
       throw new Error('Invalid JSON in request body');
     }
 
-    const { email, password, firstName, lastName, phone, roles, organizationId } = requestBody;
+    // organizationId is derived server-side from the caller's admin role
+    // assignments (audit CRITICAL #5). The body field is still read for the
+    // multi-org-admin case, but it is validated against the caller's admin
+    // orgs further down — never trusted on its own.
+    const { email, password, firstName, lastName, phone, roles, organizationId: bodyOrgIdRaw } = requestBody;
     const normalizedEmail = email?.toLowerCase().trim();
 
     console.log('Creating employee with data:', {
@@ -72,12 +76,12 @@ serve(async (req) => {
       lastName,
       phone,
       roles,
-      organizationId
+      bodyOrgIdSupplied: !!bodyOrgIdRaw
     });
 
-    if (!normalizedEmail || !password || !roles || !organizationId) {
-      console.error('Missing required fields:', { email: !!normalizedEmail, password: !!password, roles: !!roles, organizationId: !!organizationId });
-      throw new Error('Missing required fields: email, password, roles, and organizationId are required');
+    if (!normalizedEmail || !password || !roles) {
+      console.error('Missing required fields:', { email: !!normalizedEmail, password: !!password, roles: !!roles });
+      throw new Error('Missing required fields: email, password, and roles are required');
     }
 
     // Resolve current caller's internal user id using admin client (bypasses RLS)
@@ -118,23 +122,48 @@ serve(async (req) => {
 
     console.log('Current user internal id:', currentUserId);
 
-    // Verify caller has admin role in the target organization
-    const { data: adminRoleRows, error: adminRoleError } = await supabaseAdmin
+    // Server-side organizationId derivation (audit CRITICAL #5).
+    // Fetch all orgs where caller is admin, then resolve the target org:
+    //   - 0 admin orgs → reject (caller is not authorized to create employees)
+    //   - 1 admin org → use it (single-org admin: most common case)
+    //   - N admin orgs → require body to disambiguate; validate caller is admin there
+    const { data: callerAdminOrgs, error: adminOrgsError } = await supabaseAdmin
       .from('user_organization_roles')
-      .select('id')
+      .select('organization_id')
       .eq('user_id', currentUserId!)
-      .eq('organization_id', organizationId)
       .eq('role', 'admin');
 
-    if (adminRoleError) {
-      console.error('Role check database error:', adminRoleError);
-      throw new Error(`Database error checking roles: ${adminRoleError.message}`);
+    if (adminOrgsError) {
+      console.error('Role check database error:', adminOrgsError);
+      throw new Error(`Database error checking roles: ${adminOrgsError.message}`);
     }
 
-    if (!adminRoleRows || adminRoleRows.length === 0) {
-      console.error('No admin role in target org for user:', currentUserId);
-      throw new Error('Insufficient permissions - admin role required in target organization');
+    const adminOrgIds = (callerAdminOrgs ?? []).map((r: { organization_id: string }) => r.organization_id);
+
+    if (adminOrgIds.length === 0) {
+      console.error('No admin role for caller:', currentUserId);
+      throw new Error('Insufficient permissions - admin role required');
     }
+
+    let organizationId: string;
+    if (adminOrgIds.length === 1) {
+      organizationId = adminOrgIds[0];
+      if (bodyOrgIdRaw && bodyOrgIdRaw !== organizationId) {
+        console.warn('Body organizationId ignored (caller is single-org admin):', { bodyOrgIdRaw, derived: organizationId });
+      }
+    } else {
+      if (!bodyOrgIdRaw) {
+        console.error('Multi-org admin must specify target organization in body');
+        throw new Error('Caller has admin role in multiple organizations; organizationId is required in this case');
+      }
+      if (!adminOrgIds.includes(bodyOrgIdRaw)) {
+        console.error('Body organizationId is not one the caller administers:', { bodyOrgIdRaw, adminOrgIds });
+        throw new Error('Insufficient permissions - admin role required in target organization');
+      }
+      organizationId = bodyOrgIdRaw;
+    }
+
+    console.log('Resolved organizationId for new employee:', organizationId);
 
     // Check if a user with this email already exists in public.users
     const { data: existingUser, error: existingUserError } = await supabaseAdmin
