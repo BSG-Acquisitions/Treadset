@@ -114,18 +114,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Flag to prevent duplicate user data loading
-  const [loadingUserData, setLoadingUserData] = useState(false);
+  // Re-entrancy guard for loadUserData. Must be a ref, not state — the
+  // onAuthStateChange subscription closes over render-0's value, so a
+  // useState flag would always read `false` and never block parallel runs.
+  const loadingUserDataRef = useRef(false);
 
   const loadUserData = async (authUser: User | null) => {
     // Prevent duplicate calls
-    if (loadingUserData) {
+    if (loadingUserDataRef.current) {
       console.log('loadUserData already in progress, skipping');
       return;
     }
 
     console.log('loadUserData called with:', authUser?.id);
-    setLoadingUserData(true);
+    loadingUserDataRef.current = true;
     
     try {
       if (!authUser) {
@@ -259,7 +261,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUserIfChanged(null);
       }
     } finally {
-      setLoadingUserData(false);
+      loadingUserDataRef.current = false;
+      // Profile is resolved (success, fallback, or null) — release loading now.
+      // Holding loading=true until profile resolves prevents ProtectedRoute's
+      // 500ms redirect timer from racing the user-data join on slow mobile
+      // networks (the actual cause of "drivers can't log in" complaints —
+      // see fix/driver-auth-cold-login-race).
+      setLoading(false);
       console.log('loadUserData completed');
     }
   };
@@ -273,18 +281,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Check for existing session first
         const { data: { session }, error } = await supabase.auth.getSession();
         console.log('Initial session check:', session?.user?.id, error);
-        
+
         if (mounted) {
           setSession(session);
-          // Defer user data loading to avoid blocking
           if (session?.user) {
+            // loadUserData's finally releases loading once the profile join
+            // resolves. DO NOT setLoading(false) here — that's the original
+            // race that bounced authenticated drivers back to /auth.
             setTimeout(() => {
               if (mounted) loadUserData(session.user);
             }, 0);
           } else {
             setUserIfChanged(null);
+            setLoading(false);
           }
-          setLoading(false);
         }
       } catch (error) {
         console.error('Error getting initial session:', error);
@@ -298,19 +308,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log('Auth state changed:', event, session?.user?.id);
-        if (mounted) {
-          setSession(session);
-          // Defer user data loading using setTimeout to avoid deadlocks
-          setTimeout(() => {
-            if (mounted) {
-              if (session?.user) {
-                loadUserData(session.user);
-              } else {
-                setUserIfChanged(null);
-              }
-            }
-          }, 0);
-        }
+        if (!mounted) return;
+        setSession(session);
+        // Defer user data loading using setTimeout to avoid deadlocks
+        setTimeout(() => {
+          if (!mounted) return;
+          if (!session?.user) {
+            setUserIfChanged(null);
+            setLoading(false);
+            return;
+          }
+          // TOKEN_REFRESHED fires periodically while signed in. Profile data
+          // hasn't changed, so don't re-query or flip loading — that would
+          // flicker spinners across the app every refresh window.
+          if (event === 'TOKEN_REFRESHED') return;
+          // SIGNED_IN / INITIAL_SESSION / USER_UPDATED: hold loading=true
+          // until loadUserData resolves the profile.
+          setLoading(true);
+          loadUserData(session.user);
+        }, 0);
       }
     );
 
