@@ -138,6 +138,7 @@ export const useInviteHauler = () => {
           hauler_zip: zip, // Legacy field
           is_approved: true,
           is_active: true,
+          organization_id,
         })
         .select()
         .single();

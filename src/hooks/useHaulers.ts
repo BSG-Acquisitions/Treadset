@@ -81,9 +81,13 @@ export const useHaulers = () => {
 
 export const useCreateHauler = () => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async (data: CreateHaulerData) => {
+      const orgId = user?.currentOrganization?.id;
+      if (!orgId) throw new Error('No organization configured for current user');
+
       // Create simple hauler (no user account) - used for Michigan manifests
       const { data: hauler, error } = await (supabase as any)
         .from("haulers")
@@ -96,6 +100,7 @@ export const useCreateHauler = () => {
           hauler_phone: data.hauler_phone,
           hauler_mi_reg: data.hauler_mi_reg,
           is_active: true,
+          organization_id: orgId,
         })
         .select()
         .single();
