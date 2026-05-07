@@ -80,14 +80,18 @@ export const OutboundReceiverDialog: React.FC<OutboundReceiverDialogProps> = ({
     try {
       setLoading(true);
 
-      // Save signature to storage
+      if (!manifest.organization_id) {
+        throw new Error('Could not determine organization for manifest');
+      }
+
+      // Save signature to storage (tenant-scoped path prevents cross-org collisions)
       const canvas = sigRef.current.getTrimmedCanvas();
-      const blob = await new Promise<Blob>((resolve) => 
+      const blob = await new Promise<Blob>((resolve) =>
         canvas.toBlob(resolve as BlobCallback, 'image/png')
       );
-      
-      const fileName = `signatures/${manifest.id}/receiver.png`;
-      
+
+      const fileName = `${manifest.organization_id}/signatures/${manifest.id}/receiver.png`;
+
       const { error: uploadError } = await supabase.storage
         .from('manifests')
         .upload(fileName, blob, { contentType: 'image/png', upsert: true });
