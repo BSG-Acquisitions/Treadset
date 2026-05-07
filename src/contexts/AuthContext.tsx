@@ -364,8 +364,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('Attempting to sign in with Supabase...');
     
     try {
+      // Mobile keyboards (notably iOS) often append a trailing space or
+      // auto-capitalize the first letter after autocomplete. Supabase rejects
+      // those as "Invalid login credentials" even though the password is right.
+      // Kyron, 2026-05-07: same creds worked on Z's device after manual retype.
+      const normalizedEmail = email.trim().toLowerCase();
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: normalizedEmail,
         password,
       });
       

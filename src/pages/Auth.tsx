@@ -127,6 +127,10 @@ export default function Auth() {
                     <Input
                       id="login-email"
                       type="email"
+                      inputMode="email"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
@@ -195,6 +199,10 @@ export default function Auth() {
                     <Input
                       id="signup-email"
                       type="email"
+                      inputMode="email"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
