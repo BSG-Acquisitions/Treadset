@@ -127,12 +127,34 @@ export interface UpdateManifestData {
   customer_signature_png_path?: string;
   driver_signature_png_path?: string;
   pdf_path?: string;
+  acroform_pdf_path?: string;
   payment_status?: 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'NOT_APPLICABLE';
   stripe_payment_intent_id?: string;
   paid_amount?: number;
   receipt_url?: string;
   status?: 'DRAFT' | 'IN_PROGRESS' | 'AWAITING_SIGNATURE' | 'AWAITING_PAYMENT' | 'AWAITING_RECEIVER_SIGNATURE' | 'COMPLETED';
   photos?: string[];
+
+  // Admin-edit fields (EditManifestDialog) — drivers can't reach these via
+  // the wizard once a manifest is past in-progress, but admin/dispatcher
+  // /ops_manager need them for after-the-fact corrections (wrong tire
+  // category, signer typo, etc).
+  pte_off_rim?: number;
+  pte_on_rim?: number;
+  commercial_17_5_19_5_off?: number;
+  commercial_17_5_19_5_on?: number;
+  commercial_22_5_off?: number;
+  commercial_22_5_on?: number;
+  otr_count?: number;
+  tractor_count?: number;
+  semi_count?: number;
+  total_pte?: number;
+  weight_tons?: number;
+  subtotal?: number;
+  total?: number;
+  notes?: string;
+  driver_name?: string;
+  edit_history?: Array<Record<string, unknown>>;
 }
 
 export const useManifests = (clientId?: string, driverId?: string) => {
