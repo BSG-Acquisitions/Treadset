@@ -17,8 +17,11 @@ export const createOptimizedQueryClient = () => {
         // Retry failed queries twice with exponential backoff
         retry: 2,
         retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-        // Refetch on window focus for real-time data
-        refetchOnWindowFocus: true,
+        // Don't refetch on window focus — the app uses Supabase realtime
+        // channels (useRealtimeUpdates) for freshness, and focus-refetch
+        // was triggering re-renders that reset local state when dispatchers
+        // alt-tabbed (e.g. ServiceZones map zoom, CreateClient form fields).
+        refetchOnWindowFocus: false,
         // Don't refetch on reconnect by default
         refetchOnReconnect: false,
         // Refetch on mount for stale data
