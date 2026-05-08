@@ -10,6 +10,10 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="TreadSet">
     <link rel="apple-touch-icon" href="/icon-192x192.png">
+    <!-- Hint to Chrome's tab discarder to keep this tab alive while
+         dispatchers have route/zone work in progress. Not enforced, but
+         meaningfully reduces aggressive discarding under memory pressure. -->
+    <meta name="discardable" content="never">
     <meta name="author" content="Lovable" />
 
     <!-- Inter font + Dancing Script for cursive signatures -->
