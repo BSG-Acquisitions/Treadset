@@ -42,6 +42,8 @@ const DriverDashboard = lazy(() => import('./pages/DriverDashboard'));
 const DriverAssignmentView = lazy(() => import('./pages/DriverAssignmentView'));
 const PublicBook = lazy(() => import('./pages/PublicBook'));
 const PublicBookingConfirmation = lazy(() => import('./pages/PublicBookingConfirmation'));
+const Pioneer = lazy(() => import('./pages/Pioneer'));
+const Waitlist = lazy(() => import('./pages/Waitlist'));
 const ManifestViewer = lazy(() => import('./pages/ManifestViewer'));
 const Invite = lazy(() => import('./pages/Invite'));
 const ClientInvite = lazy(() => import('./pages/ClientInvite'));
@@ -145,6 +147,10 @@ const App = () => (
               {/* Public Booking Routes */}
               <Route path="/public-book" element={<PublicBook />} />
               <Route path="/public-booking-confirmation" element={<PublicBookingConfirmation />} />
+
+              {/* Tradeshow Lead Capture (Pioneer Program + Waitlist) */}
+              <Route path="/pioneer" element={<Pioneer />} />
+              <Route path="/waitlist" element={<Waitlist />} />
               <Route path="/invite/:token" element={<Invite />} />
               <Route path="/client-invite/:token" element={<ClientInvite />} />
               <Route path="/client-team-invite/:token" element={<ClientTeamInvite />} />

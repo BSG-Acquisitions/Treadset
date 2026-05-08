@@ -4,7 +4,31 @@ Newest entries at the top. Each session ends with a Ship Report appended here pe
 
 ---
 
-## 2026-05-07 (latest) — Wave 1 PR #4 opened: 5 critical onboarding hardening findings (PR #7 also merged in this session)
+## 2026-05-08 (latest) — Pioneer + Waitlist tradeshow lead-capture pages
+
+**Context:** Denver tire conference is mid-May 2026. Brochure design locked in this session (separate workspace at `~/Desktop/treadset-brochure/`) with two QR codes — one for Pioneer Program signup, one for waitlist. Pages need to be live before QRs are generated. Both pages live on the existing TreadSet app per Z's call (faster than wiring marketing-site repo) at `app.treadset.co/pioneer` and `/waitlist`.
+
+**Shipped (branch `feat/pioneer-waitlist-pages`, PR pending):**
+- **`supabase/migrations/20260508103300_pioneer_waitlist_tables.sql`** — creates `public.pioneers` and `public.waitlist`. Pioneer enforces "one per state" via `UNIQUE(state_code)` + `CHECK(length=2)`. Both tables: anon+authenticated INSERT only via RLS (no SELECT/UPDATE/DELETE policies → service_role read only). Per CLAUDE.md rule, **migration file written but not applied** — Z pastes into Supabase SQL editor manually.
+- **`src/pages/Pioneer.tsx`** — public page, react-hook-form + zod, four required fields (company, state dropdown, contact name, email). On submit: insert into `pioneers`. Catches Postgres `23505` (unique violation on `state_code`) and shows the user "this state's been claimed — join the waitlist" with a link. Success state shows "{State} is yours" inline confirmation.
+- **`src/pages/Waitlist.tsx`** — public page, lighter form (name + email required, company + state optional). Single insert into `waitlist`. Inline success state.
+- **`src/App.tsx`** — lazy imports `Pioneer` + `Waitlist`, registers `/pioneer` and `/waitlist` routes in the public block (no auth).
+- TypeScript cast on the `supabase.from()` call in both pages because the auto-generated `types.ts` doesn't yet know about the new tables. Once Z applies the migration and regenerates types, the casts can drop.
+
+**Blocked:**
+- Z to paste `20260508103300_pioneer_waitlist_tables.sql` into Supabase SQL editor for project `wvjehbozyxhmgdljwsiz` after merging.
+- Z to merge the PR. Vercel auto-deploys main on merge; URLs go live within ~2 min.
+- After both: regenerate `types.ts` (`supabase gen types typescript`) so the casts can drop in a follow-up cleanup commit.
+
+**Parked:**
+- Sending the new lead emails to a CRM / Slack on insert — for now Z reads them out of the Supabase dashboard. Hook this up post-tradeshow if volume warrants.
+- Marketing-site `treadset.co/pioneer` redirect — unnecessary for the tradeshow because the brochure points directly at `app.treadset.co/pioneer`.
+
+**Next session first move:** Generate real scannable QR codes from the live `/pioneer` and `/waitlist` URLs, swap them into the brochure HTML at `~/Desktop/treadset-brochure/index.html`, re-render the print-ready PDF, and hand off to FedEx.
+
+---
+
+## 2026-05-07 — Wave 1 PR #4 opened: 5 critical onboarding hardening findings (PR #7 also merged in this session)
 
 **Context:** After PR #7 merged earlier in the same session, took the next-session first move from the prior entry: onboarding hardening. The audit's `04-onboarding.md` lists 5 CRITICAL findings (cookie default, slug collision, employee invite email check, employee invite race, server-derived org_id) — exact match to the scope Z's prior brief had named.
 
