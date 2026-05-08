@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,12 +6,25 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useManifest } from '@/hooks/useManifests';
 import { ManifestPDFControls } from '@/components/ManifestPDFControls';
+import { EditManifestDialog } from '@/components/manifests/EditManifestDialog';
+import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
-import { ArrowLeft, FileText, User, MapPin, Package, Clock, CreditCard, CheckCircle, Truck } from 'lucide-react';
+import { ArrowLeft, FileText, User, MapPin, Package, Clock, CreditCard, CheckCircle, Truck, PencilLine } from 'lucide-react';
 
 export default function ManifestViewer() {
   const { id } = useParams<{ id: string }>();
   const { data: manifest, isLoading, error } = useManifest(id ?? '');
+  const { hasAnyRole } = useAuth();
+  const [editOpen, setEditOpen] = useState(false);
+
+  // Drivers and clients should not be able to retroactively edit a manifest.
+  // Admin / super_admin / ops_manager / dispatcher can — these are the
+  // dispatch-side roles who catch a wrong tire category before the yard
+  // signature step.
+  const canEdit = hasAnyRole(['admin', 'super_admin', 'ops_manager', 'dispatcher']);
+  const isRevised =
+    Array.isArray((manifest as { edit_history?: unknown[] } | null)?.edit_history) &&
+    ((manifest as { edit_history: unknown[] }).edit_history.length ?? 0) > 0;
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -100,13 +113,32 @@ export default function ManifestViewer() {
                   {getStatusIcon(manifest.status)}
                   <span className="ml-1">{manifest.status.replace('_', ' ')}</span>
                 </Badge>
+                {isRevised && (
+                  <Badge variant="outline" className="border-amber-300 text-amber-700 bg-amber-50">
+                    Revised
+                  </Badge>
+                )}
               </div>
               <p className="text-muted-foreground">
                 Created {format(new Date(manifest.created_at), 'PPP p')}
               </p>
             </div>
           </div>
+          {canEdit && (
+            <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+              <PencilLine className="h-4 w-4 mr-2" />
+              Edit
+            </Button>
+          )}
         </div>
+
+        {canEdit && manifest && (
+          <EditManifestDialog
+            manifest={manifest as Parameters<typeof EditManifestDialog>[0]['manifest']}
+            open={editOpen}
+            onOpenChange={setEditOpen}
+          />
+        )}
 
         <div className="grid gap-6 md:grid-cols-2">
           {/* Client & Location Info */}
