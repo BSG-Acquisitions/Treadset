@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle2, AlertTriangle, ArrowRight } from "lucide-react";
-import { BrandHeader } from "@/components/BrandHeader";
 
 const STATES: { code: string; name: string }[] = [
   ["AL","Alabama"],["AK","Alaska"],["AZ","Arizona"],["AR","Arkansas"],
@@ -47,7 +46,7 @@ type FormValues = z.infer<typeof schema>;
 type Status =
   | { kind: "idle" }
   | { kind: "submitted"; data: FormValues }
-  | { kind: "state_taken"; state_code: string }
+  | { kind: "state_taken"; state_code: string; values: FormValues }
   | { kind: "error"; message: string };
 
 export default function Pioneer() {
@@ -87,12 +86,20 @@ export default function Pioneer() {
     if (error) {
       // Postgres unique-violation = state already claimed
       if (error.code === "23505") {
-        setStatus({ kind: "state_taken", state_code: values.state_code });
+        setStatus({ kind: "state_taken", state_code: values.state_code, values });
         return;
       }
       setStatus({ kind: "error", message: error.message });
       return;
     }
+
+    // Fire notification — best-effort, never block the success path
+    void notifyZ({ kind: "pioneer", data: {
+      company_name: values.company_name,
+      state_code:   values.state_code,
+      contact_name: values.contact_name,
+      email:        values.email.toLowerCase(),
+    }});
 
     setStatus({ kind: "submitted", data: values });
   };
@@ -101,11 +108,13 @@ export default function Pioneer() {
 
   return (
     <div className="min-h-screen bg-background">
-      <BrandHeader />
+      <PageHeader />
 
-      <main className="mx-auto max-w-2xl px-6 pb-24 pt-12 md:pt-20">
+      <main className="mx-auto max-w-2xl px-6 pb-24 pt-12 md:pt-16">
         {status.kind === "submitted" ? (
           <ConfirmationCard data={status.data} />
+        ) : status.kind === "state_taken" ? (
+          <StateTakenCard stateCode={status.state_code} prefill={status.values} />
         ) : (
           <>
             <div className="mb-10">
@@ -188,20 +197,6 @@ export default function Pioneer() {
                     </div>
                   </div>
 
-                  {status.kind === "state_taken" && (
-                    <Alert variant="destructive">
-                      <AlertTriangle className="h-4 w-4" />
-                      <AlertDescription>
-                        <strong>{status.state_code}</strong> has already been
-                        claimed by another processor. Join the{" "}
-                        <Link to="/waitlist" className="underline font-medium">
-                          waitlist
-                        </Link>{" "}
-                        and we'll let you know if it opens up.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-
                   {status.kind === "error" && (
                     <Alert variant="destructive">
                       <AlertTriangle className="h-4 w-4" />
@@ -229,6 +224,29 @@ export default function Pioneer() {
         )}
       </main>
     </div>
+  );
+}
+
+/** On-brand header for /pioneer + /waitlist.  Replaces the shared BrandHeader
+    which carries BSG's "Old Tires = New Possibilities" tagline + recycle/eco
+    badges that don't belong on TreadSet sales surfaces. */
+function PageHeader() {
+  return (
+    <header className="border-b bg-card/40 backdrop-blur-sm">
+      <div className="mx-auto flex max-w-2xl items-center justify-between gap-4 px-6 py-4">
+        <Link to="/pioneer" className="flex items-center gap-2 group">
+          <span aria-hidden className="relative flex h-7 w-7 items-center justify-center rounded-full bg-emerald-800">
+            <span className="absolute inset-[28%] rounded-full bg-card" />
+          </span>
+          <span className="text-lg font-bold tracking-tight text-foreground">
+            TreadSet
+          </span>
+        </Link>
+        <span className="hidden text-xs font-medium tracking-wide text-muted-foreground sm:block">
+          The complete tire recycling operations platform
+        </span>
+      </div>
+    </header>
   );
 }
 
@@ -265,4 +283,71 @@ function ConfirmationCard({ data }: { data: FormValues }) {
       </CardContent>
     </Card>
   );
+}
+
+/** Shown when the chosen state is already claimed by another Pioneer.
+    Sells the waitlist as the natural next move and pre-fills name/email
+    via query params so the user doesn't re-type. */
+function StateTakenCard({
+  stateCode,
+  prefill,
+}: {
+  stateCode: string;
+  prefill: FormValues;
+}) {
+  const stateName = STATES.find((s) => s.code === stateCode)?.name ?? stateCode;
+  const params = new URLSearchParams({
+    name:         prefill.contact_name,
+    email:        prefill.email,
+    company_name: prefill.company_name,
+    state_code:   stateCode,
+  }).toString();
+
+  return (
+    <Card className="border-orange-200">
+      <CardContent className="p-8 md:p-12 text-center">
+        <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-orange-50">
+          <AlertTriangle className="h-7 w-7 text-orange-700" />
+        </div>
+        <p className="mb-2 text-xs uppercase tracking-widest text-orange-700 font-bold">
+          Taken
+        </p>
+        <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+          {stateName} is already claimed.
+        </h2>
+        <p className="mt-4 text-base text-muted-foreground">
+          Another processor locked {stateName} as their Pioneer slot. The good
+          news: charter terms still open up — both when we expand the program
+          and if a Pioneer changes hands.
+        </p>
+
+        <Link
+          to={`/waitlist?${params}`}
+          className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-md bg-emerald-800 px-6 py-4 text-base font-semibold text-white hover:bg-emerald-900 transition-colors"
+        >
+          Join the {stateName} waitlist
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+
+        <p className="mt-4 text-xs text-muted-foreground">
+          We'll notify you the moment {stateName} reopens.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Best-effort notification.  Calls the notify-tradeshow-signup edge fn so
+    Z gets an email the moment a new lead lands.  Failures are swallowed —
+    the signup itself already succeeded in the database. */
+async function notifyZ(payload: {
+  kind: "pioneer";
+  data: { company_name: string; state_code: string; contact_name: string; email: string };
+}): Promise<void> {
+  try {
+    await supabase.functions.invoke("notify-tradeshow-signup", { body: payload });
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.warn("notify-tradeshow-signup failed", e);
+  }
 }

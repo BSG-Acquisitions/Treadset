@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -16,7 +17,6 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle2, AlertTriangle, ArrowRight } from "lucide-react";
-import { BrandHeader } from "@/components/BrandHeader";
 
 const STATES: { code: string; name: string }[] = [
   ["AL","Alabama"],["AK","Alaska"],["AZ","Arizona"],["AR","Arkansas"],
@@ -49,6 +49,8 @@ type Status =
   | { kind: "error"; message: string };
 
 export default function Waitlist() {
+  const [params] = useSearchParams();
+  const prefilled = params.get("name") || params.get("email") || params.get("state_code");
   const [status, setStatus] = useState<Status>({ kind: "idle" });
 
   const {
@@ -59,7 +61,12 @@ export default function Waitlist() {
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { name: "", email: "", company_name: "", state_code: "" },
+    defaultValues: {
+      name:         params.get("name")         ?? "",
+      email:        params.get("email")        ?? "",
+      company_name: params.get("company_name") ?? "",
+      state_code:   params.get("state_code")   ?? "",
+    },
   });
 
   useEffect(() => {
@@ -87,6 +94,16 @@ export default function Waitlist() {
       return;
     }
 
+    void notifyZ({
+      kind: "waitlist",
+      data: {
+        name:         values.name,
+        email:        values.email.toLowerCase(),
+        company_name: values.company_name || null,
+        state_code:   values.state_code || null,
+      },
+    });
+
     setStatus({ kind: "submitted", data: values });
   };
 
@@ -94,9 +111,9 @@ export default function Waitlist() {
 
   return (
     <div className="min-h-screen bg-background">
-      <BrandHeader />
+      <PageHeader />
 
-      <main className="mx-auto max-w-2xl px-6 pb-24 pt-12 md:pt-20">
+      <main className="mx-auto max-w-2xl px-6 pb-24 pt-12 md:pt-16">
         {status.kind === "submitted" ? (
           <Card className="border-emerald-200">
             <CardContent className="p-8 md:p-12 text-center">
@@ -121,12 +138,12 @@ export default function Waitlist() {
                 Waitlist
               </span>
               <h1 className="mt-5 text-4xl font-bold leading-[0.95] tracking-tight md:text-5xl">
-                Stay close.
+                {prefilled ? "Almost there." : "Stay close."}
               </h1>
               <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground">
-                Pioneer slots fill fast. Drop your details and we'll let you
-                know if your state opens up — or when we open the next
-                charter window.
+                {prefilled
+                  ? "We carried your info over. Confirm and submit — we'll let you know the moment your state opens up."
+                  : "Pioneer slots fill fast. Drop your details and we'll let you know if your state opens up — or when we open the next charter window."}
               </p>
             </div>
 
@@ -212,4 +229,38 @@ export default function Waitlist() {
       </main>
     </div>
   );
+}
+
+/** On-brand header — same component used by /pioneer.  Replaces the shared
+    BrandHeader (which carries BSG's tagline + sustainability badges). */
+function PageHeader() {
+  return (
+    <header className="border-b bg-card/40 backdrop-blur-sm">
+      <div className="mx-auto flex max-w-2xl items-center justify-between gap-4 px-6 py-4">
+        <Link to="/pioneer" className="flex items-center gap-2 group">
+          <span aria-hidden className="relative flex h-7 w-7 items-center justify-center rounded-full bg-emerald-800">
+            <span className="absolute inset-[28%] rounded-full bg-card" />
+          </span>
+          <span className="text-lg font-bold tracking-tight text-foreground">
+            TreadSet
+          </span>
+        </Link>
+        <span className="hidden text-xs font-medium tracking-wide text-muted-foreground sm:block">
+          The complete tire recycling operations platform
+        </span>
+      </div>
+    </header>
+  );
+}
+
+async function notifyZ(payload: {
+  kind: "waitlist";
+  data: { name: string; email: string; company_name: string | null; state_code: string | null };
+}): Promise<void> {
+  try {
+    await supabase.functions.invoke("notify-tradeshow-signup", { body: payload });
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.warn("notify-tradeshow-signup failed", e);
+  }
 }
