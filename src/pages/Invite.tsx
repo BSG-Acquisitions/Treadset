@@ -70,6 +70,13 @@ export default function Invite() {
         throw new Error("Failed to create account");
       }
 
+      // Wait for handle_new_user_organization trigger to settle before claiming.
+      // Without this delay, the users INSERT below races the trigger's own users
+      // INSERT and the subsequent claim_invite_token RPC may run with a half-built
+      // user record, leaving the new employee with empty roles → "Access Denied".
+      // Mirrors the pattern in ClientInvite.tsx:132.
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
       // Create user record
       const { data: userData, error: userError } = await supabase
         .from("users")
@@ -102,11 +109,19 @@ export default function Invite() {
 
       if (!userId) throw new Error("Failed to get user ID");
 
-      // Claim the invite token
+      // Defense-in-depth: confirm the email being claimed matches the invite's email.
+      // Server enforces this too (claim_invite_token RPC validates), but failing
+      // fast here gives the user a cleaner error before the round-trip.
+      if (invite?.email && email.trim().toLowerCase() !== invite.email.trim().toLowerCase()) {
+        throw new Error("This invitation was sent to a different email address.");
+      }
+
+      // Claim the invite token (email param is required by the RPC and validated server-side)
       const { data: claimed, error: claimError } = await supabase.rpc("claim_invite_token", {
         invite_token: token,
         claiming_user_id: userId,
-      });
+        claiming_email: email.trim(),
+      } as any);
 
       if (claimError) {
         console.error("Claim error:", claimError);

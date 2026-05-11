@@ -27,6 +27,7 @@ interface AuthContextType {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error?: any }>;
   signInWithMagicLink: (email: string) => Promise<{ error?: any }>;
+  signInClientWithMagicLink: (email: string) => Promise<{ error?: any }>;
   signUp: (email: string, password: string, firstName?: string, lastName?: string) => Promise<{ error?: any }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error?: any }>;
@@ -34,7 +35,7 @@ interface AuthContextType {
   switchOrganization: (orgSlug: string) => void;
   hasRole: (role: AppRole) => boolean;
   hasAnyRole: (roles: AppRole[]) => boolean;
-  getCurrentOrgSlug: () => string;
+  getCurrentOrgSlug: () => string | undefined;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -96,7 +97,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const getCurrentOrgSlug = () => {
+  const getCurrentOrgSlug = (): string | undefined => {
     if (typeof window !== 'undefined') {
       const cookies = document.cookie.split(';');
       const orgSlugCookie = cookies.find(cookie => cookie.trim().startsWith('orgSlug='));
@@ -104,7 +105,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return orgSlugCookie.split('=')[1];
       }
     }
-    return 'bsg'; // Default to BSG
+    // No cookie → undefined; loadUserData falls back to user's first available org.
+    // Previously defaulted to 'bsg' which cross-tenant-routed multi-org users.
+    return undefined;
   };
 
   const switchOrganization = (orgSlug: string) => {
@@ -420,6 +423,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return error ? { error } : {};
   };
 
+  // Tokenless portal sign-in for clients. Caller must pre-verify the email
+  // exists in public.clients via the is_client_email RPC before calling this —
+  // shouldCreateUser is true here, and the handle_new_user_organization
+  // trigger auto-links role='client' on first sign-in based on the
+  // clients.email match. Without the pre-check, an arbitrary email would
+  // get a magic-link and (on no-match) get a brand new placeholder tenant.
+  const signInClientWithMagicLink = async (email: string) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    const { error } = await supabase.auth.signInWithOtp({
+      email: normalizedEmail,
+      options: {
+        emailRedirectTo: 'https://app.treadset.co/',
+        shouldCreateUser: true,
+      },
+    });
+    return error ? { error } : {};
+  };
+
   const signUp = async (email: string, password: string, firstName?: string, lastName?: string) => {
     const redirectUrl = 'https://app.treadset.co/';
     
@@ -493,6 +514,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loading,
         signIn,
         signInWithMagicLink,
+        signInClientWithMagicLink,
         signUp,
         signOut,
         resetPassword,

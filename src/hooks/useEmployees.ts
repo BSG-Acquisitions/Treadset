@@ -100,9 +100,12 @@ export const useCreateEmployee = () => {
       }
 
       console.log('Calling create-employee function with data:', JSON.stringify(employeeData, null, 2));
-      console.log('Organization ID:', user.currentOrganization.id);
 
-      // Call the edge function instead of using auth.admin directly
+      // organizationId is no longer sent in the body — the edge function
+      // derives it server-side from the caller's admin role assignments
+      // (audit CRITICAL #5). Single-org admins (every TreadSet user today)
+      // need send nothing; multi-org admins will need a UI-level org picker
+      // before this hook can target a non-active org.
       const { data, error } = await supabase.functions.invoke('create-employee', {
         body: {
           email: employeeData.email,
@@ -111,7 +114,6 @@ export const useCreateEmployee = () => {
           lastName: employeeData.lastName,
           phone: employeeData.phone,
           roles: employeeData.roles,
-          organizationId: user.currentOrganization.id
         }
       });
 
