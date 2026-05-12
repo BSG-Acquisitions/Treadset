@@ -104,6 +104,7 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
       driverInfo: v.driver_email || (v.assigned_driver_id ? 'Driver assigned' : null),
       vehicleId: v.id,
       assignedDriverId: v.assigned_driver_id,
+      driverEmail: v.driver_email,
     })) || []),
     ...(haulers?.map(h => ({
       id: `hauler-${h.id}`,
@@ -131,17 +132,24 @@ export function SchedulePickupWithDriverDialog({ trigger, defaultClientId }: Sch
     },
   });
 
-  // Pre-fill the driver dropdown from the vehicle's assigned driver, if any.
+  // Pre-fill the driver dropdown from assigned_driver_id, or fall back to
+  // matching the vehicle's driver_email against the drivers list.
   const watchedTruck = form.watch("truckSelection");
   const watchedDriver = form.watch("driverId");
   useEffect(() => {
-    if (!watchedTruck) return;
+    if (!watchedTruck || watchedDriver) return;
     const selected = allTrucks.find(t => t.id === watchedTruck);
-    if (selected?.type === 'vehicle' && selected.assignedDriverId && !watchedDriver) {
+    if (selected?.type !== 'vehicle') return;
+    if (selected.assignedDriverId) {
       form.setValue("driverId", selected.assignedDriverId);
+      return;
+    }
+    if (selected.driverEmail && drivers?.length) {
+      const match = drivers.find(d => d.email?.toLowerCase() === selected.driverEmail?.toLowerCase());
+      if (match) form.setValue("driverId", match.id);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchedTruck]);
+  }, [watchedTruck, drivers]);
 
   useEffect(() => {
     if (open) {

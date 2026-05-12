@@ -63,7 +63,7 @@ const scheduleSchema = z.object({
   tractorCount: z.number().min(0).default(0),
   preferredWindow: z.enum(["AM", "PM", "Any"]).default("Any"),
   truckSelection: z.string().min(1, "Truck/Hauler is required"),
-  driverId: z.string().optional(),
+  driverId: z.string().min(1, "Driver is required"),
   notes: z.string().optional(),
 });
 
@@ -114,6 +114,7 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
       driverInfo: v.driver_email || (v.assigned_driver_id ? 'Driver assigned' : null),
       vehicleId: v.id,
       assignedDriverId: v.assigned_driver_id,
+      driverEmail: v.driver_email,
     })) || []),
     ...(haulers?.map(h => ({
       id: `hauler-${h.id}`,
@@ -140,18 +141,25 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
     },
   });
 
-  // When the user picks a vehicle that already has an assigned driver,
-  // pre-fill the driver dropdown — but the user can still override it.
+  // When the user picks a vehicle, pre-fill the driver dropdown from either
+  // assigned_driver_id or driver_email (matched against the drivers list).
+  // The user can still override it.
   const watchedTruck = form.watch("truckSelection");
   const watchedDriver = form.watch("driverId");
   useEffect(() => {
-    if (!watchedTruck) return;
+    if (!watchedTruck || watchedDriver) return;
     const selected = allTrucks.find(t => t.id === watchedTruck);
-    if (selected?.type === 'vehicle' && selected.assignedDriverId && !watchedDriver) {
+    if (selected?.type !== 'vehicle') return;
+    if (selected.assignedDriverId) {
       form.setValue("driverId", selected.assignedDriverId);
+      return;
+    }
+    if (selected.driverEmail && drivers?.length) {
+      const match = drivers.find(d => d.email?.toLowerCase() === selected.driverEmail?.toLowerCase());
+      if (match) form.setValue("driverId", match.id);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchedTruck]);
+  }, [watchedTruck, drivers]);
 
   useEffect(() => {
     if (open) {
