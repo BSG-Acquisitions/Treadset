@@ -393,6 +393,7 @@ export function ServiceAreaHeatMap() {
           <p style="margin: 2px 0 0; font-size: 11px; color: #666;">
             ${loc.city || 'Unknown'} • ${loc.pickupCount} pickup${loc.pickupCount !== 1 ? 's' : ''}${loc.dropoffCount > 0 ? `, ${loc.dropoffCount} drop-off${loc.dropoffCount !== 1 ? 's' : ''}` : ''}
           </p>
+          ${loc.phone ? `<p style="margin: 2px 0 0; font-size: 11px; color: #2563eb;">${loc.phone}</p>` : ''}
         </div>
       `)
       .addTo(map.current);
