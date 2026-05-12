@@ -1,9 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 export interface Receiver {
   id: string;
+  organization_id: string;
   receiver_name: string;
   receiver_mailing_address?: string;
   receiver_city?: string;
@@ -26,30 +28,40 @@ export interface CreateReceiverData {
 }
 
 export const useReceivers = () => {
+  const { user } = useAuth();
+  const orgId = user?.currentOrganization?.id;
+
   return useQuery({
-    queryKey: ["receivers"],
+    queryKey: ["receivers", orgId],
     queryFn: async () => {
+      if (!orgId) return [];
       const { data, error } = await supabase
         .from("receivers")
         .select("*")
+        .eq("organization_id", orgId)
         .eq("is_active", true)
         .order("receiver_name");
 
       if (error) throw error;
       return data as Receiver[];
     },
+    enabled: !!orgId,
   });
 };
 
 export const useCreateReceiver = () => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const orgId = user?.currentOrganization?.id;
 
   return useMutation({
     mutationFn: async (data: CreateReceiverData) => {
+      if (!orgId) throw new Error("No organization selected");
       const { data: receiver, error } = await supabase
         .from("receivers")
         .insert({
           ...data,
+          organization_id: orgId,
           is_active: true,
         })
         .select()
