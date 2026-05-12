@@ -180,11 +180,16 @@ function DriverManifestCreationWizardInner({
   const [receiverSigUploading, setReceiverSigUploading] = useState(false);
   const [receiverPrintName, setReceiverPrintName] = useState<string>('');
   
-  // Client search for standalone mode
+  // Client search for standalone mode — scoped to the user's current org so
+  // multi-org drivers (e.g. demo accounts who also belong to BSG) don't see
+  // the wrong org's clients leak through via RLS.
   const searchClients = async (search: string) => {
+    const orgId = user?.currentOrganization?.id;
+    if (!orgId) return [];
     const { data, error } = await supabase
       .from('clients')
       .select('*')
+      .eq('organization_id', orgId)
       .ilike('company_name', `%${search}%`)
       .order('company_name')
       .limit(50);
