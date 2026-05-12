@@ -96,16 +96,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const getCurrentOrgSlug = () => {
-    if (typeof window !== 'undefined') {
-      const cookies = document.cookie.split(';');
-      const orgSlugCookie = cookies.find(cookie => cookie.trim().startsWith('orgSlug='));
-      if (orgSlugCookie) {
-        return orgSlugCookie.split('=')[1];
-      }
-    }
-    return 'bsg'; // Default to BSG
+  const getCookieOrgSlug = (): string | null => {
+    if (typeof window === 'undefined') return null;
+    const cookies = document.cookie.split(';');
+    const orgSlugCookie = cookies.find(cookie => cookie.trim().startsWith('orgSlug='));
+    return orgSlugCookie ? orgSlugCookie.split('=')[1] : null;
   };
+
+  const getCurrentOrgSlug = () => getCookieOrgSlug() ?? 'bsg';
 
   const switchOrganization = (orgSlug: string) => {
     if (typeof window !== 'undefined') {
@@ -136,11 +134,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      const orgSlug = getCurrentOrgSlug();
-      console.log('Current org slug:', orgSlug);
+      const cookieSlug = getCookieOrgSlug();
+      console.log('Cookie org slug:', cookieSlug);
 
       console.log('Fetching user data for auth user:', authUser.id);
-      
+
       // Simplified query without timeout race condition
       const { data: userData, error: userError } = await supabase
         .from('users')
@@ -151,6 +149,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           last_name,
           phone,
           signature_data_url,
+          default_org_slug,
           user_organization_roles!inner (
             role,
             organization:organizations!inner (
@@ -201,15 +200,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('Processing user data...');
 
-      // Find current organization by cookie slug
+      // Preferred slug: explicit cookie wins, otherwise the user's own default, otherwise 'bsg'.
+      const preferredSlug = cookieSlug ?? (userData as any).default_org_slug ?? 'bsg';
+
       let currentOrg = userData.user_organization_roles?.find(
-        (uor: any) => uor.organization?.slug === orgSlug
+        (uor: any) => uor.organization?.slug === preferredSlug
       )?.organization;
 
-      // If cookie slug doesn't match, use user's first available org
+      // If preferred slug doesn't match any membership, fall back to first available
       if (!currentOrg && userData.user_organization_roles?.length > 0) {
         currentOrg = userData.user_organization_roles[0]?.organization;
-        console.log('No matching org for cookie slug, using first available:', currentOrg?.slug);
+        console.log('No matching org for preferred slug, using first available:', currentOrg?.slug);
       }
 
       // Get all roles for current organization (match by ID, not slug)
