@@ -100,18 +100,21 @@ function silence() {
 // primitives work end-to-end. Each step does ONE thing then waits.
 // ============================================================================
 type TourStep =
+  // `speak` BLOCKS the tour on TTS completion. Use sparingly for short lines.
   | { kind: 'speak'; text: string; wait?: number }
+  // `speak_async` fires TTS in parallel and continues the tour immediately.
+  // Use for long orientation lines so the first highlight pops up fast.
+  | { kind: 'speak_async'; text: string }
   | { kind: 'highlight'; element_id: string; caption?: string; waitForClick?: boolean; wait?: number }
   | { kind: 'navigate'; path: string; wait?: number }
   | { kind: 'pause'; ms: number };
 
 const WELCOME_TOUR: TourStep[] = [
-  // ---- ORIENTATION (10 sec) ----
-  { kind: 'speak', text: "Welcome to TreadSet, Denver. I'll walk you through creating your first client end to end. Hands on, takes about three minutes.", wait: 200 },
-  { kind: 'pause', ms: 4500 },
-
-  // ---- STEP 1: Navigate to Clients ----
-  { kind: 'speak', text: "Tap the Clients tab when you're ready.", wait: 100 },
+  // ---- ORIENTATION + FIRST HIGHLIGHT (parallel — first ring appears in <1s) ----
+  // Long intro fires async so the user immediately sees the Clients tab pulse.
+  // Voice continues talking through the highlight; no dead air, no dead screen.
+  { kind: 'speak_async', text: "Welcome to TreadSet. I'll walk you through creating your first client end to end — hands on, about three minutes. Tap the highlighted Clients tab when you're ready." },
+  { kind: 'pause', ms: 400 },
   { kind: 'highlight', element_id: 'topnav-clients', caption: 'Clients tab — tap to continue.', waitForClick: true },
 
   // ---- STEP 2: Open Add Client dialog ----
@@ -165,6 +168,10 @@ async function runTour(
     if (step.kind === 'speak') {
       if (voiceOn) await speak(step.text);
       if (step.wait) await new Promise((r) => setTimeout(r, step.wait));
+    } else if (step.kind === 'speak_async') {
+      // Fire TTS but DON'T await — the next step runs immediately. Used for
+      // long orientation lines so the first visual lands fast.
+      if (voiceOn) void speak(step.text);
     } else if (step.kind === 'highlight') {
       window.dispatchEvent(
         new CustomEvent('tready:highlight', {
@@ -223,6 +230,20 @@ export function TreadyBubble() {
       localStorage.setItem(VOICE_PREF_KEY, voiceOn ? '1' : '0');
     }
   }, [voiceOn]);
+
+  // Pre-warm Web Speech voices on mount. First getVoices() call is what
+  // triggers the browser to populate the list; without this, the first
+  // speak() inside a tour pays up to ~600ms of `voiceschanged` wait. Mount
+  // is free since the bubble renders once per session.
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.getVoices();
+    const onChange = () => {
+      window.speechSynthesis.getVoices();
+    };
+    window.speechSynthesis.addEventListener('voiceschanged', onChange);
+    return () => window.speechSynthesis.removeEventListener('voiceschanged', onChange);
+  }, []);
 
   // Fetch + watch JWT
   useEffect(() => {
