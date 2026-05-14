@@ -56,22 +56,34 @@ Deno.serve(async (req) => {
     const resend = new Resend(resendApiKey);
     
     const body = await req.json();
-    const dryRun = body.dryRun ?? true; // Default to dry run for safety
-    const targetDate = body.targetDate ?? '2025-12-18'; // Date when broken emails were sent
-    const excludeClientIds: string[] = body.excludeClientIds ?? []; // Clients to skip (e.g., already handled by phone)
-    
+    const dryRun = body.dryRun ?? true;
+    const targetDate = body.targetDate ?? '2025-12-18';
+    const excludeClientIds: string[] = body.excludeClientIds ?? [];
+    // Caller specifies which tenant's outreach is being corrected. Required —
+    // never silently default to a specific tenant for an admin-only operation.
+    const organizationId: string | undefined = body.organization_id;
+    const orgSlug: string | undefined = body.org_slug;
+
+    if (!organizationId && !orgSlug) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'organization_id or org_slug is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     console.log(`[RESEND_OUTREACH] Starting ${dryRun ? 'DRY RUN' : 'LIVE'} resend for emails sent on ${targetDate}`);
     console.log(`[RESEND_OUTREACH] Excluding ${excludeClientIds.length} client(s): ${excludeClientIds.join(', ')}`);
 
-    // Get organization info
-    const { data: org } = await supabase
-      .from('organizations')
-      .select('id, name, logo_url')
-      .eq('slug', 'bsg')
-      .single();
+    const orgQuery = supabase.from('organizations').select('id, name, logo_url');
+    const { data: org } = organizationId
+      ? await orgQuery.eq('id', organizationId).single()
+      : await orgQuery.eq('slug', orgSlug!).single();
 
     if (!org) {
-      throw new Error('Organization not found');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Organization not found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Find clients who were sent outreach emails on the target date with broken links

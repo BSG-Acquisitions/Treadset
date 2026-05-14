@@ -5,28 +5,30 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Cache for stats to reduce database load
-let cachedStats: any = null;
-let cacheTimestamp: number = 0;
-const CACHE_DURATION_MS = 30000; // 30 second cache for fresher data
+const CACHE_DURATION_MS = 30000;
+
+// Per-slug cache so each tenant's marketing page gets its own numbers.
+const cacheByOrg = new Map<string, { stats: any; ts: number }>();
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    const url = new URL(req.url);
+    // Accept ?org_slug=demo for tenant landing pages.
+    // Default 'bsg' preserves the existing BSG marketing site call path; remove once every
+    // tenant's marketing site is passing org_slug explicitly.
+    const orgSlug = (url.searchParams.get('org_slug') || 'bsg').toLowerCase().trim();
+
     const now = Date.now();
-    const cacheHit = cachedStats && (now - cacheTimestamp) < CACHE_DURATION_MS;
-    
-    // Check cache first
-    if (cacheHit) {
-      console.log('Returning cached stats');
+    const cached = cacheByOrg.get(orgSlug);
+    if (cached && (now - cached.ts) < CACHE_DURATION_MS) {
       return new Response(JSON.stringify({
-        ...cachedStats,
+        ...cached.stats,
         cache_hit: true,
-        generated_at: new Date(cacheTimestamp).toISOString(),
+        generated_at: new Date(cached.ts).toISOString(),
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -34,14 +36,13 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get BSG organization ID
     const { data: orgData, error: orgError } = await supabase
       .from('organizations')
       .select('id')
-      .eq('slug', 'bsg')
+      .eq('slug', orgSlug)
       .single();
 
     if (orgError || !orgData) {
@@ -149,11 +150,9 @@ Deno.serve(async (req) => {
       cache_hit: false,
     };
 
-    // Cache the results
-    cachedStats = stats;
-    cacheTimestamp = now;
+    cacheByOrg.set(orgSlug, { stats, ts: now });
 
-    console.log('Returning fresh stats:', JSON.stringify(stats, null, 2));
+    console.log('Returning fresh stats for', orgSlug);
 
     return new Response(JSON.stringify(stats), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

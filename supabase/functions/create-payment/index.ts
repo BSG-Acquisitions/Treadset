@@ -85,22 +85,31 @@ serve(async (req) => {
         if (userData.user) {
           logStep("User authenticated", { userId: userData.user.id });
 
-          // Get user record from public.users table (not auth.users)
           const { data: publicUser } = await supabaseService
             .from("users")
-            .select("id, organization_id")
+            .select("id")
             .eq("auth_user_id", userData.user.id)
             .maybeSingle();
-          
+
           if (publicUser) {
-            userId = publicUser.id; // Use public.users.id, not auth.users.id
-            if (publicUser.organization_id) {
-              organizationId = publicUser.organization_id;
+            userId = publicUser.id;
+
+            const { data: roleRow } = await supabaseService
+              .from("user_organization_roles")
+              .select("organization_id")
+              .eq("user_id", userId)
+              .limit(1)
+              .maybeSingle();
+
+            if (roleRow) {
+              organizationId = roleRow.organization_id;
+              logStep("Resolved org via user_organization_roles", { userId, organizationId });
+            } else {
+              logStep("User has no organization role", { userId });
             }
-            logStep("Found public user record", { publicUserId: userId, organizationId });
           } else {
             logStep("No public user record found for auth user");
-            userId = null; // Don't set processed_by if no public user record
+            userId = null;
           }
         }
       }
@@ -108,36 +117,29 @@ serve(async (req) => {
       logStep("No authentication or failed to authenticate (proceeding as guest)", { error: error?.message || 'Unknown error' });
     }
 
-    // If no organization from user, try to get it from client_id
     if (!organizationId && client_id) {
       const { data: client } = await supabaseService
         .from("clients")
         .select("organization_id")
         .eq("id", client_id)
         .single();
-      
+
       if (client) {
         organizationId = client.organization_id;
-        logStep("Got organization from client", { organizationId });
+        logStep("Resolved org from client_id", { organizationId });
       }
     }
 
-    // Default to BSG organization if none found (for guest payments)
+    // Multi-tenant safety: never fall back to a hardcoded org.
+    // Caller must be authenticated to a known org, or pass a valid client_id whose org we can read.
     if (!organizationId) {
-      const { data: bsgOrg } = await supabaseService
-        .from("organizations")
-        .select("id")
-        .eq("slug", "bsg")
-        .single();
-      
-      if (bsgOrg) {
-        organizationId = bsgOrg.id;
-        logStep("Using default BSG organization", { organizationId });
-      }
-    }
-
-    if (!organizationId) {
-      throw new Error("Unable to determine organization");
+      logStep("Refusing to default to a tenant — caller must supply auth or client_id");
+      return new Response(
+        JSON.stringify({
+          error: "Unable to determine organization. Authenticate or pass a valid client_id."
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // Initialize Stripe
@@ -156,13 +158,13 @@ serve(async (req) => {
     // Create a one-time payment session
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
-      customer_email: customerId ? undefined : customer_email || "guest@bsgtires.com",
+      customer_email: customerId ? undefined : customer_email || undefined,
       line_items: [
         {
           price_data: {
             currency: "usd",
-            product_data: { 
-              name: description || "BSG Tire Service",
+            product_data: {
+              name: description || "Tire recycling service",
               description: `Payment for ${description || "tire recycling services"}`
             },
             unit_amount: amountInCents,
@@ -195,9 +197,9 @@ serve(async (req) => {
       amount: amountInCents,
       currency: "usd",
       status: "pending",
-      customer_email: customer_email || "guest@bsgtires.com",
+      customer_email: customer_email || null,
       customer_name: customer_name || null,
-      description: description || "BSG Tire Service",
+      description: description || "Tire recycling service",
       metadata: metadata ? JSON.stringify(metadata) : null,
       processed_by: userId || null // Only set if we have a valid public.users.id
     };

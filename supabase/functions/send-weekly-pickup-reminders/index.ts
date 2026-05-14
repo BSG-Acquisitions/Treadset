@@ -240,17 +240,30 @@ const handler = async (req: Request): Promise<Response> => {
       // Send the reminder email
       try {
         const org = orgMap.get(client.organization_id);
-        const bookingUrl = `${appUrl}/book/${org?.slug || 'bsg'}`;
+
+        // Multi-tenant safety: refuse to fabricate a booking URL with a stand-in slug.
+        // Sending a tenant's client to /book/bsg would route them to BSG's booking page.
+        if (!org?.slug) {
+          results.push({
+            client_id: client.id,
+            company_name: client.company_name,
+            status: 'error',
+            message: `Skipped: organization ${client.organization_id} has no slug; cannot generate booking URL`,
+          });
+          continue;
+        }
+
+        const bookingUrl = `${appUrl}/book/${org.slug}`;
         
         // Generate unsubscribe token
         const unsubscribeToken = await generateSecurityToken(client.id, client.email);
         const unsubscribeUrl = `${supabaseUrl}/functions/v1/portal-invite-unsubscribe?client=${client.id}&token=${unsubscribeToken}&type=reminder`;
 
         const emailResponse = await resend.emails.send({
-          from: `${org?.name || 'Your Service Provider'} <noreply@bsgtires.com>`,
+          from: `${org.name || 'Your Service Provider'} <noreply@bsgtires.com>`,
           to: [client.email],
           subject: "🗓️ Ready to schedule your tire pickup this week?",
-          html: generateEmailHtml(client, bookingUrl, unsubscribeUrl, org?.name || 'BSG Tire Recycling'),
+          html: generateEmailHtml(client, bookingUrl, unsubscribeUrl, org.name || 'Your service provider'),
         });
 
         console.log(`Weekly reminder sent to ${client.email} (${client.company_name}):`, emailResponse);
