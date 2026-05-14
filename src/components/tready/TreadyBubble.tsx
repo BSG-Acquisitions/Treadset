@@ -90,7 +90,6 @@ const WELCOME_TOUR: TourStep[] = [
   { kind: 'pause', ms: 8000 },
 ];
 
-// ============================================================================
 // Drop-off tour — walks the user through the 5-step Process Drop-off wizard.
 // User-driven advance through the wizard (waitForClick on Next); we never
 // mutate currentStep ourselves because it lives inside the dialog's local
@@ -159,6 +158,55 @@ const DROPOFF_TOUR: TourStep[] = [
   // ---- STEP 12: Celebrate ----
   { kind: 'speak', text: "Done. That drop-off is logged, the manifest is on its way, and the dashboard totals just updated. Same flow every time. Tap me if you want to learn another one.", wait: 200 },
   { kind: 'pause', ms: 9000 },
+];
+
+// ============================================================================
+// Trailers tour — guided walk of the four trailer sub-pages (Inventory,
+// Vehicles, Drivers, Routes), explaining the mental model and ending on the
+// Create Route entry point. No data mutation — pure orientation.
+// ============================================================================
+const TRAILERS_TOUR: TourStep[] = [
+  // ---- ORIENTATION ----
+  { kind: 'speak', text: "Trailers are how TreadSet tracks every dumpster-on-wheels you move between yards — empty, full, or staged.", wait: 200 },
+  { kind: 'pause', ms: 4500 },
+
+  // ---- STEP 1: Top-nav entry ----
+  { kind: 'speak', text: "Tap the Trailers tab in the top nav.", wait: 100 },
+  { kind: 'highlight', element_id: 'topnav-trailers', caption: 'Trailers — the hub for everything related to moving asset trailers.', waitForClick: true },
+
+  // ---- STEP 2: Inventory page — status board ----
+  { kind: 'navigate', path: '/trailers/inventory', wait: 1200 },
+  { kind: 'speak', text: "This is your trailer inventory — a live status board. Every trailer lives in one of three columns: Empty, Full, or Staged.", wait: 200 },
+  { kind: 'highlight', element_id: 'trailers-page-header', caption: 'Trailer Inventory — the real-time status board.', wait: 6000 },
+
+  { kind: 'speak', text: "Drag a card between columns to update its status. Or click any trailer to see its full event history.", wait: 200 },
+  { kind: 'highlight', element_id: 'trailers-status-board', caption: 'Drag cards between columns to change status. Click a card for history.', wait: 7000 },
+
+  { kind: 'speak', text: "Add a new trailer here when one joins your fleet. Just the trailer number and ownership info — TreadSet handles the rest.", wait: 200 },
+  { kind: 'highlight', element_id: 'trailers-add-button', caption: 'Add Trailer — register a new asset.', wait: 6000 },
+
+  // ---- STEP 3: Vehicles page ----
+  { kind: 'navigate', path: '/trailers/vehicles', wait: 1200 },
+  { kind: 'speak', text: "Trailers don't move themselves — they need a semi truck. This page is your fleet of pulling vehicles.", wait: 200 },
+  { kind: 'highlight', element_id: 'trailer-vehicles-page-header', caption: 'Trailer Vehicles — your semi-truck fleet.', wait: 6500 },
+
+  // ---- STEP 4: Driver Management page ----
+  { kind: 'navigate', path: '/trailers/drivers', wait: 1200 },
+  { kind: 'speak', text: "And drivers — only ones with the semi-hauler capability can be assigned to a trailer route. Flip the switch to grant it.", wait: 200 },
+  { kind: 'highlight', element_id: 'trailer-drivers-page-header', caption: 'Trailer Driver Management — gate who can haul trailers.', wait: 7000 },
+
+  // ---- STEP 5: Routes page ----
+  { kind: 'navigate', path: '/trailers/routes', wait: 1200 },
+  { kind: 'speak', text: "Once you've got trailers, vehicles, and qualified drivers, you build a route — a sequenced plan of stops for one driver, one truck, one day.", wait: 200 },
+  { kind: 'highlight', element_id: 'trailer-routes-page-header', caption: 'Trailer Routes — plan a day of moves.', wait: 6500 },
+
+  // ---- STEP 6: Handoff to Create Route ----
+  { kind: 'speak', text: "Hit Create Route whenever you're ready to plan your first run. The wizard walks you through picking a date, driver, vehicle, and stops.", wait: 200 },
+  { kind: 'highlight', element_id: 'trailer-route-create-button', caption: 'Create Route — opens the route wizard.', wait: 8000 },
+
+  // ---- CLOSE ----
+  { kind: 'speak', text: "That's the trailer loop. Inventory tells you what's where, vehicles and drivers gate who can move them, and routes tie it all into a day's plan. Tap me anytime.", wait: 200 },
+  { kind: 'pause', ms: 7000 },
 ];
 
 async function runTour(
@@ -423,6 +471,11 @@ export function TreadyBubble() {
     void runTour(DROPOFF_TOUR, navigate, voiceOn, setTourRunning);
   }, [navigate, voiceOn]);
 
+  const startTrailersTour = useCallback(() => {
+    setIsOpen(false);
+    void runTour(TRAILERS_TOUR, navigate, voiceOn, setTourRunning);
+  }, [navigate, voiceOn]);
+
   const toggle = useCallback(() => setIsOpen((v) => !v), []);
 
   if (loading || !user) return null;
@@ -609,13 +662,43 @@ export function TreadyBubble() {
                   </div>
                 </button>
 
+                {/* Trailers tour — third shipped deep tour */}
+                <button
+                  type="button"
+                  onClick={startTrailersTour}
+                  disabled={tourRunning}
+                  style={{
+                    background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 12,
+                    padding: '14px 16px',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: tourRunning ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 10,
+                    boxShadow: '0 4px 12px rgba(22,163,74,0.3)',
+                    opacity: tourRunning ? 0.6 : 1,
+                    textAlign: 'left',
+                  }}
+                >
+                  <Play size={16} fill="#fff" style={{ marginTop: 2, flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div>{tourRunning ? 'Tour running…' : 'Manage Trailers'}</div>
+                    <div style={{ fontSize: 11, opacity: 0.85, fontWeight: 400, marginTop: 2 }}>
+                      Hands-on, ~2 minutes. Tours the four trailer sub-pages.
+                    </div>
+                  </div>
+                </button>
+
                 {/* Coming-soon tours — clicking sends a chat message so Tready
                     can talk about the flow even before the deep tour is built */}
                 {[
                   { title: 'Schedule Your First Pickup', sub: 'Coming next session', prompt: 'Walk me through scheduling a pickup' },
                   { title: 'Sign Your First Manifest', sub: 'Coming next session', prompt: 'Walk me through signing a manifest' },
                   { title: 'Generate a Compliance Report', sub: 'Coming next session', prompt: 'Walk me through generating a compliance report' },
-                  { title: 'Manage Trailers', sub: 'Coming next session', prompt: 'Walk me through managing trailers' },
                 ].map((t) => (
                   <button
                     key={t.title}

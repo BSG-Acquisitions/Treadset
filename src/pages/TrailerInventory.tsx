@@ -200,7 +200,7 @@ export default function TrailerInventory() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Trailer Inventory</h1>
+          <h1 data-tready-id="trailers-page-header" className="text-2xl font-bold text-foreground">Trailer Inventory</h1>
           <p className="text-muted-foreground">
             Real-time status board • {trailers?.length || 0} trailers
           </p>
@@ -222,7 +222,7 @@ export default function TrailerInventory() {
           
           <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
             <DialogTrigger asChild>
-              <Button className="gap-2">
+              <Button data-tready-id="trailers-add-button" className="gap-2">
                 <Plus className="h-4 w-4" />
                 Add Trailer
               </Button>
@@ -356,7 +356,7 @@ export default function TrailerInventory() {
       </Card>
 
       {/* Status Board */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div data-tready-id="trailers-status-board" className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {STATUS_COLUMNS.map(column => {
           const columnTrailers = trailersByStatus[column.status];
           const Icon = column.icon;
