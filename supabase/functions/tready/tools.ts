@@ -53,7 +53,7 @@ export function buildToolFactory(ctx: ToolContext) {
         server_time_iso: new Date().toISOString(),
         tenant_organization_id: ctx.organizationId,
         your_role: ctx.userRole,
-        tready_version: 'V1.1.0-build-2',
+        tready_version: 'V1.2.0-build-6',
       }),
     }),
 
@@ -458,6 +458,316 @@ export function buildToolFactory(ctx: ToolContext) {
           return { found: false, hint: 'No manifest matched. Check the ID or number, or ask the user to specify which client it\'s for.' };
         }
         return { found: true, manifest: data };
+      },
+    }),
+
+    // ------------------------------------------------------------------------
+    // Build 6 — write tools.
+    // Two-step preview/confirm protocol: every write tool takes a `confirm`
+    // boolean. Call with `confirm: false` first → tool returns a preview of
+    // what it WOULD do. Show the preview to the user, get verbal "yes",
+    // then call again with `confirm: true` to actually write.
+    // The model must NEVER call confirm: true on the first turn.
+    // ------------------------------------------------------------------------
+
+    /**
+     * Lists drivers in the caller's org. Helper for assign_driver_to_pickup
+     * — when the user says "assign Bob to pickup X," Tready needs Bob's
+     * users.id to write the assignment. Returns name + email + id + active
+     * status. Tenant-scoped via org_id closure.
+     */
+    list_drivers: tool({
+      description:
+        'Lists drivers in the current tenant (users with role driver). Use BEFORE assign_driver_to_pickup so the model can map a driver name to a users.id. Use also when the user asks who is driving today / lists drivers / asks who is available.',
+      inputSchema: z.object({
+        query: z.string().min(1).max(100).optional().describe('Optional substring match against first_name, last_name, or email. Case-insensitive.'),
+        limit: z.number().int().min(1).max(50).default(20),
+      }),
+      execute: async ({ query, limit }) => {
+        let q = ctx.supabaseClient
+          .from('user_organization_roles')
+          .select('user_id, role, users!inner(id, first_name, last_name, email)')
+          .eq('organization_id', ctx.organizationId)
+          .eq('role', 'driver')
+          .limit(limit);
+
+        const { data, error } = await q;
+        if (error) {
+          return { error: error.message };
+        }
+
+        let drivers = (data ?? []).map((r: any) => ({
+          users_id: r.users.id,
+          first_name: r.users.first_name,
+          last_name: r.users.last_name,
+          email: r.users.email,
+        }));
+
+        if (query) {
+          const needle = query.toLowerCase();
+          drivers = drivers.filter(
+            (d) =>
+              (d.first_name ?? '').toLowerCase().includes(needle) ||
+              (d.last_name ?? '').toLowerCase().includes(needle) ||
+              (d.email ?? '').toLowerCase().includes(needle),
+          );
+        }
+
+        return {
+          query: query ?? null,
+          count: drivers.length,
+          drivers,
+        };
+      },
+    }),
+
+    /**
+     * Schedules a pickup for a client. Two-step protocol:
+     *   - confirm: false  →  return preview, do not write
+     *   - confirm: true   →  insert the pickup row, return id + summary
+     *
+     * Tenant-safe: verifies client_id and optional location_id both belong
+     * to the caller's org before any write. tire counts are NOT taken here
+     * — they're filled in by the driver at pickup completion. The status
+     * field defaults to 'scheduled'.
+     *
+     * Compliance scope: the row this creates will eventually become a
+     * manifest. The tool does NOT set anything that appears on the manifest
+     * (counts, weights, signatures) — those come later. So the engineering
+     * write here is upstream of regulated paperwork, not OF it.
+     */
+    schedule_pickup: tool({
+      description:
+        'Schedules a new pickup for a client. ALWAYS call this with confirm: false first to preview; show the preview to the user; only call with confirm: true after the user explicitly says yes. Sets status=scheduled. Does NOT set tire counts (those come from the driver at completion).',
+      inputSchema: z.object({
+        client_id: z.string().uuid().describe('The clients.id of the tire-generating business. Resolve via search_clients first if the user gives a name.'),
+        pickup_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).describe('Pickup date in YYYY-MM-DD format.'),
+        location_id: z.string().uuid().optional().describe('Optional locations.id. If omitted, the pickup has no specific location (some tenants do this).'),
+        notes: z.string().max(500).optional().describe('Optional dispatcher note about the pickup.'),
+        confirm: z.boolean().describe('false = preview only (default first call). true = actually write the pickup. NEVER pass true on the first call — show the preview to the user and wait for verbal confirmation first.'),
+      }),
+      execute: async ({ client_id, pickup_date, location_id, notes, confirm }) => {
+        // Verify client belongs to caller's org
+        const { data: client, error: clientErr } = await ctx.supabaseClient
+          .from('clients')
+          .select('id, company_name, organization_id, is_active')
+          .eq('id', client_id)
+          .eq('organization_id', ctx.organizationId)
+          .maybeSingle();
+
+        if (clientErr) return { error: clientErr.message };
+        if (!client) {
+          return {
+            error: 'client_not_found',
+            hint: 'No client with that id in your organization. Use search_clients to find the right client_id.',
+          };
+        }
+        if (client.is_active === false) {
+          return {
+            error: 'client_inactive',
+            hint: `Client "${client.company_name}" is marked inactive. Confirm with the user whether to reactivate before scheduling.`,
+          };
+        }
+
+        // Verify location if provided
+        let locationLabel: string | null = null;
+        if (location_id) {
+          const { data: loc, error: locErr } = await ctx.supabaseClient
+            .from('locations')
+            .select('id, name, address, organization_id, client_id')
+            .eq('id', location_id)
+            .eq('organization_id', ctx.organizationId)
+            .maybeSingle();
+
+          if (locErr) return { error: locErr.message };
+          if (!loc) {
+            return {
+              error: 'location_not_found',
+              hint: 'No location with that id in your organization.',
+            };
+          }
+          if (loc.client_id !== client_id) {
+            return {
+              error: 'location_client_mismatch',
+              hint: `Location ${loc.name ?? loc.address} does not belong to ${client.company_name}.`,
+            };
+          }
+          locationLabel = loc.name ?? loc.address ?? null;
+        }
+
+        const preview = {
+          action: 'schedule_pickup',
+          client: { id: client.id, name: client.company_name },
+          location: location_id ? { id: location_id, label: locationLabel } : null,
+          pickup_date,
+          notes: notes ?? null,
+          status: 'scheduled',
+        };
+
+        if (!confirm) {
+          return {
+            written: false,
+            preview,
+            confirm_instruction:
+              'Show this preview to the user. If they confirm verbally, call this tool again with the same args and confirm: true.',
+          };
+        }
+
+        const { data: inserted, error: insertErr } = await ctx.supabaseClient
+          .from('pickups')
+          .insert({
+            organization_id: ctx.organizationId,
+            client_id,
+            location_id: location_id ?? null,
+            pickup_date,
+            status: 'scheduled',
+            notes: notes ?? null,
+          })
+          .select('id, pickup_date, status, client_id, location_id')
+          .single();
+
+        if (insertErr) return { written: false, error: insertErr.message };
+
+        return {
+          written: true,
+          pickup: {
+            id: inserted.id,
+            client: client.company_name,
+            pickup_date: inserted.pickup_date,
+            status: inserted.status,
+            location_label: locationLabel,
+          },
+          next_step_hint:
+            'Tell the user the pickup is on the books. Offer to assign a driver via assign_driver_to_pickup.',
+        };
+      },
+    }),
+
+    /**
+     * Assigns a driver (and optional vehicle) to an existing pickup by
+     * creating an assignments row. Two-step protocol like schedule_pickup.
+     *
+     * Tenant-safe: verifies pickup, driver, and vehicle (if given) all
+     * belong to the caller's org. The driver must have role=driver in
+     * the same org. The vehicle, if provided, must belong to the org.
+     */
+    assign_driver_to_pickup: tool({
+      description:
+        'Assigns a driver to a pickup by creating an assignments row. ALWAYS call with confirm: false first to preview; only call with confirm: true after the user verbally confirms. Optionally set vehicle_id and scheduled_date (defaults to the pickup_date).',
+      inputSchema: z.object({
+        pickup_id: z.string().uuid().describe('The pickups.id to assign. Find it via list_recent_pickups or by asking the user.'),
+        driver_user_id: z.string().uuid().describe('The users.id of the driver. Resolve via list_drivers first if the user gives a name.'),
+        vehicle_id: z.string().uuid().optional().describe('Optional vehicles.id to assign alongside the driver.'),
+        scheduled_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe('Optional YYYY-MM-DD scheduled_date. Defaults to the pickup_date if omitted.'),
+        sequence_order: z.number().int().min(0).max(100).optional().describe('Optional route ordering. If omitted, the dispatcher will set sequence later.'),
+        confirm: z.boolean().describe('false = preview only. true = write. NEVER true on the first call.'),
+      }),
+      execute: async ({ pickup_id, driver_user_id, vehicle_id, scheduled_date, sequence_order, confirm }) => {
+        // Verify pickup belongs to caller's org
+        const { data: pickup, error: pickupErr } = await ctx.supabaseClient
+          .from('pickups')
+          .select('id, pickup_date, status, organization_id, client_id, clients(company_name)')
+          .eq('id', pickup_id)
+          .eq('organization_id', ctx.organizationId)
+          .maybeSingle();
+
+        if (pickupErr) return { error: pickupErr.message };
+        if (!pickup) {
+          return {
+            error: 'pickup_not_found',
+            hint: 'No pickup with that id in your organization.',
+          };
+        }
+
+        // Verify driver is a driver-role member of caller's org
+        const { data: driverRole, error: driverErr } = await ctx.supabaseClient
+          .from('user_organization_roles')
+          .select('user_id, role, users!inner(id, first_name, last_name, email)')
+          .eq('organization_id', ctx.organizationId)
+          .eq('user_id', driver_user_id)
+          .eq('role', 'driver')
+          .maybeSingle();
+
+        if (driverErr) return { error: driverErr.message };
+        if (!driverRole) {
+          return {
+            error: 'driver_not_in_org',
+            hint: 'That user is not a driver in your organization. Use list_drivers to find a valid driver.',
+          };
+        }
+        const driverName = `${(driverRole as any).users.first_name ?? ''} ${(driverRole as any).users.last_name ?? ''}`.trim() || (driverRole as any).users.email;
+
+        // Verify vehicle if provided
+        let vehicleLabel: string | null = null;
+        if (vehicle_id) {
+          const { data: vehicle, error: vehicleErr } = await ctx.supabaseClient
+            .from('vehicles')
+            .select('id, name, license_plate, organization_id')
+            .eq('id', vehicle_id)
+            .eq('organization_id', ctx.organizationId)
+            .maybeSingle();
+          if (vehicleErr) return { error: vehicleErr.message };
+          if (!vehicle) {
+            return {
+              error: 'vehicle_not_in_org',
+              hint: 'That vehicle does not belong to your organization.',
+            };
+          }
+          vehicleLabel = vehicle.name ?? vehicle.license_plate ?? null;
+        }
+
+        const effectiveDate = scheduled_date ?? pickup.pickup_date;
+
+        const preview = {
+          action: 'assign_driver_to_pickup',
+          pickup: {
+            id: pickup.id,
+            client: (pickup as any).clients?.company_name ?? 'unknown',
+            pickup_date: pickup.pickup_date,
+          },
+          driver: { id: driver_user_id, name: driverName },
+          vehicle: vehicle_id ? { id: vehicle_id, label: vehicleLabel } : null,
+          scheduled_date: effectiveDate,
+          sequence_order: sequence_order ?? null,
+          status: 'assigned',
+        };
+
+        if (!confirm) {
+          return {
+            written: false,
+            preview,
+            confirm_instruction:
+              'Show this preview to the user. If they confirm verbally, call this tool again with the same args and confirm: true.',
+          };
+        }
+
+        const { data: inserted, error: insertErr } = await ctx.supabaseClient
+          .from('assignments')
+          .insert({
+            organization_id: ctx.organizationId,
+            pickup_id,
+            driver_id: driver_user_id,
+            vehicle_id: vehicle_id ?? null,
+            scheduled_date: effectiveDate,
+            sequence_order: sequence_order ?? null,
+            status: 'assigned',
+          })
+          .select('id, pickup_id, driver_id, vehicle_id, scheduled_date, status')
+          .single();
+
+        if (insertErr) return { written: false, error: insertErr.message };
+
+        return {
+          written: true,
+          assignment: {
+            id: inserted.id,
+            pickup_id: inserted.pickup_id,
+            driver_name: driverName,
+            vehicle_label: vehicleLabel,
+            scheduled_date: inserted.scheduled_date,
+            status: inserted.status,
+          },
+        };
       },
     }),
   };
