@@ -29,6 +29,17 @@ interface ToolContext {
   supabaseClient: any;
 }
 
+// Supabase Edge Functions provide an in-runtime embedding model
+// (https://supabase.com/docs/guides/functions/ai-models). gte-small
+// returns 384-dim vectors. Lazy-init so the model is only downloaded
+// once per cold-start (it's ~30MB).
+let _embedSession: any = null;
+async function embed(text: string): Promise<number[]> {
+  // @ts-ignore — Supabase global only exists in Edge Function runtime
+  if (!_embedSession) _embedSession = new Supabase.ai.Session('gte-small');
+  return await _embedSession.run(text, { mean_pool: true, normalize: true }) as number[];
+}
+
 export function buildToolFactory(ctx: ToolContext) {
   return {
     /**
@@ -204,6 +215,125 @@ export function buildToolFactory(ctx: ToolContext) {
             created_at: m.created_at,
           })),
         };
+      },
+    }),
+
+    /**
+     * RAG search over the Tready knowledge base. Tready calls this
+     * when a user asks something that's not directly answerable from
+     * persona / live data tools — Z's curated Q&A pairs (and later,
+     * industry / state-compliance facts) live here.
+     *
+     * Returns matches scored by cosine similarity. Org-scoped:
+     * matches either GLOBAL entries (organization_id IS NULL) OR
+     * the caller's tenant entries.
+     */
+    search_kb: tool({
+      description:
+        'Searches Tready\'s knowledge base for relevant facts about TreadSet, tire-recycling operations, compliance, or this tenant\'s specific notes. Use when the user asks something that requires specific knowledge (a regulation, a how-to that\'s not obvious from the UI map, a tenant-specific fact). Returns up to 5 matches with relevance scores. If results are weak (similarity < 0.5), fall back to "I don\'t know — let me get this to a human."',
+      inputSchema: z.object({
+        query: z.string().min(3).max(500).describe('A focused natural-language query. Concrete > abstract.'),
+        limit: z.number().int().min(1).max(10).default(5),
+      }),
+      execute: async ({ query, limit }) => {
+        try {
+          const queryEmbedding = await embed(query);
+
+          // Use rpc if available, otherwise use direct query with vector ops.
+          // The vector operator <=> returns cosine distance (lower = closer).
+          // We compute similarity = 1 - distance for the model's intuition.
+          const { data, error } = await ctx.supabaseClient.rpc('match_tready_kb', {
+            query_embedding: queryEmbedding,
+            match_org_id: ctx.organizationId,
+            match_count: limit,
+          });
+
+          if (error) {
+            // RPC may not exist yet — fall back to direct similarity query
+            const directQuery = await ctx.supabaseClient
+              .from('tready_kb')
+              .select('id, topic, content, source, confidence, organization_id')
+              .or(`organization_id.is.null,organization_id.eq.${ctx.organizationId}`)
+              .limit(limit);
+
+            return {
+              query,
+              note: 'RAG fallback used (no vector match RPC available; returning recent KB entries instead). Build the match_tready_kb RPC to enable real similarity ranking.',
+              matches: directQuery.data ?? [],
+              error_if_any: error.message,
+            };
+          }
+
+          return {
+            query,
+            count: data?.length ?? 0,
+            matches: data ?? [],
+          };
+        } catch (e) {
+          return { error: (e as Error).message, hint: 'Embedding generation may have failed. Tell the user "I don\'t have a good answer for that yet" and offer to escalate.' };
+        }
+      },
+    }),
+
+    /**
+     * Admin-only: add a new Q&A entry to the knowledge base. This is
+     * the foundation of the V3 curator loop — Z teaches Tready once,
+     * forever. The frontend "Teach Tready" button (Build 3 frontend)
+     * calls this; the V3 curator job auto-calls this with proposed
+     * drafts derived from escalation patterns.
+     *
+     * Refuses to run unless the caller has admin or super_admin role.
+     * Embeddings generated server-side via Supabase.ai.Session.
+     */
+    teach_tready: tool({
+      description:
+        'Add a new fact / Q&A pair to Tready\'s knowledge base so future questions on the same topic get answered automatically. ADMIN ONLY — refuses if the calling user is not an admin or super_admin. Use ONLY when the user explicitly asks Tready to remember something or learn a new fact. Otherwise leave the KB to the curator.',
+      inputSchema: z.object({
+        topic: z.string().min(3).max(200).describe('A short topic label (e.g., "voiding manifests", "Texas TCEQ retention").'),
+        content: z.string().min(10).max(2000).describe('The actual fact / answer / Q&A in plain English. Will be embedded as-is for similarity search.'),
+        scope: z.enum(['tenant', 'global']).default('tenant').describe('"tenant" = visible only to this organization. "global" = visible to all tenants. Default tenant; super_admin can use global.'),
+      }),
+      execute: async ({ topic, content, scope }) => {
+        // Role gate — only admins teach Tready
+        if (ctx.userRole !== 'admin' && ctx.userRole !== 'super_admin') {
+          return {
+            success: false,
+            error: 'role_not_permitted',
+            message: 'Only admins can teach Tready new facts. Tell the user this and offer to escalate to an admin if needed.',
+          };
+        }
+
+        // Global scope requires super_admin
+        if (scope === 'global' && ctx.userRole !== 'super_admin') {
+          return {
+            success: false,
+            error: 'scope_not_permitted',
+            message: 'Global KB scope is super_admin only. Falling back to tenant scope would be safer.',
+          };
+        }
+
+        try {
+          const embedding = await embed(`${topic}\n\n${content}`);
+          const { data, error } = await ctx.supabaseClient
+            .from('tready_kb')
+            .insert({
+              organization_id: scope === 'global' ? null : ctx.organizationId,
+              topic,
+              content,
+              embedding,
+              source: 'z_authored',
+              confidence: 1.0,
+            })
+            .select('id, topic')
+            .single();
+
+          if (error) {
+            return { success: false, error: error.message };
+          }
+          return { success: true, kb_id: data.id, topic: data.topic, scope };
+        } catch (e) {
+          return { success: false, error: (e as Error).message };
+        }
       },
     }),
 
