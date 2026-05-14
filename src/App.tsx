@@ -11,6 +11,8 @@ import { ThemeProvider } from "@/providers/ThemeProvider";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/AppLayout";
 import { AIAssistant } from "@/components/AIAssistant";
+import { TreadyBubble } from "@/components/tready/TreadyBubble";
+import { HighlightOverlay } from "@/components/tready/HighlightOverlay";
 import { createOptimizedQueryClient } from "@/lib/performance/queryCache";
 import { RouteFallback } from "@/lib/performance/lazyRoutes";
 import { FEATURE_FLAGS } from "./lib/featureFlags";
@@ -593,6 +595,14 @@ const App = () => (
             </Suspense>
             </DemoModeProvider>
             <AIAssistant />
+            {/* Tready V1.5 — chat bubble + visual highlight overlay.
+                Both auto-hide for unauthed users (TreadyBubble checks
+                useAuth(); HighlightOverlay only renders when given a
+                target). Mounted here so they have BrowserRouter +
+                AuthProvider in scope. Wired to the tready edge fn at
+                ${VITE_SUPABASE_URL}/functions/v1/tready. */}
+            <TreadyBubble />
+            <HighlightOverlay />
           </BrowserRouter>
         </AuthProvider>
       </TooltipProvider>

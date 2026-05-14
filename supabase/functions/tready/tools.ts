@@ -19,7 +19,7 @@
  *   4. Always validate inputs with zod
  *   5. Return small, model-friendly JSON (avoid raw DB rows)
  */
-import { tool } from 'npm:ai@^6.0.0';
+import { tool } from 'npm:ai@^5.0.188';
 import { z } from 'npm:zod@^3.25.76';
 
 interface ToolContext {
