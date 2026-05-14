@@ -219,6 +219,73 @@ export function buildToolFactory(ctx: ToolContext) {
     }),
 
     /**
+     * Visually highlight a UI element on the user's screen with a
+     * pulsing ring + optional caption. The frontend HighlightOverlay
+     * component (week 2 deliverable) listens for this tool's output
+     * via the SSE stream and renders the highlight.
+     *
+     * This tool ONLY returns structured data — it does not directly
+     * touch the DOM. The model uses it to instruct the frontend to
+     * point at a real on-screen element.
+     *
+     * Validates against tready_ui_map so the model cannot invent
+     * element_ids. If the element doesn't exist or the user's role
+     * doesn't qualify, returns a hint so Tready can fall back to a
+     * verbal description.
+     */
+    highlight_ui: tool({
+      description:
+        'Visually highlights an element on the user\'s screen (pulsing ring + caption). Use ANY time you tell the user where to click. The frontend renders the highlight based on what you return. ALWAYS use exact element_ids from the UI map. Don\'t invent IDs. If the element you want isn\'t in the map, fall back to describing the location in plain English instead of calling this tool.',
+      inputSchema: z.object({
+        element_id: z.string().min(2).max(80).describe('The exact data-tready-id from the UI map. e.g., "clients-add-button".'),
+        caption: z.string().min(2).max(140).optional().describe('Optional short label (≤140 chars) shown next to the ring. e.g., "Click here to add a client."'),
+        wait_for_click: z.boolean().default(false).describe('If true, the frontend waits for the user to click before letting Tready continue. Use for multi-step walkthroughs.'),
+      }),
+      execute: async ({ element_id, caption, wait_for_click }) => {
+        const { data, error } = await ctx.supabaseClient
+          .from('tready_ui_map')
+          .select('element_id, label, page_path, location_hint, required_roles, required_app_state, is_active')
+          .eq('element_id', element_id)
+          .eq('is_active', true)
+          .maybeSingle();
+
+        if (error || !data) {
+          return {
+            highlighted: false,
+            error: 'element_not_in_ui_map',
+            element_id,
+            hint: `No element registered as "${element_id}" in tready_ui_map. Describe its location verbally instead of calling this tool.`,
+          };
+        }
+
+        // Role gate — make sure this element is accessible to the user
+        const requiredRoles: string[] = data.required_roles ?? [];
+        if (requiredRoles.length > 0 && !requiredRoles.includes(ctx.userRole)) {
+          return {
+            highlighted: false,
+            error: 'role_not_permitted',
+            element_id,
+            element_label: data.label,
+            user_role: ctx.userRole,
+            required_roles: requiredRoles,
+            hint: `This element is only visible to ${requiredRoles.join('/')}. The current user is ${ctx.userRole}. Tell them honestly that this isn\'t available to their role.`,
+          };
+        }
+
+        return {
+          highlighted: true,
+          element_id: data.element_id,
+          element_label: data.label,
+          page_path: data.page_path,
+          location_hint: data.location_hint,
+          caption: caption ?? data.label,
+          wait_for_click,
+          // The frontend reads this payload from the tool-output SSE event.
+        };
+      },
+    }),
+
+    /**
      * RAG search over the Tready knowledge base. Tready calls this
      * when a user asks something that's not directly answerable from
      * persona / live data tools — Z's curated Q&A pairs (and later,

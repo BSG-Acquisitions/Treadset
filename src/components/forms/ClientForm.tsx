@@ -221,7 +221,7 @@ export function ClientForm({ initialData, onSubmit, onCancel, isLoading }: Clien
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="submit" disabled={isLoading}>
+          <Button type="submit" disabled={isLoading} data-tready-id="client-form-submit">
             {isLoading ? "Saving..." : initialData ? "Update Client" : "Create Client"}
           </Button>
         </div>
