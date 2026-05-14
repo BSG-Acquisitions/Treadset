@@ -469,16 +469,18 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
                           Add Client
                         </Button>
                       </div>
-                      <SearchableDropdown
-                        placeholder="Select generator..."
-                        searchFunction={searchClients}
-                        onSelect={(client) => {
-                          setSelectedGenerator(client);
-                          setCustomerId(client?.id || "");
-                        }}
-                        displayField="company_name"
-                        selected={selectedGenerator}
-                      />
+                      <div data-tready-id="dropoff-generator-select">
+                        <SearchableDropdown
+                          placeholder="Select generator..."
+                          searchFunction={searchClients}
+                          onSelect={(client) => {
+                            setSelectedGenerator(client);
+                            setCustomerId(client?.id || "");
+                          }}
+                          displayField="company_name"
+                          selected={selectedGenerator}
+                        />
+                      </div>
                     </div>
 
                   <div className="space-y-3">
@@ -510,7 +512,7 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
                       Receiver
                     </Label>
                     <Select value={selectedReceiverId} onValueChange={setSelectedReceiverId}>
-                      <SelectTrigger>
+                      <SelectTrigger data-tready-id="dropoff-receiver-select">
                         <SelectValue placeholder="Select receiver..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -531,7 +533,7 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="pte">Passenger Tires</Label>
-                    <Input id="pte" type="number" value={pteCount} onChange={(e) => setPteCount(e.target.value)} placeholder="0" />
+                    <Input id="pte" data-tready-id="dropoff-pte-input" type="number" value={pteCount} onChange={(e) => setPteCount(e.target.value)} placeholder="0" />
                     <div className="text-xs text-muted-foreground">1 tire = 1 PTE</div>
                   </div>
                   <div className="space-y-2">
@@ -556,7 +558,7 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
                   <div className="space-y-3">
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                      <Input type="number" step="0.01" min="0" value={manualRevenue} onChange={(e) => setManualRevenue(e.target.value)} className="pl-7 text-lg font-medium" placeholder="0.00" />
+                      <Input data-tready-id="dropoff-revenue-input" type="number" step="0.01" min="0" value={manualRevenue} onChange={(e) => setManualRevenue(e.target.value)} className="pl-7 text-lg font-medium" placeholder="0.00" />
                     </div>
                     {computedPTE > 0 && (
                       <div className="flex justify-between text-sm text-muted-foreground pt-2 border-t border-border">
@@ -640,6 +642,7 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
                   <Label htmlFor="has-hauler-sig" className="text-sm">Capture now?</Label>
                   <Switch
                     id="has-hauler-sig"
+                    data-tready-id="dropoff-hauler-sig-toggle"
                     checked={hasHaulerSig}
                     onCheckedChange={setHasHaulerSig}
                   />
@@ -868,6 +871,7 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
             </Button>
             {currentStep !== 'confirmation' ? (
               <Button
+                data-tready-id="dropoff-next-button"
                 onClick={goNext}
                 disabled={
                   (currentStep === 'info' && !canProceedFromInfo) ||
@@ -880,7 +884,7 @@ export const ProcessDropoffDialog = ({ open, onOpenChange, selectedCustomerId }:
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             ) : (
-              <Button onClick={handleSubmit} disabled={isSubmitting || createDropoffWithManifest.isPending}>
+              <Button data-tready-id="dropoff-submit-button" onClick={handleSubmit} disabled={isSubmitting || createDropoffWithManifest.isPending}>
                 {isSubmitting || createDropoffWithManifest.isPending ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />

@@ -154,6 +154,77 @@ const WELCOME_TOUR: TourStep[] = [
   { kind: 'pause', ms: 8000 },
 ];
 
+// ============================================================================
+// Drop-off tour — walks the user through the 5-step Process Drop-off wizard.
+// User-driven advance through the wizard (waitForClick on Next); we never
+// mutate currentStep ourselves because it lives inside the dialog's local
+// state.
+// ============================================================================
+const DROPOFF_TOUR: TourStep[] = [
+  // ---- ORIENTATION ----
+  { kind: 'speak', text: "Now I'll walk you through processing a tire drop-off end to end. Takes about three minutes.", wait: 200 },
+  { kind: 'pause', ms: 3500 },
+
+  // ---- STEP 1: Navigate to Drop-offs ----
+  { kind: 'speak', text: "Tap the Drop-offs tab when you're ready.", wait: 100 },
+  { kind: 'highlight', element_id: 'topnav-dropoffs', caption: 'Drop-offs tab — tap to continue.', waitForClick: true },
+
+  // ---- STEP 2: Open the Process Drop-off dialog ----
+  { kind: 'speak', text: "Tap Process Drop-off to open the wizard.", wait: 100 },
+  { kind: 'pause', ms: 600 },
+  { kind: 'highlight', element_id: 'dropoffs-process-button', caption: 'Process Drop-off — opens the 5-step wizard.', waitForClick: true },
+
+  // ---- STEP 3: Generator ----
+  { kind: 'speak', text: "Leave the walk-in switch off for a regular drop-off. First, pick the Generator — the business whose tires you're receiving.", wait: 200 },
+  { kind: 'pause', ms: 900 },
+  { kind: 'highlight', element_id: 'dropoff-generator-select', caption: 'Generator — search and pick the source client.', wait: 8000 },
+
+  // ---- STEP 4: Receiver ----
+  { kind: 'speak', text: "Now pick the Receiver — which of your facilities is taking the tires.", wait: 200 },
+  { kind: 'highlight', element_id: 'dropoff-receiver-select', caption: 'Receiver — your facility.', wait: 6500 },
+
+  // ---- STEP 5: Tire counts ----
+  { kind: 'speak', text: "Enter the tire counts by type. Try 40 passenger tires to start.", wait: 200 },
+  { kind: 'highlight', element_id: 'dropoff-pte-input', caption: 'Passenger tires — 1 tire = 1 PTE.', wait: 7000 },
+
+  // ---- STEP 6: Amount ----
+  { kind: 'speak', text: "Now the amount you're charging the client.", wait: 200 },
+  { kind: 'highlight', element_id: 'dropoff-revenue-input', caption: 'Amount charged in dollars — required.', wait: 7000 },
+
+  // ---- STEP 7: Next to generator signature ----
+  { kind: 'speak', text: "Tap Next to move to the generator signature.", wait: 100 },
+  { kind: 'highlight', element_id: 'dropoff-next-button', caption: 'Next — advances the wizard.', waitForClick: true },
+
+  // ---- STEP 8: Generator signature ----
+  { kind: 'speak', text: "The generator signs first. Type their name, then draw their signature in the box.", wait: 200 },
+  { kind: 'pause', ms: 700 },
+  { kind: 'highlight', element_id: 'dropoff-signature-print-name', caption: 'Print name — required for the manifest.', wait: 6500 },
+  { kind: 'speak', text: "Now tap Next once they've signed.", wait: 100 },
+  { kind: 'highlight', element_id: 'dropoff-next-button', caption: 'Next — moves to the hauler signature.', waitForClick: true },
+
+  // ---- STEP 9: Skip hauler signature ----
+  { kind: 'speak', text: "Hauler signature is optional — leave the switch off if the driver isn't standing here, and tap Next.", wait: 200 },
+  { kind: 'pause', ms: 500 },
+  { kind: 'highlight', element_id: 'dropoff-hauler-sig-toggle', caption: 'Hauler signature toggle — off is fine for now.', wait: 5500 },
+  { kind: 'highlight', element_id: 'dropoff-next-button', caption: 'Next — skips the hauler signature.', waitForClick: true },
+
+  // ---- STEP 10: Receiver signature ----
+  { kind: 'speak', text: "Receiver is your staff member taking the tires. Same drill — print name and sign.", wait: 200 },
+  { kind: 'pause', ms: 500 },
+  { kind: 'highlight', element_id: 'dropoff-signature-print-name', caption: 'Print name — receiver signer.', wait: 6500 },
+  { kind: 'speak', text: "Tap Next to review.", wait: 100 },
+  { kind: 'highlight', element_id: 'dropoff-next-button', caption: 'Next — goes to the review screen.', waitForClick: true },
+
+  // ---- STEP 11: Review + submit ----
+  { kind: 'speak', text: "Review everything looks right, then tap Complete Drop-off — that fires the manifest.", wait: 200 },
+  { kind: 'pause', ms: 500 },
+  { kind: 'highlight', element_id: 'dropoff-submit-button', caption: 'Complete Drop-off — generates the manifest.', waitForClick: true },
+
+  // ---- STEP 12: Celebrate ----
+  { kind: 'speak', text: "Done. That drop-off is logged, the manifest is on its way, and the dashboard totals just updated. Same flow every time. Tap me if you want to learn another one.", wait: 200 },
+  { kind: 'pause', ms: 9000 },
+];
+
 async function runTour(
   steps: TourStep[],
   navigate: (path: string) => void,
@@ -430,6 +501,11 @@ export function TreadyBubble() {
     void runTour(WELCOME_TOUR, navigate, voiceOn, setTourRunning);
   }, [navigate, voiceOn]);
 
+  const startDropoffTour = useCallback(() => {
+    setIsOpen(false);
+    void runTour(DROPOFF_TOUR, navigate, voiceOn, setTourRunning);
+  }, [navigate, voiceOn]);
+
   const toggle = useCallback(() => setIsOpen((v) => !v), []);
   const toggleVoice = useCallback(() => setVoiceOn((v) => !v), []);
 
@@ -622,13 +698,43 @@ export function TreadyBubble() {
                   </div>
                 </button>
 
+                {/* Drop-off tour — second shipped deep tour */}
+                <button
+                  type="button"
+                  onClick={startDropoffTour}
+                  disabled={tourRunning}
+                  style={{
+                    background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 12,
+                    padding: '14px 16px',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: tourRunning ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 10,
+                    boxShadow: '0 4px 12px rgba(22,163,74,0.3)',
+                    opacity: tourRunning ? 0.6 : 1,
+                    textAlign: 'left',
+                  }}
+                >
+                  <Play size={16} fill="#fff" style={{ marginTop: 2, flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div>{tourRunning ? 'Tour running…' : 'Process a Drop-off'}</div>
+                    <div style={{ fontSize: 11, opacity: 0.85, fontWeight: 400, marginTop: 2 }}>
+                      Hands-on, ~3 minutes. Walks the wizard end to end.
+                    </div>
+                  </div>
+                </button>
+
                 {/* Coming-soon tours — clicking sends a chat message so Tready
                     can talk about the flow even before the deep tour is built */}
                 {[
                   { title: 'Schedule Your First Pickup', sub: 'Coming next session', prompt: 'Walk me through scheduling a pickup' },
                   { title: 'Sign Your First Manifest', sub: 'Coming next session', prompt: 'Walk me through signing a manifest' },
                   { title: 'Generate a Compliance Report', sub: 'Coming next session', prompt: 'Walk me through generating a compliance report' },
-                  { title: 'Process a Drop-off', sub: 'Coming next session', prompt: 'Walk me through processing a drop-off' },
                   { title: 'Manage Trailers', sub: 'Coming next session', prompt: 'Walk me through managing trailers' },
                 ].map((t) => (
                   <button
