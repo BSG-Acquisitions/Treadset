@@ -2,6 +2,90 @@
 
 Newest entries at the top. Each session ends with a Ship Report appended here per CLAUDE.md protocol.
 
+Two parallel sessions now active. Prefix entries with `[A]` (Architect / backend / integrations) or `[B]` (Builder / Tready / demo). See `TREADSET_TWO_SESSION_BRIEF.md` for scope split.
+
+---
+
+## 2026-05-13 [B] — Tready V1 edge function scaffolded; coordination docs committed
+
+**Context:** First Session B work-block. Read brief + roadmap + CLAUDE.md + BRAIN + the session-A entries below. Working in a sibling worktree (`git worktree add ../green-road-ui-tready -b tready/v1-foundation origin/main`) so the primary working directory stays Session A's. Recommend worktrees as standing practice for parallel sessions — eliminates the May-7 multi-process collision risk.
+
+**Shipped (branch `tready/v1-foundation`, PR pending Z review):**
+- `supabase/functions/tready/index.ts` — main edge fn entry. Vercel AI SDK v6 + `@ai-sdk/anthropic` (Sonnet 4.6). Two Anthropic prompt-cache breakpoints (persona @ breakpoint 1, UI-map slice @ breakpoint 2 — shape correct even though `tready_ui_map` is empty in V1). Tool-factory pattern with `organization_id` closed over from JWT — model cannot override. SSE stream response via `toDataStreamResponse`. Conversation logged to `tready_conversations` on inbound user turn and outbound assistant turn (with token counts + latency).
+- `supabase/functions/tready/persona.ts` — static system prompt (cache breakpoint 1). Tight V1 persona covering audience, tone, knowledge boundaries, multi-tenancy safety constraints, and "what V1 cannot do yet."
+- `supabase/functions/tready/tools.ts` — tool factory. One static tool (`get_current_time`) returns server time + tenant context. Real read tools (search_clients, get_pickups, highlight_ui, navigate_to, escalate_to_human) ship in week 2.
+- `supabase/functions/tready/log.ts` — typed insert helper for `tready_conversations`. Logging failures never block user response.
+- `supabase/functions/tready/sentry.ts` — V1 stub. Real `@sentry/deno` wiring lands after Session A's Sentry MCP install. Callsite shape stable so no `index.ts` edits when real SDK arrives.
+- `supabase/functions/tready/README.md` — deploy + test instructions, expected response shape, cost expectation, known issues.
+
+**Coordination artifacts committed (were sitting untracked in Session A's primary worktree):**
+- `SESSION_INBOX.md` — with [B → A] handshake reply + 5 tenant-safety findings forwarded
+- `SESSION_LOG.md` — this entry plus Session A's prior entries
+- `TREADSET_TWO_SESSION_BRIEF.md`
+- `TREADSET_AI_NATIVE_ROADMAP.md`
+
+The other 6 untracked items in Session A's primary worktree (`ship-pioneer.sh`, `src/components/manifests/`, `src/lib/manifest-recalc.ts`, two May-7/8 migrations, modified `useManifests.ts` / `ClientLogin.tsx` / `ManifestViewer.tsx`) are stale from prior sessions per memory notes — NOT included in this commit. Session A's call whether to revert or commit those separately.
+
+**Audit-trail note per brief §6 Gate 1:** Tready core migration (5 tables — `tready_conversations`, `tready_memory`, `tready_kb`, `tready_kb_drafts`, `tready_ui_map` — plus pgvector v0.8.0) was applied directly to production project `wvjehbozyxhmgdljwsiz` via Supabase Management API on 2026-05-13, with Z's explicit go-ahead. This bypassed the standard "write SQL → hand to Z for manual paste" Gate 1 discipline. Acceptable here (purely additive DDL, no existing data touched, RLS enabled on every table, Z authorized in chat). All future migrations from this session use the proper paste flow.
+
+**Discovery output for the next PR:** an Explore agent produced a structured list of 85 UI elements across the demo path (sidebar nav, dashboard, clients CRUD, pickup scheduling, manifests CRUD + signing, integrations, driver mobile, compliance reports) with suggested `data-tready-id` values, file paths, role gating, required app state. Used to drive the next PR: the `data-tready-id` tagging pass + the `tready_ui_map` seed migration. 5 cross-tenant smells from the same pass forwarded to Session A via `SESSION_INBOX.md`.
+
+**Blocked (not blocking other work):**
+- `package.json` install of `ai`, `@ai-sdk/anthropic`, `@ai-sdk/react` for frontend (week 2). Coordination ticket in `SESSION_INBOX.md` for Session A to handle in their week-1 maintenance pass.
+- Real Sentry SDK wiring — depends on Session A's Sentry MCP install per brief §4 tier 1 item 3.
+- Edge function deploy — per CLAUDE.md, edge functions don't auto-deploy. Z to run `supabase functions deploy tready --project-ref wvjehbozyxhmgdljwsiz` after merge, or deploy via Supabase dashboard. See `supabase/functions/tready/README.md` for steps.
+
+**Parked:**
+- Frontend components (`TreadyBubble`, `TreadyChat`, `HighlightOverlay`, `WalkthroughPlayer`) — week 2 per phase plan.
+- The 85-element `data-tready-id` tagging pass — next PR after edge fn is verified deploying.
+- Migration to seed `tready_ui_map` from the tagged elements — paired with the tagging PR.
+- 30-question scripted booth Q&A eval cases — week 2.
+
+**Quality gate status:**
+- Gate 1 (Build complete): code written, ready for review. No tests yet — `get_current_time` touches neither money nor PII, so brief §6 "two tests minimum if touches money/PII" doesn't apply at V1. Tests land with the first real tool in week 2.
+- Gate 2 (Ghost test on demo tenant): pending Z's deploy + invoke from Supabase dashboard as `demo@treadset.com`.
+- Gate 3 (Z's real test): pending Gate 2.
+- Gate 4 (Production rollout): N/A for V1 — the edge fn only fires when something POSTs to it; no users will reach it until the frontend ships in week 2.
+
+**Next session first move:** Verify the edge fn deploys cleanly to Supabase and responds with a streamed reply to a test invoke from `demo@treadset.com`. If yes → start the 85-element `data-tready-id` tagging pass on the demo path + write the `tready_ui_map` seed migration. If no → debug deploy / `npm:` import resolution and surface to Z + Session A inbox.
+
+---
+
+## 2026-05-13 [A] — Roadmap + brief patched: Denver booth is complete, not upcoming
+
+**Context:** Session B caught a date drift. The roadmap + brief were drafted from a stale memory snapshot that treated Denver (~2026-05-27) as upcoming; this thread's context confirms the booth wrapped on or before 2026-05-12 (demo password rotated 2026-05-13 "after a competitor was caught with the demo"). Mode shifts from sprint to thoughtful.
+
+**Shipped:**
+- Inserted correction banner at top of `TREADSET_AI_NATIVE_ROADMAP.md` reframing "pre-Denver" → "week 1, thoughtful pacing" and week-3 → "buffer week for booth retro + follow-ups."
+- Same correction banner on `TREADSET_TWO_SESSION_BRIEF.md`. §10 onboarding script is now post-booth sales-call + customer onboarding tour, not a booth piece.
+- Updated `~/.claude/projects/-Users-zachariahdevon/memory/project_treadset.md` to record booth completion so future session-start reads don't repeat the same misframe.
+
+**Blocked:** Z to greenlight Session A week-1 punch list (5 slug fixes + Resend HMAC). No code touched yet.
+
+**Next session first move:** Wait for "go A." Then branch `arch/wk1-tenant-fixes`, diff `create-payment/index.ts:28` first.
+
+---
+
+## 2026-05-13 [A] — Two-session coordination set up; Session A overreach reverted
+
+**Context:** Z asked for an AI-native roadmap, then split work between two Claude Code sessions. This session became Session A (Architect). After writing the brief, I started building Tready (Session B's scope) before Session B came online. Cleaned up.
+
+**Shipped:**
+- `TREADSET_AI_NATIVE_ROADMAP.md` (~580 lines) — master plan from 4 Explore + 3 research + 1 Plan agent synthesis.
+- `TREADSET_TWO_SESSION_BRIEF.md` (~530 lines) — file ownership map, quality gates (build → ghost-test on demo → Z accepts → prod), week-by-week phase plan for both sessions, Stripe Connect + QBO specifics, Tready demo onboarding script.
+- `SESSION_INBOX.md` — async coordination channel between A and B.
+
+**Reverted (Session B's territory):**
+- Deleted `supabase/migrations/20260513210000_tready_core.sql` (redundant — Session B already applied full Tready data model to prod via Supabase Management API; pgvector v0.8.0 enabled).
+- Deleted `supabase/functions/tready/index.ts` (Session B will rebuild on Vercel AI SDK v6 + tool-factory + Sentry per brief).
+- Deleted `src/components/tready/**`, `src/hooks/useTready.ts`, `src/lib/tready/types.ts` (pre-emptive frontend; Session B owns the week-2 build).
+
+**Blocked:** Z to greenlight Session A's week-1 punch list (5 hardcoded `slug='bsg'` edge functions + Resend HMAC). No infra changes yet.
+
+**Parked:** Stripe Connect + QBO schema migrations — will write SQL once Z greenlights, then hand for paste.
+
+**Next session first move:** Open branch `arch/wk1-tenant-fixes`, write the diff for `create-payment/index.ts:28` (hardcoded `slug='bsg'` → accept `organization_id` from caller, validate membership). Repeat for the other 4 functions in separate commits.
+
 ---
 
 ## 2026-05-08 (latest) — Pioneer + Waitlist tradeshow lead-capture pages
