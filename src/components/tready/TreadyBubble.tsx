@@ -823,18 +823,25 @@ export function TreadyBubble() {
     void runAutopilot(navigate, setTourRunning, () => tours);
   }, [navigate]);
 
-  // Kiosk auto-launch: any URL with ?autopilot=1 kicks the loop on auth load.
-  // Click Tready to exit. Only fires once per session (autopilot itself loops
-  // internally; we don't want a remount to relaunch on top of itself).
+  // Auto-launch the autopilot loop in two cases:
+  //   (a) any URL with ?autopilot=1 — explicit kiosk flag, works for any tenant
+  //   (b) the demo org (currentOrganization.slug === 'demo') on the dashboard
+  //       — every demo session starts looping by default, no flag needed
+  // Escape hatch: append ?manual=1 to opt out of (b). Click the Tready
+  // character to stop the loop at any time.
   const autopilotStartedRef = useRef(false);
   useEffect(() => {
     if (loading || !user) return;
     if (autopilotStartedRef.current) return;
     const params = new URLSearchParams(window.location.search);
-    if (params.get('autopilot') !== '1') return;
+    if (params.get('manual') === '1') return;
+    const explicitFlag = params.get('autopilot') === '1';
+    const isDemoOrg = user.currentOrganization?.slug === 'demo';
+    if (!explicitFlag && !isDemoOrg) return;
     autopilotStartedRef.current = true;
-    // Small delay so the page has time to render before highlights fire.
-    const t = setTimeout(() => startAutopilot(), 1200);
+    // Demo-mode auto-start gives the page extra render time + nav-to-dashboard
+    // breathing room. Explicit-flag start is faster.
+    const t = setTimeout(() => startAutopilot(), explicitFlag ? 1200 : 2000);
     return () => clearTimeout(t);
   }, [loading, user, startAutopilot]);
 
