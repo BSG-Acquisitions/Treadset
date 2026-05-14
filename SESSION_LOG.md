@@ -6,6 +6,52 @@ Two parallel sessions now active. Prefix entries with `[A]` (Architect / backend
 
 ---
 
+## 2026-05-14 [A] — Integration foundation: 7 PRs merged in one work block (Stripe Connect + QBO + AI SDK install)
+
+**Context:** Z said "keep pushing" + "any uncommitted changes must be pushed and merged as long as they are involved with this specific build." Session B was parked waiting on AI SDK install. Burned through Session A's integration foundation.
+
+**Shipped + merged to main (chronological):**
+- **PR #18** `arch/config-toml-cleanup` — removed 12 deprecated keys from `supabase/config.toml` (CLI 2.98.2 was rejecting on parse). Verified `supabase functions list` now works without the config-move workaround.
+- **PR #20** `arch/stripe-connect-schema` — adds `stripe_connect_accounts` + `stripe_events` tables for per-tenant Stripe Connect (Standard accounts). RLS: org admins SELECT their row; service-role-only writes. Paste-flow.
+- **PR #21** `arch/quickbooks-schema` — adds `quickbooks_connections` + `quickbooks_sync_log` for per-tenant QBO. Token columns are `_encrypted text` (ciphertext only). `quickbooks_connections` has zero client RLS policies by design — only service-role reaches tokens. Paste-flow.
+- **PR #23** `arch/stripe-connect-oauth` — `stripe-connect-onboard` (POST, JWT, admin) + `stripe-connect-callback` (GET, no JWT). HMAC-signed state, 15-min TTL, 302-redirect-only on failure.
+- **PR #24** `arch/quickbooks-oauth` — `quickbooks-connect` + `quickbooks-callback`. AES-256-GCM token encryption with master key `QUICKBOOKS_TOKEN_KEY`. Shared `_shared/qbo-crypto.ts` for encrypt/decrypt + state signing.
+- **PR #25** `arch/integration-status-rpcs` — `get_stripe_connection_status(p_org_id)` + `get_quickbooks_connection_status(p_org_id)`. Both `SECURITY DEFINER`, `is_org_admin` gate, never return tokens. Paste-flow.
+- **PR #26** `arch/ai-sdk-install` — installs `ai@^5.0.188` + `@ai-sdk/react@^1.2.12` in `package.json`. Pinned to v5 (not v6) because v6 wants React 19; this repo runs React 18. v5/v6 share the UIMessage wire protocol so Session B's v6 edge fn streams correctly to a v5 client. **This unblocks Session B's HighlightOverlay + TreadyBubble frontend work** — their week-2 plan can start.
+
+**Blocked on Z's hands:**
+1. Apply 3 migrations via Supabase SQL editor (project `wvjehbozyxhmgdljwsiz`):
+   - `20260513233000_stripe_connect_schema.sql`
+   - `20260513234000_quickbooks_connections_schema.sql`
+   - `20260513234500_integration_status_rpcs.sql`
+2. Set 10 new Supabase project secrets (dashboard → Edge Functions → Secrets):
+   - `STRIPE_CONNECT_CLIENT_ID` (from Stripe Connect platform settings; `ca_...`)
+   - `STRIPE_CONNECT_REDIRECT_URI` = `https://wvjehbozyxhmgdljwsiz.supabase.co/functions/v1/stripe-connect-callback`
+   - `STRIPE_CONNECT_STATE_SECRET` = `openssl rand -base64 32`
+   - `STRIPE_CONNECT_APP_URL` = `https://app.treadset.co`
+   - `QBO_CLIENT_ID` + `QBO_CLIENT_SECRET` (from Intuit Developer dashboard)
+   - `QBO_REDIRECT_URI` = `https://wvjehbozyxhmgdljwsiz.supabase.co/functions/v1/quickbooks-callback`
+   - `QUICKBOOKS_STATE_SECRET` = `openssl rand -base64 32`
+   - `QUICKBOOKS_TOKEN_KEY` = `openssl rand -base64 32`
+   - `QBO_APP_URL` = `https://app.treadset.co`
+   - `RESEND_WEBHOOK_SECRET` (still pending from previous work block; Resend dashboard signing secret)
+3. Set `verify_jwt = false` on `stripe-connect-callback` and `quickbooks-callback` (Supabase dashboard → Functions). These get hit by user browser redirect with no auth.
+4. Register the two `*_REDIRECT_URI` URLs in Stripe Connect + Intuit Developer dashboards.
+5. After secrets land: deploy the 4 new edge functions (Session A can do via Management API on green light — `deploy stripe-qbo`).
+
+**Parked (next Session A work block):**
+- 3 orphan-risk pipelines → atomic RPCs (`useGenerateDropoffManifest`, `useUpdateAssignmentStatus`, `useSchedulePickupWithDriver`)
+- `stripe-webhook` edge function — receives `charge.succeeded` etc., HMAC-verifies, inserts to `stripe_events` for downstream processing
+- `quickbooks-refresh-token` edge function — auto-rotates QBO access tokens before sync calls
+- WDK installation + first durable workflow (`stripeEventWorkflow`)
+- 28 orphan edge function audit + delete pass
+
+**Cross-session note:** Zero file collisions with Session B. The only "shared" file touched was `package.json` for the AI SDK install; Session B was parked at the time, no concurrent edit. Their week-2 frontend work (`HighlightOverlay.tsx`, `TreadyBubble.tsx`) is now unblocked.
+
+**Next session first move:** Either (a) wait for Z to apply schemas + set secrets → then `deploy stripe-qbo`, or (b) start on the 3 orphan-risk RPCs (paste-flow SQL only; no edge function deploy needed).
+
+---
+
 ## 2026-05-13 [B] — Tready V1 edge function scaffolded; coordination docs committed
 
 **Context:** First Session B work-block. Read brief + roadmap + CLAUDE.md + BRAIN + the session-A entries below. Working in a sibling worktree (`git worktree add ../green-road-ui-tready -b tready/v1-foundation origin/main`) so the primary working directory stays Session A's. Recommend worktrees as standing practice for parallel sessions — eliminates the May-7 multi-process collision risk.
