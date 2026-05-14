@@ -19,8 +19,6 @@ max_client_conn = 100
 
 [realtime]
 enabled = true
-port = 54324
-tenant_id = "realtime-dev"
 
 [studio]
 enabled = true
@@ -35,27 +33,17 @@ pop3_port = 54326
 
 [storage]
 enabled = true
-port = 54327
-image_transformation_enabled = true
 
 [auth]
 enabled = true
-port = 54328
 site_url = "http://127.0.0.1:3000"
 additional_redirect_urls = ["https://127.0.0.1:3000"]
 jwt_expiry = 3600
-refresh_token_rotation_enabled = true
-security_update_enabled = true
-security_update_email_change_enabled = true
 
 [auth.email]
 enable_signup = true
 double_confirm_changes = true
 enable_confirmations = true
-
-[edge-functions]
-enabled = true
-port = 54329
 
 [functions.route-planner]
 verify_jwt = false
