@@ -297,11 +297,14 @@ Deno.serve(async (req) => {
         );
       }
       
-      // Get the default BSG organization
+      // Resolve the tenant whose public booking page this request belongs to.
+      // Pass orgSlug from the client (e.g. demo.app.treadset.co posts orgSlug='demo').
+      // Default 'bsg' preserves backward compat for the existing BSG marketing site.
+      const zoneOrgSlug = (body.orgSlug || 'bsg').toString().toLowerCase().trim();
       const { data: organization } = await supabase
         .from('organizations')
         .select('id')
-        .eq('slug', 'bsg')
+        .eq('slug', zoneOrgSlug)
         .single();
 
       if (organization) {
@@ -370,11 +373,12 @@ Deno.serve(async (req) => {
     const bookingData = validation.data!;
     console.log('[PUBLIC_BOOKING] Processing validated booking request');
 
-    // Get the default BSG organization
+    // Resolve the tenant whose booking page produced this submission.
+    const bookingOrgSlug = (body.orgSlug || 'bsg').toString().toLowerCase().trim();
     const { data: organization, error: orgError } = await supabase
       .from('organizations')
       .select('id')
-      .eq('slug', 'bsg')
+      .eq('slug', bookingOrgSlug)
       .single();
 
     if (orgError || !organization) {
