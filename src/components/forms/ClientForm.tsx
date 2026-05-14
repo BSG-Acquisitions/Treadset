@@ -67,7 +67,7 @@ export function ClientForm({ initialData, onSubmit, onCancel, isLoading }: Clien
               control={form.control}
               name="company_name"
               render={({ field }) => (
-                <FormItem>
+                <FormItem data-tready-id="clientform-company-name">
                   <FormLabel>Company Name *</FormLabel>
                   <FormControl>
                     <Input placeholder="Enter company name" {...field} />
@@ -81,7 +81,7 @@ export function ClientForm({ initialData, onSubmit, onCancel, isLoading }: Clien
               control={form.control}
               name="contact_name"
               render={({ field }) => (
-                <FormItem>
+                <FormItem data-tready-id="clientform-contact-name">
                   <FormLabel>Contact Name</FormLabel>
                   <FormControl>
                     <Input placeholder="Enter contact name" {...field} />
@@ -95,7 +95,7 @@ export function ClientForm({ initialData, onSubmit, onCancel, isLoading }: Clien
               control={form.control}
               name="email"
               render={({ field }) => (
-                <FormItem>
+                <FormItem data-tready-id="clientform-email">
                   <FormLabel>Email</FormLabel>
                   <FormControl>
                     <Input type="email" placeholder="contact@company.com" {...field} />
@@ -109,7 +109,7 @@ export function ClientForm({ initialData, onSubmit, onCancel, isLoading }: Clien
               control={form.control}
               name="phone"
               render={({ field }) => (
-                <FormItem>
+                <FormItem data-tready-id="clientform-phone">
                   <FormLabel>Phone</FormLabel>
                   <FormControl>
                     <Input placeholder="313-555-1234" {...field} />
@@ -130,7 +130,7 @@ export function ClientForm({ initialData, onSubmit, onCancel, isLoading }: Clien
               control={form.control}
               name="mailing_address"
               render={({ field }) => (
-                <FormItem className="md:col-span-2">
+                <FormItem className="md:col-span-2" data-tready-id="clientform-address">
                   <FormLabel>Street Address *</FormLabel>
                   <FormControl>
                     <Input placeholder="Enter street address" {...field} />
@@ -144,7 +144,7 @@ export function ClientForm({ initialData, onSubmit, onCancel, isLoading }: Clien
               control={form.control}
               name="city"
               render={({ field }) => (
-                <FormItem>
+                <FormItem data-tready-id="clientform-city">
                   <FormLabel>City *</FormLabel>
                   <FormControl>
                     <Input placeholder="Enter city" {...field} />
@@ -158,7 +158,7 @@ export function ClientForm({ initialData, onSubmit, onCancel, isLoading }: Clien
               control={form.control}
               name="state"
               render={({ field }) => (
-                <FormItem>
+                <FormItem data-tready-id="clientform-state">
                   <FormLabel>State *</FormLabel>
                   <FormControl>
                     <Input placeholder="MI" maxLength={2} {...field} />
@@ -172,7 +172,7 @@ export function ClientForm({ initialData, onSubmit, onCancel, isLoading }: Clien
               control={form.control}
               name="zip"
               render={({ field }) => (
-                <FormItem>
+                <FormItem data-tready-id="clientform-zip">
                   <FormLabel>ZIP Code *</FormLabel>
                   <FormControl>
                     <Input placeholder="Enter ZIP" {...field} />

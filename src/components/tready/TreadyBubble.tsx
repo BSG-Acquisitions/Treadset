@@ -106,21 +106,52 @@ type TourStep =
   | { kind: 'pause'; ms: number };
 
 const WELCOME_TOUR: TourStep[] = [
-  { kind: 'speak', text: "Welcome to TreadSet. I'm Tready, your AI ops copilot. Let me walk you through the main tabs — about ninety seconds.", wait: 200 },
-  { kind: 'highlight', element_id: 'topnav-dashboard', caption: 'Dashboard — today\'s tire counts and recent activity.', wait: 4500 },
-  { kind: 'highlight', element_id: 'topnav-clients', caption: 'Clients — your customer list, history, and pricing.', wait: 4000 },
-  { kind: 'highlight', element_id: 'topnav-pickups', caption: 'Pickups — today\'s routes and the outbound schedule.', wait: 4000 },
-  { kind: 'highlight', element_id: 'topnav-dropoffs', caption: 'Drop-offs — for tires brought to your facility.', wait: 4000 },
-  { kind: 'highlight', element_id: 'topnav-trailers', caption: 'Trailers — fleet inventory, routes, vehicles, drivers.', wait: 4000 },
-  { kind: 'highlight', element_id: 'topnav-reports', caption: 'Reports — analytics and state compliance reports.', wait: 4000 },
-  { kind: 'speak', text: 'Now let me show you how to add a client.', wait: 200 },
-  { kind: 'navigate', path: '/clients', wait: 1500 },
-  { kind: 'highlight', element_id: 'clients-add-button', caption: 'Tap this button to add a new client.', waitForClick: false, wait: 5000 },
-  { kind: 'speak', text: 'Fill in company name, contact, address — submit, done.', wait: 200 },
-  { kind: 'pause', ms: 4000 },
-  { kind: 'navigate', path: '/dashboard', wait: 1500 },
-  { kind: 'highlight', element_id: 'topnav-user-menu', caption: 'Your profile and sign-out live up here.', wait: 4000 },
-  { kind: 'speak', text: "That's the layout. Tap me anytime — ask anything or I'll walk you through any flow.", wait: 100 },
+  // ---- ORIENTATION (10 sec) ----
+  { kind: 'speak', text: "Welcome to TreadSet, Denver. I'll walk you through creating your first client end to end. Hands on, takes about three minutes.", wait: 200 },
+  { kind: 'pause', ms: 4500 },
+
+  // ---- STEP 1: Navigate to Clients ----
+  { kind: 'speak', text: "Tap the Clients tab when you're ready.", wait: 100 },
+  { kind: 'highlight', element_id: 'topnav-clients', caption: 'Clients tab — tap to continue.', waitForClick: true },
+
+  // ---- STEP 2: Open Add Client dialog ----
+  { kind: 'speak', text: "Now tap the Add Client button.", wait: 100 },
+  { kind: 'pause', ms: 800 },
+  { kind: 'highlight', element_id: 'clients-add-button', caption: 'Add Client — tap to open the form.', waitForClick: true },
+
+  // ---- STEP 3: Walk the form fields one at a time ----
+  { kind: 'speak', text: "First, the company name. Try Acme Tire Recyclers.", wait: 200 },
+  { kind: 'pause', ms: 800 },
+  { kind: 'highlight', element_id: 'clientform-company-name', caption: 'Type the company name. Required.', wait: 9000 },
+
+  { kind: 'speak', text: "Now the contact name — who you'll talk to there.", wait: 200 },
+  { kind: 'highlight', element_id: 'clientform-contact-name', caption: 'Type the primary contact.', wait: 7000 },
+
+  { kind: 'speak', text: "Their email goes here. Manifests and invoices auto-send to this address.", wait: 200 },
+  { kind: 'highlight', element_id: 'clientform-email', caption: 'Email — used for auto-sending manifests + invoices.', wait: 7000 },
+
+  { kind: 'speak', text: "Phone number.", wait: 200 },
+  { kind: 'highlight', element_id: 'clientform-phone', caption: 'Phone, format 313-555-1234.', wait: 5500 },
+
+  { kind: 'speak', text: "Now the pickup address — required for the compliance manifest.", wait: 200 },
+  { kind: 'highlight', element_id: 'clientform-address', caption: 'Street address. Required for manifest generation.', wait: 7000 },
+
+  { kind: 'speak', text: "City.", wait: 200 },
+  { kind: 'highlight', element_id: 'clientform-city', caption: 'City.', wait: 5000 },
+
+  { kind: 'speak', text: "State — two letters. This determines which compliance template the manifests use.", wait: 200 },
+  { kind: 'highlight', element_id: 'clientform-state', caption: 'State — 2-letter code (e.g. CO, MI). Sets the compliance template.', wait: 6500 },
+
+  { kind: 'speak', text: "ZIP code.", wait: 200 },
+  { kind: 'highlight', element_id: 'clientform-zip', caption: 'ZIP code.', wait: 5000 },
+
+  // ---- STEP 4: Submit ----
+  { kind: 'speak', text: "When the form looks right, hit Save.", wait: 200 },
+  { kind: 'highlight', element_id: 'client-form-submit', caption: 'Save — creates the client.', waitForClick: true },
+
+  // ---- STEP 5: Celebrate + handoff ----
+  { kind: 'speak', text: "Done. Your first client is live. They show up in the Clients list, ready to schedule pickups for. Same flow for the rest of TreadSet — tap me anytime and I'll walk you through scheduling a pickup, signing a manifest, or anything else.", wait: 200 },
+  { kind: 'pause', ms: 8000 },
 ];
 
 async function runTour(
