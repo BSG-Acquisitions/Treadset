@@ -381,6 +381,47 @@ const PICKUP_TOUR: TourStep[] = [
 ];
 
 // ============================================================================
+// Compliance Reports tour — walks the State Compliance Reports surface.
+// /reports/compliance is the canonical compliance view; tour orients the
+// user to the year picker, totals, tabs, and export pane.
+// ============================================================================
+const REPORTS_TOUR: TourStep[] = [
+  // ---- ORIENTATION + FIRST HIGHLIGHT ----
+  { kind: 'pause', ms: 250 },
+  { kind: 'highlight', element_id: 'topnav-reports', caption: 'Reports menu — tap to open the dropdown.', waitForClick: true },
+
+  // ---- STEP 2: Compliance Reports menu item ----
+  { kind: 'pause', ms: 400 },
+  { kind: 'highlight', element_id: 'topnav-reports-compliance', caption: 'Compliance Reports — the state-compliance report.', waitForClick: true },
+
+  // ---- STEP 3: Page header ----
+  { kind: 'pause', ms: 800 },
+  { kind: 'highlight', element_id: 'compliance-page-header', caption: 'State Compliance Reports — your annual scrap-tire reporting view.', wait: 5000 },
+
+  // ---- STEP 4: Year picker ----
+  { kind: 'highlight', element_id: 'compliance-year-select', caption: 'Year picker — drives every metric on the page. Switches between the last five years.', wait: 6000 },
+
+  // ---- STEP 5: Totals overview ----
+  { kind: 'highlight', element_id: 'compliance-totals-row', caption: 'Headline totals — PTEs in, tons in, tons out, counties, processed. Auto-calculated from every manifest + drop-off in the year.', wait: 9000 },
+
+  // ---- STEP 6: Tabs ----
+  { kind: 'highlight', element_id: 'compliance-tabs-list', caption: 'Eight tabs slice the report by inbound, outbound, counties, processing, sites, state totals, and export.', wait: 7500 },
+
+  // ---- STEP 7: Export tab ----
+  { kind: 'highlight', element_id: 'compliance-export-tab', caption: 'Tap Export when you are ready to generate a file for the state.', waitForClick: true },
+
+  // ---- STEP 8: CSV button ----
+  { kind: 'pause', ms: 500 },
+  { kind: 'highlight', element_id: 'compliance-export-csv', caption: 'Export CSV — opens the spreadsheet most states accept directly.', wait: 6500 },
+
+  // ---- STEP 9: PDF button ----
+  { kind: 'highlight', element_id: 'compliance-export-pdf', caption: 'Export PDF — printable version with formatting for filing or audit.', wait: 6500 },
+
+  // ---- CLOSE ----
+  { kind: 'pause', ms: 9000 },
+];
+
+// ============================================================================
 // Main component
 // ============================================================================
 export function TreadyBubble() {
@@ -690,6 +731,11 @@ export function TreadyBubble() {
     void runTour(PICKUP_TOUR, navigate, setTourRunning);
   }, [navigate]);
 
+  const startReportsTour = useCallback(() => {
+    setIsOpen(false);
+    void runTour(REPORTS_TOUR, navigate, setTourRunning);
+  }, [navigate]);
+
   const toggle = useCallback(() => {
     // If a tour is running, the X / bubble button is a "stop the tour" button
     // — don't toggle the chat panel until the tour is over.
@@ -951,42 +997,36 @@ export function TreadyBubble() {
                   </div>
                 </button>
 
-                {/* Coming-soon tours — clicking sends a chat message so Tready
-                    can talk about the flow even before the deep tour is built */}
-                {[
-                  { title: 'Generate a Compliance Report', sub: 'Coming next session', prompt: 'Walk me through generating a compliance report' },
-                ].map((t) => (
-                  <button
-                    key={t.title}
-                    type="button"
-                    onClick={() => sendMessage(t.prompt)}
-                    disabled={!accessToken || isStreaming}
-                    style={{
-                      textAlign: 'left',
-                      background: '#fff',
-                      border: '1px dashed #d1d5db',
-                      borderRadius: 10,
-                      padding: '10px 12px',
-                      fontSize: 13,
-                      color: '#111827',
-                      cursor: accessToken && !isStreaming ? 'pointer' : 'not-allowed',
-                      transition: 'all 120ms ease',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = '#f0fdf4';
-                      e.currentTarget.style.borderColor = '#16a34a';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = '#fff';
-                      e.currentTarget.style.borderColor = '#d1d5db';
-                    }}
-                  >
-                    <div style={{ fontWeight: 500 }}>{t.title}</div>
-                    <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
-                      {t.sub} · or ask me about it now
+                {/* Reports tour — sixth (final) shipped deep tour */}
+                <button
+                  type="button"
+                  onClick={startReportsTour}
+                  disabled={tourRunning}
+                  style={{
+                    background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 12,
+                    padding: '14px 16px',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: tourRunning ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 10,
+                    boxShadow: '0 4px 12px rgba(22,163,74,0.3)',
+                    opacity: tourRunning ? 0.6 : 1,
+                    textAlign: 'left',
+                  }}
+                >
+                  <Play size={16} fill="#fff" style={{ marginTop: 2, flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div>{tourRunning ? 'Tour running…' : 'Generate a Compliance Report'}</div>
+                    <div style={{ fontSize: 11, opacity: 0.85, fontWeight: 400, marginTop: 2 }}>
+                      Hands-on, ~2 minutes. Tours the compliance report end to end.
                     </div>
-                  </button>
-                ))}
+                  </div>
+                </button>
 
                 <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, padding: '12px 4px 0' }}>
                   Or ask anything
