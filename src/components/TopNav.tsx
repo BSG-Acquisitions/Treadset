@@ -224,14 +224,14 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
         <div className="px-3 sm:px-6">
           <nav className="flex items-center justify-evenly min-w-max xl:min-w-0">
             {/* Dashboard - Simple link */}
-            <Link to="/dashboard" className={navItemClass(activeSection === 'dashboard')}>
+            <Link to="/dashboard" className={navItemClass(activeSection === 'dashboard')} data-tready-id="topnav-dashboard">
               <Home className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span>Dashboard</span>
             </Link>
 
             {/* Clients - Simple link */}
             {hasAnyRole(['admin', 'ops_manager', 'sales', 'viewer']) && (
-              <Link to="/clients" className={navItemClass(activeSection === 'clients')}>
+              <Link to="/clients" className={navItemClass(activeSection === 'clients')} data-tready-id="topnav-clients">
                 <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 <span>Clients</span>
               </Link>
@@ -241,7 +241,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
             {hasAnyRole(['admin', 'ops_manager', 'dispatcher', 'viewer']) && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <div className={navItemClass(activeSection === 'routes')}>
+                  <div className={navItemClass(activeSection === 'routes')} data-tready-id="topnav-pickups">
                     <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     <span>Pickups</span>
                     <ChevronDown className="h-3 w-3 opacity-60" />
@@ -266,7 +266,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
 
             {/* Drop-offs - Direct link */}
             {hasAnyRole(['admin', 'ops_manager', 'sales', 'viewer']) && (
-              <Link to="/dropoffs" className={navItemClass(activeSection === 'dropoffs')}>
+              <Link to="/dropoffs" className={navItemClass(activeSection === 'dropoffs')} data-tready-id="topnav-dropoffs">
                 <PackageOpen className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 <span>Drop-offs</span>
               </Link>
@@ -276,7 +276,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
             {FEATURE_FLAGS.TRAILERS && hasAnyRole(['admin', 'ops_manager', 'dispatcher', 'viewer']) && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <div className={navItemClass(activeSection === 'trailers')}>
+                  <div className={navItemClass(activeSection === 'trailers')} data-tready-id="topnav-trailers">
                     <Container className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     <span>Trailers</span>
                     <ChevronDown className="h-3 w-3 opacity-60" />
@@ -321,7 +321,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
             {FEATURE_FLAGS.INVENTORY && hasAnyRole(['admin', 'ops_manager', 'dispatcher', 'viewer']) && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <div className={navItemClass(activeSection === 'inventory')}>
+                  <div className={navItemClass(activeSection === 'inventory')} data-tready-id="topnav-inventory">
                     <Boxes className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     <span>Inventory</span>
                     <ChevronDown className="h-3 w-3 opacity-60" />
@@ -354,7 +354,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
             {hasAnyRole(['admin', 'ops_manager', 'viewer']) && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <div className={navItemClass(activeSection === 'reports')}>
+                  <div className={navItemClass(activeSection === 'reports')} data-tready-id="topnav-reports">
                     <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     <span>Reports</span>
                     <ChevronDown className="h-3 w-3 opacity-60" />

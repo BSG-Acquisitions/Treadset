@@ -77,17 +77,21 @@ type TourStep =
   | { kind: 'pause'; ms: number };
 
 const WELCOME_TOUR: TourStep[] = [
-  { kind: 'speak', text: "Welcome to TreadSet. I'm Tready, your AI ops copilot. Let me show you around — should take about ninety seconds.", wait: 200 },
-  { kind: 'highlight', element_id: 'sidebar-dashboard', caption: 'Your dashboard — today\'s tire counts and pickups live here.', wait: 4500 },
-  { kind: 'speak', text: 'Up next: how to add a client.', wait: 100 },
-  { kind: 'pause', ms: 1500 },
+  { kind: 'speak', text: "Welcome to TreadSet. I'm Tready, your AI ops copilot. Let me walk you through the main tabs — about ninety seconds.", wait: 200 },
+  { kind: 'highlight', element_id: 'topnav-dashboard', caption: 'Dashboard — today\'s tire counts and recent activity.', wait: 4500 },
+  { kind: 'highlight', element_id: 'topnav-clients', caption: 'Clients — your customer list, history, and pricing.', wait: 4000 },
+  { kind: 'highlight', element_id: 'topnav-pickups', caption: 'Pickups — today\'s routes and the outbound schedule.', wait: 4000 },
+  { kind: 'highlight', element_id: 'topnav-dropoffs', caption: 'Drop-offs — for tires brought to your facility.', wait: 4000 },
+  { kind: 'highlight', element_id: 'topnav-trailers', caption: 'Trailers — fleet inventory, routes, vehicles, drivers.', wait: 4000 },
+  { kind: 'highlight', element_id: 'topnav-reports', caption: 'Reports — analytics and state compliance reports.', wait: 4000 },
+  { kind: 'speak', text: 'Now let me show you how to add a client.', wait: 200 },
   { kind: 'navigate', path: '/clients', wait: 1500 },
-  { kind: 'highlight', element_id: 'clients-add-button', caption: 'This is the Add Client button — click it when you have a new business to add.', waitForClick: false, wait: 5000 },
-  { kind: 'speak', text: 'When you click it, a form opens — company name, contact, address. Submit and you\'re done.', wait: 100 },
-  { kind: 'pause', ms: 5500 },
+  { kind: 'highlight', element_id: 'clients-add-button', caption: 'Tap this button to add a new client.', waitForClick: false, wait: 5000 },
+  { kind: 'speak', text: 'Fill in company name, contact, address — submit, done.', wait: 200 },
+  { kind: 'pause', ms: 4000 },
   { kind: 'navigate', path: '/dashboard', wait: 1500 },
   { kind: 'highlight', element_id: 'topnav-user-menu', caption: 'Your profile and sign-out live up here.', wait: 4000 },
-  { kind: 'speak', text: "That's the basics. Tap me anytime — ask anything, or I'll walk you through any flow step by step.", wait: 100 },
+  { kind: 'speak', text: "That's the layout. Tap me anytime — ask anything or I'll walk you through any flow.", wait: 100 },
 ];
 
 async function runTour(
