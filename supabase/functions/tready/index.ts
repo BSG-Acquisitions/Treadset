@@ -272,31 +272,56 @@ function buildDynamicContext(args: {
 }
 
 async function getUIMapForRoute(supabaseClient: any, route: string): Promise<string> {
-  // V1: tready_ui_map is empty until the 80-element tagging pass populates it.
-  // The query shape is correct so V1.5 just adds rows and this function lights up.
+  // V1.5: fetch ALL active elements (not just the current route's). The model
+  // needs to see what's available everywhere so it can navigate_to the right
+  // page before calling highlight_ui. Cache breakpoint 2 caches this whole
+  // map per route so cost stays bounded.
   try {
     const { data, error } = await supabaseClient
       .from('tready_ui_map')
-      .select('element_id, label, description, location_hint, required_app_state')
-      .eq('page_path', route)
+      .select('element_id, label, description, page_path, location_hint, required_app_state')
       .eq('is_active', true)
-      .limit(100);
+      .order('page_path')
+      .order('element_id')
+      .limit(500);
 
     if (error || !data || data.length === 0) {
-      return `UI map for ${route}: (no elements registered yet — V1 scaffold). When the user asks how to do something on this page, answer in plain English without pointing at specific buttons. The visual-highlight feature lights up in V1.5.`;
+      return `UI map: (no elements registered yet). Answer in plain English without highlights for now.`;
     }
 
-    const lines = data.map((e: any) => {
+    // Group elements by page_path so the model has structure
+    const byPage: Record<string, string[]> = {};
+    for (const e of data as any[]) {
+      const page = e.page_path || '*';
       const stateNote = e.required_app_state
-        ? ` [requires: ${JSON.stringify(e.required_app_state)}]`
+        ? ` [needs: ${JSON.stringify(e.required_app_state)}]`
         : '';
       const loc = e.location_hint ? ` — ${e.location_hint}` : '';
-      return `- \`${e.element_id}\` "${e.label}": ${e.description}${loc}${stateNote}`;
-    });
+      const line = `- \`${e.element_id}\` "${e.label}": ${e.description}${loc}${stateNote}`;
+      (byPage[page] = byPage[page] || []).push(line);
+    }
 
-    return `UI map for ${route} (use exact element_ids when pointing at the UI):\n${lines.join('\n')}`;
+    const sections: string[] = [];
+    sections.push(`UI map (use exact element_ids when calling highlight_ui).`);
+    sections.push(`User is currently on: ${route}`);
+    sections.push(``);
+
+    if (byPage['*']) {
+      sections.push(`## Visible on every page (sidebar nav, top nav)`);
+      sections.push(byPage['*'].join('\n'));
+      sections.push(``);
+    }
+
+    for (const page of Object.keys(byPage).sort()) {
+      if (page === '*') continue;
+      sections.push(`## On ${page}`);
+      sections.push(byPage[page].join('\n'));
+      sections.push(``);
+    }
+
+    return sections.join('\n');
   } catch (e) {
     captureError(e, { fn: 'getUIMapForRoute', route });
-    return `UI map for ${route}: (lookup failed — answering without highlights)`;
+    return `UI map: (lookup failed — answering without highlights)`;
   }
 }

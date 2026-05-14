@@ -100,7 +100,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
           {/* User menu - Streamlined to personal/account items only */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="relative">
+              <Button variant="ghost" size="sm" className="relative" data-tready-id="topnav-user-menu">
                 <User className="h-4 w-4 sm:h-5 sm:w-5" />
                 <span className="sr-only">Open user menu</span>
               </Button>
