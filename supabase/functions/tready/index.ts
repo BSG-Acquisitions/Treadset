@@ -229,7 +229,9 @@ Deno.serve(async (req) => {
     });
 
     // ---------- Step 9: return SSE stream ----------
-    return result.toDataStreamResponse({
+    // AI SDK v6 renamed toDataStreamResponse -> toUIMessageStreamResponse.
+    // This is the protocol the React `useChat` hook consumes in week 2.
+    return result.toUIMessageStreamResponse({
       headers: corsHeaders,
     });
   } catch (error) {
