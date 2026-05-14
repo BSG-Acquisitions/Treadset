@@ -230,11 +230,10 @@ export function AppSidebar() {
               <SidebarGroupContent>
                 <SidebarMenu className="space-y-1">
                   {superAdminNavigation.overview.map((item) => (
-                    <SidebarMenuItem key={item.id}>
+                    <SidebarMenuItem key={item.id} data-tready-id={`sidebar-${item.id}`}>
                       <SidebarMenuButton asChild className="h-12">
                         <NavLink
                           to={item.path}
-                          data-tready-id={`sidebar-${item.id}`}
                           onClick={handleNavClick}
                           className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${getNavClass(item.path)}`}
                         >
@@ -253,11 +252,10 @@ export function AppSidebar() {
               <SidebarGroupContent>
                 <SidebarMenu className="space-y-1">
                   {superAdminNavigation.scheduling.map((item) => (
-                    <SidebarMenuItem key={item.id}>
+                    <SidebarMenuItem key={item.id} data-tready-id={`sidebar-${item.id}`}>
                       <SidebarMenuButton asChild className="h-12">
                         <NavLink
                           to={item.path}
-                          data-tready-id={`sidebar-${item.id}`}
                           onClick={handleNavClick}
                           className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${getNavClass(item.path)}`}
                         >
@@ -282,11 +280,10 @@ export function AppSidebar() {
                       return !item.requiresSemiHauler || hasSemiHauler;
                     })
                     .map((item) => (
-                    <SidebarMenuItem key={item.id}>
+                    <SidebarMenuItem key={item.id} data-tready-id={`sidebar-${item.id}`}>
                       <SidebarMenuButton asChild className="h-12">
                         <NavLink
                           to={item.path}
-                          data-tready-id={`sidebar-${item.id}`}
                           onClick={handleNavClick}
                           className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${getNavClass(item.path)}`}
                         >
@@ -305,11 +302,10 @@ export function AppSidebar() {
               <SidebarGroupContent>
                 <SidebarMenu className="space-y-1">
                   {superAdminNavigation.haulerPortal.map((item) => (
-                    <SidebarMenuItem key={item.id}>
+                    <SidebarMenuItem key={item.id} data-tready-id={`sidebar-${item.id}`}>
                       <SidebarMenuButton asChild className="h-12">
                         <NavLink
                           to={item.path}
-                          data-tready-id={`sidebar-${item.id}`}
                           onClick={handleNavClick}
                           className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${getNavClass(item.path)}`}
                         >
@@ -328,11 +324,10 @@ export function AppSidebar() {
               <SidebarGroupContent>
                 <SidebarMenu className="space-y-1">
                   {superAdminNavigation.financial.map((item) => (
-                    <SidebarMenuItem key={item.id}>
+                    <SidebarMenuItem key={item.id} data-tready-id={`sidebar-${item.id}`}>
                       <SidebarMenuButton asChild className="h-12">
                         <NavLink
                           to={item.path}
-                          data-tready-id={`sidebar-${item.id}`}
                           onClick={handleNavClick}
                           className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${getNavClass(item.path)}`}
                         >
@@ -399,11 +394,10 @@ export function AppSidebar() {
               <SidebarGroupContent>
                 <SidebarMenu className="space-y-1">
                   {superAdminNavigation.reporting.map((item) => (
-                    <SidebarMenuItem key={item.id}>
+                    <SidebarMenuItem key={item.id} data-tready-id={`sidebar-${item.id}`}>
                       <SidebarMenuButton asChild className="h-12">
                         <NavLink
                           to={item.path}
-                          data-tready-id={`sidebar-${item.id}`}
                           onClick={handleNavClick}
                           className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${getNavClass(item.path)}`}
                         >
@@ -422,11 +416,10 @@ export function AppSidebar() {
               <SidebarGroupContent>
                 <SidebarMenu className="space-y-1">
                   {superAdminNavigation.administration.map((item) => (
-                    <SidebarMenuItem key={item.id}>
+                    <SidebarMenuItem key={item.id} data-tready-id={`sidebar-${item.id}`}>
                       <SidebarMenuButton asChild className="h-12">
                         <NavLink
                           to={item.path}
-                          data-tready-id={`sidebar-${item.id}`}
                           onClick={handleNavClick}
                           className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${getNavClass(item.path)}`}
                         >
@@ -450,11 +443,10 @@ export function AppSidebar() {
               <SidebarGroupContent>
                 <SidebarMenu className="space-y-1">
                   {filteredNavItems.map((item) => (
-                    <SidebarMenuItem key={item.id}>
+                    <SidebarMenuItem key={item.id} data-tready-id={`sidebar-${item.id}`}>
                       <SidebarMenuButton asChild className="h-12">
                         <NavLink
                           to={item.path}
-                          data-tready-id={`sidebar-${item.id}`}
                           onClick={handleNavClick}
                           className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${getNavClass(item.path)}`}
                         >
