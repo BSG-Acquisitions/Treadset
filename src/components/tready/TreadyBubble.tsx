@@ -207,40 +207,70 @@ async function runTour(
   setRunning: (b: boolean) => void,
 ) {
   setRunning(true);
-  for (const step of steps) {
-    if (step.kind === 'speak' || step.kind === 'speak_async') {
-      // Voice removed (PR #45). Both step kinds are now true no-ops — `wait`
-      // is ignored. Existing tours had wait values tuned for TTS timing; with
-      // voice gone, those waits are dead air. Pacing is driven by `pause` +
-      // highlight `wait` instead.
-    } else if (step.kind === 'highlight') {
-      window.dispatchEvent(
-        new CustomEvent('tready:highlight', {
-          detail: { element_id: step.element_id, caption: step.caption, wait_for_click: step.waitForClick },
-        }),
-      );
-      // If waiting for click, wait for the step-complete event; else wait the configured ms
-      if (step.waitForClick) {
-        await new Promise<void>((resolve) => {
-          const handler = () => {
-            window.removeEventListener('tready:step-complete', handler);
-            resolve();
-          };
-          window.addEventListener('tready:step-complete', handler);
-        });
-      } else if (step.wait) {
-        await new Promise((r) => setTimeout(r, step.wait));
+
+  // Cancellation: any code can dispatch `tready:cancel-tour` to bail out.
+  // The bubble toggle and chat-panel X both fire it when a tour is running.
+  let cancelled = false;
+  const onCancel = () => {
+    cancelled = true;
+    // Unblock anything currently awaiting a step-complete.
+    window.dispatchEvent(new CustomEvent('tready:step-complete'));
+  };
+  window.addEventListener('tready:cancel-tour', onCancel);
+
+  // Helper: sleep that wakes early on cancel. Avoids the 9-second celebration
+  // pause holding up the abort.
+  const cancellableSleep = (ms: number) =>
+    new Promise<void>((resolve) => {
+      const t = setTimeout(() => {
+        window.removeEventListener('tready:cancel-tour', earlyWake);
+        resolve();
+      }, ms);
+      const earlyWake = () => {
+        clearTimeout(t);
+        window.removeEventListener('tready:cancel-tour', earlyWake);
+        resolve();
+      };
+      window.addEventListener('tready:cancel-tour', earlyWake);
+    });
+
+  try {
+    for (const step of steps) {
+      if (cancelled) break;
+
+      if (step.kind === 'speak' || step.kind === 'speak_async') {
+        // Voice removed (PR #45). Both step kinds are silent no-ops.
+      } else if (step.kind === 'highlight') {
+        window.dispatchEvent(
+          new CustomEvent('tready:highlight', {
+            detail: { element_id: step.element_id, caption: step.caption, wait_for_click: step.waitForClick },
+          }),
+        );
+        if (step.waitForClick) {
+          // Resolves on either step-complete (real click) or cancel-tour
+          // (because onCancel also dispatches step-complete to unblock us).
+          await new Promise<void>((resolve) => {
+            const handler = () => {
+              window.removeEventListener('tready:step-complete', handler);
+              resolve();
+            };
+            window.addEventListener('tready:step-complete', handler);
+          });
+        } else if (step.wait) {
+          await cancellableSleep(step.wait);
+        }
+      } else if (step.kind === 'navigate') {
+        navigate(step.path);
+        if (step.wait) await cancellableSleep(step.wait);
+      } else if (step.kind === 'pause') {
+        await cancellableSleep(step.ms);
       }
-    } else if (step.kind === 'navigate') {
-      navigate(step.path);
-      if (step.wait) await new Promise((r) => setTimeout(r, step.wait));
-    } else if (step.kind === 'pause') {
-      await new Promise((r) => setTimeout(r, step.ms));
     }
+  } finally {
+    window.removeEventListener('tready:cancel-tour', onCancel);
+    window.dispatchEvent(new CustomEvent('tready:clear-highlight'));
+    setRunning(false);
   }
-  // Clear any lingering highlight
-  window.dispatchEvent(new CustomEvent('tready:clear-highlight'));
-  setRunning(false);
 }
 
 // ============================================================================
@@ -544,16 +574,27 @@ export function TreadyBubble() {
     void runTour(MANIFEST_TOUR, navigate, setTourRunning);
   }, [navigate]);
 
-  const toggle = useCallback(() => setIsOpen((v) => !v), []);
+  const toggle = useCallback(() => {
+    // If a tour is running, the X / bubble button is a "stop the tour" button
+    // — don't toggle the chat panel until the tour is over.
+    if (tourRunning) {
+      window.dispatchEvent(new CustomEvent('tready:cancel-tour'));
+      return;
+    }
+    setIsOpen((v) => !v);
+  }, [tourRunning]);
 
   if (loading || !user) return null;
 
   return (
     <>
-      {/* Floating bubble — pulses subtly when tour is running */}
+      {/* Floating bubble — pulses brighter and shows an X (stop) icon while a
+          tour is running. Click during a tour = cancel; click otherwise =
+          toggle chat panel. */}
       <button
         onClick={toggle}
-        aria-label={isOpen ? 'Close Tready' : 'Open Tready'}
+        aria-label={tourRunning ? 'Stop tour' : isOpen ? 'Close Tready' : 'Open Tready'}
+        title={tourRunning ? 'Stop tour' : isOpen ? 'Close Tready' : 'Open Tready'}
         data-tready-id="tready-bubble-toggle"
         style={{
           position: 'fixed',
@@ -579,7 +620,7 @@ export function TreadyBubble() {
         onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
         onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
       >
-        {isOpen ? <X size={24} /> : <MessageCircle size={24} />}
+        {(isOpen || tourRunning) ? <X size={24} /> : <MessageCircle size={24} />}
       </button>
       <style>{`
         @keyframes tready-bubble-pulse {
