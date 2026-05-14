@@ -1,13 +1,12 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { encode as b64encode } from "https://deno.land/std@0.190.0/encoding/base64.ts";
 import { Resend } from "https://esm.sh/resend@2.0.0";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  requireUserAndOrg,
+  tenantAuthErrorResponse,
+} from "../_shared/tenant-auth.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL") as string;
-const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") as string;
-
-const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -32,6 +31,18 @@ serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  let supabase;
+  let organizationId: string;
+  try {
+    const ctx = await requireUserAndOrg(req);
+    supabase = ctx.supabaseService;
+    organizationId = ctx.organizationId;
+  } catch (err) {
+    const r = tenantAuthErrorResponse(err, corsHeaders);
+    if (r) return r;
+    throw err;
   }
 
   let parsedBody: SendManifestEmailRequest | null = null;
@@ -60,6 +71,7 @@ serve(async (req) => {
           `id, manifest_number, pdf_path, acroform_pdf_path, total, signed_at, client_id, organization_id`
         )
         .eq("id", body.manifest_id)
+        .eq("organization_id", organizationId)
         .maybeSingle();
 
       if (error) throw error;
@@ -78,6 +90,7 @@ serve(async (req) => {
         .from("clients")
         .select("email, company_name")
         .eq("id", manifest.client_id)
+        .eq("organization_id", organizationId)
         .maybeSingle();
       if (clientErr) throw clientErr;
 
@@ -280,7 +293,8 @@ serve(async (req) => {
       const { error: updateError } = await supabase
         .from('manifests')
         .update(emailUpdate)
-        .eq('id', body.manifest_id);
+        .eq('id', body.manifest_id)
+        .eq('organization_id', organizationId);
       
       if (updateError) {
         console.error('Failed to update manifest email tracking:', updateError);
@@ -295,14 +309,15 @@ serve(async (req) => {
     console.error("Error in send-manifest-email:", error);
     
     // Update manifest with error status if manifest_id was provided
-    if (parsedBody?.manifest_id) {
+    if (parsedBody?.manifest_id && supabase) {
       await supabase
         .from('manifests')
         .update({
           email_status: 'failed',
           email_error: error.message ?? "Unknown error",
         })
-        .eq('id', parsedBody.manifest_id);
+        .eq('id', parsedBody.manifest_id)
+        .eq('organization_id', organizationId);
     }
     
     return new Response(

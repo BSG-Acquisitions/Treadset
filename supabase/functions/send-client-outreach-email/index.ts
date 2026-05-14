@@ -1,5 +1,8 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
 import { Resend } from 'npm:resend@2.0.0';
+import {
+  requireUserAndOrg,
+  tenantAuthErrorResponse,
+} from '../_shared/tenant-auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,20 +14,28 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let supabase;
+  let organizationId: string;
   try {
-    const { clientId, organizationId } = await req.json();
+    const ctx = await requireUserAndOrg(req);
+    supabase = ctx.supabaseService;
+    organizationId = ctx.organizationId;
+  } catch (err) {
+    const r = tenantAuthErrorResponse(err, corsHeaders);
+    if (r) return r;
+    throw err;
+  }
 
-    if (!clientId || !organizationId) {
+  try {
+    // organizationId from request body is ignored — server-resolved from JWT.
+    const { clientId } = await req.json();
+
+    if (!clientId) {
       return new Response(
-        JSON.stringify({ error: 'clientId and organizationId are required' }),
+        JSON.stringify({ error: 'clientId is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
 
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
     if (!resendApiKey) {
@@ -58,11 +69,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get client info including opt-out status
+    // Get client info including opt-out status. Scoped to caller's org.
     const { data: client, error: clientError } = await supabase
       .from('clients')
       .select('id, company_name, email, contact_name, last_pickup_at, portal_invite_opted_out, is_active')
       .eq('id', clientId)
+      .eq('organization_id', organizationId)
       .maybeSingle();
 
     if (clientError) {

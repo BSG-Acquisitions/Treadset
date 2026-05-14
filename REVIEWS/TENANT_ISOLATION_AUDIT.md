@@ -330,3 +330,57 @@ Applied to prod on 2026-05-14 evening. "Success. No rows returned." Within-org r
 
 **Next session first move:**
 Open `fix/leak-edge-fns`. **Re-verify the §3 LEAK list against current code first** (it may be similarly off). Patch the confirmed leakers to the `tready/index.ts` pattern: validate JWT, resolve `organization_id` from `user_organization_roles` server-side, never accept `org_id` from request body. Same paste-flow / branch discipline. Each fix is a function file change — Z redeploys via Supabase dashboard, not git.
+
+---
+
+## 8. §3 LEAK list — verification — 2026-05-14 (post-§7 reconciliation, evening 2)
+
+After §1's accuracy collapse the §3 list deserved the same skepticism. The 11 functions were re-read end-to-end in this session against current code. **All 11 are confirmed leaks.** §3 is more accurate than §1.
+
+### Per-function verification
+
+| # | Function | Leak verified | Vector | Compliance-adjacent? |
+|---|---|---|---|---|
+| 1 | `send-manifest-email` | ✅ | `verify_jwt = false`. No code-level auth check. Caller passes any `manifest_id`; fn fetches by id only and emails `client.email`. No org check. | No (auth-only fix) |
+| 2 | `generate-acroform-manifest` | ✅ | `verify_jwt = false`. No code-level auth. Caller supplies `manifestData` (so no read-side leak), but the fn writes `pdf_path` to any `manifests.id` without org check. Cross-tenant write. | No (auth-only fix) |
+| 3 | `manifest-finalize` | ✅ | `verify_jwt = false`. No code-level auth. Updates `pickups.status='completed'` + `manifest_pdf_path` for any `pickup_id` from body. Cross-tenant write. | No (auth-only fix) |
+| 4 | `batch-manifest-export` | ✅ | `verify_jwt = false`. No auth. Body `manifest_ids` array `.in('id', ...)` with NO org filter — ZIPs and returns PDFs across tenants. Enumeration-vulnerable. | No (auth-only fix) |
+| 5 | `send-client-outreach-email` | ✅ | `verify_jwt = false`. No auth. Body trusts `clientId` + `organizationId`. Emails any client in any org. | No |
+| 6 | `send-client-team-invite` | ✅ | `verify_jwt = false`. No auth. Looks up invite by `invite_id`, sends email — no check that caller belongs to the invite's org. Cross-tenant email send / quota drain. | No |
+| 7 | `send-portal-invitation-drip` | ✅ | `verify_jwt = false`. No auth. Bulk-send across all orgs (or one if `body.organization_id` provided). Triggerable by anyone. | No |
+| 8 | `send-portal-invitation` | ✅ | `verify_jwt = false`. No auth. Per `client_id`/`client_ids` from body — fetches client without org check, creates `client_invites` rows, sends email. Cross-tenant invite generation. | No |
+| 9 | `csv-export` | ✅ | `verify_jwt = false`. No auth. `clients`, `pickups`, `invoices` queries have NO org filter. Single call returns every tenant's data as CSV. **Most severe.** | No |
+| 10 | `michigan-report-export` | ✅ | No `verify_jwt` line in config (platform default applies, but code does not validate). No org filter on `pickups` query. Cross-tenant state-compliance report. | Compliance-adjacent (state report). Fix is auth-only, no change to multipliers/categorization. |
+| 11 | `delete-hauler-and-manifests` | ✅ | `verify_jwt = false` in config; **code DOES validate JWT** (audit was right about that one nuance). But after JWT it deletes by `hauler_id` from body — no check that hauler.organization_id matches caller's org. **Destructive cross-tenant**: deletes haulers + manifests + pickups + assignments. Worst-case impact. | Compliance-adjacent (manifest deletion). Fix is access-control + role gate; deletion behavior preserved for legitimate callers. |
+
+### Patterns observed
+
+- `verify_jwt = false` is set in `supabase/config.toml` for 10 of the 11. Platform does not enforce a JWT, and the function code does not compensate. Only `delete-hauler-and-manifests` validates the JWT in code, and even then trusts body-supplied IDs.
+- `organization_id` is accepted from request body in 3 of the 11 (`send-client-outreach-email`, `send-portal-invitation-drip`, implicitly via `client_id` lookups in others) — the exact pattern the `tready/index.ts` model warns against.
+- The remaining 56 RISK-service-role-no-jwt functions from §3 were NOT re-verified in this session. Mostly cron/internal-tool by name, but the audit's accuracy elsewhere makes it worth re-verifying any that get touched in the future.
+
+### Fix strategy applied this session
+
+1. New shared helper `supabase/functions/_shared/tenant-auth.ts` — exports `requireUserAndOrg(req)` and `requireUserOrgAndRole(req, allowedRoles)`. Mirrors the auth flow in `supabase/functions/tready/index.ts:80-112`. Returns `{ user, userId, organizationId, role, supabaseService }` or throws `TenantAuthError`.
+2. Each of the 11 functions: auth check inserted after CORS preflight, before any DB work. All queries scoped by the resolved `organizationId`. Any body-supplied `organization_id` ignored.
+3. `delete-hauler-and-manifests`: additionally gated to `admin` and `ops_manager` roles. Defense-in-depth for the destructive path (deletes regulated manifest records).
+4. No `verify_jwt = false` lines removed from `config.toml` this session. Platform-side JWT enforcement is the next layer; out of scope here to avoid breaking cron callers that don't pass user JWTs. Tracked as parked.
+
+### Ship Report — 2026-05-14 (evening 2)
+
+**Shipped:**
+- `supabase/functions/_shared/tenant-auth.ts` — shared JWT + org-resolution helper.
+- 11 of 11 confirmed leak functions patched to validate JWT, resolve org server-side, and scope all queries. `delete-hauler-and-manifests` additionally role-gated.
+- This §8 verification table appended to the audit.
+
+**Blocked:**
+- Z must redeploy each of the 11 patched functions via Supabase dashboard or `supabase functions deploy <name>` — code changes don't auto-deploy. Suggest a batch deploy after merge.
+
+**Parked:**
+- `verify_jwt = false` lines in `config.toml` for these 10 functions — leaving in place to avoid breaking cron paths that may not pass user JWTs. Tighten in a follow-up audit of cron callers.
+- The remaining 56 RISK-service-role-no-jwt functions from §3 — not re-verified.
+- §4 app-code anti-patterns (`'bsg'` slug fallbacks, super-admin email hardcode) — separate branch.
+- RLS recursion CI guard — separate branch.
+
+**Next session first move:**
+After this PR merges + the 11 functions are deployed, smoke-test by calling at least 2 of the destructive paths (`delete-hauler-and-manifests`, `manifest-finalize`) with a non-admin / cross-tenant token — confirm 401/403. Then open `fix/app-code-anti-patterns` to handle the `'bsg'` slug fallbacks + super-admin email per §4.

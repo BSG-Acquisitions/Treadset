@@ -1,6 +1,9 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.55.0";
 import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
+import {
+  requireUserAndOrg,
+  tenantAuthErrorResponse,
+} from "../_shared/tenant-auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -140,11 +143,19 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let supabase;
+  let organizationId: string;
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    
+    const ctx = await requireUserAndOrg(req);
+    supabase = ctx.supabaseService;
+    organizationId = ctx.organizationId;
+  } catch (err) {
+    const r = tenantAuthErrorResponse(err, corsHeaders);
+    if (r) return r;
+    throw err;
+  }
+
+  try {
     const { pickup_id, manifest_data, calibrate, template_bucket, template_path }: ManifestRequest = await req.json();
     console.log('Processing manifest for pickup:', pickup_id);
     console.log('Calibrate mode:', Boolean(calibrate));
@@ -330,7 +341,8 @@ const handler = async (req: Request): Promise<Response> => {
       .from('manifests')
       .getPublicUrl(filePath);
 
-    // Update pickup status
+    // Update pickup status. Scoped to caller's org — a caller in tenant A
+    // cannot mark tenant B's pickup completed or overwrite its manifest_pdf_path.
     await supabase
       .from('pickups')
       .update({
@@ -338,7 +350,8 @@ const handler = async (req: Request): Promise<Response> => {
         status: 'completed',
         updated_at: new Date().toISOString()
       })
-      .eq('id', pickup_id);
+      .eq('id', pickup_id)
+      .eq('organization_id', organizationId);
 
     return new Response(
       JSON.stringify({

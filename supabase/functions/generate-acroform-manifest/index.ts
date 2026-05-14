@@ -1,7 +1,10 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { PDFDocument, PDFForm, PDFTextField, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+import {
+  requireUserAndOrg,
+  tenantAuthErrorResponse,
+} from "../_shared/tenant-auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -56,32 +59,40 @@ const handler = async (req: Request): Promise<Response> => {
     );
   }
 
+  let supabase;
+  let organizationId: string;
+  try {
+    const ctx = await requireUserAndOrg(req);
+    supabase = ctx.supabaseService;
+    organizationId = ctx.organizationId;
+  } catch (err) {
+    const r = tenantAuthErrorResponse(err, corsHeaders);
+    if (r) return r;
+    throw err;
+  }
+
   try {
     // Parse and validate request body
     const requestBody = await req.json();
     let body: AcroFormFillRequest;
-    
+
     try {
       body = AcroFormFillRequestSchema.parse(requestBody);
     } catch (error: any) {
       console.error('Validation error:', error.errors);
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           error: 'Invalid input',
-          details: error.errors 
+          details: error.errors
         }),
-        { 
+        {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
     }
-    
-    console.log('Request body validated:', JSON.stringify(body, null, 2));
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    console.log('Request body validated:', JSON.stringify(body, null, 2));
 
     // Download the AcroForm template from storage with fallbacks
     async function fetchTemplateBytes(): Promise<ArrayBuffer | null> {
@@ -497,17 +508,19 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Update manifest record if manifestId provided
+    // Update manifest record if manifestId provided. Scoped to caller's org —
+    // a caller in tenant A cannot overwrite tenant B's manifest pdf_path.
     if (body.manifestId) {
       console.log(`Updating manifest ${body.manifestId} with PDF path: ${outputPath}`);
-      
+
       const { error: updateError } = await supabase
         .from('manifests')
-        .update({ 
+        .update({
           pdf_path: outputPath,
           updated_at: new Date().toISOString()
         })
-        .eq('id', body.manifestId);
+        .eq('id', body.manifestId)
+        .eq('organization_id', organizationId);
 
       if (updateError) {
         console.error('Error updating manifest:', updateError);

@@ -1,6 +1,9 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.0";
 import { Resend } from "npm:resend@2.0.0";
+import {
+  requireUserAndOrg,
+  tenantAuthErrorResponse,
+} from "../_shared/tenant-auth.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -27,14 +30,25 @@ const handler = async (req: Request): Promise<Response> => {
   const startTime = Date.now();
   console.log("Starting portal invitation drip campaign...");
 
+  let supabase;
+  let organizationId: string;
+  try {
+    const ctx = await requireUserAndOrg(req);
+    supabase = ctx.supabaseService;
+    organizationId = ctx.organizationId;
+  } catch (err) {
+    const r = tenantAuthErrorResponse(err, corsHeaders);
+    if (r) return r;
+    throw err;
+  }
+
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const appUrl = "https://app.treadset.co";
 
-    // Parse optional parameters
-    let body: { organization_id?: string; dry_run?: boolean; limit?: number } = {};
+    // Parse optional parameters. body.organization_id is intentionally ignored —
+    // org is server-resolved from the caller's JWT to prevent cross-tenant drip.
+    let body: { dry_run?: boolean; limit?: number } = {};
     try {
       body = await req.json();
     } catch {
@@ -44,25 +58,22 @@ const handler = async (req: Request): Promise<Response> => {
     const dryRun = body.dry_run || false;
     const limit = body.limit || 500; // Safety limit
 
-    console.log(`Parameters: dry_run=${dryRun}, limit=${limit}`);
+    console.log(`Parameters: org=${organizationId} dry_run=${dryRun}, limit=${limit}`);
 
-    // Get all eligible clients:
+    // Get all eligible clients (scoped to caller's org):
     // - Has email
     // - Is active
     // - No user_id (hasn't signed up yet)
     // - Not opted out
-    let query = supabase
+    const query = supabase
       .from("clients")
       .select("id, company_name, email, contact_name, organization_id, user_id, portal_invite_opted_out")
+      .eq("organization_id", organizationId)
       .eq("is_active", true)
       .not("email", "is", null)
       .is("user_id", null)
       .eq("portal_invite_opted_out", false)
       .limit(limit);
-
-    if (body.organization_id) {
-      query = query.eq("organization_id", body.organization_id);
-    }
 
     const { data: eligibleClients, error: clientsError } = await query;
 

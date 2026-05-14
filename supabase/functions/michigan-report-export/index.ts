@@ -1,5 +1,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
+import {
+  requireUserAndOrg,
+  tenantAuthErrorResponse,
+} from '../_shared/tenant-auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,17 +19,27 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let supabase;
+  let organizationId: string;
+  try {
+    const ctx = await requireUserAndOrg(req);
+    supabase = ctx.supabaseService;
+    organizationId = ctx.organizationId;
+  } catch (err) {
+    const r = tenantAuthErrorResponse(err, corsHeaders);
+    if (r) return r;
+    throw err;
+  }
+
   try {
     const { year, format }: ExportRequest = await req.json();
-    
-    console.log(`Exporting Michigan report for ${year} as ${format}`);
 
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    console.log(`Exporting Michigan report for ${year} as ${format} (org=${organizationId})`);
 
-    // Get pickup data for the year
+    // Get pickup data for the year. Scoped to caller's org so a multi-tenant
+    // install cannot return another tenant's regulated state report.
+    // PTE multipliers below are unchanged from prior code — compliance output
+    // for legitimate callers is unaffected.
     const { data: pickups, error: pickupsError } = await supabase
       .from('pickups')
       .select(`
@@ -44,6 +57,7 @@ const handler = async (req: Request): Promise<Response> => {
           address
         )
       `)
+      .eq('organization_id', organizationId)
       .eq('status', 'completed')
       .gte('pickup_date', `${year}-01-01`)
       .lte('pickup_date', `${year}-12-31`);

@@ -1,6 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import JSZip from "https://esm.sh/jszip@3.10.1";
+import {
+  requireUserAndOrg,
+  tenantAuthErrorResponse,
+} from "../_shared/tenant-auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -10,6 +13,18 @@ const corsHeaders = {
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  let supabase;
+  let organizationId: string;
+  try {
+    const ctx = await requireUserAndOrg(req);
+    supabase = ctx.supabaseService;
+    organizationId = ctx.organizationId;
+  } catch (err) {
+    const r = tenantAuthErrorResponse(err, corsHeaders);
+    if (r) return r;
+    throw err;
   }
 
   try {
@@ -31,11 +46,8 @@ serve(async (req) => {
       );
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Fetch manifest details
+    // Fetch manifest details. Scoped to caller's org — any manifest_id that
+    // belongs to another tenant is silently filtered out.
     const { data: manifests, error: manifestError } = await supabase
       .from('manifests')
       .select(`
@@ -47,7 +59,8 @@ serve(async (req) => {
         created_at,
         clients:client_id (company_name)
       `)
-      .in('id', manifest_ids);
+      .in('id', manifest_ids)
+      .eq('organization_id', organizationId);
 
     if (manifestError) {
       console.error('[BatchExport] Error fetching manifests:', manifestError);
