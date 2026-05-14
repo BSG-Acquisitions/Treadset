@@ -24,8 +24,8 @@
  * Per CLAUDE.md migration discipline: this file does NOT auto-deploy.
  * After committing, run `supabase functions deploy tready` manually.
  */
-import { streamText, stepCountIs, type ModelMessage } from 'npm:ai@^6.0.0';
-import { createAnthropic } from 'npm:@ai-sdk/anthropic@^2.0.0';
+import { streamText, stepCountIs, type ModelMessage } from 'npm:ai@^5.0.188';
+import { createAnthropic } from 'npm:@ai-sdk/anthropic@^2';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
 import { TREADY_PERSONA } from './persona.ts';
 import { buildToolFactory } from './tools.ts';
@@ -229,8 +229,10 @@ Deno.serve(async (req) => {
     });
 
     // ---------- Step 9: return SSE stream ----------
-    // AI SDK v6 renamed toDataStreamResponse -> toUIMessageStreamResponse.
-    // This is the protocol the React `useChat` hook consumes in week 2.
+    // ai@5.x uses toUIMessageStreamResponse (toDataStreamResponse was the
+    // deprecated v4 name). The v5/v6 distinction I assumed earlier was
+    // wrong — both use this method name. The frontend `useChat` hook
+    // from `@ai-sdk/react@^1.2.12` consumes this stream protocol.
     return result.toUIMessageStreamResponse({
       headers: corsHeaders,
     });
