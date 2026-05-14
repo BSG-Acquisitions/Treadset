@@ -1,16 +1,18 @@
 /**
  * TreadyBubble — floating chat button + slide-out panel.
  *
- * V1.6: voice (Web Speech API) + scripted "Take a tour" mode that
- * bypasses the LLM entirely to prove the visual primitives
- * (highlight + navigate + speak) work end-to-end.
+ * V1.7: voice removed (Z, 2026-05-14). Tours are now visual-only — highlight
+ * ring + caption + timing. The speak / speak_async step kinds are retained
+ * as silent no-ops so existing tour scripts keep parsing; speak still
+ * respects its `wait` ms so per-step pacing is preserved. Re-enabling voice
+ * later is a one-line swap inside runTour.
  *
  * Implementation: hand-rolled SSE streaming via fetch. Bypasses
  * @ai-sdk/react's useChat entirely (the v5 hook captured transport
  * at first render and didn't propagate auth-token updates).
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { MessageCircle, X, Send, Loader2, Sparkles, Volume2, VolumeX, Play } from 'lucide-react';
+import { MessageCircle, X, Send, Loader2, Sparkles, Play } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,7 +21,6 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL ?? '';
 const TREADY_ENDPOINT = `${SUPABASE_URL}/functions/v1/tready`;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY ?? '';
 const WELCOMED_KEY_PREFIX = 'tready_welcomed_';
-const VOICE_PREF_KEY = 'tready_voice_enabled';
 
 interface ChatMessage {
   id: string;
@@ -28,90 +29,25 @@ interface ChatMessage {
 }
 
 // ============================================================================
-// Voice helper — Web Speech API. Browser-native, free, instant.
-// ============================================================================
-function speak(text: string, opts: { rate?: number } = {}): Promise<void> {
-  return new Promise((resolve) => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-      console.log('[Tready/voice] speechSynthesis not available in this browser');
-      resolve();
-      return;
-    }
-    if (!text.trim()) {
-      resolve();
-      return;
-    }
-    const synth = window.speechSynthesis;
-
-    const doSpeak = () => {
-      synth.cancel(); // stop any prior speech
-      const utt = new SpeechSynthesisUtterance(text);
-      utt.rate = opts.rate ?? 1.05;
-      utt.pitch = 1.0;
-      utt.volume = 1.0;
-      const voices = synth.getVoices();
-      const pref =
-        voices.find((v) => v.name === 'Samantha') ||
-        voices.find((v) => v.name === 'Alex') ||
-        voices.find((v) => v.lang === 'en-US' && v.localService) ||
-        voices.find((v) => v.lang === 'en-US') ||
-        voices.find((v) => v.lang.startsWith('en')) ||
-        voices[0];
-      if (pref) utt.voice = pref;
-      console.log('[Tready/voice] speaking:', text.substring(0, 50), 'voice=', pref?.name, 'rate=', utt.rate);
-      utt.onend = () => {
-        console.log('[Tready/voice] done');
-        resolve();
-      };
-      utt.onerror = (e) => {
-        console.warn('[Tready/voice] error', e);
-        resolve();
-      };
-      synth.speak(utt);
-    };
-
-    // Voices may not be loaded yet — wait for voiceschanged before speaking
-    if (synth.getVoices().length === 0) {
-      console.log('[Tready/voice] voices not loaded yet, waiting…');
-      const onVoicesChanged = () => {
-        synth.removeEventListener('voiceschanged', onVoicesChanged);
-        doSpeak();
-      };
-      synth.addEventListener('voiceschanged', onVoicesChanged);
-      // Failsafe: try anyway after 600ms in case the event never fires
-      setTimeout(() => {
-        synth.removeEventListener('voiceschanged', onVoicesChanged);
-        doSpeak();
-      }, 600);
-    } else {
-      doSpeak();
-    }
-  });
-}
-
-function silence() {
-  if (typeof window !== 'undefined' && window.speechSynthesis) {
-    window.speechSynthesis.cancel();
-  }
-}
-
-// ============================================================================
 // Scripted "welcome tour" — deterministic, no LLM. Proves the visual
 // primitives work end-to-end. Each step does ONE thing then waits.
 // ============================================================================
 type TourStep =
+  // `speak` BLOCKS the tour on TTS completion. Use sparingly for short lines.
   | { kind: 'speak'; text: string; wait?: number }
+  // `speak_async` fires TTS in parallel and continues the tour immediately.
+  // Use for long orientation lines so the first highlight pops up fast.
+  | { kind: 'speak_async'; text: string }
   | { kind: 'highlight'; element_id: string; caption?: string; waitForClick?: boolean; wait?: number }
   | { kind: 'navigate'; path: string; wait?: number }
   | { kind: 'pause'; ms: number };
 
 const WELCOME_TOUR: TourStep[] = [
-  // ---- ORIENTATION (10 sec) ----
-  { kind: 'speak', text: "Welcome to TreadSet, Denver. I'll walk you through creating your first client end to end. Hands on, takes about three minutes.", wait: 200 },
-  { kind: 'pause', ms: 4500 },
-
-  // ---- STEP 1: Navigate to Clients ----
-  { kind: 'speak', text: "Tap the Clients tab when you're ready.", wait: 100 },
+  // ---- ORIENTATION + FIRST HIGHLIGHT (parallel — first ring appears in <1s) ----
+  // Long intro fires async so the user immediately sees the Clients tab pulse.
+  // Voice continues talking through the highlight; no dead air, no dead screen.
+  { kind: 'speak_async', text: "Welcome to TreadSet. I'll walk you through creating your first client end to end — hands on, about three minutes. Tap the highlighted Clients tab when you're ready." },
+  { kind: 'pause', ms: 400 },
   { kind: 'highlight', element_id: 'topnav-clients', caption: 'Clients tab — tap to continue.', waitForClick: true },
 
   // ---- STEP 2: Open Add Client dialog ----
@@ -157,14 +93,17 @@ const WELCOME_TOUR: TourStep[] = [
 async function runTour(
   steps: TourStep[],
   navigate: (path: string) => void,
-  voiceOn: boolean,
   setRunning: (b: boolean) => void,
 ) {
   setRunning(true);
   for (const step of steps) {
     if (step.kind === 'speak') {
-      if (voiceOn) await speak(step.text);
+      // Voice removed. Step is silent but still respects its `wait` ms so
+      // per-step pacing carries over from the old voice-on tours.
       if (step.wait) await new Promise((r) => setTimeout(r, step.wait));
+    } else if (step.kind === 'speak_async') {
+      // Voice removed. Step is a no-op — the next step runs immediately,
+      // which is exactly the behavior the orientation lines wanted anyway.
     } else if (step.kind === 'highlight') {
       window.dispatchEvent(
         new CustomEvent('tready:highlight', {
@@ -209,20 +148,8 @@ export function TreadyBubble() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Voice always ON by default. localStorage only stores explicit OFF.
-  const [voiceOn, setVoiceOn] = useState<boolean>(() => {
-    if (typeof localStorage === 'undefined') return true;
-    return localStorage.getItem(VOICE_PREF_KEY) !== '0';
-  });
   const [tourRunning, setTourRunning] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  // Persist voice toggle
-  useEffect(() => {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(VOICE_PREF_KEY, voiceOn ? '1' : '0');
-    }
-  }, [voiceOn]);
 
   // Fetch + watch JWT
   useEffect(() => {
@@ -271,12 +198,6 @@ export function TreadyBubble() {
     window.addEventListener('tready:navigate', onNavigate as EventListener);
     return () => window.removeEventListener('tready:navigate', onNavigate as EventListener);
   }, [navigate, location.pathname]);
-
-  // Cancel speech when bubble closes or unmounts
-  useEffect(() => () => silence(), []);
-  useEffect(() => {
-    if (!isOpen) silence();
-  }, [isOpen]);
 
   // ==========================================================================
   // sendMessage: hand-rolled SSE stream parser with verbose logging
@@ -398,10 +319,6 @@ export function TreadyBubble() {
         }
 
         console.log('[Tready/req] stream done. text length:', assistantText.length);
-        // Speak the full assistant message after the stream completes
-        if (voiceOn && assistantText.trim()) {
-          void speak(assistantText);
-        }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         console.error('[Tready/req] error:', msg);
@@ -411,7 +328,7 @@ export function TreadyBubble() {
         setIsStreaming(false);
       }
     },
-    [accessToken, sessionId, location.pathname, messages, voiceOn],
+    [accessToken, sessionId, location.pathname, messages],
   );
 
   const onSubmit = useCallback(
@@ -427,11 +344,10 @@ export function TreadyBubble() {
 
   const startTour = useCallback(() => {
     setIsOpen(false); // get the chat panel out of the way during the tour
-    void runTour(WELCOME_TOUR, navigate, voiceOn, setTourRunning);
-  }, [navigate, voiceOn]);
+    void runTour(WELCOME_TOUR, navigate, setTourRunning);
+  }, [navigate]);
 
   const toggle = useCallback(() => setIsOpen((v) => !v), []);
-  const toggleVoice = useCallback(() => setVoiceOn((v) => !v), []);
 
   if (loading || !user) return null;
 
@@ -513,42 +429,6 @@ export function TreadyBubble() {
               <div style={{ fontSize: 11, opacity: 0.85, fontWeight: 400 }}>Your TreadSet AI copilot</div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <button
-                onClick={() => void speak('Hi, I am Tready. Voice is working.')}
-                aria-label="Test voice"
-                title="Test voice — click to hear Tready"
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#fff',
-                  cursor: 'pointer',
-                  padding: 6,
-                  display: 'flex',
-                  alignItems: 'center',
-                  borderRadius: 6,
-                  fontSize: 11,
-                  fontWeight: 600,
-                }}
-              >
-                Test 🔊
-              </button>
-              <button
-                onClick={toggleVoice}
-                aria-label={voiceOn ? 'Mute voice' : 'Unmute voice'}
-                title={voiceOn ? 'Voice ON — click to mute' : 'Voice OFF — click to unmute'}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#fff',
-                  cursor: 'pointer',
-                  padding: 6,
-                  display: 'flex',
-                  alignItems: 'center',
-                  borderRadius: 6,
-                }}
-              >
-                {voiceOn ? <Volume2 size={18} /> : <VolumeX size={18} />}
-              </button>
               <button
                 onClick={toggle}
                 aria-label="Close"
