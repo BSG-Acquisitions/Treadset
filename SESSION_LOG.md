@@ -6,6 +6,58 @@ Two parallel sessions now active. Prefix entries with `[A]` (Architect / backend
 
 ---
 
+## 2026-05-14 [B] (evening) — fix/critical-rls-gaps: invoice_items isolated; audit reconciled (4 of 5 §1 gaps were false)
+
+**Context:** Continuation of Session B's afternoon audit work. Z's session prompt was the audit's own "next session first move" — open `fix/critical-rls-gaps`, write SQL for the 5 §1 critical tables, paste-flow only. One fix branch scoped to one thing. RLS work hands-off until Z reviews.
+
+Installed the four `treadset-*` skills (core/stack/captain/ship) from local archives → `.claude/skills/`. Committed to main as session housekeeping (`2e24cc2`). Conflict-flagged CLAUDE.md against the skills; Z ruled:
+- Ownership model — skills supersede (joint with Ethan, not solo Z; CLAUDE.md is stale).
+- Ship Report destination — both `SESSION_LOG.md` (cross-topic chronology + [A]/[B] threading) and `REVIEWS/<TOPIC>.md` (topic narrative).
+- Compliance scope — RLS gaps don't touch manifest content/PTE math/categorization; engineering scope, no joint approval needed.
+- Demo-data check skipped (tradeshow is over).
+
+Wrote a 313-line migration covering all 5 audit-named tables. Paused before paste to flag a discrepancy: the audit said 4 of those 5 tables had "zero policies" but their CREATE TABLE migrations clearly defined them. Z said paste under Option A — trust the audit. First paste errored on statement 1:
+
+    ERROR: 42P01: relation "public.client_risk_scores_beta" does not exist
+
+Pivoted to diagnose-before-fix. Ran 4 read-only verification queries against prod (`information_schema.tables`, `pg_class`, `pg_policies`). Result table:
+
+| Audit name | Reality |
+|---|---|
+| `client_risk_scores_beta` | Does not exist. Actual: `client_risk_scores`. Already RLS-on with tenant + role SELECT policy. No action. |
+| `contact_submissions` | RLS on, **4 policies** (public INSERT, member SELECT, admin/ops/sales UPDATE, admin/ops DELETE). No action. |
+| `client_workflows` | RLS on, 1 FOR ALL tenant policy with `IS NULL OR` demo tolerance. No action. |
+| `outbound_assignments` | RLS on, **3 policies** (driver-self SELECT/UPDATE, admin/ops/dispatcher FOR ALL). No action. |
+| `invoice_items` | RLS on, 1 policy `USING (true) WITH CHECK (true)` — **actually open across tenants.** Real gap. |
+
+Of 5 audited "critical gaps," only 1 was real. Audit cannot be trusted on policy state.
+
+### Shipped
+
+- **Migration `20260516120000_critical_rls_gaps.sql` applied to prod via paste-flow** — `invoice_items` now tenant-isolated via parent `invoices.organization_id` (EXISTS subquery; no `organization_id` column on the child). 313 → 95 lines. Within-org role gates on the other 4 tables preserved by not touching them.
+- **`.claude/skills/treadset-{core,stack,captain,ship}/SKILL.md`** committed to main (`2e24cc2`).
+- **`REVIEWS/TENANT_ISOLATION_AUDIT.md` §7** appended — reality reconciliation table, outcome, downstream implications, evening Ship Report.
+- This SESSION_LOG entry.
+
+### Blocked
+
+None pending Z action right now. PR open for trail/merge.
+
+### Parked
+
+- **`client_risk_scores` (audit called it `_beta`) suspected dead** — needs grep pass across `src/` + `supabase/functions/`. If unused, separate `fix/drop-client-risk-scores` migration. Tenant-isolating it tonight was correct work; it's correct until confirmed droppable.
+- **`contact_submissions_insert_public` is `WITH CHECK (true)`** — direct anon INSERT can target any `organization_id`. Tenant-pollution risk (not data leak). Defense-in-depth follow-up that derives org from hostname server-side.
+- **`auth.uid() IS NULL OR …` demo-mode tolerance** on `client_workflows` (and per BRAIN line 226 across many policies). Footgun if demo path widens. Not flagged by §1.
+- **Audit §3 LEAK edge functions (11)** + **§4 app-code anti-patterns** (`'bsg'` slug fallbacks in `AuthContext.tsx:106` + `:204`, `requireRole.ts:80` BSG-only filter, super-admin email hardcode `AppSidebar.tsx:174`) + **RLS recursion CI guard** — all next-session work. Re-verify §3 first; it may be as wrong on edge-fn state as §1 was on policy state.
+- **CLAUDE.md tightening list:** stale solo-operator framing (joint with Ethan now), stale `treadset.vercel.app` line, missing note that Lovable AI is still a runtime dependency via `LOVABLE_API_KEY` in ~5 edge fns.
+- **`treadset-ship` skill correction:** Ship Report goes to both `SESSION_LOG.md` and `REVIEWS/<TOPIC>.md`, not REVIEWS only.
+
+### Next session first move
+
+Open `fix/leak-edge-fns`. **Re-verify the §3 LEAK list against current code first** — the audit may be similarly off. Patch the confirmed leakers to the `tready/index.ts` pattern: validate JWT, resolve `organization_id` from `user_organization_roles` server-side, never accept `org_id` from request body. Same paste-flow / branch discipline. Each fix is a function file change — Z redeploys via Supabase dashboard, not git.
+
+---
+
 ## 2026-05-14 [B] — Tready 6/6 deep tours + character + autopilot + tenant-isolation audit
 
 **Context:** Continuation of Session B (Builder). Three phases in one work-block: (1) finish the Tready deep tours, (2) pivot Tready into the animated character experience + autopilot for the tradeshow display, (3) read-only tenant-isolation audit before Tready's flexible-query feature ships.

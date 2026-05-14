@@ -275,3 +275,58 @@ Open `fix/critical-rls-gaps` branch. Add an explicit-policy SQL migration for th
 ---
 
 *Compiled from four parallel Explore subagents (RLS coverage / RLS correctness / edge functions / app-code auth). Source migrations: 352 SQL files in `supabase/migrations/`. Source edge fns: 87 functions in `supabase/functions/`. Read-only; no schema or code modified.*
+
+---
+
+## 7. Reconciliation — 2026-05-14 (evening)
+
+**The §1 critical-gaps table is not reliable on policy state.** A `fix/critical-rls-gaps` paste-flow session on 2026-05-14 evening attempted to migrate all 5 §1 gaps and errored on the first statement:
+
+    ERROR: 42P01: relation "public.client_risk_scores_beta" does not exist
+
+Read-only verification queries against prod (`information_schema.tables`, `pg_class`, `pg_policies`) revealed:
+
+| §1 audit name | Reality |
+|---|---|
+| `client_risk_scores_beta` ("RLS DISABLED") | **Does not exist.** Actual table: `client_risk_scores`. Already RLS-on with one tenant-isolated SELECT policy gated to `admin`/`sales`/`ops_manager`. Cron writes via service_role. No action. |
+| `contact_submissions` ("RLS on, zero policies") | RLS on, **4 policies** — `contact_submissions_insert_public` (`WITH CHECK true`), `contact_submissions_select` (tenant), `contact_submissions_update` (tenant + admin/ops/sales), `contact_submissions_delete` (tenant + admin/ops). No action. |
+| `client_workflows` ("RLS on, zero policies") | RLS on, 1 FOR ALL policy tenant-scoped with `auth.uid() IS NULL OR …` demo-mode tolerance. No action. |
+| `outbound_assignments` ("RLS on, zero policies") | RLS on, **3 policies** — driver-self SELECT, driver-self UPDATE, admin/ops_manager/dispatcher FOR ALL. No action. |
+| `invoice_items` ("RLS on, zero policies, no org_id") | RLS on, 1 policy `USING (true) WITH CHECK (true)` — **actually open across tenants.** No `organization_id` column confirmed. Real gap. |
+
+### Outcome
+
+Migration `20260516120000_critical_rls_gaps.sql` rewritten from 313 lines down to ~95 lines, targeting `invoice_items` only:
+
+- `DROP POLICY IF EXISTS "Allow all operations on invoice_items"`
+- `CREATE POLICY tenant_select_invoice_items` (SELECT via EXISTS on parent `invoices.organization_id`)
+- `CREATE POLICY tenant_modify_invoice_items` (FOR ALL via the same)
+
+Applied to prod on 2026-05-14 evening. "Success. No rows returned." Within-org role gates on `contact_submissions` and `outbound_assignments` were preserved by **not** touching those tables — the original 313-line migration would have replaced them with looser org-only policies.
+
+### Implications for downstream users of this audit
+
+- **§1 cannot be trusted on policy state** without re-verifying via `pg_policies`. Treat its critical-gaps table as "tables flagged for verification," not ground truth.
+- **§1 cannot be trusted on table names** either — `client_risk_scores_beta` was wrong.
+- **§3 (11 LEAK edge functions)** and **§4 (app-code anti-patterns)** have not been re-verified. Same skepticism applies before any fix branch opens against them.
+- The skepticism cuts both ways — the audit may also have missed real gaps. Whatever it claims, verify in prod.
+
+### Ship Report — 2026-05-14 (evening reconciliation)
+
+**Shipped:**
+- Migration `20260516120000_critical_rls_gaps.sql` applied to prod via paste-flow. `invoice_items` now tenant-isolated via parent `invoices.organization_id`.
+- This §7 reality reconciliation appended to the audit.
+- `treadset-*` skill set (core/stack/captain/ship) installed at `.claude/skills/` and committed to `main` (`2e24cc2`).
+
+**Blocked:** None pending Z action right now.
+
+**Parked:**
+- `client_risk_scores` (audit called it `_beta`) suspected dead — needs a grep pass across `src/` + `supabase/functions/`. If unused, separate `fix/drop-client-risk-scores` migration. Tenant-isolating it tonight was not wasted work — it's correct until confirmed droppable.
+- `contact_submissions_insert_public` is `WITH CHECK (true)` — direct anon INSERT can target any `organization_id`. Tenant-pollution risk (not leak). Defense-in-depth follow-up.
+- `auth.uid() IS NULL OR …` demo-mode tolerance on `client_workflows` (and per BRAIN line 226 elsewhere) — footgun if demo path widens. Not flagged by §1.
+- §3 LEAK edge functions + §4 app-code anti-patterns + RLS recursion CI guard — all next-session work.
+- CLAUDE.md tightening: stale solo-operator framing (now joint with Ethan), stale `treadset.vercel.app` line, missing note that Lovable AI is still a runtime dependency via `LOVABLE_API_KEY`.
+- `treadset-ship` skill correction: Ship Report goes to both `SESSION_LOG.md` and `REVIEWS/<TOPIC>.md`, not REVIEWS only.
+
+**Next session first move:**
+Open `fix/leak-edge-fns`. **Re-verify the §3 LEAK list against current code first** (it may be similarly off). Patch the confirmed leakers to the `tready/index.ts` pattern: validate JWT, resolve `organization_id` from `user_organization_roles` server-side, never accept `org_id` from request body. Same paste-flow / branch discipline. Each fix is a function file change — Z redeploys via Supabase dashboard, not git.
