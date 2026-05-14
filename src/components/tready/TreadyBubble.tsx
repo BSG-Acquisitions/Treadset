@@ -1,22 +1,16 @@
 /**
  * TreadyBubble — floating chat button + slide-out panel.
  *
- * Sits in the bottom-right of every authed page. Click to expand
- * into a chat surface that talks to the tready edge function.
+ * V1.6: voice (Web Speech API) + scripted "Take a tour" mode that
+ * bypasses the LLM entirely to prove the visual primitives
+ * (highlight + navigate + speak) work end-to-end.
  *
  * Implementation: hand-rolled SSE streaming via fetch. Bypasses
- * @ai-sdk/react's useChat entirely — that hook's transport prop
- * gets captured at first render, so when accessToken arrives async
- * after mount, the chat instance is stuck with a stale (undefined)
- * transport. Rolling our own avoids the whole class of bugs.
- *
- * Reads SSE events of shape `data: {json}\n\n` from the edge fn,
- * parses text-delta events into the streaming assistant message,
- * and parses tool-output-available for highlight_ui → dispatches
- * `tready:highlight` events that HighlightOverlay catches.
+ * @ai-sdk/react's useChat entirely (the v5 hook captured transport
+ * at first render and didn't propagate auth-token updates).
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { MessageCircle, X, Send, Loader2, Sparkles } from 'lucide-react';
+import { MessageCircle, X, Send, Loader2, Sparkles, Volume2, VolumeX, Play } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,6 +18,8 @@ import { supabase } from '@/integrations/supabase/client';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL ?? '';
 const TREADY_ENDPOINT = `${SUPABASE_URL}/functions/v1/tready`;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY ?? '';
+const WELCOMED_KEY_PREFIX = 'tready_welcomed_';
+const VOICE_PREF_KEY = 'tready_voice_enabled';
 
 interface ChatMessage {
   id: string;
@@ -31,17 +27,113 @@ interface ChatMessage {
   content: string;
 }
 
-// Localstorage flag so the welcome auto-launch only fires once per
-// (user, browser). Cleared if the user clears site data.
-const WELCOMED_KEY_PREFIX = 'tready_welcomed_';
+// ============================================================================
+// Voice helper — Web Speech API. Browser-native, free, instant.
+// ============================================================================
+function speak(text: string, opts: { rate?: number } = {}): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      console.log('[Tready/voice] speechSynthesis not available');
+      resolve();
+      return;
+    }
+    if (!text.trim()) {
+      resolve();
+      return;
+    }
+    window.speechSynthesis.cancel(); // stop any prior speech
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.rate = opts.rate ?? 1.05;
+    utt.pitch = 1.0;
+    utt.volume = 0.95;
+    // Pick a good voice if available (loaded async on first call)
+    const voices = window.speechSynthesis.getVoices();
+    const pref =
+      voices.find((v) => v.name === 'Samantha') ||
+      voices.find((v) => v.name === 'Alex') ||
+      voices.find((v) => v.lang === 'en-US') ||
+      voices[0];
+    if (pref) utt.voice = pref;
+    utt.onend = () => resolve();
+    utt.onerror = () => resolve();
+    window.speechSynthesis.speak(utt);
+  });
+}
 
-// Suggestion chips shown in the empty state. Click → sends as user message.
-const WELCOME_SUGGESTIONS = [
-  'Show me how to add a client',
-  "What's on my dashboard today?",
-  'Walk me through signing a manifest',
+function silence() {
+  if (typeof window !== 'undefined' && window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+  }
+}
+
+// ============================================================================
+// Scripted "welcome tour" — deterministic, no LLM. Proves the visual
+// primitives work end-to-end. Each step does ONE thing then waits.
+// ============================================================================
+type TourStep =
+  | { kind: 'speak'; text: string; wait?: number }
+  | { kind: 'highlight'; element_id: string; caption?: string; waitForClick?: boolean; wait?: number }
+  | { kind: 'navigate'; path: string; wait?: number }
+  | { kind: 'pause'; ms: number };
+
+const WELCOME_TOUR: TourStep[] = [
+  { kind: 'speak', text: "Welcome to TreadSet. I'm Tready, your AI ops copilot. Let me show you around — should take about ninety seconds.", wait: 200 },
+  { kind: 'highlight', element_id: 'sidebar-dashboard', caption: 'Your dashboard — today\'s tire counts and pickups live here.', wait: 4500 },
+  { kind: 'speak', text: 'Up next: how to add a client.', wait: 100 },
+  { kind: 'pause', ms: 1500 },
+  { kind: 'navigate', path: '/clients', wait: 1500 },
+  { kind: 'highlight', element_id: 'clients-add-button', caption: 'This is the Add Client button — click it when you have a new business to add.', waitForClick: false, wait: 5000 },
+  { kind: 'speak', text: 'When you click it, a form opens — company name, contact, address. Submit and you\'re done.', wait: 100 },
+  { kind: 'pause', ms: 5500 },
+  { kind: 'navigate', path: '/dashboard', wait: 1500 },
+  { kind: 'highlight', element_id: 'topnav-user-menu', caption: 'Your profile and sign-out live up here.', wait: 4000 },
+  { kind: 'speak', text: "That's the basics. Tap me anytime — ask anything, or I'll walk you through any flow step by step.", wait: 100 },
 ];
 
+async function runTour(
+  steps: TourStep[],
+  navigate: (path: string) => void,
+  voiceOn: boolean,
+  setRunning: (b: boolean) => void,
+) {
+  setRunning(true);
+  for (const step of steps) {
+    if (step.kind === 'speak') {
+      if (voiceOn) await speak(step.text);
+      if (step.wait) await new Promise((r) => setTimeout(r, step.wait));
+    } else if (step.kind === 'highlight') {
+      window.dispatchEvent(
+        new CustomEvent('tready:highlight', {
+          detail: { element_id: step.element_id, caption: step.caption, wait_for_click: step.waitForClick },
+        }),
+      );
+      // If waiting for click, wait for the step-complete event; else wait the configured ms
+      if (step.waitForClick) {
+        await new Promise<void>((resolve) => {
+          const handler = () => {
+            window.removeEventListener('tready:step-complete', handler);
+            resolve();
+          };
+          window.addEventListener('tready:step-complete', handler);
+        });
+      } else if (step.wait) {
+        await new Promise((r) => setTimeout(r, step.wait));
+      }
+    } else if (step.kind === 'navigate') {
+      navigate(step.path);
+      if (step.wait) await new Promise((r) => setTimeout(r, step.wait));
+    } else if (step.kind === 'pause') {
+      await new Promise((r) => setTimeout(r, step.ms));
+    }
+  }
+  // Clear any lingering highlight
+  window.dispatchEvent(new CustomEvent('tready:clear-highlight'));
+  setRunning(false);
+}
+
+// ============================================================================
+// Main component
+// ============================================================================
 export function TreadyBubble() {
   const { user, loading } = useAuth();
   const location = useLocation();
@@ -53,37 +145,22 @@ export function TreadyBubble() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [voiceOn, setVoiceOn] = useState<boolean>(() => {
+    if (typeof localStorage === 'undefined') return true;
+    const v = localStorage.getItem(VOICE_PREF_KEY);
+    return v === null ? true : v === '1';
+  });
+  const [tourRunning, setTourRunning] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // First-login auto-open: when the user lands and we haven't welcomed
-  // them yet, pop Tready open after a short delay so the page can finish
-  // loading first. The chips in the empty state are the welcome.
+  // Persist voice toggle
   useEffect(() => {
-    if (loading || !user) return;
-    const key = WELCOMED_KEY_PREFIX + user.id;
-    if (localStorage.getItem(key)) return; // already welcomed
-    const t = setTimeout(() => {
-      setIsOpen(true);
-      localStorage.setItem(key, new Date().toISOString());
-    }, 1200);
-    return () => clearTimeout(t);
-  }, [loading, user]);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(VOICE_PREF_KEY, voiceOn ? '1' : '0');
+    }
+  }, [voiceOn]);
 
-  // Listen for tready:navigate events from the navigate_to tool and
-  // route the user via react-router.
-  useEffect(() => {
-    const onNavigate = (e: Event) => {
-      const detail = (e as CustomEvent<{ path: string; reason?: string }>).detail;
-      if (!detail?.path) return;
-      // Don't navigate if already on that path
-      if (detail.path === location.pathname) return;
-      navigate(detail.path);
-    };
-    window.addEventListener('tready:navigate', onNavigate as EventListener);
-    return () => window.removeEventListener('tready:navigate', onNavigate as EventListener);
-  }, [navigate, location.pathname]);
-
-  // Fetch + watch the JWT
+  // Fetch + watch JWT
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -106,6 +183,40 @@ export function TreadyBubble() {
     }
   }, [messages, isStreaming]);
 
+  // First-login auto-open (only if user hasn't been welcomed)
+  useEffect(() => {
+    if (loading || !user) return;
+    const key = WELCOMED_KEY_PREFIX + user.id;
+    if (localStorage.getItem(key)) return;
+    const t = setTimeout(() => {
+      setIsOpen(true);
+      localStorage.setItem(key, new Date().toISOString());
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [loading, user]);
+
+  // Listen for tready:navigate events from the navigate_to tool
+  useEffect(() => {
+    const onNavigate = (e: Event) => {
+      const detail = (e as CustomEvent<{ path: string; reason?: string }>).detail;
+      console.log('[Tready/event] tready:navigate received', detail);
+      if (!detail?.path) return;
+      if (detail.path === location.pathname) return;
+      navigate(detail.path);
+    };
+    window.addEventListener('tready:navigate', onNavigate as EventListener);
+    return () => window.removeEventListener('tready:navigate', onNavigate as EventListener);
+  }, [navigate, location.pathname]);
+
+  // Cancel speech when bubble closes or unmounts
+  useEffect(() => () => silence(), []);
+  useEffect(() => {
+    if (!isOpen) silence();
+  }, [isOpen]);
+
+  // ==========================================================================
+  // sendMessage: hand-rolled SSE stream parser with verbose logging
+  // ==========================================================================
   const sendMessage = useCallback(
     async (text: string) => {
       if (!accessToken) {
@@ -115,18 +226,15 @@ export function TreadyBubble() {
       const userMsg: ChatMessage = { id: crypto.randomUUID(), role: 'user', content: text };
       const assistantId = crypto.randomUUID();
 
-      // Snapshot the conversation BEFORE adding the user message —
-      // that's what gets sent to the edge fn (history + new user turn).
       const conversation = messages.map((m) => ({ role: m.role, content: m.content }));
       conversation.push({ role: 'user', content: text });
 
-      // Optimistically render user message + empty assistant placeholder
       setMessages((prev) => [...prev, userMsg, { id: assistantId, role: 'assistant', content: '' }]);
       setIsStreaming(true);
       setError(null);
 
       try {
-        console.log('[Tready] sending', { sessionId, currentPage: location.pathname, turns: conversation.length });
+        console.log('[Tready/req] sending', { sessionId, currentPage: location.pathname, turns: conversation.length });
         const response = await fetch(TREADY_ENDPOINT, {
           method: 'POST',
           headers: {
@@ -141,20 +249,19 @@ export function TreadyBubble() {
           }),
         });
 
-        console.log('[Tready] response', { status: response.status, contentType: response.headers.get('content-type') });
+        console.log('[Tready/req] response', { status: response.status, contentType: response.headers.get('content-type') });
 
         if (!response.ok) {
           const errText = await response.text();
           throw new Error(`HTTP ${response.status}: ${errText.substring(0, 300)}`);
         }
-        if (!response.body) {
-          throw new Error('No response body');
-        }
+        if (!response.body) throw new Error('No response body');
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let assistantText = '';
         let buffer = '';
+        let speechBuffer = ''; // buffer for sentence-by-sentence speech
 
         while (true) {
           const { done, value } = await reader.read();
@@ -162,15 +269,11 @@ export function TreadyBubble() {
 
           buffer += decoder.decode(value, { stream: true });
 
-          // Parse SSE events. Each event is "data: {json}\n\n" possibly
-          // split across chunks — accumulate in buffer and split on
-          // double-newline boundaries.
           let nlIdx;
           while ((nlIdx = buffer.indexOf('\n\n')) !== -1) {
             const event = buffer.slice(0, nlIdx);
             buffer = buffer.slice(nlIdx + 2);
 
-            // Each event may have multiple "data: ..." lines (rare); join them
             const dataLines = event
               .split('\n')
               .filter((l) => l.startsWith('data:'))
@@ -186,16 +289,23 @@ export function TreadyBubble() {
               continue;
             }
 
-            // Handle the event types we care about
+            // CATCH-ALL LOGGING — see every event type
+            console.log('[Tready/evt]', evt.type, evt);
+
             if (evt.type === 'text-delta' && typeof evt.delta === 'string') {
               assistantText += evt.delta;
+              speechBuffer += evt.delta;
               setMessages((prev) =>
                 prev.map((m) => (m.id === assistantId ? { ...m, content: assistantText } : m)),
               );
-            } else if (evt.type === 'tool-output-available' && evt.toolName === 'highlight_ui') {
-              const output = evt.output;
-              if (output?.highlighted) {
-                console.log('[Tready] highlight', output);
+            } else if (evt.type === 'tool-output-available' || evt.type === 'tool-result') {
+              // Multiple possible shapes from AI SDK v5 — try them all
+              const toolName = evt.toolName ?? evt.tool ?? evt.name;
+              const output = evt.output ?? evt.result ?? evt.data;
+              console.log('[Tready/tool]', toolName, output);
+
+              if (toolName === 'highlight_ui' && output?.highlighted) {
+                console.log('[Tready/dispatch] tready:highlight', output);
                 window.dispatchEvent(
                   new CustomEvent('tready:highlight', {
                     detail: {
@@ -205,11 +315,8 @@ export function TreadyBubble() {
                     },
                   }),
                 );
-              }
-            } else if (evt.type === 'tool-output-available' && evt.toolName === 'navigate_to') {
-              const output = evt.output;
-              if (output?.navigated_to) {
-                console.log('[Tready] navigate', output);
+              } else if (toolName === 'navigate_to' && output?.navigated_to) {
+                console.log('[Tready/dispatch] tready:navigate', output);
                 window.dispatchEvent(
                   new CustomEvent('tready:navigate', {
                     detail: { path: output.navigated_to, reason: output.reason },
@@ -222,18 +329,21 @@ export function TreadyBubble() {
           }
         }
 
-        console.log('[Tready] stream done. final text length:', assistantText.length);
+        console.log('[Tready/req] stream done. text length:', assistantText.length);
+        // Speak the full assistant message after the stream completes
+        if (voiceOn && assistantText.trim()) {
+          void speak(assistantText);
+        }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.error('[Tready] error:', msg);
+        console.error('[Tready/req] error:', msg);
         setError(msg);
-        // Remove the empty assistant placeholder we added optimistically
         setMessages((prev) => prev.filter((m) => m.id !== assistantId || m.content));
       } finally {
         setIsStreaming(false);
       }
     },
-    [accessToken, sessionId, location.pathname, messages],
+    [accessToken, sessionId, location.pathname, messages, voiceOn],
   );
 
   const onSubmit = useCallback(
@@ -247,12 +357,19 @@ export function TreadyBubble() {
     [input, isStreaming, sendMessage],
   );
 
+  const startTour = useCallback(() => {
+    setIsOpen(false); // get the chat panel out of the way during the tour
+    void runTour(WELCOME_TOUR, navigate, voiceOn, setTourRunning);
+  }, [navigate, voiceOn]);
+
   const toggle = useCallback(() => setIsOpen((v) => !v), []);
+  const toggleVoice = useCallback(() => setVoiceOn((v) => !v), []);
 
   if (loading || !user) return null;
 
   return (
     <>
+      {/* Floating bubble — pulses subtly when tour is running */}
       <button
         onClick={toggle}
         aria-label={isOpen ? 'Close Tready' : 'Open Tready'}
@@ -268,18 +385,27 @@ export function TreadyBubble() {
           background: '#16a34a',
           color: '#fff',
           cursor: 'pointer',
-          boxShadow: '0 6px 20px rgba(22, 163, 74, 0.35), 0 2px 6px rgba(0,0,0,0.15)',
+          boxShadow: tourRunning
+            ? '0 0 0 6px rgba(22,163,74,0.25), 0 6px 20px rgba(22, 163, 74, 0.45)'
+            : '0 6px 20px rgba(22, 163, 74, 0.35), 0 2px 6px rgba(0,0,0,0.15)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 90000,
-          transition: 'transform 160ms ease',
+          transition: 'transform 160ms ease, box-shadow 220ms ease',
+          animation: tourRunning ? 'tready-bubble-pulse 1.6s ease-in-out infinite' : undefined,
         }}
         onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
         onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
       >
         {isOpen ? <X size={24} /> : <MessageCircle size={24} />}
       </button>
+      <style>{`
+        @keyframes tready-bubble-pulse {
+          0%,100% { box-shadow: 0 0 0 6px rgba(22,163,74,0.20), 0 6px 20px rgba(22,163,74,0.45); }
+          50%     { box-shadow: 0 0 0 14px rgba(22,163,74,0.10), 0 6px 24px rgba(22,163,74,0.65); }
+        }
+      `}</style>
 
       {isOpen && (
         <div
@@ -290,7 +416,7 @@ export function TreadyBubble() {
             right: 20,
             bottom: 88,
             width: 380,
-            height: 540,
+            height: 580,
             maxHeight: 'calc(100vh - 120px)',
             background: '#ffffff',
             borderRadius: 16,
@@ -302,9 +428,10 @@ export function TreadyBubble() {
             border: '1px solid #e5e7eb',
           }}
         >
+          {/* Header — voice toggle + close */}
           <div
             style={{
-              padding: '14px 18px',
+              padding: '12px 16px',
               background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
               color: '#fff',
               fontWeight: 600,
@@ -315,19 +442,37 @@ export function TreadyBubble() {
           >
             <div>
               <div style={{ fontSize: 15 }}>Tready</div>
-              <div style={{ fontSize: 11, opacity: 0.85, fontWeight: 400 }}>
-                Your TreadSet AI copilot
-              </div>
+              <div style={{ fontSize: 11, opacity: 0.85, fontWeight: 400 }}>Your TreadSet AI copilot</div>
             </div>
-            <button
-              onClick={toggle}
-              aria-label="Close"
-              style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', padding: 4 }}
-            >
-              <X size={18} />
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <button
+                onClick={toggleVoice}
+                aria-label={voiceOn ? 'Mute voice' : 'Unmute voice'}
+                title={voiceOn ? 'Voice ON — click to mute' : 'Voice OFF — click to unmute'}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  padding: 6,
+                  display: 'flex',
+                  alignItems: 'center',
+                  borderRadius: 6,
+                }}
+              >
+                {voiceOn ? <Volume2 size={18} /> : <VolumeX size={18} />}
+              </button>
+              <button
+                onClick={toggle}
+                aria-label="Close"
+                style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', padding: 6 }}
+              >
+                <X size={18} />
+              </button>
+            </div>
           </div>
 
+          {/* Messages */}
           <div
             ref={scrollRef}
             style={{
@@ -341,52 +486,81 @@ export function TreadyBubble() {
             }}
           >
             {messages.length === 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '8px 4px' }}>
-                <div style={{ textAlign: 'center', color: '#374151', fontSize: 13, padding: '8px 4px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 8 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '4px' }}>
+                <div style={{ textAlign: 'center', color: '#374151', fontSize: 13, padding: '4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 6 }}>
                     <Sparkles size={16} color="#16a34a" />
                     <p style={{ margin: 0, fontWeight: 600, color: '#111827', fontSize: 14 }}>
                       Hi {user.email?.split('@')[0]} — I'm Tready
                     </p>
                   </div>
                   <p style={{ margin: 0, lineHeight: 1.5 }}>
-                    Your AI ops copilot for TreadSet. Ask me anything — I'll answer, point you at the right buttons, or walk you through any flow step-by-step.
+                    AI copilot for TreadSet. Speaks, points, and walks you through anything.
                   </p>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '0 4px' }}>
-                  <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 500, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>
-                    Try one of these
-                  </div>
-                  {WELCOME_SUGGESTIONS.map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => sendMessage(s)}
-                      disabled={!accessToken || isStreaming}
-                      style={{
-                        textAlign: 'left',
-                        background: '#fff',
-                        border: '1px solid #d1d5db',
-                        borderRadius: 10,
-                        padding: '10px 12px',
-                        fontSize: 13,
-                        color: '#111827',
-                        cursor: accessToken && !isStreaming ? 'pointer' : 'not-allowed',
-                        transition: 'all 120ms ease',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = '#f0fdf4';
-                        e.currentTarget.style.borderColor = '#16a34a';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = '#fff';
-                        e.currentTarget.style.borderColor = '#d1d5db';
-                      }}
-                    >
-                      {s}
-                    </button>
-                  ))}
+
+                {/* The headline CTA — scripted tour */}
+                <button
+                  type="button"
+                  onClick={startTour}
+                  disabled={tourRunning}
+                  style={{
+                    background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 12,
+                    padding: '14px 16px',
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: tourRunning ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    boxShadow: '0 4px 12px rgba(22,163,74,0.3)',
+                    opacity: tourRunning ? 0.6 : 1,
+                  }}
+                >
+                  <Play size={16} fill="#fff" />
+                  {tourRunning ? 'Tour running…' : 'Take the 90-second tour'}
+                </button>
+
+                <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 500, textTransform: 'uppercase', letterSpacing: 0.5, padding: '4px 0 0 4px' }}>
+                  Or ask me
                 </div>
+                {[
+                  'Show me how to add a client',
+                  "What's on my dashboard today?",
+                  'Walk me through signing a manifest',
+                ].map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => sendMessage(s)}
+                    disabled={!accessToken || isStreaming}
+                    style={{
+                      textAlign: 'left',
+                      background: '#fff',
+                      border: '1px solid #d1d5db',
+                      borderRadius: 10,
+                      padding: '10px 12px',
+                      fontSize: 13,
+                      color: '#111827',
+                      cursor: accessToken && !isStreaming ? 'pointer' : 'not-allowed',
+                      transition: 'all 120ms ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#f0fdf4';
+                      e.currentTarget.style.borderColor = '#16a34a';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = '#fff';
+                      e.currentTarget.style.borderColor = '#d1d5db';
+                    }}
+                  >
+                    {s}
+                  </button>
+                ))}
               </div>
             )}
             {messages.map((m) => (
@@ -415,6 +589,7 @@ export function TreadyBubble() {
             )}
           </div>
 
+          {/* Input */}
           <form
             onSubmit={onSubmit}
             style={{
