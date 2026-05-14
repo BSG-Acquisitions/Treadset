@@ -249,13 +249,13 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-48">
                   <DropdownMenuItem asChild>
-                    <Link to="/routes/today" className={dropdownItemClass(location.pathname.startsWith('/routes'))}>
+                    <Link to="/routes/today" className={dropdownItemClass(location.pathname.startsWith('/routes'))} data-tready-id="topnav-pickups-today">
                       <MapPin className="h-4 w-4" />
                       Today's Routes
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/outbound-schedule" className={dropdownItemClass(location.pathname === '/outbound-schedule')}>
+                    <Link to="/outbound-schedule" className={dropdownItemClass(location.pathname === '/outbound-schedule')} data-tready-id="topnav-pickups-outbound">
                       <Send className="h-4 w-4" />
                       Outbound
                     </Link>
