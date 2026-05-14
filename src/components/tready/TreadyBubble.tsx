@@ -11,11 +11,12 @@
  * @ai-sdk/react's useChat entirely (the v5 hook captured transport
  * at first render and didn't propagate auth-token updates).
  */
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { MessageCircle, X, Send, Loader2, Sparkles, Play } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { X, Send, Loader2, Sparkles, Play } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { TreadyCharacter, type TreadyState } from './TreadyCharacter';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL ?? '';
 const TREADY_ENDPOINT = `${SUPABASE_URL}/functions/v1/tready`;
@@ -398,6 +399,60 @@ export function TreadyBubble() {
     return () => clearTimeout(t);
   }, [loading, user]);
 
+  // ===========================================================================
+  // Character target tracking — when the tour engine fires a highlight,
+  // resolve the element on screen so TreadyCharacter can lean + look at it.
+  // ===========================================================================
+  const [highlightTarget, setHighlightTarget] = useState<{ x: number; y: number } | null>(null);
+  useEffect(() => {
+    let rafId = 0;
+    let activeElement: HTMLElement | null = null;
+
+    const refresh = () => {
+      if (!activeElement) return;
+      const r = activeElement.getBoundingClientRect();
+      setHighlightTarget({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+      rafId = requestAnimationFrame(refresh);
+    };
+
+    const onHighlight = (e: Event) => {
+      const detail = (e as CustomEvent<{ element_id?: string }>).detail;
+      if (!detail?.element_id) return;
+      const el = document.querySelector<HTMLElement>(`[data-tready-id="${detail.element_id}"]`);
+      activeElement = el;
+      if (el) {
+        const r = el.getBoundingClientRect();
+        setHighlightTarget({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+        cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(refresh);
+      } else {
+        setHighlightTarget(null);
+      }
+    };
+    const onClear = () => {
+      activeElement = null;
+      cancelAnimationFrame(rafId);
+      setHighlightTarget(null);
+    };
+
+    window.addEventListener('tready:highlight', onHighlight as EventListener);
+    window.addEventListener('tready:clear-highlight', onClear);
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener('tready:highlight', onHighlight as EventListener);
+      window.removeEventListener('tready:clear-highlight', onClear);
+    };
+  }, []);
+
+  // Derive the character state from current activity.
+  const characterState: TreadyState = useMemo(() => {
+    if (loading || !user) return 'hidden';
+    if (tourRunning && highlightTarget) return 'pointing';
+    if (tourRunning) return 'thinking';
+    if (isStreaming) return 'thinking';
+    return 'idle';
+  }, [loading, user, tourRunning, highlightTarget, isStreaming]);
+
   // Listen for tready:navigate events from the navigate_to tool
   useEffect(() => {
     const onNavigate = (e: Event) => {
@@ -588,46 +643,17 @@ export function TreadyBubble() {
 
   return (
     <>
-      {/* Floating bubble — pulses brighter and shows an X (stop) icon while a
-          tour is running. Click during a tour = cancel; click otherwise =
-          toggle chat panel. */}
-      <button
+      {/* Tready character — replaces the old green circle. Click toggles
+          the chat panel; during a tour, click cancels the tour. Eyes track
+          the current highlight element when a tour is pointing at something. */}
+      <TreadyCharacter
+        state={characterState}
+        target={highlightTarget ?? undefined}
+        size={80}
+        position={{ right: 16, bottom: 16 }}
         onClick={toggle}
-        aria-label={tourRunning ? 'Stop tour' : isOpen ? 'Close Tready' : 'Open Tready'}
-        title={tourRunning ? 'Stop tour' : isOpen ? 'Close Tready' : 'Open Tready'}
-        data-tready-id="tready-bubble-toggle"
-        style={{
-          position: 'fixed',
-          right: 20,
-          bottom: 20,
-          width: 56,
-          height: 56,
-          borderRadius: 28,
-          border: 'none',
-          background: '#16a34a',
-          color: '#fff',
-          cursor: 'pointer',
-          boxShadow: tourRunning
-            ? '0 0 0 6px rgba(22,163,74,0.25), 0 6px 20px rgba(22, 163, 74, 0.45)'
-            : '0 6px 20px rgba(22, 163, 74, 0.35), 0 2px 6px rgba(0,0,0,0.15)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 90000,
-          transition: 'transform 160ms ease, box-shadow 220ms ease',
-          animation: tourRunning ? 'tready-bubble-pulse 1.6s ease-in-out infinite' : undefined,
-        }}
-        onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
-        onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-      >
-        {(isOpen || tourRunning) ? <X size={24} /> : <MessageCircle size={24} />}
-      </button>
-      <style>{`
-        @keyframes tready-bubble-pulse {
-          0%,100% { box-shadow: 0 0 0 6px rgba(22,163,74,0.20), 0 6px 20px rgba(22,163,74,0.45); }
-          50%     { box-shadow: 0 0 0 14px rgba(22,163,74,0.10), 0 6px 24px rgba(22,163,74,0.65); }
-        }
-      `}</style>
+        ariaLabel={tourRunning ? 'Stop tour' : isOpen ? 'Close Tready' : 'Open Tready'}
+      />
 
       {isOpen && (
         <div
@@ -636,7 +662,7 @@ export function TreadyBubble() {
           style={{
             position: 'fixed',
             right: 20,
-            bottom: 88,
+            bottom: 112,
             width: 380,
             height: 580,
             maxHeight: 'calc(100vh - 120px)',

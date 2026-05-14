@@ -47,6 +47,7 @@ const DriverAssignmentView = lazy(() => import('./pages/DriverAssignmentView'));
 const PublicBook = lazy(() => import('./pages/PublicBook'));
 const PublicBookingConfirmation = lazy(() => import('./pages/PublicBookingConfirmation'));
 const Pioneer = lazy(() => import('./pages/Pioneer'));
+const TreadyLab = lazy(() => import('./pages/TreadyLab'));
 const Waitlist = lazy(() => import('./pages/Waitlist'));
 const ManifestViewer = lazy(() => import('./pages/ManifestViewer'));
 const Invite = lazy(() => import('./pages/Invite'));
@@ -155,6 +156,10 @@ const App = () => (
               {/* Tradeshow Lead Capture (Pioneer Program + Waitlist) */}
               <Route path="/pioneer" element={<Pioneer />} />
               <Route path="/waitlist" element={<Waitlist />} />
+
+              {/* Tready character scratch page — public, no auth, for tuning */}
+              <Route path="/tready-lab" element={<TreadyLab />} />
+
               <Route path="/invite/:token" element={<Invite />} />
               <Route path="/client-invite/:token" element={<ClientInvite />} />
               <Route path="/client-team-invite/:token" element={<ClientTeamInvite />} />
