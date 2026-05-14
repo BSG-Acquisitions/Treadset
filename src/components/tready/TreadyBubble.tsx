@@ -33,7 +33,7 @@ interface ChatMessage {
 function speak(text: string, opts: { rate?: number } = {}): Promise<void> {
   return new Promise((resolve) => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-      console.log('[Tready/voice] speechSynthesis not available');
+      console.log('[Tready/voice] speechSynthesis not available in this browser');
       resolve();
       return;
     }
@@ -41,22 +41,51 @@ function speak(text: string, opts: { rate?: number } = {}): Promise<void> {
       resolve();
       return;
     }
-    window.speechSynthesis.cancel(); // stop any prior speech
-    const utt = new SpeechSynthesisUtterance(text);
-    utt.rate = opts.rate ?? 1.05;
-    utt.pitch = 1.0;
-    utt.volume = 0.95;
-    // Pick a good voice if available (loaded async on first call)
-    const voices = window.speechSynthesis.getVoices();
-    const pref =
-      voices.find((v) => v.name === 'Samantha') ||
-      voices.find((v) => v.name === 'Alex') ||
-      voices.find((v) => v.lang === 'en-US') ||
-      voices[0];
-    if (pref) utt.voice = pref;
-    utt.onend = () => resolve();
-    utt.onerror = () => resolve();
-    window.speechSynthesis.speak(utt);
+    const synth = window.speechSynthesis;
+
+    const doSpeak = () => {
+      synth.cancel(); // stop any prior speech
+      const utt = new SpeechSynthesisUtterance(text);
+      utt.rate = opts.rate ?? 1.05;
+      utt.pitch = 1.0;
+      utt.volume = 1.0;
+      const voices = synth.getVoices();
+      const pref =
+        voices.find((v) => v.name === 'Samantha') ||
+        voices.find((v) => v.name === 'Alex') ||
+        voices.find((v) => v.lang === 'en-US' && v.localService) ||
+        voices.find((v) => v.lang === 'en-US') ||
+        voices.find((v) => v.lang.startsWith('en')) ||
+        voices[0];
+      if (pref) utt.voice = pref;
+      console.log('[Tready/voice] speaking:', text.substring(0, 50), 'voice=', pref?.name, 'rate=', utt.rate);
+      utt.onend = () => {
+        console.log('[Tready/voice] done');
+        resolve();
+      };
+      utt.onerror = (e) => {
+        console.warn('[Tready/voice] error', e);
+        resolve();
+      };
+      synth.speak(utt);
+    };
+
+    // Voices may not be loaded yet — wait for voiceschanged before speaking
+    if (synth.getVoices().length === 0) {
+      console.log('[Tready/voice] voices not loaded yet, waiting…');
+      const onVoicesChanged = () => {
+        synth.removeEventListener('voiceschanged', onVoicesChanged);
+        doSpeak();
+      };
+      synth.addEventListener('voiceschanged', onVoicesChanged);
+      // Failsafe: try anyway after 600ms in case the event never fires
+      setTimeout(() => {
+        synth.removeEventListener('voiceschanged', onVoicesChanged);
+        doSpeak();
+      }, 600);
+    } else {
+      doSpeak();
+    }
   });
 }
 
@@ -149,10 +178,10 @@ export function TreadyBubble() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Voice always ON by default. localStorage only stores explicit OFF.
   const [voiceOn, setVoiceOn] = useState<boolean>(() => {
     if (typeof localStorage === 'undefined') return true;
-    const v = localStorage.getItem(VOICE_PREF_KEY);
-    return v === null ? true : v === '1';
+    return localStorage.getItem(VOICE_PREF_KEY) !== '0';
   });
   const [tourRunning, setTourRunning] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -310,6 +339,8 @@ export function TreadyBubble() {
 
               if (toolName === 'highlight_ui' && output?.highlighted) {
                 console.log('[Tready/dispatch] tready:highlight', output);
+                // AUTO-CLOSE the chat panel so the highlight isn't blocked
+                setIsOpen(false);
                 window.dispatchEvent(
                   new CustomEvent('tready:highlight', {
                     detail: {
@@ -321,6 +352,8 @@ export function TreadyBubble() {
                 );
               } else if (toolName === 'navigate_to' && output?.navigated_to) {
                 console.log('[Tready/dispatch] tready:navigate', output);
+                // AUTO-CLOSE the chat panel; the visual is the show
+                setIsOpen(false);
                 window.dispatchEvent(
                   new CustomEvent('tready:navigate', {
                     detail: { path: output.navigated_to, reason: output.reason },
@@ -449,6 +482,25 @@ export function TreadyBubble() {
               <div style={{ fontSize: 11, opacity: 0.85, fontWeight: 400 }}>Your TreadSet AI copilot</div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <button
+                onClick={() => void speak('Hi, I am Tready. Voice is working.')}
+                aria-label="Test voice"
+                title="Test voice — click to hear Tready"
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  padding: 6,
+                  display: 'flex',
+                  alignItems: 'center',
+                  borderRadius: 6,
+                  fontSize: 11,
+                  fontWeight: 600,
+                }}
+              >
+                Test 🔊
+              </button>
               <button
                 onClick={toggleVoice}
                 aria-label={voiceOn ? 'Mute voice' : 'Unmute voice'}
