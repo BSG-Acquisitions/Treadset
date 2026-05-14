@@ -374,7 +374,7 @@ export function TopNav({ onMenuToggle, showMenuButton = false }: TopNavProps) {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/reports/compliance" className={dropdownItemClass(location.pathname === '/reports/compliance')}>
+                    <Link to="/reports/compliance" data-tready-id="topnav-reports-compliance" className={dropdownItemClass(location.pathname === '/reports/compliance')}>
                       <Shield className="h-4 w-4" />
                       Compliance Reports
                     </Link>

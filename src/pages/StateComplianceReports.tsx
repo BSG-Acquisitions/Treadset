@@ -114,7 +114,7 @@ const StateComplianceReports = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">State Compliance Reports</h1>
+          <h1 data-tready-id="compliance-page-header" className="text-3xl font-bold tracking-tight">State Compliance Reports</h1>
           <p className="text-muted-foreground">
             Annual scrap tire reporting for state regulatory compliance
           </p>
@@ -122,7 +122,7 @@ const StateComplianceReports = () => {
         
         <div className="flex items-center gap-4">
           <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
-            <SelectTrigger className="w-32">
+            <SelectTrigger data-tready-id="compliance-year-select" className="w-32">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -135,7 +135,7 @@ const StateComplianceReports = () => {
       </div>
 
       {/* Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div data-tready-id="compliance-totals-row" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total PTEs In</CardTitle>
@@ -228,7 +228,7 @@ const StateComplianceReports = () => {
 
       {/* Report Tabs */}
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-8">
+        <TabsList data-tready-id="compliance-tabs-list" className="grid w-full grid-cols-8">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="inbound">Inbound</TabsTrigger>
           <TabsTrigger value="outbound">Outbound</TabsTrigger>
@@ -236,7 +236,7 @@ const StateComplianceReports = () => {
           <TabsTrigger value="processing">Processing</TabsTrigger>
           <TabsTrigger value="sites">Sites</TabsTrigger>
           <TabsTrigger value="totals">State Totals</TabsTrigger>
-          <TabsTrigger value="export">Export</TabsTrigger>
+          <TabsTrigger data-tready-id="compliance-export-tab" value="export">Export</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">
@@ -448,6 +448,7 @@ const StateComplianceReports = () => {
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Button
+                    data-tready-id="compliance-export-csv"
                     onClick={() => exportReport.mutate({ year: selectedYear, format: 'csv' })}
                     disabled={exportReport.isPending}
                     className="flex items-center gap-2"
@@ -455,8 +456,9 @@ const StateComplianceReports = () => {
                     <Download className="h-4 w-4" />
                     Export CSV
                   </Button>
-                  
+
                   <Button
+                    data-tready-id="compliance-export-pdf"
                     onClick={() => exportReport.mutate({ year: selectedYear, format: 'pdf' })}
                     disabled={exportReport.isPending}
                     variant="outline"
