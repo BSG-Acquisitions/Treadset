@@ -6,6 +6,61 @@ Two parallel sessions now active. Prefix entries with `[A]` (Architect / backend
 
 ---
 
+## 2026-05-14 [B] — Tready 6/6 deep tours + character + autopilot + tenant-isolation audit
+
+**Context:** Continuation of Session B (Builder). Three phases in one work-block: (1) finish the Tready deep tours, (2) pivot Tready into the animated character experience + autopilot for the tradeshow display, (3) read-only tenant-isolation audit before Tready's flexible-query feature ships.
+
+### Shipped — Phase 1: 5 remaining deep tours
+
+PRs all merged to main, all 6 tour migrations applied to prod (`wvjehbozyxhmgdljwsiz`) via Supabase Management API:
+
+- **PR #43** — Drop-off tour (14 steps, 9 ui_map seeds)
+- **PR #44** — Trailers tour (11 steps, 7 ui_map seeds)
+- **PR #47** — Sign Manifest tour (18 steps, 12 ui_map seeds) + critical hotfix for the `voiceOn` leftover that was crashing Drop-off + Trailers tours since they merged
+- **PR #50** — Schedule Pickup tour (15 steps, 12 ui_map seeds)
+- **PR #51** — Compliance Report tour (11 steps, 8 ui_map seeds)
+
+All 6 deep tours now live: Welcome → Drop-off → Trailers → Manifest → Pickup → Reports.
+
+### Shipped — Phase 2: character, autopilot, infrastructure
+
+- **PR #45** — Voice removed (Web Speech API stripped) + first fast-start commit (`speak_async` step kind, pre-warm voices, restructured WELCOME_TOUR opening so first highlight in <500ms).
+- **PR #46** — Snappier tutorial start (drop voice-era `wait` ms on speak steps, collapse intro pauses ~3.8s → ~250ms, pre-warm Tready edge fn on bubble mount via OPTIONS request for 1-3s faster first chat).
+- **PR #48** — Tour cancel: tap the Tready character mid-tour to abort. New `tready:cancel-tour` event, `cancellableSleep` helper, `finally` guarantees clear-highlight + setRunning(false). X icon shown whenever `tourRunning` regardless of chat-open state.
+- **PR #49** — `TreadyCharacter` component (Z's spec): SVG tire-with-eyes character replaces the green circle. Body morphs tire → blob when active; big Pixar-ish eyes blink (2-5s) + glance (1-3s) + track highlighted element via rAF; subtle puffer-jacket on the lower body; 5 states (idle/thinking/talking/pointing/hidden) via Framer Motion variants. Self-contained — no Tready integration leaks. Lab page at `/tready-lab` for tuning. Wired into `TreadyBubble` so state derives from tour + chat activity; target resolves from `tready:highlight` events through rAF (eyes follow scroll + dialog mounts).
+- **PR #52** — Autopilot mode: `runTour` accepts `options.autopilot`; in autopilot mode, every `waitForClick` step auto-clicks after a brief pause UNLESS the id is in `AUTOPILOT_SKIP_CLICK` (submits, exports — autopilot presses Escape instead so no fake data / file downloads). New `runAutopilot` loops all 6 tours forever, closing dialogs + nav-home between tours. `?autopilot=1` on any authed URL triggers it.
+- **PR #53** — Demo org auto-autopilot: when `currentOrganization.slug === 'demo'`, autopilot fires automatically on dashboard. `?manual=1` opts out. Tradeshow workflow now: log in as demo, go to /dashboard, walk away.
+
+### Shipped — Phase 3: tenant-isolation audit (read-only)
+
+- **PR #54** — `REVIEWS/TENANT_ISOLATION_AUDIT.md`. Four-agent parallel diagnosis: RLS coverage (66/89 tables compliant, 5 critical gaps + 2 design issues), RLS correctness (zero active self-referential policies — April-20 incident closed; NO CI guard exists), edge-fn validation (11 functions LEAK tenant data; 56 hold service-role without JWT), app-code auth (hardcoded `zachdevon@bsgtires.com` super-admin + 3 hardcoded `'bsg'` slug fallbacks). Force-added past `.gitignore`.
+- **PR #55** — Removed `REVIEWS/` from `.gitignore` so session-continuity trail lives in git.
+
+### Blocked
+
+- **Tready flexible-query / agentic-DB-write feature** is blocked on the audit's fix list before it can ship. Specifically: patch the 11 LEAK edge functions, add policies to the 5 critical RLS gaps, remove the 4 app-code anti-patterns. Each becomes its own PR.
+
+### Parked
+
+- **Auto-reload on stale bundle.** Z's colleague (and others) hit cached old JS after merges. A version-check on app boot that triggers reload when a new bundle hashes mismatch would solve it permanently. Offered, not greenlit yet.
+- **RLS recursion CI guard.** TREADSET_BRAIN.md flags it; the audit confirms it doesn't exist. One pre-merge script scanning migrations for self-referential `CREATE POLICY` would prevent the next April-20.
+- **Pickup + Reports demo data prerequisites.** Demo tenant may need at least one client + one hauler / vehicle for autopilot's tour mid-flow to look right. Memory snapshot from 2026-05-11 said the demo had 12 clients / 14 pickups / 7 manifests — likely still adequate, but worth verifying when prepping the tradeshow laptop.
+
+### Next session first move
+
+Open `fix/critical-rls-gaps`. Write the SQL migration that:
+1. Enables RLS on `client_risk_scores_beta` + adds tenant-isolation policy
+2. Adds policies to `contact_submissions`, `client_workflows`, `outbound_assignments`
+3. Fixes `invoice_items` — either add `organization_id` column + policy or rewrite to inherit from parent `invoices`
+
+Per CLAUDE.md, write the SQL but **do not apply it** — hand to Z for paste-flow review. RLS changes are exactly the category CLAUDE.md says hands-off until reviewed.
+
+After that PR lands, the next sequence is `fix/leak-edge-fns` (patch the 11 LEAK functions to the `tready/index.ts` pattern — validate JWT, resolve org from `user_organization_roles`, never accept org_id from request body).
+
+Full prioritized fix list in `REVIEWS/TENANT_ISOLATION_AUDIT.md` section 5.
+
+---
+
 ## 2026-05-14 [A] — Integration foundation: 7 PRs merged in one work block (Stripe Connect + QBO + AI SDK install)
 
 **Context:** Z said "keep pushing" + "any uncommitted changes must be pushed and merged as long as they are involved with this specific build." Session B was parked waiting on AI SDK install. Burned through Session A's integration foundation.
