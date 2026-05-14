@@ -698,8 +698,32 @@ export function TreadyBubble() {
   );
 }
 
+// Typewriter — reveals chars at a measured pace (~22ms each) regardless of
+// how fast the upstream text actually streams. Gives the JARVIS feel where
+// Tready appears to be thinking + typing.
+function useTypewriter(target: string, speedMs = 22): string {
+  const [shown, setShown] = useState('');
+  useEffect(() => {
+    // If target shrunk below shown (re-render edge case), snap to target
+    if (target.length <= shown.length) {
+      setShown(target);
+      return;
+    }
+    // Reveal one char at a time
+    const t = setTimeout(() => {
+      setShown(target.slice(0, shown.length + 1));
+    }, speedMs);
+    return () => clearTimeout(t);
+  }, [target, shown, speedMs]);
+  return shown;
+}
+
 function MessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === 'user';
+  // Only typewriter for assistant messages
+  const displayText = isUser ? message.content : useTypewriter(message.content, 22);
+  const isCaughtUp = displayText === message.content;
+
   return (
     <div
       style={{
@@ -717,7 +741,27 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         border: isUser ? 'none' : '1px solid #f3f4f6',
       }}
     >
-      {message.content || (isUser ? '' : '...')}
+      {displayText || (isUser ? '' : '...')}
+      {!isUser && !isCaughtUp && (
+        // Blinking cursor while typing
+        <span
+          style={{
+            display: 'inline-block',
+            width: 2,
+            height: '1em',
+            background: '#16a34a',
+            verticalAlign: 'text-bottom',
+            marginLeft: 2,
+            animation: 'tready-cursor-blink 1s step-end infinite',
+          }}
+        />
+      )}
+      <style>{`
+        @keyframes tready-cursor-blink {
+          0%, 50% { opacity: 1; }
+          51%, 100% { opacity: 0; }
+        }
+      `}</style>
     </div>
   );
 }
