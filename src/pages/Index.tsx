@@ -317,6 +317,7 @@ export default function Index() {
         {/* Enhanced Stats Grid - Now with staggered animation */}
         <StaggerList className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8" staggerDelay={0.1}>
           <SlideUp>
+            <div data-tready-id="dashboard-pte-today">
             <StatsCard
               title="Tires Recycled Today"
               value={totalTiresRecycled > 0 ? `${totalTiresRecycled} PTEs` : '0 PTEs'}
@@ -326,6 +327,7 @@ export default function Index() {
               changeLabel="vs yesterday"
               onClick={() => setBreakdownDialog({ open: true, title: 'Tires Recycled Today', period: 'today' })}
             />
+            </div>
           </SlideUp>
           
           <SlideUp>

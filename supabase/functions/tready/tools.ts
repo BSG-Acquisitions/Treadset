@@ -219,6 +219,30 @@ export function buildToolFactory(ctx: ToolContext) {
     }),
 
     /**
+     * Navigate the user to a different page in TreadSet. The frontend
+     * listens for this tool's output and calls react-router's navigate().
+     * Use BEFORE highlight_ui when the target element lives on a page
+     * the user isn't currently on.
+     *
+     * Typical pattern:
+     *   navigate_to('/clients') → highlight_ui('clients-add-button')
+     */
+    navigate_to: tool({
+      description:
+        'Navigates the user to a different page in TreadSet via react-router (no full reload). Use BEFORE highlight_ui when the element you want lives on a different page. Common paths: /dashboard, /clients, /manifests, /routes/today, /settings, /integrations, /reports/compliance, /driver/dashboard.',
+      inputSchema: z.object({
+        path: z.string().min(1).max(120).describe('The route path to navigate to (e.g., "/clients").'),
+        reason: z.string().min(2).max(140).optional().describe('Optional one-sentence "why" shown briefly to the user.'),
+      }),
+      execute: async ({ path, reason }) => {
+        return {
+          navigated_to: path,
+          reason: reason ?? null,
+        };
+      },
+    }),
+
+    /**
      * Visually highlight a UI element on the user's screen with a
      * pulsing ring + optional caption. The frontend HighlightOverlay
      * component (week 2 deliverable) listens for this tool's output

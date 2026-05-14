@@ -16,9 +16,9 @@
  * `tready:highlight` events that HighlightOverlay catches.
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { MessageCircle, X, Send, Loader2 } from 'lucide-react';
+import { MessageCircle, X, Send, Loader2, Sparkles } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL ?? '';
@@ -31,9 +31,21 @@ interface ChatMessage {
   content: string;
 }
 
+// Localstorage flag so the welcome auto-launch only fires once per
+// (user, browser). Cleared if the user clears site data.
+const WELCOMED_KEY_PREFIX = 'tready_welcomed_';
+
+// Suggestion chips shown in the empty state. Click → sends as user message.
+const WELCOME_SUGGESTIONS = [
+  'Show me how to add a client',
+  "What's on my dashboard today?",
+  'Walk me through signing a manifest',
+];
+
 export function TreadyBubble() {
   const { user, loading } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [sessionId] = useState(() => crypto.randomUUID());
@@ -42,6 +54,34 @@ export function TreadyBubble() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // First-login auto-open: when the user lands and we haven't welcomed
+  // them yet, pop Tready open after a short delay so the page can finish
+  // loading first. The chips in the empty state are the welcome.
+  useEffect(() => {
+    if (loading || !user) return;
+    const key = WELCOMED_KEY_PREFIX + user.id;
+    if (localStorage.getItem(key)) return; // already welcomed
+    const t = setTimeout(() => {
+      setIsOpen(true);
+      localStorage.setItem(key, new Date().toISOString());
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [loading, user]);
+
+  // Listen for tready:navigate events from the navigate_to tool and
+  // route the user via react-router.
+  useEffect(() => {
+    const onNavigate = (e: Event) => {
+      const detail = (e as CustomEvent<{ path: string; reason?: string }>).detail;
+      if (!detail?.path) return;
+      // Don't navigate if already on that path
+      if (detail.path === location.pathname) return;
+      navigate(detail.path);
+    };
+    window.addEventListener('tready:navigate', onNavigate as EventListener);
+    return () => window.removeEventListener('tready:navigate', onNavigate as EventListener);
+  }, [navigate, location.pathname]);
 
   // Fetch + watch the JWT
   useEffect(() => {
@@ -163,6 +203,16 @@ export function TreadyBubble() {
                       caption: output.caption,
                       wait_for_click: output.wait_for_click,
                     },
+                  }),
+                );
+              }
+            } else if (evt.type === 'tool-output-available' && evt.toolName === 'navigate_to') {
+              const output = evt.output;
+              if (output?.navigated_to) {
+                console.log('[Tready] navigate', output);
+                window.dispatchEvent(
+                  new CustomEvent('tready:navigate', {
+                    detail: { path: output.navigated_to, reason: output.reason },
                   }),
                 );
               }
@@ -291,13 +341,52 @@ export function TreadyBubble() {
             }}
           >
             {messages.length === 0 && (
-              <div style={{ textAlign: 'center', color: '#6b7280', fontSize: 13, padding: '24px 12px' }}>
-                <p style={{ margin: '0 0 8px', fontWeight: 500, color: '#111827' }}>
-                  Hi {user.email?.split('@')[0]} — I'm Tready.
-                </p>
-                <p style={{ margin: 0 }}>
-                  Ask me anything about TreadSet — how to do something, where it lives, or for live data on your operation.
-                </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '8px 4px' }}>
+                <div style={{ textAlign: 'center', color: '#374151', fontSize: 13, padding: '8px 4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 8 }}>
+                    <Sparkles size={16} color="#16a34a" />
+                    <p style={{ margin: 0, fontWeight: 600, color: '#111827', fontSize: 14 }}>
+                      Hi {user.email?.split('@')[0]} — I'm Tready
+                    </p>
+                  </div>
+                  <p style={{ margin: 0, lineHeight: 1.5 }}>
+                    Your AI ops copilot for TreadSet. Ask me anything — I'll answer, point you at the right buttons, or walk you through any flow step-by-step.
+                  </p>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '0 4px' }}>
+                  <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 500, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>
+                    Try one of these
+                  </div>
+                  {WELCOME_SUGGESTIONS.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => sendMessage(s)}
+                      disabled={!accessToken || isStreaming}
+                      style={{
+                        textAlign: 'left',
+                        background: '#fff',
+                        border: '1px solid #d1d5db',
+                        borderRadius: 10,
+                        padding: '10px 12px',
+                        fontSize: 13,
+                        color: '#111827',
+                        cursor: accessToken && !isStreaming ? 'pointer' : 'not-allowed',
+                        transition: 'all 120ms ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#f0fdf4';
+                        e.currentTarget.style.borderColor = '#16a34a';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = '#fff';
+                        e.currentTarget.style.borderColor = '#d1d5db';
+                      }}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
             {messages.map((m) => (
