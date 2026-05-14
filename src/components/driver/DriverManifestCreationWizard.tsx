@@ -1606,7 +1606,7 @@ function DriverManifestCreationWizardInner({
                   </div>
                 ) : isStandalone ? (
                   <div className="space-y-3">
-                    <div>
+                    <div data-tready-id="manifest-generator-search">
                       <Label>Search Client / Generator *</Label>
                       <SearchableDropdown
                         placeholder="Search for client..."
@@ -1775,7 +1775,7 @@ function DriverManifestCreationWizardInner({
                             }
                           }}
                         >
-                          <SelectTrigger id="hauler-select" className="w-full border-red-300 dark:border-red-700">
+                          <SelectTrigger id="hauler-select" data-tready-id="manifest-hauler-select" className="w-full border-red-300 dark:border-red-700">
                             <SelectValue placeholder="Choose a hauler..." />
                           </SelectTrigger>
                           <SelectContent>
@@ -1827,7 +1827,7 @@ function DriverManifestCreationWizardInner({
                     <FormItem>
                       <FormLabel>Off Rim</FormLabel>
                       <FormControl>
-                        <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value) || 0)} />
+                        <Input data-tready-id="manifest-pte-off-rim-input" type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value) || 0)} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -2147,11 +2147,11 @@ function DriverManifestCreationWizardInner({
                   <CardContent className="space-y-3">
                     <div className="space-y-2">
                       <Label className="text-xs text-muted-foreground">Quick Select Rate</Label>
-                      <Select 
-                        value={PRESET_RATES.passengerOffRim.includes(pteOffRimRate) ? pteOffRimRate : ''} 
+                      <Select
+                        value={PRESET_RATES.passengerOffRim.includes(pteOffRimRate) ? pteOffRimRate : ''}
                         onValueChange={setPteOffRimRate}
                       >
-                        <SelectTrigger className="bg-background">
+                        <SelectTrigger data-tready-id="manifest-pte-off-rim-rate" className="bg-background">
                           <SelectValue placeholder="Select preset rate" />
                         </SelectTrigger>
                         <SelectContent className="bg-background z-50">
@@ -2587,7 +2587,8 @@ function DriverManifestCreationWizardInner({
             </div>
 
             <div className="space-y-3">
-              <Card 
+              <Card
+                data-tready-id="manifest-payment-method-cash"
                 className={`cursor-pointer transition-colors hover:bg-muted/50 ${paymentMethod === 'CASH' ? 'border-primary border-2' : ''}`}
                 onClick={() => setPaymentMethod('CASH')}
               >
@@ -2766,9 +2767,10 @@ function DriverManifestCreationWizardInner({
                     <FormItem>
                       <FormLabel className="text-xs sm:text-sm">Person's Name (who is signing) *</FormLabel>
                       <FormControl>
-                        <Input 
-                          {...field} 
-                          value={field.value || ""} 
+                        <Input
+                          data-tready-id="manifest-generator-print-name"
+                          {...field}
+                          value={field.value || ""}
                           placeholder="First and last name of the person signing"
                           type="text"
                           autoComplete="off"
@@ -2799,7 +2801,8 @@ function DriverManifestCreationWizardInner({
                       Clear
                     </Button>
                   </div>
-                  <div 
+                  <div
+                    data-tready-id="manifest-generator-signature-pad"
                     className="border-2 border-border rounded-lg bg-white overflow-hidden"
                     onTouchStart={(e) => { blurActiveInputs(); e.stopPropagation(); }}
                     onPointerDown={() => blurActiveInputs()}
@@ -2853,9 +2856,10 @@ function DriverManifestCreationWizardInner({
                     <FormItem>
                       <FormLabel className="text-xs sm:text-sm">Driver's Name (who is signing) *</FormLabel>
                       <FormControl>
-                        <Input 
-                          {...field} 
-                          value={field.value || ""} 
+                        <Input
+                          data-tready-id="manifest-hauler-print-name"
+                          {...field}
+                          value={field.value || ""}
                           placeholder="First and last name of driver"
                           type="text"
                           autoComplete="off"
@@ -2885,7 +2889,8 @@ function DriverManifestCreationWizardInner({
                       Clear
                     </Button>
                   </div>
-                  <div 
+                  <div
+                    data-tready-id="manifest-hauler-signature-pad"
                     className="border-2 border-border rounded-lg bg-white overflow-hidden"
                     onTouchStart={(e) => { blurActiveInputs(); e.stopPropagation(); }}
                     onPointerDown={() => blurActiveInputs()}
@@ -3364,8 +3369,9 @@ function DriverManifestCreationWizardInner({
                 </Button>
 
                 {currentStep.key === "review" ? (
-                  <Button 
-                    type="submit" 
+                  <Button
+                    data-tready-id="manifest-wizard-submit"
+                    type="submit"
                     disabled={isSubmitting}
                     className="flex-1 md:flex-none md:min-w-[180px] !bg-green-600 hover:!bg-green-700 !text-white font-semibold disabled:opacity-50 text-xs sm:text-sm whitespace-nowrap"
                     style={{ backgroundColor: '#16a34a', color: 'white' }}
@@ -3373,9 +3379,10 @@ function DriverManifestCreationWizardInner({
                     {isSubmitting ? "Creating..." : "Create Manifest"}
                   </Button>
                 ) : (
-                  <Button 
-                    type="button" 
-                    onClick={handleNext} 
+                  <Button
+                    data-tready-id="manifest-wizard-next"
+                    type="button"
+                    onClick={handleNext}
                     disabled={isSubmitting}
                     className="flex-1 md:flex-none md:min-w-[120px] !bg-green-600 hover:!bg-green-700 !text-white font-semibold disabled:opacity-50 text-xs sm:text-sm"
                     style={{ backgroundColor: '#16a34a', color: 'white' }}

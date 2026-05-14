@@ -244,6 +244,56 @@ async function runTour(
 }
 
 // ============================================================================
+// Sign Manifest tour — walks the driver wizard standalone-mode end to end.
+// Captions-first convention: no speak steps, all narration in highlight
+// captions. User drives wizard advance via waitForClick on Next.
+// ============================================================================
+const MANIFEST_TOUR: TourStep[] = [
+  // ---- ORIENTATION + FIRST HIGHLIGHT ----
+  { kind: 'pause', ms: 250 },
+  { kind: 'navigate', path: '/driver/manifests', wait: 1200 },
+  { kind: 'highlight', element_id: 'driver-manifests-new-button', caption: 'Tap New Manifest — opens the 7-step wizard. Standalone mode, no existing pickup needed.', waitForClick: true },
+
+  // ---- STEP 1: Info — generator + hauler ----
+  { kind: 'pause', ms: 500 },
+  { kind: 'highlight', element_id: 'manifest-generator-search', caption: 'Generator — search for the client whose tires you are hauling. Pick any one.', wait: 9000 },
+  { kind: 'highlight', element_id: 'manifest-hauler-select', caption: 'Hauler — your company. Required to advance.', wait: 7000 },
+  { kind: 'highlight', element_id: 'manifest-wizard-next', caption: 'Tap Next — advances to tire counts.', waitForClick: true },
+
+  // ---- STEP 2: Tires ----
+  { kind: 'pause', ms: 500 },
+  { kind: 'highlight', element_id: 'manifest-pte-off-rim-input', caption: 'Off-rim passenger tires — type 40 to start. At least one count > 0 required.', wait: 8000 },
+  { kind: 'highlight', element_id: 'manifest-wizard-next', caption: 'Tap Next — advances to pricing.', waitForClick: true },
+
+  // ---- STEP 3: Pricing ----
+  { kind: 'pause', ms: 500 },
+  { kind: 'highlight', element_id: 'manifest-pte-off-rim-rate', caption: 'Pick a preset rate — $3 per tire is typical. Total updates live.', wait: 7000 },
+  { kind: 'highlight', element_id: 'manifest-wizard-next', caption: 'Tap Next — advances to payment method.', waitForClick: true },
+
+  // ---- STEP 4: Payment method ----
+  { kind: 'pause', ms: 500 },
+  { kind: 'highlight', element_id: 'manifest-payment-method-cash', caption: 'Cash — payment will mark COMPLETED on submit. Tap to select.', wait: 5500 },
+  { kind: 'highlight', element_id: 'manifest-wizard-next', caption: 'Tap Next — advances to signatures, the legal step.', waitForClick: true },
+
+  // ---- STEP 5: Generator signature ----
+  { kind: 'pause', ms: 700 },
+  { kind: 'highlight', element_id: 'manifest-generator-print-name', caption: 'Generator print name — the individual signing, not the company.', wait: 7000 },
+  { kind: 'highlight', element_id: 'manifest-generator-signature-pad', caption: 'Draw the generator signature with your finger or mouse. Clear to redo.', wait: 9000 },
+
+  // ---- STEP 6: Hauler signature ----
+  { kind: 'highlight', element_id: 'manifest-hauler-print-name', caption: 'Hauler print name — the driver signing. Pre-filled from your account if available.', wait: 6500 },
+  { kind: 'highlight', element_id: 'manifest-hauler-signature-pad', caption: 'Driver signs here. Both signatures required to advance.', wait: 8000 },
+  { kind: 'highlight', element_id: 'manifest-wizard-next', caption: 'Tap Next — wizard validates both sigs captured.', waitForClick: true },
+
+  // ---- STEP 7: Review + submit ----
+  { kind: 'pause', ms: 700 },
+  { kind: 'highlight', element_id: 'manifest-wizard-submit', caption: 'Create Manifest — generates the PDF, uploads sigs, emails the client.', waitForClick: true },
+
+  // ---- CLOSE ----
+  { kind: 'pause', ms: 9000 },
+];
+
+// ============================================================================
 // Main component
 // ============================================================================
 export function TreadyBubble() {
@@ -481,13 +531,18 @@ export function TreadyBubble() {
 
   const startDropoffTour = useCallback(() => {
     setIsOpen(false);
-    void runTour(DROPOFF_TOUR, navigate, voiceOn, setTourRunning);
-  }, [navigate, voiceOn]);
+    void runTour(DROPOFF_TOUR, navigate, setTourRunning);
+  }, [navigate]);
 
   const startTrailersTour = useCallback(() => {
     setIsOpen(false);
-    void runTour(TRAILERS_TOUR, navigate, voiceOn, setTourRunning);
-  }, [navigate, voiceOn]);
+    void runTour(TRAILERS_TOUR, navigate, setTourRunning);
+  }, [navigate]);
+
+  const startManifestTour = useCallback(() => {
+    setIsOpen(false);
+    void runTour(MANIFEST_TOUR, navigate, setTourRunning);
+  }, [navigate]);
 
   const toggle = useCallback(() => setIsOpen((v) => !v), []);
 
@@ -706,11 +761,41 @@ export function TreadyBubble() {
                   </div>
                 </button>
 
+                {/* Manifest tour — fourth shipped deep tour */}
+                <button
+                  type="button"
+                  onClick={startManifestTour}
+                  disabled={tourRunning}
+                  style={{
+                    background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 12,
+                    padding: '14px 16px',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: tourRunning ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 10,
+                    boxShadow: '0 4px 12px rgba(22,163,74,0.3)',
+                    opacity: tourRunning ? 0.6 : 1,
+                    textAlign: 'left',
+                  }}
+                >
+                  <Play size={16} fill="#fff" style={{ marginTop: 2, flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div>{tourRunning ? 'Tour running…' : 'Sign Your First Manifest'}</div>
+                    <div style={{ fontSize: 11, opacity: 0.85, fontWeight: 400, marginTop: 2 }}>
+                      Hands-on, ~3 minutes. Walks the 7-step driver wizard end to end.
+                    </div>
+                  </div>
+                </button>
+
                 {/* Coming-soon tours — clicking sends a chat message so Tready
                     can talk about the flow even before the deep tour is built */}
                 {[
                   { title: 'Schedule Your First Pickup', sub: 'Coming next session', prompt: 'Walk me through scheduling a pickup' },
-                  { title: 'Sign Your First Manifest', sub: 'Coming next session', prompt: 'Walk me through signing a manifest' },
                   { title: 'Generate a Compliance Report', sub: 'Coming next session', prompt: 'Walk me through generating a compliance report' },
                 ].map((t) => (
                   <button
