@@ -7,17 +7,20 @@
  * the highlight_ui tool, dispatches a `tready:highlight` window
  * event that HighlightOverlay catches and renders.
  *
- * V1.5 scope: chat only. Proactive triggers (auto-launch on first
- * login, stuck detection, milestone celebration) land in V1.6+.
+ * v5 useChat API: we manage input state ourselves and call
+ * sendMessage(text) on submit. No legacy handleSubmit/handleInputChange
+ * (those were the v3 API and are gone in @ai-sdk/react@^1.x).
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useChat } from '@ai-sdk/react';
+import { DefaultChatTransport } from 'ai';
 import { MessageCircle, X, Send, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 
-const TREADY_ENDPOINT = `${import.meta.env.VITE_SUPABASE_URL ?? ''}/functions/v1/tready`;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL ?? '';
+const TREADY_ENDPOINT = `${SUPABASE_URL}/functions/v1/tready`;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY ?? '';
 
 export function TreadyBubble() {
@@ -26,6 +29,7 @@ export function TreadyBubble() {
   const [isOpen, setIsOpen] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [sessionId] = useState(() => crypto.randomUUID());
+  const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Get a fresh JWT from the Supabase session
@@ -44,33 +48,55 @@ export function TreadyBubble() {
     };
   }, []);
 
-  // Forward highlight_ui tool outputs to HighlightOverlay
-  // The body sent to the edge fn carries session_id + current_page so
-  // the server can wire UI map context for the user's current route.
-  const { messages, input, handleInputChange, handleSubmit, isLoading, status } = useChat({
-    api: TREADY_ENDPOINT,
-    headers: accessToken
-      ? {
-          Authorization: `Bearer ${accessToken}`,
-          apikey: ANON_KEY,
-        }
-      : undefined,
-    body: {
-      session_id: sessionId,
-      current_page: location.pathname,
-    },
-    onToolCall: async ({ toolCall }) => {
-      // We don't auto-execute any tool client-side; the edge fn handles all
-      // tool execution server-side. This callback is here to confirm the
-      // shape — left as no-op for V1.
-    },
+  // Build the transport whenever JWT or route changes. Adapts the v5
+  // parts-based message format → our edge fn's simpler { role, content }
+  // expectation. Keeps the backend contract stable across SDK upgrades.
+  const transport = (
+    accessToken
+      ? new DefaultChatTransport({
+          api: TREADY_ENDPOINT,
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            apikey: ANON_KEY,
+          },
+          body: {
+            session_id: sessionId,
+            current_page: location.pathname,
+          },
+          prepareSendMessagesRequest: ({ messages, body }) => ({
+            body: {
+              ...body,
+              messages: messages.map((m: any) => ({
+                role: m.role,
+                content:
+                  m.parts
+                    ?.filter((p: any) => p.type === 'text')
+                    .map((p: any) => p.text)
+                    .join('') ?? m.content ?? '',
+              })),
+            },
+          }),
+        })
+      : undefined
+  ) as any;
+
+  const { messages, sendMessage, status, error } = useChat({
+    transport,
     onFinish: ({ message }) => {
-      // After the assistant finishes, scan its parts for highlight_ui tool
-      // outputs and dispatch them to HighlightOverlay.
-      const parts = (message as any).parts ?? [];
+      // Scan the assistant message for highlight_ui tool outputs and
+      // dispatch them to the HighlightOverlay component.
+      const parts = (message as any)?.parts ?? [];
       for (const part of parts) {
-        if (part.type === 'tool-invocation' && part.toolInvocation?.toolName === 'highlight_ui') {
-          const output = part.toolInvocation?.result ?? part.toolInvocation?.output;
+        // v5 part types: tool-{toolName} (e.g., 'tool-highlight_ui')
+        // Older shapes: type='tool-invocation' with toolInvocation.toolName
+        const toolName =
+          part.toolName ??
+          part.toolInvocation?.toolName ??
+          (typeof part.type === 'string' && part.type.startsWith('tool-')
+            ? part.type.slice('tool-'.length)
+            : undefined);
+        if (toolName === 'highlight_ui') {
+          const output = part.output ?? part.result ?? part.toolInvocation?.result;
           if (output?.highlighted) {
             window.dispatchEvent(
               new CustomEvent('tready:highlight', {
@@ -85,23 +111,34 @@ export function TreadyBubble() {
         }
       }
     },
-  });
+  } as any);
 
-  // Autoscroll the chat to the bottom when new content arrives
+  const isStreaming = status === 'submitted' || status === 'streaming';
+
+  // Autoscroll
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, status]);
 
+  const onSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!input.trim() || !accessToken || isStreaming) return;
+      sendMessage({ text: input.trim() } as any);
+      setInput('');
+    },
+    [input, accessToken, isStreaming, sendMessage],
+  );
+
   const toggle = useCallback(() => setIsOpen((v) => !v), []);
 
-  // Hide entirely if user not authed
   if (loading || !user) return null;
 
   return (
     <>
-      {/* Floating bubble button */}
+      {/* Floating bubble */}
       <button
         onClick={toggle}
         aria-label={isOpen ? 'Close Tready' : 'Open Tready'}
@@ -130,7 +167,6 @@ export function TreadyBubble() {
         {isOpen ? <X size={24} /> : <MessageCircle size={24} />}
       </button>
 
-      {/* Slide-out chat panel */}
       {isOpen && (
         <div
           role="dialog"
@@ -185,7 +221,7 @@ export function TreadyBubble() {
             </button>
           </div>
 
-          {/* Message list */}
+          {/* Messages */}
           <div
             ref={scrollRef}
             style={{
@@ -215,19 +251,33 @@ export function TreadyBubble() {
                 </p>
               </div>
             )}
-            {messages.map((m) => (
+            {messages.map((m: any) => (
               <MessageBubble key={m.id} message={m} />
             ))}
-            {isLoading && (
+            {isStreaming && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#6b7280', fontSize: 12 }}>
                 <Loader2 size={14} className="animate-spin" /> Tready is thinking…
+              </div>
+            )}
+            {error && (
+              <div
+                style={{
+                  background: '#fee2e2',
+                  color: '#991b1b',
+                  padding: 10,
+                  borderRadius: 8,
+                  fontSize: 12,
+                  border: '1px solid #fecaca',
+                }}
+              >
+                <strong>Tready error:</strong> {String((error as any)?.message ?? error)}
               </div>
             )}
           </div>
 
           {/* Input */}
           <form
-            onSubmit={handleSubmit}
+            onSubmit={onSubmit}
             style={{
               padding: 12,
               borderTop: '1px solid #e5e7eb',
@@ -239,9 +289,9 @@ export function TreadyBubble() {
             <input
               type="text"
               value={input}
-              onChange={handleInputChange}
-              placeholder="Ask Tready…"
-              disabled={!accessToken || isLoading}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder={accessToken ? 'Ask Tready…' : 'Loading session…'}
+              disabled={!accessToken || isStreaming}
               style={{
                 flex: 1,
                 padding: '10px 12px',
@@ -249,22 +299,24 @@ export function TreadyBubble() {
                 borderRadius: 10,
                 fontSize: 14,
                 outline: 'none',
+                background: accessToken ? '#fff' : '#f3f4f6',
               }}
             />
             <button
               type="submit"
-              disabled={!input.trim() || isLoading || !accessToken}
+              disabled={!input.trim() || isStreaming || !accessToken}
               style={{
                 padding: '0 14px',
                 borderRadius: 10,
                 background: '#16a34a',
                 color: '#fff',
                 border: 'none',
-                cursor: input.trim() && !isLoading ? 'pointer' : 'not-allowed',
-                opacity: input.trim() && !isLoading ? 1 : 0.5,
+                cursor: input.trim() && !isStreaming && accessToken ? 'pointer' : 'not-allowed',
+                opacity: input.trim() && !isStreaming && accessToken ? 1 : 0.5,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                minWidth: 44,
               }}
             >
               <Send size={16} />
@@ -278,7 +330,6 @@ export function TreadyBubble() {
 
 function MessageBubble({ message }: { message: any }) {
   const isUser = message.role === 'user';
-  // ai@^5 messages have a `parts` array. For text-only, fall back to message.content.
   const text =
     message.parts
       ?.filter((p: any) => p.type === 'text')
@@ -302,7 +353,7 @@ function MessageBubble({ message }: { message: any }) {
         border: isUser ? 'none' : '1px solid #f3f4f6',
       }}
     >
-      {text}
+      {text || (isUser ? '' : '...')}
     </div>
   );
 }

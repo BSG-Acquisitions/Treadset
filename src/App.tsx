@@ -10,7 +10,9 @@ import { DemoModeProvider } from "@/contexts/DemoModeContext";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/AppLayout";
-import { AIAssistant } from "@/components/AIAssistant";
+// AIAssistant removed 2026-05-14 — Tready replaces it. Old component file
+// stays in src/components/AIAssistant.tsx for now; clean up in a follow-up
+// PR once we're sure no other route references it.
 import { TreadyBubble } from "@/components/tready/TreadyBubble";
 import { HighlightOverlay } from "@/components/tready/HighlightOverlay";
 import { createOptimizedQueryClient } from "@/lib/performance/queryCache";
@@ -594,13 +596,10 @@ const App = () => (
             </Routes>
             </Suspense>
             </DemoModeProvider>
-            <AIAssistant />
             {/* Tready V1.5 — chat bubble + visual highlight overlay.
-                Both auto-hide for unauthed users (TreadyBubble checks
-                useAuth(); HighlightOverlay only renders when given a
-                target). Mounted here so they have BrowserRouter +
-                AuthProvider in scope. Wired to the tready edge fn at
-                ${VITE_SUPABASE_URL}/functions/v1/tready. */}
+                Replaces the old AIAssistant mount (removed 2026-05-14).
+                Both auto-hide for unauthed users. Wired to the tready
+                edge fn at ${VITE_SUPABASE_URL}/functions/v1/tready. */}
             <TreadyBubble />
             <HighlightOverlay />
           </BrowserRouter>
