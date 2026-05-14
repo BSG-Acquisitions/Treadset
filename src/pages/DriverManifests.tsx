@@ -98,7 +98,7 @@ export default function DriverManifests() {
             </p>
           </div>
           <Button asChild className="bg-brand-primary hover:bg-brand-primary/90">
-            <Link to="/driver/manifest/new">
+            <Link to="/driver/manifest/new" data-tready-id="driver-manifests-new-button">
               <Plus className="h-4 w-4 mr-2" />
               New Manifest
             </Link>
