@@ -311,7 +311,7 @@ export default function EnhancedRoutesToday() {
                 
                 <SchedulePickupDialog
                   trigger={
-                    <Button variant="outline" size="sm">
+                    <Button data-tready-id="routes-schedule-pickup-button" variant="outline" size="sm">
                       <CalendarPlus className="h-4 w-4 mr-2" />
                       Schedule Pickup
                     </Button>

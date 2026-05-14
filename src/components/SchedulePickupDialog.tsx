@@ -278,6 +278,7 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
+                            data-tready-id="pickup-client-select"
                             variant="outline"
                             role="combobox"
                             aria-expanded={clientComboOpen}
@@ -374,10 +375,10 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
                         disabled={!selectedClientId || !locations || locations.length === 0}
                       >
                        <FormControl>
-                         <SelectTrigger>
+                         <SelectTrigger data-tready-id="pickup-location-select">
                            <SelectValue placeholder={
-                             !selectedClientId 
-                               ? "Select a client first" 
+                             !selectedClientId
+                               ? "Select a client first"
                                : !locations || locations.length === 0
                                  ? "Using client address above"
                                  : "Or select alternate location"
@@ -418,7 +419,7 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
                   <FormLabel>Select Truck or Hauler</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger data-tready-id="pickup-truck-select">
                         <SelectValue placeholder="Select a truck or hauler">
                           {field.value && (() => {
                             const selected = allTrucks.find(t => t.id === field.value);
@@ -493,6 +494,7 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
+                            data-tready-id="pickup-driver-select"
                             variant="outline"
                             role="combobox"
                             aria-expanded={driverComboOpen}
@@ -572,6 +574,7 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
+                            data-tready-id="pickup-date-picker"
                             variant="outline"
                             className={`w-full pl-3 text-left font-normal ${
                               !field.value && "text-muted-foreground"
@@ -614,7 +617,7 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
                     <FormLabel>Preferred Time Window</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger data-tready-id="pickup-window-select">
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
@@ -639,6 +642,7 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
                     <FormLabel>PTE Count</FormLabel>
                     <FormControl>
                       <Input
+                        data-tready-id="pickup-pte-input"
                         type="number"
                         min="0"
                         {...field}
@@ -658,6 +662,7 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
                     <FormLabel>OTR Count</FormLabel>
                     <FormControl>
                       <Input
+                        data-tready-id="pickup-otr-input"
                         type="number"
                         min="0"
                         {...field}
@@ -677,6 +682,7 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
                     <FormLabel>Tractor Count</FormLabel>
                     <FormControl>
                       <Input
+                        data-tready-id="pickup-tractor-input"
                         type="number"
                         min="0"
                         {...field}
@@ -697,6 +703,7 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
                   <FormLabel>Notes (Optional)</FormLabel>
                   <FormControl>
                     <Textarea
+                      data-tready-id="pickup-notes-input"
                       placeholder="Any special instructions or notes for this pickup"
                       {...field}
                     />
@@ -710,7 +717,7 @@ export function SchedulePickupDialog({ trigger, defaultClientId }: SchedulePicku
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={schedulePickup.isPending}>
+              <Button data-tready-id="pickup-submit-button" type="submit" disabled={schedulePickup.isPending}>
                 {schedulePickup.isPending ? "Scheduling..." : "Schedule Pickup"}
               </Button>
             </div>

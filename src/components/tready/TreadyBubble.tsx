@@ -325,6 +325,62 @@ const MANIFEST_TOUR: TourStep[] = [
 ];
 
 // ============================================================================
+// Schedule Pickup tour — single-page Schedule Pickup dialog on /routes/today.
+// One submit at the end, no Next clicks (the form is single-page). Captions
+// carry all narration.
+// ============================================================================
+const PICKUP_TOUR: TourStep[] = [
+  // ---- ORIENTATION + FIRST HIGHLIGHT ----
+  { kind: 'pause', ms: 250 },
+  { kind: 'highlight', element_id: 'topnav-pickups', caption: 'Pickups menu — tap to open.', waitForClick: true },
+
+  // ---- STEP 2: Drill into Today's Routes ----
+  { kind: 'pause', ms: 400 },
+  { kind: 'highlight', element_id: 'topnav-pickups-today', caption: "Today's Routes — the dispatch board.", waitForClick: true },
+
+  // ---- STEP 3: Open the Schedule Pickup dialog ----
+  { kind: 'pause', ms: 700 },
+  { kind: 'highlight', element_id: 'routes-schedule-pickup-button', caption: 'Schedule Pickup — opens the form.', waitForClick: true },
+
+  // ---- STEP 4: Client ----
+  { kind: 'pause', ms: 600 },
+  { kind: 'highlight', element_id: 'pickup-client-select', caption: 'Client — searchable list of every client you have. Required.', wait: 8500 },
+
+  // ---- STEP 5: Service address ----
+  { kind: 'highlight', element_id: 'pickup-location-select', caption: "Service address — defaults to the client's on-file address. Pick a different one if needed.", wait: 7000 },
+
+  // ---- STEP 6: Truck / Hauler ----
+  { kind: 'highlight', element_id: 'pickup-truck-select', caption: 'Truck or hauler — your own trucks and external haulers in one list. Required.', wait: 7500 },
+
+  // ---- STEP 7: Driver ----
+  { kind: 'highlight', element_id: 'pickup-driver-select', caption: 'Driver — auto-fills from the truck if one is assigned. Override here if needed.', wait: 7000 },
+
+  // ---- STEP 8: Date ----
+  { kind: 'highlight', element_id: 'pickup-date-picker', caption: 'Pickup date — today or later. Past dates are blocked.', wait: 6500 },
+
+  // ---- STEP 9: Window ----
+  { kind: 'highlight', element_id: 'pickup-window-select', caption: 'Morning, afternoon, or any time — drives the route order.', wait: 5500 },
+
+  // ---- STEP 10: PTE count ----
+  { kind: 'highlight', element_id: 'pickup-pte-input', caption: 'PTE — passenger tire count. Estimate is fine. Try 30 to start.', wait: 6500 },
+
+  // ---- STEP 11: OTR count ----
+  { kind: 'highlight', element_id: 'pickup-otr-input', caption: 'OTR — off-the-road tires. Skip if there are none.', wait: 5500 },
+
+  // ---- STEP 12: Tractor count ----
+  { kind: 'highlight', element_id: 'pickup-tractor-input', caption: 'Tractor — semi-truck tires. Skip if zero.', wait: 5500 },
+
+  // ---- STEP 13: Notes ----
+  { kind: 'highlight', element_id: 'pickup-notes-input', caption: 'Notes show on the driver mobile manifest. Gate codes, contact name, dock numbers — drop it all here.', wait: 8000 },
+
+  // ---- STEP 14: Submit ----
+  { kind: 'highlight', element_id: 'pickup-submit-button', caption: 'Schedule Pickup — puts it on the dispatch board.', waitForClick: true },
+
+  // ---- CLOSE ----
+  { kind: 'pause', ms: 9000 },
+];
+
+// ============================================================================
 // Main component
 // ============================================================================
 export function TreadyBubble() {
@@ -629,6 +685,11 @@ export function TreadyBubble() {
     void runTour(MANIFEST_TOUR, navigate, setTourRunning);
   }, [navigate]);
 
+  const startPickupTour = useCallback(() => {
+    setIsOpen(false);
+    void runTour(PICKUP_TOUR, navigate, setTourRunning);
+  }, [navigate]);
+
   const toggle = useCallback(() => {
     // If a tour is running, the X / bubble button is a "stop the tour" button
     // — don't toggle the chat panel until the tour is over.
@@ -859,10 +920,40 @@ export function TreadyBubble() {
                   </div>
                 </button>
 
+                {/* Pickup tour — fifth shipped deep tour */}
+                <button
+                  type="button"
+                  onClick={startPickupTour}
+                  disabled={tourRunning}
+                  style={{
+                    background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 12,
+                    padding: '14px 16px',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: tourRunning ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 10,
+                    boxShadow: '0 4px 12px rgba(22,163,74,0.3)',
+                    opacity: tourRunning ? 0.6 : 1,
+                    textAlign: 'left',
+                  }}
+                >
+                  <Play size={16} fill="#fff" style={{ marginTop: 2, flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div>{tourRunning ? 'Tour running…' : 'Schedule Your First Pickup'}</div>
+                    <div style={{ fontSize: 11, opacity: 0.85, fontWeight: 400, marginTop: 2 }}>
+                      Hands-on, ~3 minutes. Walks the form end to end.
+                    </div>
+                  </div>
+                </button>
+
                 {/* Coming-soon tours — clicking sends a chat message so Tready
                     can talk about the flow even before the deep tour is built */}
                 {[
-                  { title: 'Schedule Your First Pickup', sub: 'Coming next session', prompt: 'Walk me through scheduling a pickup' },
                   { title: 'Generate a Compliance Report', sub: 'Coming next session', prompt: 'Walk me through generating a compliance report' },
                 ].map((t) => (
                   <button
