@@ -280,7 +280,7 @@ export default function Clients() {
 
       <CreateClientDialog
         trigger={
-          <Button>
+          <Button data-tready-id="clients-add-button">
             <Plus className="h-4 w-4 mr-2" />
             Add Client
           </Button>

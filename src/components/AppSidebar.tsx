@@ -232,8 +232,9 @@ export function AppSidebar() {
                   {superAdminNavigation.overview.map((item) => (
                     <SidebarMenuItem key={item.id}>
                       <SidebarMenuButton asChild className="h-12">
-                        <NavLink 
-                          to={item.path} 
+                        <NavLink
+                          to={item.path}
+                          data-tready-id={`sidebar-${item.id}`}
                           onClick={handleNavClick}
                           className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${getNavClass(item.path)}`}
                         >
@@ -254,8 +255,9 @@ export function AppSidebar() {
                   {superAdminNavigation.scheduling.map((item) => (
                     <SidebarMenuItem key={item.id}>
                       <SidebarMenuButton asChild className="h-12">
-                        <NavLink 
-                          to={item.path} 
+                        <NavLink
+                          to={item.path}
+                          data-tready-id={`sidebar-${item.id}`}
                           onClick={handleNavClick}
                           className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${getNavClass(item.path)}`}
                         >
@@ -282,8 +284,9 @@ export function AppSidebar() {
                     .map((item) => (
                     <SidebarMenuItem key={item.id}>
                       <SidebarMenuButton asChild className="h-12">
-                        <NavLink 
-                          to={item.path} 
+                        <NavLink
+                          to={item.path}
+                          data-tready-id={`sidebar-${item.id}`}
                           onClick={handleNavClick}
                           className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${getNavClass(item.path)}`}
                         >
@@ -304,8 +307,9 @@ export function AppSidebar() {
                   {superAdminNavigation.haulerPortal.map((item) => (
                     <SidebarMenuItem key={item.id}>
                       <SidebarMenuButton asChild className="h-12">
-                        <NavLink 
-                          to={item.path} 
+                        <NavLink
+                          to={item.path}
+                          data-tready-id={`sidebar-${item.id}`}
                           onClick={handleNavClick}
                           className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${getNavClass(item.path)}`}
                         >
@@ -326,8 +330,9 @@ export function AppSidebar() {
                   {superAdminNavigation.financial.map((item) => (
                     <SidebarMenuItem key={item.id}>
                       <SidebarMenuButton asChild className="h-12">
-                        <NavLink 
-                          to={item.path} 
+                        <NavLink
+                          to={item.path}
+                          data-tready-id={`sidebar-${item.id}`}
                           onClick={handleNavClick}
                           className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${getNavClass(item.path)}`}
                         >
@@ -396,8 +401,9 @@ export function AppSidebar() {
                   {superAdminNavigation.reporting.map((item) => (
                     <SidebarMenuItem key={item.id}>
                       <SidebarMenuButton asChild className="h-12">
-                        <NavLink 
-                          to={item.path} 
+                        <NavLink
+                          to={item.path}
+                          data-tready-id={`sidebar-${item.id}`}
                           onClick={handleNavClick}
                           className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${getNavClass(item.path)}`}
                         >
@@ -418,8 +424,9 @@ export function AppSidebar() {
                   {superAdminNavigation.administration.map((item) => (
                     <SidebarMenuItem key={item.id}>
                       <SidebarMenuButton asChild className="h-12">
-                        <NavLink 
-                          to={item.path} 
+                        <NavLink
+                          to={item.path}
+                          data-tready-id={`sidebar-${item.id}`}
                           onClick={handleNavClick}
                           className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${getNavClass(item.path)}`}
                         >
@@ -445,8 +452,9 @@ export function AppSidebar() {
                   {filteredNavItems.map((item) => (
                     <SidebarMenuItem key={item.id}>
                       <SidebarMenuButton asChild className="h-12">
-                        <NavLink 
-                          to={item.path} 
+                        <NavLink
+                          to={item.path}
+                          data-tready-id={`sidebar-${item.id}`}
                           onClick={handleNavClick}
                           className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ${getNavClass(item.path)}`}
                         >
