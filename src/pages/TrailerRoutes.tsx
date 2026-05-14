@@ -72,7 +72,7 @@ export default function TrailerRoutes() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Trailer Routes</h1>
+          <h1 data-tready-id="trailer-routes-page-header" className="text-2xl font-bold text-foreground">Trailer Routes</h1>
           <p className="text-muted-foreground">Plan and manage trailer move routes</p>
         </div>
         
@@ -106,7 +106,7 @@ export default function TrailerRoutes() {
           
           <Dialog open={showCreateWizard} onOpenChange={setShowCreateWizard}>
             <DialogTrigger asChild>
-              <Button className="gap-2">
+              <Button data-tready-id="trailer-route-create-button" className="gap-2">
                 <Plus className="h-4 w-4" />
                 Create Route
               </Button>

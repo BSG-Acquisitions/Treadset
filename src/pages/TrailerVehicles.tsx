@@ -53,7 +53,7 @@ export default function TrailerVehicles() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Trailer Vehicles</h1>
+          <h1 data-tready-id="trailer-vehicles-page-header" className="text-2xl font-bold text-foreground">Trailer Vehicles</h1>
           <p className="text-muted-foreground">Manage semi-trucks and trailer-pulling vehicles</p>
         </div>
         
