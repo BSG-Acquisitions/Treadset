@@ -1,23 +1,32 @@
-# Tready edge function — V1 scaffold
+# Tready edge function — V1.2 (Build 6)
 
 The AI ops copilot's server-side endpoint. Frontend posts messages here, gets back an SSE stream.
 
-## What's in V1
+## What's in V1.2 (Build 6)
 
 - Vercel AI SDK v6 + `@ai-sdk/anthropic` — Sonnet 4.6
 - Two Anthropic prompt-cache breakpoints (persona + UI-map slice)
 - Tool factory pattern — every tool closes over `organization_id` from JWT
-- One static tool: `get_current_time` (proof-of-loop only; real tools land week 2)
+- Tools wired:
+  - **Read:** `get_current_time`, `get_dashboard_stats`, `list_recent_pickups`, `search_clients`, `list_pending_manifests`, `get_manifest_summary`, `list_drivers`, `search_kb`
+  - **UI:** `navigate_to`, `highlight_ui`
+  - **KB write (admin):** `teach_tready`
+  - **Operational write (Build 6):** `schedule_pickup`, `assign_driver_to_pickup` — two-step `confirm` protocol (preview first, write only on `confirm: true`)
+- UI map seeded across 10 migrations (~78 rows covering tour-relevant elements)
 - Conversation logged to `tready_conversations` on every turn
-- Sentry stub (real SDK wiring is week 2)
+- Sentry stub (real SDK wiring still pending)
 
-## What's NOT in V1
+## Write-tool protocol (non-negotiable)
 
-- The 80-element UI map (tagging pass is the next deliverable; until then, `tready_ui_map` returns empty and Tready answers in plain text without highlights)
-- Read tools (search_clients, get_pickups, etc.) — week 2
-- Write tools (schedule_pickup, etc.) — week 5+
-- Memory layer (per-user, per-tenant facts) — V3 / week 9+
-- KB / RAG — V2 / week 7+
+Every write tool takes a `confirm: boolean`. The model MUST call once with `confirm: false` to surface a preview, then call again with `confirm: true` only after the user verbally confirms. The server enforces this — passing `confirm: false` returns a preview and never writes. Anything else (silence, follow-up questions, ambiguous input) does NOT count as confirmation.
+
+See `persona.ts` "Write tools (Build 6) — preview, then confirm" for the full spec the model is instructed against.
+
+## What's NOT in V1.2
+
+- Memory layer (per-user, per-tenant facts) — V3
+- Real Sentry SDK wiring — pending Sentry MCP install
+- Write tools that touch regulated manifest content (counts, signatures, voids) — explicitly out of scope; those need a separate compliance-adjacent review
 
 ## Required env vars
 
