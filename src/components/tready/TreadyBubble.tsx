@@ -3,17 +3,19 @@
  *
  * Sits in the bottom-right of every authed page. Click to expand
  * into a chat surface that talks to the tready edge function.
- * Streams responses via @ai-sdk/react useChat. When Tready calls
- * the highlight_ui tool, dispatches a `tready:highlight` window
- * event that HighlightOverlay catches and renders.
  *
- * v5 useChat API: we manage input state ourselves and call
- * sendMessage(text) on submit. No legacy handleSubmit/handleInputChange
- * (those were the v3 API and are gone in @ai-sdk/react@^1.x).
+ * Implementation: hand-rolled SSE streaming via fetch. Bypasses
+ * @ai-sdk/react's useChat entirely — that hook's transport prop
+ * gets captured at first render, so when accessToken arrives async
+ * after mount, the chat instance is stuck with a stale (undefined)
+ * transport. Rolling our own avoids the whole class of bugs.
+ *
+ * Reads SSE events of shape `data: {json}\n\n` from the edge fn,
+ * parses text-delta events into the streaming assistant message,
+ * and parses tool-output-available for highlight_ui → dispatches
+ * `tready:highlight` events that HighlightOverlay catches.
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useChat } from '@ai-sdk/react';
-import { DefaultChatTransport } from 'ai';
 import { MessageCircle, X, Send, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
@@ -23,6 +25,12 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL ?? '';
 const TREADY_ENDPOINT = `${SUPABASE_URL}/functions/v1/tready`;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY ?? '';
 
+interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export function TreadyBubble() {
   const { user, loading } = useAuth();
   const location = useLocation();
@@ -30,9 +38,12 @@ export function TreadyBubble() {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [sessionId] = useState(() => crypto.randomUUID());
   const [input, setInput] = useState('');
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Get a fresh JWT from the Supabase session
+  // Fetch + watch the JWT
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -48,88 +59,142 @@ export function TreadyBubble() {
     };
   }, []);
 
-  // Build the transport whenever JWT or route changes. Adapts the v5
-  // parts-based message format → our edge fn's simpler { role, content }
-  // expectation. Keeps the backend contract stable across SDK upgrades.
-  const transport = (
-    accessToken
-      ? new DefaultChatTransport({
-          api: TREADY_ENDPOINT,
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            apikey: ANON_KEY,
-          },
-          body: {
-            session_id: sessionId,
-            current_page: location.pathname,
-          },
-          prepareSendMessagesRequest: ({ messages, body }) => ({
-            body: {
-              ...body,
-              messages: messages.map((m: any) => ({
-                role: m.role,
-                content:
-                  m.parts
-                    ?.filter((p: any) => p.type === 'text')
-                    .map((p: any) => p.text)
-                    .join('') ?? m.content ?? '',
-              })),
-            },
-          }),
-        })
-      : undefined
-  ) as any;
-
-  const { messages, sendMessage, status, error } = useChat({
-    transport,
-    onFinish: ({ message }) => {
-      // Scan the assistant message for highlight_ui tool outputs and
-      // dispatch them to the HighlightOverlay component.
-      const parts = (message as any)?.parts ?? [];
-      for (const part of parts) {
-        // v5 part types: tool-{toolName} (e.g., 'tool-highlight_ui')
-        // Older shapes: type='tool-invocation' with toolInvocation.toolName
-        const toolName =
-          part.toolName ??
-          part.toolInvocation?.toolName ??
-          (typeof part.type === 'string' && part.type.startsWith('tool-')
-            ? part.type.slice('tool-'.length)
-            : undefined);
-        if (toolName === 'highlight_ui') {
-          const output = part.output ?? part.result ?? part.toolInvocation?.result;
-          if (output?.highlighted) {
-            window.dispatchEvent(
-              new CustomEvent('tready:highlight', {
-                detail: {
-                  element_id: output.element_id,
-                  caption: output.caption,
-                  wait_for_click: output.wait_for_click,
-                },
-              }),
-            );
-          }
-        }
-      }
-    },
-  } as any);
-
-  const isStreaming = status === 'submitted' || status === 'streaming';
-
   // Autoscroll
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages, status]);
+  }, [messages, isStreaming]);
+
+  const sendMessage = useCallback(
+    async (text: string) => {
+      if (!accessToken) {
+        setError('Not authenticated yet — wait a moment and try again.');
+        return;
+      }
+      const userMsg: ChatMessage = { id: crypto.randomUUID(), role: 'user', content: text };
+      const assistantId = crypto.randomUUID();
+
+      // Snapshot the conversation BEFORE adding the user message —
+      // that's what gets sent to the edge fn (history + new user turn).
+      const conversation = messages.map((m) => ({ role: m.role, content: m.content }));
+      conversation.push({ role: 'user', content: text });
+
+      // Optimistically render user message + empty assistant placeholder
+      setMessages((prev) => [...prev, userMsg, { id: assistantId, role: 'assistant', content: '' }]);
+      setIsStreaming(true);
+      setError(null);
+
+      try {
+        console.log('[Tready] sending', { sessionId, currentPage: location.pathname, turns: conversation.length });
+        const response = await fetch(TREADY_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            apikey: ANON_KEY,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            session_id: sessionId,
+            current_page: location.pathname,
+            messages: conversation,
+          }),
+        });
+
+        console.log('[Tready] response', { status: response.status, contentType: response.headers.get('content-type') });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          throw new Error(`HTTP ${response.status}: ${errText.substring(0, 300)}`);
+        }
+        if (!response.body) {
+          throw new Error('No response body');
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let assistantText = '';
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          // Parse SSE events. Each event is "data: {json}\n\n" possibly
+          // split across chunks — accumulate in buffer and split on
+          // double-newline boundaries.
+          let nlIdx;
+          while ((nlIdx = buffer.indexOf('\n\n')) !== -1) {
+            const event = buffer.slice(0, nlIdx);
+            buffer = buffer.slice(nlIdx + 2);
+
+            // Each event may have multiple "data: ..." lines (rare); join them
+            const dataLines = event
+              .split('\n')
+              .filter((l) => l.startsWith('data:'))
+              .map((l) => l.slice(5).trimStart());
+            if (dataLines.length === 0) continue;
+            const dataStr = dataLines.join('\n').trim();
+            if (!dataStr || dataStr === '[DONE]') continue;
+
+            let evt: any;
+            try {
+              evt = JSON.parse(dataStr);
+            } catch {
+              continue;
+            }
+
+            // Handle the event types we care about
+            if (evt.type === 'text-delta' && typeof evt.delta === 'string') {
+              assistantText += evt.delta;
+              setMessages((prev) =>
+                prev.map((m) => (m.id === assistantId ? { ...m, content: assistantText } : m)),
+              );
+            } else if (evt.type === 'tool-output-available' && evt.toolName === 'highlight_ui') {
+              const output = evt.output;
+              if (output?.highlighted) {
+                console.log('[Tready] highlight', output);
+                window.dispatchEvent(
+                  new CustomEvent('tready:highlight', {
+                    detail: {
+                      element_id: output.element_id,
+                      caption: output.caption,
+                      wait_for_click: output.wait_for_click,
+                    },
+                  }),
+                );
+              }
+            } else if (evt.type === 'error') {
+              throw new Error(evt.error ?? 'stream-error');
+            }
+          }
+        }
+
+        console.log('[Tready] stream done. final text length:', assistantText.length);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error('[Tready] error:', msg);
+        setError(msg);
+        // Remove the empty assistant placeholder we added optimistically
+        setMessages((prev) => prev.filter((m) => m.id !== assistantId || m.content));
+      } finally {
+        setIsStreaming(false);
+      }
+    },
+    [accessToken, sessionId, location.pathname, messages],
+  );
 
   const onSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
-      if (!input.trim() || !accessToken || isStreaming) return;
-      sendMessage({ text: input.trim() } as any);
+      const text = input.trim();
+      if (!text || isStreaming) return;
       setInput('');
+      void sendMessage(text);
     },
-    [input, accessToken, isStreaming, sendMessage],
+    [input, isStreaming, sendMessage],
   );
 
   const toggle = useCallback(() => setIsOpen((v) => !v), []);
@@ -138,7 +203,6 @@ export function TreadyBubble() {
 
   return (
     <>
-      {/* Floating bubble */}
       <button
         onClick={toggle}
         aria-label={isOpen ? 'Close Tready' : 'Open Tready'}
@@ -188,7 +252,6 @@ export function TreadyBubble() {
             border: '1px solid #e5e7eb',
           }}
         >
-          {/* Header */}
           <div
             style={{
               padding: '14px 18px',
@@ -209,19 +272,12 @@ export function TreadyBubble() {
             <button
               onClick={toggle}
               aria-label="Close"
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: '#fff',
-                cursor: 'pointer',
-                padding: 4,
-              }}
+              style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', padding: 4 }}
             >
               <X size={18} />
             </button>
           </div>
 
-          {/* Messages */}
           <div
             ref={scrollRef}
             style={{
@@ -235,14 +291,7 @@ export function TreadyBubble() {
             }}
           >
             {messages.length === 0 && (
-              <div
-                style={{
-                  textAlign: 'center',
-                  color: '#6b7280',
-                  fontSize: 13,
-                  padding: '24px 12px',
-                }}
-              >
+              <div style={{ textAlign: 'center', color: '#6b7280', fontSize: 13, padding: '24px 12px' }}>
                 <p style={{ margin: '0 0 8px', fontWeight: 500, color: '#111827' }}>
                   Hi {user.email?.split('@')[0]} — I'm Tready.
                 </p>
@@ -251,7 +300,7 @@ export function TreadyBubble() {
                 </p>
               </div>
             )}
-            {messages.map((m: any) => (
+            {messages.map((m) => (
               <MessageBubble key={m.id} message={m} />
             ))}
             {isStreaming && (
@@ -268,14 +317,15 @@ export function TreadyBubble() {
                   borderRadius: 8,
                   fontSize: 12,
                   border: '1px solid #fecaca',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
                 }}
               >
-                <strong>Tready error:</strong> {String((error as any)?.message ?? error)}
+                <strong>Tready error:</strong> {error}
               </div>
             )}
           </div>
 
-          {/* Input */}
           <form
             onSubmit={onSubmit}
             style={{
@@ -291,7 +341,7 @@ export function TreadyBubble() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={accessToken ? 'Ask Tready…' : 'Loading session…'}
-              disabled={!accessToken || isStreaming}
+              disabled={isStreaming}
               style={{
                 flex: 1,
                 padding: '10px 12px',
@@ -304,15 +354,15 @@ export function TreadyBubble() {
             />
             <button
               type="submit"
-              disabled={!input.trim() || isStreaming || !accessToken}
+              disabled={!input.trim() || isStreaming}
               style={{
                 padding: '0 14px',
                 borderRadius: 10,
                 background: '#16a34a',
                 color: '#fff',
                 border: 'none',
-                cursor: input.trim() && !isStreaming && accessToken ? 'pointer' : 'not-allowed',
-                opacity: input.trim() && !isStreaming && accessToken ? 1 : 0.5,
+                cursor: input.trim() && !isStreaming ? 'pointer' : 'not-allowed',
+                opacity: input.trim() && !isStreaming ? 1 : 0.5,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -328,14 +378,8 @@ export function TreadyBubble() {
   );
 }
 
-function MessageBubble({ message }: { message: any }) {
+function MessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === 'user';
-  const text =
-    message.parts
-      ?.filter((p: any) => p.type === 'text')
-      .map((p: any) => p.text)
-      .join('') ?? message.content ?? '';
-
   return (
     <div
       style={{
@@ -353,7 +397,7 @@ function MessageBubble({ message }: { message: any }) {
         border: isUser ? 'none' : '1px solid #f3f4f6',
       }}
     >
-      {text || (isUser ? '' : '...')}
+      {message.content || (isUser ? '' : '...')}
     </div>
   );
 }
