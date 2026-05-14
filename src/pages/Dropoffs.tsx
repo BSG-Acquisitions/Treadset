@@ -99,7 +99,11 @@ const Dropoffs = () => {
               Manage Clients
             </Link>
           </Button>
-          <Button onClick={() => setShowProcessDialog(true)} className="w-full sm:w-auto">
+          <Button
+            data-tready-id="dropoffs-process-button"
+            onClick={() => setShowProcessDialog(true)}
+            className="w-full sm:w-auto"
+          >
             <Plus className="mr-2 h-4 w-4" />
             Process Drop-off
           </Button>

@@ -192,6 +192,7 @@ export const DropoffSignatureStep = ({
             <Label htmlFor="printName">Print Name *</Label>
             <Input
               id="printName"
+              data-tready-id="dropoff-signature-print-name"
               placeholder="Enter signer's name"
               value={printName}
               onChange={(e) => {
