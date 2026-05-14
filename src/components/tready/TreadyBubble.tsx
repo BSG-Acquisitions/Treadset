@@ -582,11 +582,16 @@ export function TreadyBubble() {
                     </p>
                   </div>
                   <p style={{ margin: 0, lineHeight: 1.5 }}>
-                    AI copilot for TreadSet. Speaks, points, and walks you through anything.
+                    Hands-on tutorials walk you through every TreadSet flow.
                   </p>
                 </div>
 
-                {/* The headline CTA — scripted tour */}
+                {/* Tutorials menu — pick a hands-on walkthrough */}
+                <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, padding: '8px 4px 0' }}>
+                  Tutorials
+                </div>
+
+                {/* The first deep tour — actually creates a client */}
                 <button
                   type="button"
                   onClick={startTour}
@@ -597,28 +602,74 @@ export function TreadyBubble() {
                     border: 'none',
                     borderRadius: 12,
                     padding: '14px 16px',
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: 600,
                     cursor: tourRunning ? 'not-allowed' : 'pointer',
                     display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
+                    alignItems: 'flex-start',
+                    gap: 10,
                     boxShadow: '0 4px 12px rgba(22,163,74,0.3)',
                     opacity: tourRunning ? 0.6 : 1,
+                    textAlign: 'left',
                   }}
                 >
-                  <Play size={16} fill="#fff" />
-                  {tourRunning ? 'Tour running…' : 'Take the 90-second tour'}
+                  <Play size={16} fill="#fff" style={{ marginTop: 2, flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div>{tourRunning ? 'Tour running…' : 'Add Your First Client'}</div>
+                    <div style={{ fontSize: 11, opacity: 0.85, fontWeight: 400, marginTop: 2 }}>
+                      Hands-on, ~3 minutes. Walks you through every field.
+                    </div>
+                  </div>
                 </button>
 
-                <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 500, textTransform: 'uppercase', letterSpacing: 0.5, padding: '4px 0 0 4px' }}>
-                  Or ask me
+                {/* Coming-soon tours — clicking sends a chat message so Tready
+                    can talk about the flow even before the deep tour is built */}
+                {[
+                  { title: 'Schedule Your First Pickup', sub: 'Coming next session', prompt: 'Walk me through scheduling a pickup' },
+                  { title: 'Sign Your First Manifest', sub: 'Coming next session', prompt: 'Walk me through signing a manifest' },
+                  { title: 'Generate a Compliance Report', sub: 'Coming next session', prompt: 'Walk me through generating a compliance report' },
+                  { title: 'Process a Drop-off', sub: 'Coming next session', prompt: 'Walk me through processing a drop-off' },
+                  { title: 'Manage Trailers', sub: 'Coming next session', prompt: 'Walk me through managing trailers' },
+                ].map((t) => (
+                  <button
+                    key={t.title}
+                    type="button"
+                    onClick={() => sendMessage(t.prompt)}
+                    disabled={!accessToken || isStreaming}
+                    style={{
+                      textAlign: 'left',
+                      background: '#fff',
+                      border: '1px dashed #d1d5db',
+                      borderRadius: 10,
+                      padding: '10px 12px',
+                      fontSize: 13,
+                      color: '#111827',
+                      cursor: accessToken && !isStreaming ? 'pointer' : 'not-allowed',
+                      transition: 'all 120ms ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#f0fdf4';
+                      e.currentTarget.style.borderColor = '#16a34a';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = '#fff';
+                      e.currentTarget.style.borderColor = '#d1d5db';
+                    }}
+                  >
+                    <div style={{ fontWeight: 500 }}>{t.title}</div>
+                    <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
+                      {t.sub} · or ask me about it now
+                    </div>
+                  </button>
+                ))}
+
+                <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, padding: '12px 4px 0' }}>
+                  Or ask anything
                 </div>
                 {[
-                  'Show me how to add a client',
                   "What's on my dashboard today?",
-                  'Walk me through signing a manifest',
+                  'Find a client called Mountain',
+                  'How many pickups did we do this week?',
                 ].map((s) => (
                   <button
                     key={s}
@@ -630,9 +681,9 @@ export function TreadyBubble() {
                       background: '#fff',
                       border: '1px solid #d1d5db',
                       borderRadius: 10,
-                      padding: '10px 12px',
-                      fontSize: 13,
-                      color: '#111827',
+                      padding: '8px 12px',
+                      fontSize: 12,
+                      color: '#374151',
                       cursor: accessToken && !isStreaming ? 'pointer' : 'not-allowed',
                       transition: 'all 120ms ease',
                     }}
