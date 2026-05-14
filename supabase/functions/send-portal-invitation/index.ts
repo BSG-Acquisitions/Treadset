@@ -1,6 +1,9 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.0";
 import { Resend } from "npm:resend@2.0.0";
+import {
+  requireUserAndOrg,
+  tenantAuthErrorResponse,
+} from "../_shared/tenant-auth.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -36,10 +39,20 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let supabase;
+  let organizationId: string;
+  try {
+    const ctx = await requireUserAndOrg(req);
+    supabase = ctx.supabaseService;
+    organizationId = ctx.organizationId;
+  } catch (err) {
+    const r = tenantAuthErrorResponse(err, corsHeaders);
+    if (r) return r;
+    throw err;
+  }
+
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const { client_id, client_ids, test_email }: PortalInviteRequest = await req.json();
 
@@ -59,11 +72,13 @@ const handler = async (req: Request): Promise<Response> => {
 
     for (const clientId of idsToProcess) {
       try {
-        // Get client details including opt-out status
+        // Get client details including opt-out status. Scoped to caller's org —
+        // caller cannot trigger portal invites for another tenant's clients.
         const { data: client, error: clientError } = await supabase
           .from("clients")
           .select("id, company_name, email, contact_name, organization_id, is_active, portal_invite_opted_out")
           .eq("id", clientId)
+          .eq("organization_id", organizationId)
           .single();
 
         if (clientError || !client) {

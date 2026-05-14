@@ -1,4 +1,7 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
+import {
+  requireUserAndOrg,
+  tenantAuthErrorResponse,
+} from '../_shared/tenant-auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -28,11 +31,19 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let supabase;
+  let organizationId: string;
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const ctx = await requireUserAndOrg(req);
+    supabase = ctx.supabaseService;
+    organizationId = ctx.organizationId;
+  } catch (err) {
+    const r = tenantAuthErrorResponse(err, corsHeaders);
+    if (r) return r;
+    throw err;
+  }
 
+  try {
     const { type, startDate, endDate } = await req.json();
     
     console.log('Processing CSV export:', { type, startDate, endDate });
@@ -58,6 +69,7 @@ Deno.serve(async (req) => {
             created_at,
             pricing_tier:pricing_tiers(name)
           `)
+          .eq('organization_id', organizationId)
           .order('company_name');
 
         if (error) throw error;
@@ -121,6 +133,7 @@ Deno.serve(async (req) => {
               status
             )
           `)
+          .eq('organization_id', organizationId)
           .gte('pickup_date', startDate)
           .lte('pickup_date', endDate)
           .order('pickup_date');
@@ -191,6 +204,7 @@ Deno.serve(async (req) => {
               pickup:pickups(pickup_date)
             )
           `)
+          .eq('organization_id', organizationId)
           .order('issued_date', { ascending: false });
 
         if (error) throw error;

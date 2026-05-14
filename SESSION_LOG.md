@@ -6,6 +6,58 @@ Two parallel sessions now active. Prefix entries with `[A]` (Architect / backend
 
 ---
 
+## 2026-05-14 [B] (evening 2) — fix/leak-edge-fns: 11 LEAK edge functions patched to JWT + org-scoped pattern
+
+**Context:** Continuation of the tenant-isolation arc. Z opened the session with the audit's "next session first move" verbatim: verify §3's LEAK list before fixing (since §1 was substantially wrong), then patch only confirmed leakers using the `tready/index.ts` reference pattern. No DB migrations, no app-code auth fixes. Edge-fn code only.
+
+### Verification (Step 1)
+
+Read all 11 candidates end-to-end against current code. **All 11 are confirmed leaks** — §3 was more accurate than §1. Verification table appended to `REVIEWS/TENANT_ISOLATION_AUDIT.md` as §8. Key patterns observed:
+
+- `verify_jwt = false` is set in `supabase/config.toml` for 10 of the 11. The function code does not compensate.
+- `organization_id` is accepted from request body in 3 of the 11; resolves implicitly from caller-supplied `client_id`/`manifest_id` in the others.
+- Only `delete-hauler-and-manifests` validates a JWT in code — and even then trusts the body-supplied hauler_id.
+
+### Fix (Step 2)
+
+Built a shared helper `supabase/functions/_shared/tenant-auth.ts` mirroring the `tready/index.ts` auth flow. Exports `requireUserAndOrg(req)`, `requireUserOrgAndRole(req, allowedRoles)`, and `tenantAuthErrorResponse(err, corsHeaders)`. Each patched function now:
+
+1. CORS preflight (unchanged).
+2. Calls the helper to validate JWT + resolve `{ userId, organizationId, role, supabaseService }`.
+3. All DB queries scoped by the resolved `organizationId`.
+4. Any body-supplied `organization_id` ignored.
+
+`delete-hauler-and-manifests` additionally gated to `admin` / `ops_manager` roles via `requireUserOrgAndRole`. Defense-in-depth for the destructive path (it deletes regulated manifest records).
+
+### Shipped
+
+- **`supabase/functions/_shared/tenant-auth.ts`** — new shared helper (~100 lines).
+- **11 of 11 edge functions patched:** `send-manifest-email`, `generate-acroform-manifest`, `manifest-finalize`, `batch-manifest-export`, `send-client-outreach-email`, `send-client-team-invite`, `send-portal-invitation-drip`, `send-portal-invitation`, `csv-export`, `michigan-report-export`, `delete-hauler-and-manifests`.
+- **`REVIEWS/TENANT_ISOLATION_AUDIT.md` §8** — verification table + fix strategy + Ship Report.
+- This SESSION_LOG entry.
+
+Net diff: +330 / -106. Code changes only — zero DB migrations, zero app-code auth changes.
+
+### Blocked
+
+- **Z must redeploy each patched function** via Supabase dashboard or `supabase functions deploy <name>`. Edge-fn code does not auto-deploy from git. Suggest a batch deploy after PR merge — list of 11 names is in REVIEWS §8 / PR description.
+- **Z must smoke-test** at least the destructive paths post-deploy: `delete-hauler-and-manifests` (non-admin → 403, cross-tenant hauler → 404), `manifest-finalize` (cross-tenant pickup → no-op).
+
+### Parked
+
+- **`verify_jwt = false` lines in `config.toml`** for the 10 functions — leaving in place to avoid breaking any cron paths that don't pass user JWTs. Tightening this is a follow-up audit of cron callers.
+- **The remaining 56 RISK-service-role-no-jwt functions** from audit §3 — not re-verified this session. Worth a sweep before assuming any of them are safe.
+- **§4 app-code anti-patterns** (`'bsg'` slug fallbacks in `AuthContext.tsx:106`, `:204`, `requireRole.ts:80`; super-admin email hardcode in `AppSidebar.tsx:174`) — separate branch.
+- **RLS recursion CI guard** — separate branch.
+- **Storage-side signature path validation** — `generate-acroform-manifest` accepts caller-supplied signature paths and reads them with service_role (bypassing storage RLS). A malicious caller could embed another tenant's signature in their PDF. Out of audit §3 scope but worth a separate follow-up.
+- **`send-portal-invitation-drip` cron use case** — if a cron currently calls this without a user JWT, the patch will 401 it. Confirm whether any cron exists before deploying; if so, that cron needs its own auth strategy.
+
+### Next session first move
+
+After this PR merges + the 11 functions deploy + smoke-tests pass, open `fix/app-code-anti-patterns`. Re-verify §4 first (audit-skepticism posture). Then patch the `'bsg'` slug fallbacks in `AuthContext.tsx` + `requireRole.ts` and the super-admin email hardcode in `AppSidebar.tsx`. App-code auth scope.
+
+---
+
 ## 2026-05-14 [B] (evening) — fix/critical-rls-gaps: invoice_items isolated; audit reconciled (4 of 5 §1 gaps were false)
 
 **Context:** Continuation of Session B's afternoon audit work. Z's session prompt was the audit's own "next session first move" — open `fix/critical-rls-gaps`, write SQL for the 5 §1 critical tables, paste-flow only. One fix branch scoped to one thing. RLS work hands-off until Z reviews.
