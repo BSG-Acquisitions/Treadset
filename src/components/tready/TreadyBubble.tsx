@@ -202,25 +202,40 @@ const TRAILERS_TOUR: TourStep[] = [
   { kind: 'pause', ms: 7000 },
 ];
 
+// Element-ids that autopilot must NOT click — they create real data or
+// fire file downloads. Autopilot pauses on these to let the visual breathe,
+// then closes any open dialog with Escape and continues.
+const AUTOPILOT_SKIP_CLICK = new Set([
+  'dropoff-submit-button',
+  'manifest-wizard-submit',
+  'pickup-submit-button',
+  'compliance-export-csv',
+  'compliance-export-pdf',
+]);
+
+interface RunTourOptions {
+  /** Autopilot mode: auto-advance every waitForClick after a brief pause. */
+  autopilot?: boolean;
+  /** Pause duration on waitForClick steps when autopilot is on. */
+  autopilotClickDelay?: number;
+}
+
 async function runTour(
   steps: TourStep[],
   navigate: (path: string) => void,
   setRunning: (b: boolean) => void,
+  options: RunTourOptions = {},
 ) {
   setRunning(true);
 
   // Cancellation: any code can dispatch `tready:cancel-tour` to bail out.
-  // The bubble toggle and chat-panel X both fire it when a tour is running.
   let cancelled = false;
   const onCancel = () => {
     cancelled = true;
-    // Unblock anything currently awaiting a step-complete.
     window.dispatchEvent(new CustomEvent('tready:step-complete'));
   };
   window.addEventListener('tready:cancel-tour', onCancel);
 
-  // Helper: sleep that wakes early on cancel. Avoids the 9-second celebration
-  // pause holding up the abort.
   const cancellableSleep = (ms: number) =>
     new Promise<void>((resolve) => {
       const t = setTimeout(() => {
@@ -235,6 +250,8 @@ async function runTour(
       window.addEventListener('tready:cancel-tour', earlyWake);
     });
 
+  const clickDelay = options.autopilotClickDelay ?? 2500;
+
   try {
     for (const step of steps) {
       if (cancelled) break;
@@ -248,15 +265,31 @@ async function runTour(
           }),
         );
         if (step.waitForClick) {
-          // Resolves on either step-complete (real click) or cancel-tour
-          // (because onCancel also dispatches step-complete to unblock us).
-          await new Promise<void>((resolve) => {
-            const handler = () => {
-              window.removeEventListener('tready:step-complete', handler);
-              resolve();
-            };
-            window.addEventListener('tready:step-complete', handler);
-          });
+          if (options.autopilot) {
+            // Autopilot: pause on the highlight, then either click the
+            // target (if safe) or press Escape to clear any modal.
+            await cancellableSleep(clickDelay);
+            if (cancelled) break;
+            const id = step.element_id;
+            if (AUTOPILOT_SKIP_CLICK.has(id)) {
+              // Don't fire destructive actions on the kiosk display. Press
+              // Escape to dismiss whatever dialog the user was looking at.
+              document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+              document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+            } else {
+              const el = document.querySelector<HTMLElement>(`[data-tready-id="${id}"]`);
+              if (el) el.click();
+            }
+          } else {
+            // Manual: wait for the real click event (or cancel-tour unblock).
+            await new Promise<void>((resolve) => {
+              const handler = () => {
+                window.removeEventListener('tready:step-complete', handler);
+                resolve();
+              };
+              window.addEventListener('tready:step-complete', handler);
+            });
+          }
         } else if (step.wait) {
           await cancellableSleep(step.wait);
         }
@@ -271,6 +304,54 @@ async function runTour(
     window.removeEventListener('tready:cancel-tour', onCancel);
     window.dispatchEvent(new CustomEvent('tready:clear-highlight'));
     setRunning(false);
+  }
+}
+
+// ============================================================================
+// Autopilot — loops through every shipped tour, indefinitely. For tradeshow
+// display screens. Stops when cancel-tour is dispatched (click the character
+// to exit). Closes dialogs + nav home between tours.
+// ============================================================================
+async function runAutopilot(
+  navigate: (path: string) => void,
+  setRunning: (b: boolean) => void,
+  getTours: () => TourStep[][],
+) {
+  let cancelled = false;
+  const onCancel = () => {
+    cancelled = true;
+  };
+  window.addEventListener('tready:cancel-tour', onCancel);
+
+  const sleep = (ms: number) =>
+    new Promise<void>((resolve) => {
+      const t = setTimeout(resolve, ms);
+      const earlyWake = () => {
+        clearTimeout(t);
+        window.removeEventListener('tready:cancel-tour', earlyWake);
+        resolve();
+      };
+      window.addEventListener('tready:cancel-tour', earlyWake);
+    });
+
+  try {
+    while (!cancelled) {
+      const tours = getTours();
+      for (const tour of tours) {
+        if (cancelled) break;
+        // Reset between tours: close any open dialog, return home.
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        await sleep(300);
+        navigate('/dashboard');
+        await sleep(900);
+        if (cancelled) break;
+        await runTour(tour, navigate, setRunning, { autopilot: true });
+        await sleep(2500); // breath between tours
+      }
+    }
+  } finally {
+    window.removeEventListener('tready:cancel-tour', onCancel);
   }
 }
 
@@ -736,6 +817,27 @@ export function TreadyBubble() {
     void runTour(REPORTS_TOUR, navigate, setTourRunning);
   }, [navigate]);
 
+  const startAutopilot = useCallback(() => {
+    setIsOpen(false);
+    const tours = [WELCOME_TOUR, DROPOFF_TOUR, TRAILERS_TOUR, MANIFEST_TOUR, PICKUP_TOUR, REPORTS_TOUR];
+    void runAutopilot(navigate, setTourRunning, () => tours);
+  }, [navigate]);
+
+  // Kiosk auto-launch: any URL with ?autopilot=1 kicks the loop on auth load.
+  // Click Tready to exit. Only fires once per session (autopilot itself loops
+  // internally; we don't want a remount to relaunch on top of itself).
+  const autopilotStartedRef = useRef(false);
+  useEffect(() => {
+    if (loading || !user) return;
+    if (autopilotStartedRef.current) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('autopilot') !== '1') return;
+    autopilotStartedRef.current = true;
+    // Small delay so the page has time to render before highlights fire.
+    const t = setTimeout(() => startAutopilot(), 1200);
+    return () => clearTimeout(t);
+  }, [loading, user, startAutopilot]);
+
   const toggle = useCallback(() => {
     // If a tour is running, the X / bubble button is a "stop the tour" button
     // — don't toggle the chat panel until the tour is over.
@@ -1024,6 +1126,38 @@ export function TreadyBubble() {
                     <div>{tourRunning ? 'Tour running…' : 'Generate a Compliance Report'}</div>
                     <div style={{ fontSize: 11, opacity: 0.85, fontWeight: 400, marginTop: 2 }}>
                       Hands-on, ~2 minutes. Tours the compliance report end to end.
+                    </div>
+                  </div>
+                </button>
+
+                {/* Autopilot — loops every tour for a tradeshow display */}
+                <button
+                  type="button"
+                  onClick={startAutopilot}
+                  disabled={tourRunning}
+                  style={{
+                    background: 'linear-gradient(135deg, hsl(212,70%,52%) 0%, hsl(212,70%,40%) 100%)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 12,
+                    padding: '12px 16px',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: tourRunning ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 10,
+                    boxShadow: '0 4px 12px rgba(37,99,235,0.30)',
+                    opacity: tourRunning ? 0.6 : 1,
+                    textAlign: 'left',
+                    marginTop: 4,
+                  }}
+                >
+                  <Play size={16} fill="#fff" style={{ marginTop: 2, flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div>{tourRunning ? 'Autopilot running…' : 'Run every tour (Autopilot)'}</div>
+                    <div style={{ fontSize: 11, opacity: 0.85, fontWeight: 400, marginTop: 2 }}>
+                      Loops all six tours back-to-back. Tap me to stop. Or add <code>?autopilot=1</code> to any URL.
                     </div>
                   </div>
                 </button>
