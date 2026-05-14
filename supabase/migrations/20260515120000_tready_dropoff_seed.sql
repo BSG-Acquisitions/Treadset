@@ -19,49 +19,49 @@ VALUES
    'Searchable dropdown to pick the client generating the tires. Required unless walk-in mode.',
    '/dropoffs', 'wizard step 1 — Manifest Parties card, first dropdown',
    ARRAY['admin','ops_manager','sales']::app_role[],
-   'dropoff_dialog_open_step_info'),
+   NULL),
 
   ('dropoff-receiver-select', 'Receiver selector',
    'Dropdown to pick the facility receiving the tires.',
    '/dropoffs', 'wizard step 1 — Manifest Parties card, third dropdown',
    ARRAY['admin','ops_manager','sales']::app_role[],
-   'dropoff_dialog_open_step_info'),
+   NULL),
 
   ('dropoff-pte-input', 'Passenger Tire count field',
    'Number of passenger tires (1 tire = 1 PTE). At least one tire-count field must be > 0.',
    '/dropoffs', 'wizard step 1 — Tire Counts row, left',
    ARRAY['admin','ops_manager','sales']::app_role[],
-   'dropoff_dialog_open_step_info'),
+   NULL),
 
   ('dropoff-revenue-input', 'Amount Charged field',
    'Dollar amount charged for this drop-off. Required, must be > 0.',
    '/dropoffs', 'wizard step 1 — Amount Charged card',
    ARRAY['admin','ops_manager','sales']::app_role[],
-   'dropoff_dialog_open_step_info'),
+   NULL),
 
   ('dropoff-next-button', 'Wizard Next button',
    'Advances to the next wizard step. Disabled until the current step is valid.',
    '/dropoffs', 'wizard footer, bottom-right',
    ARRAY['admin','ops_manager','sales']::app_role[],
-   'dropoff_dialog_open'),
+   NULL),
 
   ('dropoff-signature-print-name', 'Signature Print Name field',
    'Print name of whoever is signing the current step (generator, hauler, or receiver).',
    '/dropoffs', 'wizard signature steps — top of the signature card',
    ARRAY['admin','ops_manager','sales']::app_role[],
-   'dropoff_dialog_open_step_signature'),
+   NULL),
 
   ('dropoff-hauler-sig-toggle', 'Hauler Signature toggle',
    'Switch controlling whether the hauler signature is captured. Off by default — hauler sig is optional.',
    '/dropoffs', 'wizard step 3 — Hauler Signature header, right side',
    ARRAY['admin','ops_manager','sales']::app_role[],
-   'dropoff_dialog_open_step_hauler_sig'),
+   NULL),
 
   ('dropoff-submit-button', 'Complete Drop-off submit button',
    'Final submit on the review step. Fires manifest generation and uploads signatures.',
    '/dropoffs', 'wizard footer on the review step, bottom-right',
    ARRAY['admin','ops_manager','sales']::app_role[],
-   'dropoff_dialog_open_step_confirmation')
+   NULL)
 ON CONFLICT (element_id) DO UPDATE SET
   label = EXCLUDED.label,
   description = EXCLUDED.description,
