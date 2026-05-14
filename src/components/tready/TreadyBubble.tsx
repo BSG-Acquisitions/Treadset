@@ -32,11 +32,12 @@ interface ChatMessage {
 // Scripted "welcome tour" — deterministic, no LLM. Proves the visual
 // primitives work end-to-end. Each step does ONE thing then waits.
 // ============================================================================
+// `speak` / `speak_async` are silent no-ops since voice was removed (PR #45).
+// Their `text` and `wait` fields are ignored by the engine — pacing is driven
+// entirely by `pause` and `highlight wait`. Step kinds retained so existing
+// tour scripts keep parsing; remove from new tours.
 type TourStep =
-  // `speak` BLOCKS the tour on TTS completion. Use sparingly for short lines.
   | { kind: 'speak'; text: string; wait?: number }
-  // `speak_async` fires TTS in parallel and continues the tour immediately.
-  // Use for long orientation lines so the first highlight pops up fast.
   | { kind: 'speak_async'; text: string }
   | { kind: 'highlight'; element_id: string; caption?: string; waitForClick?: boolean; wait?: number }
   | { kind: 'navigate'; path: string; wait?: number }
@@ -96,17 +97,12 @@ const WELCOME_TOUR: TourStep[] = [
 // state.
 // ============================================================================
 const DROPOFF_TOUR: TourStep[] = [
-  // ---- ORIENTATION ----
-  { kind: 'speak', text: "Now I'll walk you through processing a tire drop-off end to end. Takes about three minutes.", wait: 200 },
-  { kind: 'pause', ms: 3500 },
-
-  // ---- STEP 1: Navigate to Drop-offs ----
-  { kind: 'speak', text: "Tap the Drop-offs tab when you're ready.", wait: 100 },
-  { kind: 'highlight', element_id: 'topnav-dropoffs', caption: 'Drop-offs tab — tap to continue.', waitForClick: true },
+  // ---- ORIENTATION + FIRST HIGHLIGHT (no voice → no orientation pause) ----
+  { kind: 'pause', ms: 250 },
+  { kind: 'highlight', element_id: 'topnav-dropoffs', caption: 'Drop-offs tab — tap to start the walkthrough.', waitForClick: true },
 
   // ---- STEP 2: Open the Process Drop-off dialog ----
-  { kind: 'speak', text: "Tap Process Drop-off to open the wizard.", wait: 100 },
-  { kind: 'pause', ms: 600 },
+  { kind: 'pause', ms: 250 },
   { kind: 'highlight', element_id: 'dropoffs-process-button', caption: 'Process Drop-off — opens the 5-step wizard.', waitForClick: true },
 
   // ---- STEP 3: Generator ----
@@ -166,13 +162,9 @@ const DROPOFF_TOUR: TourStep[] = [
 // Create Route entry point. No data mutation — pure orientation.
 // ============================================================================
 const TRAILERS_TOUR: TourStep[] = [
-  // ---- ORIENTATION ----
-  { kind: 'speak', text: "Trailers are how TreadSet tracks every dumpster-on-wheels you move between yards — empty, full, or staged.", wait: 200 },
-  { kind: 'pause', ms: 4500 },
-
-  // ---- STEP 1: Top-nav entry ----
-  { kind: 'speak', text: "Tap the Trailers tab in the top nav.", wait: 100 },
-  { kind: 'highlight', element_id: 'topnav-trailers', caption: 'Trailers — the hub for everything related to moving asset trailers.', waitForClick: true },
+  // ---- ORIENTATION + FIRST HIGHLIGHT (no voice → no orientation pause) ----
+  { kind: 'pause', ms: 250 },
+  { kind: 'highlight', element_id: 'topnav-trailers', caption: 'Trailers tab — tap to tour the four trailer sub-pages.', waitForClick: true },
 
   // ---- STEP 2: Inventory page — status board ----
   { kind: 'navigate', path: '/trailers/inventory', wait: 1200 },
@@ -216,13 +208,11 @@ async function runTour(
 ) {
   setRunning(true);
   for (const step of steps) {
-    if (step.kind === 'speak') {
-      // Voice removed. Step is silent but still respects its `wait` ms so
-      // per-step pacing carries over from the old voice-on tours.
-      if (step.wait) await new Promise((r) => setTimeout(r, step.wait));
-    } else if (step.kind === 'speak_async') {
-      // Voice removed. Step is a no-op — the next step runs immediately,
-      // which is exactly the behavior the orientation lines wanted anyway.
+    if (step.kind === 'speak' || step.kind === 'speak_async') {
+      // Voice removed (PR #45). Both step kinds are now true no-ops — `wait`
+      // is ignored. Existing tours had wait values tuned for TTS timing; with
+      // voice gone, those waits are dead air. Pacing is driven by `pause` +
+      // highlight `wait` instead.
     } else if (step.kind === 'highlight') {
       window.dispatchEvent(
         new CustomEvent('tready:highlight', {
@@ -285,6 +275,29 @@ export function TreadyBubble() {
       sub.data.subscription.unsubscribe();
     };
   }, []);
+
+  // Pre-warm the Tready edge function on bubble mount. Supabase edge fns can
+  // cold-start in 1-3s; firing one cheap OPTIONS request right after JWT load
+  // keeps the runtime warm so the first real chat message streams faster.
+  // Fire-and-forget — never block the UI on this.
+  useEffect(() => {
+    if (!accessToken) return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      if (cancelled) return;
+      void fetch(TREADY_ENDPOINT, {
+        method: 'OPTIONS',
+        headers: { apikey: ANON_KEY },
+      }).catch(() => {
+        // Pre-warm failures are silent — they'd just mean the first chat
+        // pays the cold-start cost like before.
+      });
+    }, 500);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [accessToken]);
 
   // Autoscroll
   useEffect(() => {
